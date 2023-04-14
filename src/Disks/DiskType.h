@@ -19,6 +19,7 @@ enum class ObjectStorageType
     S3,
     Azure,
     HDFS,
+    NFS,
     Web,
     Local,
 };

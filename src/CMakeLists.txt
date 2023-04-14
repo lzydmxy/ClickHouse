@@ -90,6 +90,7 @@ add_headers_and_sources(clickhouse_common_io IO)
 add_headers_and_sources(clickhouse_common_io IO/Archives)
 add_headers_and_sources(clickhouse_common_io IO/S3)
 add_headers_and_sources(clickhouse_common_io IO/AzureBlobStorage)
+add_headers_and_sources(clickhouse_common_io IO/NFS)
 list (REMOVE_ITEM clickhouse_common_io_sources Common/malloc.cpp Common/new_delete.cpp)
 
 
@@ -119,6 +120,7 @@ endif()
 
 add_headers_and_sources(dbms Storages/DataLakes)
 add_headers_and_sources(dbms Storages/DataLakes/Iceberg)
+add_headers_and_sources(dbms Storages/NFS)
 add_headers_and_sources(dbms Common/NamedCollections)
 
 if (TARGET ch_contrib::amqp_cpp)
@@ -152,6 +154,7 @@ endif()
 
 add_headers_and_sources(dbms Disks/ObjectStorages/Cached)
 add_headers_and_sources(dbms Disks/ObjectStorages/Local)
+add_headers_and_sources(dbms Disks/ObjectStorages/NFS)
 add_headers_and_sources(dbms Disks/ObjectStorages/Web)
 
 add_headers_and_sources(dbms Storages/Cache)

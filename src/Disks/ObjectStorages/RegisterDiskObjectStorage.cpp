@@ -50,6 +50,7 @@ void registerDiskObjectStorage(DiskFactory & factory, bool global_skip_access_ch
     };
 
     factory.registerDiskType("object_storage", creator);
+    factory.registerDiskType("nfs", creator); /// For compatibility
 #if USE_AWS_S3
     factory.registerDiskType("s3", creator); /// For compatibility
     factory.registerDiskType("s3_plain", creator); /// For compatibility

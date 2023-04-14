@@ -50,6 +50,8 @@ std::string DataSourceDescription::toString() const
                     return "s3";
                 case ObjectStorageType::HDFS:
                     return "hdfs";
+                case ObjectStorageType::NFS:
+                    return "nfs";
                 case ObjectStorageType::Azure:
                     return "azure_blob_storage";
                 case ObjectStorageType::Local:
