@@ -2,6 +2,7 @@
 #include <IO/BufferWithOwnMemory.h>
 #include <IO/SeekableReadBuffer.h>
 #include <IO/ReadHelpers.h>
+#include <IO/OpenedFileCache.h>
 #include <Common/Stopwatch.h>
 #include <base/hex.h>
 #include <Common/logger_useful.h>
@@ -30,13 +31,14 @@ namespace ErrorCodes
 struct ReadBufferFromNFS::ReadBufferFromNFSImpl : public BufferWithOwnMemory<SeekableReadBuffer>
 {
     String nfs_file_path;
+    OpenedFileCache::OpenedFilePtr file;
     ReadSettings read_settings;
     UInt64 max_single_read_retries;
     std::atomic<off_t> file_offset_of_init = 0;
     std::atomic<off_t> file_offset_of_buffer_end = 0;
     std::atomic<off_t> read_until_position = 0;
     int fd;
-    bool use_pread = false;
+    bool use_pread = true;
     String uuid;
 
     Poco::Logger* log = &Poco::Logger::get("ReadBufferFromNFSImpl");
@@ -56,31 +58,16 @@ struct ReadBufferFromNFS::ReadBufferFromNFSImpl : public BufferWithOwnMemory<See
         , file_offset_of_buffer_end(offset_)
         , read_until_position(read_until_position_)
     {
-#ifdef __APPLE__
-        bool o_direct = (flags != -1) && (flags & O_DIRECT);
-        if (o_direct)
-            flags = flags & ~O_DIRECT;
-#endif
         int flags = O_RDONLY | O_CLOEXEC;
-        fd = ::open(nfs_file_path.c_str(), flags);
-        if (-1 == fd)
+        file = OpenedFileCache::instance().get(nfs_file_path, flags);
+        fd = file->getFD();
+        if (fd == -1)
             throw Exception(errno == ENOENT ? ErrorCodes::FILE_DOESNT_EXIST : ErrorCodes::CANNOT_OPEN_FILE,
                 "Cannot open file {}", nfs_file_path);
-
-#ifdef __APPLE__
-        if (o_direct)
-        {
-            if (fcntl(fd, F_NOCACHE, 1) == -1)
-                throw Exception(ErrorCodes::CANNOT_OPEN_FILE, "Cannot set F_NOCACHE on file " + nfs_file_path);
-        }
-#endif
     }
 
     ~ReadBufferFromNFSImpl() override
     {
-        if (fd < 0)
-            return;
-        ::close(fd);
     }
 
     bool nextImpl() override
@@ -187,7 +174,7 @@ struct ReadBufferFromNFS::ReadBufferFromNFSImpl : public BufferWithOwnMemory<See
             {
                 read_until_position = position;
                 resetWorkingBuffer();
-                //LOG_TEST(log, "setReadUntilPosition {}. {}", position, getInfoForLog());
+                LOG_TEST(log, "setReadUntilPosition {}. {}", position, getInfoForLog());
             }
         }
     }
@@ -219,12 +206,10 @@ ReadBufferFromNFS::ReadBufferFromNFS(
         offset_, read_until_position_, use_external_buffer_))
     , log(&Poco::Logger::get("ReadBufferFromNFS"))
 {
-    //LOG_TEST(log, "Constructor {}", getInfoForLog());
 }
 
 ReadBufferFromNFS::~ReadBufferFromNFS()
 {
-    //LOG_TEST(log, "~Constructor {}", getInfoForLog());
 };
 
 bool ReadBufferFromNFS::nextImpl()
@@ -246,7 +231,7 @@ bool ReadBufferFromNFS::nextImpl()
     if (result)
         BufferBase::set(impl->buffer().begin(), impl->buffer().size(), impl->offset()); /// use the buffer returned by `impl`
 
-    //LOG_TEST(log, "nextImpl {}", getInfoForLog());
+    LOG_TEST(log, "nextImpl {}", getInfoForLog());
     return result;
 }
 
@@ -273,7 +258,7 @@ off_t ReadBufferFromNFS::seek(off_t offset_, int whence)
         resetWorkingBuffer();
         impl->seek(offset_, whence);
     }
-    //LOG_TEST(log, "seek offset {}, {}", offset_, getInfoForLog());
+    LOG_TEST(log, "seek offset {}, {}", offset_, getInfoForLog());
     return impl->getPosition();
 }
 
@@ -301,7 +286,7 @@ size_t ReadBufferFromNFS::getFileOffsetOfBufferEnd() const
 off_t ReadBufferFromNFS::getPosition()
 {
     auto position = impl->getPosition() - available();
-    //LOG_TEST(log, "getPosition {}. {}", position, getInfoForLog());
+    LOG_TEST(log, "getPosition {}. {}", position, getInfoForLog());
     return position;
 }
 

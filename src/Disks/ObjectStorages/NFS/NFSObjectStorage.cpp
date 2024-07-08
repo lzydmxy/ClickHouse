@@ -1,7 +1,9 @@
 #include "NFSObjectStorage.h"
 #include <Common/getRandomASCIIString.h>
+#include <Common/filesystemHelpers.h>
 #include <Disks/IO/ReadBufferFromRemoteFSGather.h>
 #include <Disks/IO/AsynchronousBoundedReadBuffer.h>
+#include <Disks/IO/createReadBufferFromFileBase.h>
 #include <IO/copyData.h>
 #include <IO/ReadHelpers.h>
 #include <IO/WriteHelpers.h>
@@ -70,12 +72,11 @@ bool NFSObjectStorage::exists(const StoredObject & object) const
     return fs::exists(fs::path(object.remote_path));
 }
 
-
 std::unique_ptr<ReadBufferFromFileBase> NFSObjectStorage::readObject( /// NOLINT
     const StoredObject & object,
     const ReadSettings & read_settings,
-    std::optional<size_t>,
-    std::optional<size_t>) const
+    std::optional<size_t> /*read_hint*/,
+    std::optional<size_t> /*file_size*/) const
 {
     return std::make_unique<ReadBufferFromNFS>(object.remote_path, patchSettings(read_settings));
 }
@@ -83,8 +84,8 @@ std::unique_ptr<ReadBufferFromFileBase> NFSObjectStorage::readObject( /// NOLINT
 std::unique_ptr<ReadBufferFromFileBase> NFSObjectStorage::readObjects( /// NOLINT
     const StoredObjects & objects,
     const ReadSettings & read_settings,
-    std::optional<size_t>,
-    std::optional<size_t>) const
+    std::optional<size_t> /* read_hint */,
+    std::optional<size_t> /* file_size */) const
 {
     auto disk_read_settings = patchSettings(read_settings);
     auto global_context = Context::getGlobalContextInstance();
@@ -93,14 +94,13 @@ std::unique_ptr<ReadBufferFromFileBase> NFSObjectStorage::readObjects( /// NOLIN
         [this, disk_read_settings]
         (bool /* restricted_seek */, const std::string & path) -> std::unique_ptr<ReadBufferFromFileBase>
     {
-        // auto buffer_size = disk_read_settings.remote_fs_buffer_size;
         return std::make_unique<ReadBufferFromNFS>(
             fs::path(path),
             disk_read_settings,
             settings->nfs_max_single_read_retries,
             /* offset */ 0,
-            /*read_until_position*/ 0,
-            /* use_external_buffer */true);
+            /* read_until_position */ 0,
+            /* use_external_buffer */ true);
     };
 
     switch (read_settings.remote_fs_method)
@@ -136,7 +136,7 @@ std::unique_ptr<WriteBufferFromFileBase> NFSObjectStorage::writeObject( /// NOLI
     if (attributes.has_value())
         throw Exception(
             ErrorCodes::UNSUPPORTED_METHOD,
-            "HDFS API doesn't support custom attributes/metadata for stored objects");
+            "NFS API doesn't support custom attributes/metadata for stored objects");
 
     const String & nfs_path = object.remote_path.substr(0, object.remote_path.find_last_of('/') + 1);
     if (!fs::is_directory(nfs_path))
@@ -152,8 +152,15 @@ std::unique_ptr<WriteBufferFromFileBase> NFSObjectStorage::writeObject( /// NOLI
         }
     }
     int flags = (mode == WriteMode::Append) ? (O_APPEND | O_CREAT | O_WRONLY) : -1;
-    return std::make_unique<WriteBufferFromNFS>(object.remote_path, config, patchSettings(write_settings),
+    return std::make_unique<WriteBufferFromNFS>(object.remote_path, config, write_settings,
         buf_size, flags);
+}
+
+/// Return true if the directory has any child
+bool NFSObjectStorage::hasAnyChild(const std::string & path) const
+{
+    fs::directory_iterator end;
+    return fs::directory_iterator(path) != end;
 }
 
 /// Remove file. Throws exception if file doesn't exists or it's a directory.
@@ -162,6 +169,14 @@ void NFSObjectStorage::removeObject(const StoredObject & object)
     auto nfs_path = fs::path(object.remote_path);
     if (0 != unlink(nfs_path.c_str()) && errno != ENOENT)
         throw Exception(ErrorCodes::CANNOT_UNLINK, "Cannot unlink file {}", nfs_path.string());
+
+    // Remove null parent directory
+    const String & parent_path = object.remote_path.substr(0, object.remote_path.find_last_of('/') + 1);
+    if (!hasAnyChild(parent_path))
+    {
+        LOG_TEST(log, "Remove null parent directory {}", parent_path);
+        fs::remove(parent_path);
+    }
 }
 
 void NFSObjectStorage::removeObjects(const StoredObjects & objects)
@@ -186,7 +201,7 @@ ObjectMetadata NFSObjectStorage::getObjectMetadata(const std::string &) const
 {
     throw Exception(
         ErrorCodes::UNSUPPORTED_METHOD,
-        "HDFS API doesn't support custom attributes/metadata for stored objects");
+        "NFS API doesn't support custom attributes/metadata for stored objects");
 }
 
 void NFSObjectStorage::copyObject( // NOLINT
@@ -209,7 +224,7 @@ void NFSObjectStorage::applyNewSettings(
 
 std::unique_ptr<IObjectStorage> NFSObjectStorage::cloneObjectStorage(const std::string &, const Poco::Util::AbstractConfiguration &, const std::string &, ContextPtr)
 {
-    throw Exception(ErrorCodes::UNSUPPORTED_METHOD, "HDFS object storage doesn't support cloning");
+    throw Exception(ErrorCodes::UNSUPPORTED_METHOD, "NFS object storage doesn't support cloning");
 }
 
 }

@@ -15,7 +15,7 @@
 namespace DB
 {
 
-/** Accepts DFS path to file and opens it.
+/** Accepts NFS path to file and opens it.
  * Closes file by himself (thus "owns" a file descriptor).
  */
 class ReadBufferFromNFS : public ReadBufferFromFileBase
