@@ -2,7 +2,9 @@
     <storage_configuration>
         <disks>
             <d_nfs>
-                <type>nfs</type>
+                <type>object_storage</type>
+                <object_storage_type>nfs</object_storage_type>
+                <metadata_type>local</metadata_type>
                 <path>/nfs/00/</path>
                 <data_cache_enabled>true</data_cache_enabled>
             </d_nfs>
