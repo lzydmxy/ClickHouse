@@ -1,7 +1,14 @@
 #include "config.h"
 #include <IO/WriteHelpers.h>
 #include <Storages/NFS/WriteBufferFromNFS.h>
+#include <Common/Throttler.h>
 #include <sys/uio.h>
+
+namespace ProfileEvents
+{
+    extern const Event RemoteWriteThrottlerBytes;
+    extern const Event RemoteWriteThrottlerSleepMicroseconds;
+}
 
 
 namespace DB
@@ -26,7 +33,7 @@ struct WriteBufferFromNFS::WriteBufferFromNFSImpl
 
     WriteBufferFromNFSImpl(
             const std::string & nfs_file_path_,
-            const Poco::Util::AbstractConfiguration & config_, 
+            const Poco::Util::AbstractConfiguration & config_,
             const WriteSettings write_settings_,
             int flags)
         : nfs_file_path(nfs_file_path_), config(config_), write_settings(write_settings_)
@@ -70,6 +77,7 @@ struct WriteBufferFromNFS::WriteBufferFromNFSImpl
             vec[0].iov_len = size;
             res = ::writev(fd, vec, 1);
         }
+
         if ((-1 == res || 0 == res) && errno != EINTR)
         {
             String error_file_name = nfs_file_path;
@@ -78,8 +86,14 @@ struct WriteBufferFromNFS::WriteBufferFromNFSImpl
             throw Exception(ErrorCodes::CANNOT_WRITE_TO_FILE_DESCRIPTOR,
                 "Cannot write to NFS file {}", error_file_name);
         }
+
         if (res > 0)
+        {
             bytes_written += res;
+            if (write_settings.remote_throttler)
+                write_settings.remote_throttler->add(res, ProfileEvents::RemoteWriteThrottlerBytes, ProfileEvents::RemoteWriteThrottlerSleepMicroseconds);
+        }
+
        return bytes_written;
     }
 

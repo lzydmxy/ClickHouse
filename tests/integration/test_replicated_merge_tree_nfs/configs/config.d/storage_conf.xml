@@ -27,6 +27,16 @@
                     </main>
                 </volumes>
             </p_local>
+            <p_local_remote>
+                <volumes>
+                    <local>
+                        <disk>d_local</disk>
+                    </local>
+                    <remote>
+                        <disk>d_nfs</disk>
+                    </remote>
+                </volumes>
+            </p_local_remote>
         </policies>
     </storage_configuration>
 
@@ -53,5 +63,7 @@
         <cluster>nfs_cluster</cluster>
         <shard>0</shard>
     </macros>
+
+    <max_remote_write_network_bandwidth_for_server>1600000</max_remote_write_network_bandwidth_for_server>
 
 </clickhouse>

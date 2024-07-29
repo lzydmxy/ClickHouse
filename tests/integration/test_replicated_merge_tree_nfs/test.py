@@ -236,3 +236,77 @@ def test_nfs_zero_copy_mutations(cluster):
         assert all_done == True
     finally:
         query_cluster(cluster, "DROP TABLE IF EXISTS nfs_test_mutations NO DELAY")
+
+
+def test_nfs_zero_copy_throttling(cluster):
+    node1 = cluster.instances["node1"]
+
+    logging.debug(
+        node1.query(
+            "select * from system.server_settings where "
+            "name = 'max_remote_write_network_bandwidth_for_server' FORMAT TSVWithNames"
+        )
+    )
+
+    create_table_statement = f"""
+        CREATE TABLE nfs_test_throttling ON CLUSTER nfs_cluster
+        (key UInt64 CODEC(NONE))
+        ENGINE = MergeTree 
+        ORDER BY tuple() 
+        SETTINGS storage_policy='p_local_remote'
+        """
+    node1.query(create_table_statement)
+
+    node1.query("INSERT INTO nfs_test_throttling SELECT number FROM numbers(1e6)")
+
+    logging.debug(
+        node1.query(
+            "SELECT disk_name, partition, bytes_on_disk, data_compressed_bytes, rows "
+            "FROM system.parts "
+            "WHERE database = currentDatabase() AND "
+            "table = 'nfs_test_throttling' AND active FORMAT TSVWithNames"
+        )
+    )
+
+    node1.query(
+        "ALTER TABLE nfs_test_throttling MOVE PARTITION tuple() TO VOLUME 'remote' "
+        # "SETTINGS max_remote_write_network_bandwidth=1600000"
+    )
+
+    node1.query("SYSTEM FLUSH LOGS")
+
+    time_cost_1 = node1.query(
+        "SELECT query_duration_ms FROM system.query_log "
+        "WHERE type = 'QueryFinish' AND current_database = currentDatabase() "
+        "AND query_kind = 'Alter' and query like '%nfs_test_throttling%'"
+    )
+
+    logging.debug(f"Move part from local to remote cost: {time_cost_1}ms")
+
+    assert int(time_cost_1) > 4000
+
+    logging.debug(
+        node1.query(
+            "SELECT disk_name, partition, bytes_on_disk, data_compressed_bytes, rows "
+            "FROM system.parts "
+            "WHERE database = currentDatabase() AND "
+            "table = 'nfs_test_throttling' AND active FORMAT TSVWithNames"
+        )
+    )
+
+    node1.query(
+        "ALTER TABLE nfs_test_throttling MOVE PARTITION tuple() TO VOLUME 'local' "
+        "SETTINGS max_remote_read_network_bandwidth=4000000"
+    )
+
+    node1.query("SYSTEM FLUSH LOGS")
+
+    time_cost_2 = node1.query(
+        "SELECT query_duration_ms FROM system.query_log "
+        "WHERE type = 'QueryFinish' AND current_database = currentDatabase() "
+        "AND query_kind = 'Alter' AND query like '%max_remote_read_network_bandwidth%' "
+    )
+
+    logging.debug(f"Move part from remote to local cost: {time_cost_2}ms")
+
+    assert 3 * int(time_cost_2) < int(time_cost_1) < 5 * int(time_cost_2)

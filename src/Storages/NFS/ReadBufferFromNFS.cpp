@@ -7,11 +7,18 @@
 #include <base/hex.h>
 #include <Common/logger_useful.h>
 #include <base/errnoToString.h>
+#include <Common/Throttler.h>
 #include <base/sleep.h>
 
 #include <sys/stat.h>
 #include <mutex>
 #include <unistd.h>
+
+namespace ProfileEvents
+{
+    extern const Event RemoteReadThrottlerBytes;
+    extern const Event RemoteReadThrottlerSleepMicroseconds;
+}
 
 namespace DB
 {
@@ -110,6 +117,8 @@ struct ReadBufferFromNFS::ReadBufferFromNFSImpl : public BufferWithOwnMemory<See
             file_offset_of_buffer_end += bytes_read;
             working_buffer = internal_buffer;
             working_buffer.resize(bytes_read);
+            if (read_settings.remote_throttler)
+                read_settings.remote_throttler->add(bytes_read, ProfileEvents::RemoteReadThrottlerBytes, ProfileEvents::RemoteReadThrottlerSleepMicroseconds);
             return true;
         }
         else
@@ -144,7 +153,7 @@ struct ReadBufferFromNFS::ReadBufferFromNFSImpl : public BufferWithOwnMemory<See
     size_t getFileSize()
     {
         struct stat statbuff;
-        if(::stat(nfs_file_path.c_str(), &statbuff) >= 0)
+        if (::stat(nfs_file_path.c_str(), &statbuff) >= 0)
             return statbuff.st_size;
         else
         {
