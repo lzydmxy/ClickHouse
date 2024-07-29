@@ -37,6 +37,7 @@ try:
         CachedSchemaRegistryClient,
     )
     from .hdfs_api import HDFSApi  # imports requests_kerberos
+    from .cfs_mount import mountCfs
 except Exception as e:
     logging.warning(f"Cannot import some modules, some tests may not work: {e}")
 
@@ -2700,17 +2701,19 @@ class ClickHouseCluster:
 
             common_opts = ["--verbose", "up", "-d"]
 
-            images_pull_cmd = self.base_cmd + ["pull"]
-            # sometimes dockerhub/proxy can be flaky
-            for i in range(5):
-                try:
-                    run_and_check(images_pull_cmd)
-                    break
-                except Exception as ex:
-                    if i == 4:
-                        raise ex
-                    logging.info("Got exception pulling images: %s", ex)
-                    time.sleep(i * 3)
+            # never pull image in our env
+            # you can update images by docker run -d -P m.daocloud.io/docker.io/clickhouse/clickhouse-server:24.3
+            # images_pull_cmd = self.base_cmd + ["pull"]
+            # # sometimes dockerhub/proxy can be flaky
+            # for i in range(5):
+            #     try:
+            #         run_and_check(images_pull_cmd)
+            #         break
+            #     except Exception as ex:
+            #         if i == 4:
+            #             raise ex
+            #         logging.info("Got exception pulling images: %s", ex)
+            #         time.sleep(i * 3)
 
             if self.with_zookeeper_secure and self.base_zookeeper_cmd:
                 logging.debug("Setup ZooKeeper Secure")
@@ -2914,8 +2917,9 @@ class ClickHouseCluster:
 
             if self.with_nfs and self.base_nfs_cmd:
                 logging.debug('Setup NFS, nfs dir : %s' % self.nfs_dir)
-                os.makedirs(self.nfs_dir)
-                os.chmod(self.nfs_dir, stat.S_IRWXU | stat.S_IRWXO)
+                os.makedirs(self.nfs_dir, exist_ok=True)
+                mountCfs(volname='integration_test', mountpoint=self.nfs_dir, logdir=self.instances_dir)
+                # os.chmod(self.nfs_dir, stat.S_IRWXU | stat.S_IRWXO)
                 self.up_called = True
 
             if self.with_kerberized_hdfs and self.base_kerberized_hdfs_cmd:
@@ -3054,6 +3058,27 @@ class ClickHouseCluster:
     def shutdown(self, kill=True, ignore_fatal=True):
         sanitizer_assert_instance = None
         fatal_log = None
+
+        # Should remove data and unmount nfs when shutdown
+        if self.with_nfs:
+            logging.debug(f"Clear data in {self.nfs_dir}")
+            try:
+                run_and_check(["rm", "-rf", f"{self.nfs_dir}/*"])
+            except Exception as e:
+                logging.warning(f"Unable to Clear data in {self.nfs_dir}: {e}.")
+
+            logging.debug(f"Unmounting the cfs {self.nfs_dir}")
+            try:
+                run_and_check(["umount", "-l", f"{self.nfs_dir}"])
+            except Exception as e:
+                logging.warning(f"Unable to umount nfs disk {self.nfs_dir}: {e}.")
+            cfs_dir = f"{os.getenv('PWD')}/cfs-client"
+
+            logging.debug(f"Clear cfs_client {cfs_dir}")
+            try:
+                run_and_check(["rm", "-rf", f"{cfs_dir}"])
+            except Exception as e:
+                logging.warning(f"Unable to clear cfs-client dir {cfs_dir}: {e}.")
 
         if self.up_called:
             with open(self.docker_logs_path, "w+") as f:
@@ -3289,6 +3314,7 @@ class ClickHouseInstance:
         odbc_bridge_bin_path,
         library_bridge_bin_path,
         clickhouse_path_dir,
+        shared_path,
         with_odbc_drivers,
         with_postgres,
         with_postgres_cluster,
@@ -4671,6 +4697,7 @@ class ClickHouseInstance:
                     tmpfs=str(self.tmpfs),
                     mem_limit=self.mem_limit,
                     logs_dir=logs_dir,
+                    shared_path=self.shared_path,
                     depends_on=str(depends_on),
                     user=os.getuid(),
                     env_file=self.env_file,

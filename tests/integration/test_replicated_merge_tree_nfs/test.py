@@ -15,14 +15,23 @@ def cluster():
     try:
         cluster = ClickHouseCluster(__file__)
 
-        cluster.add_instance("node1", main_configs=["configs/config.d/storage_conf.xml"],
-                            macros={'replica': '1'},
-                            with_nfs=True,
-                            with_zookeeper=True)
-        cluster.add_instance("node2", main_configs=["configs/config.d/storage_conf.xml"],
-                            macros={'replica': '2'},
-                            with_nfs=True,
-                            with_zookeeper=True)
+        cluster.add_instance(
+            "node1",
+            main_configs=["configs/config.d/storage_conf.xml"],
+            user_configs=["configs/config.d/users.xml"],
+            macros={'replica': '1'},
+            with_nfs=True,
+            with_zookeeper=True
+        )
+
+        cluster.add_instance(
+            "node2",
+            main_configs=["configs/config.d/storage_conf.xml"],
+            user_configs=["configs/config.d/users.xml"],
+            macros={'replica': '2'},
+            with_nfs=True,
+            with_zookeeper=True
+        )
 
         logging.info("Starting cluster...")
         cluster.start()
@@ -208,6 +217,7 @@ def test_nfs_zero_copy_mutations(cluster):
                 rows += '{}	{}	{}\n'.format(date_str, random.randint(1, 10), i)
             node1.query("INSERT INTO nfs_test_mutations FORMAT TSV", rows)
 
+        logging.debug(node1.query("select name, value from system.settings where name = 'function_sleep_max_microseconds_per_block' FORMAT TSVWithNames"))
         node1.query("ALTER TABLE nfs_test_mutations UPDATE i = sleepEachRow(2) WHERE 1")
 
         all_done = wait_for_mutations([node1], "nfs_test_mutations", 1)
