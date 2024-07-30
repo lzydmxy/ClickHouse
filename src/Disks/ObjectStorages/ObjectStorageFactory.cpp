@@ -17,6 +17,7 @@
 #include <Disks/ObjectStorages/Web/WebObjectStorage.h>
 #include <Disks/ObjectStorages/Local/LocalObjectStorage.h>
 #include <Disks/loadLocalDiskConfig.h>
+#include <Disks/ObjectStorages/NFS/NFSObjectStorage.h>
 #endif
 #include <Disks/ObjectStorages/MetadataStorageFactory.h>
 #include <Disks/ObjectStorages/PlainObjectStorage.h>
@@ -308,6 +309,48 @@ void registerLocalObjectStorage(ObjectStorageFactory & factory)
     factory.registerObjectStorageType("local_blob_storage", creator);
     factory.registerObjectStorageType("local", creator);
 }
+
+void loadDiskNFSConfig(const String & name,
+                      const Poco::Util::AbstractConfiguration & config,
+                      const String & config_prefix,
+                      String & path)
+{
+    path = config.getString(config_prefix + ".path", "");
+    if (path.empty())
+        throw Exception(ErrorCodes::UNKNOWN_ELEMENT_IN_CONFIG, "Disk path can not be empty. Disk : {}", name);
+    if (path.back() != '/')
+        throw Exception(ErrorCodes::UNKNOWN_ELEMENT_IN_CONFIG, "Disk path must end with /. Disk ");
+}
+
+std::unique_ptr<NFSObjectStorageSettings> getSettings(const Poco::Util::AbstractConfiguration & config, const String & config_prefix)
+{
+    return std::make_unique<NFSObjectStorageSettings>(
+        config.getUInt64(config_prefix + ".min_bytes_for_seek", 1024 * 1024),
+        config.getUInt64(config_prefix + ".remote_file_buffer_size", 10 * 1024 * 1024),
+        config.getInt(config_prefix + ".thread_pool_size", 16),
+        config.getInt(config_prefix + ".objects_chunk_size_to_delete", 1000),
+        config.getUInt64(config_prefix + ".nfs_max_single_read_retries", 3));
+}
+
+void registerNFSObjectStorage(ObjectStorageFactory & factory)
+{
+   auto creator = [](
+        const String & name,
+        const Poco::Util::AbstractConfiguration & config,
+        const String & config_prefix,
+        ContextPtr context,
+        bool /* skip_access_check */) -> ObjectStoragePtr
+    {
+        //The path to the real remote disk
+        String root_path;
+        loadDiskNFSConfig(name, config, config_prefix, root_path);
+        fs::create_directories(root_path);
+        auto settings = getSettings(config, config_prefix);
+
+        return std::make_shared<NFSObjectStorage>(name, root_path, context, std::move(settings), config);
+    };
+    factory.registerObjectStorageType("nfs", creator);
+}
 #endif
 
 void registerObjectStorages()
@@ -330,6 +373,7 @@ void registerObjectStorages()
 #ifndef CLICKHOUSE_KEEPER_STANDALONE_BUILD
     registerWebObjectStorage(factory);
     registerLocalObjectStorage(factory);
+    registerNFSObjectStorage(factory);
 #endif
 }
 
