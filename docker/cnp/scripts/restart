@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+pkill -f clickhouse || true && sleep 5 && /etc/clickhouse-server/bin/clickhouse server --config-file=/etc/clickhouse-server/config.xml --daemon

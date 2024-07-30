@@ -1,0 +1,498 @@
+#!/usr/bin/env bash
+
+set -x
+
+# 公共环境变量
+#export REGION_LIST=rhbdp,lf06           # Region列表,如果大于2个则表示是跨集群的部署方式
+#export CNP_REGION=rhbdp			# 当前Region: rhbdp
+#export SHARD=3  			# CK Shard数量 
+#export CNP_APP_NAME=ch-000245		# 单集群模式rhbdp-ch-000245; 跨集群模式ch-000245
+#export CNP_COMPONENT="clickhouse"	# clickhouse
+
+# 当前Region的环境变量
+#export CNP_APP_LABEL="RLRH_CK_Pub_85"
+#export REPLICAS=2			# 当前Region的Replica数量
+#export CNP_NAMESPACE="realtime-data-platform"
+#export CNP_DOMAIN_SUFFIX="rhbdp.n.jd.local"
+
+# Region rhbdp的环境变量
+#export REPLICAS_rhbdp=2
+#export CNP_NAMESPACE_rhbdp=realtime-data-platform
+#export CNP_DOMAIN_SUFFIX_rhbdp=rhbdp.n.jd.local
+
+# Region lf06的环境变量
+#export REPLICAS_lf06=2
+#export CNP_NAMESPACE_lf06=realtime-data-platform
+#export CNP_DOMAIN_SUFFIX_lf06=lf06.n.jd.local
+
+CHROOT=/etc/clickhouse-server		# 生成的配置文件的路径
+#CHROOT=.				
+
+HOST=$(hostname -s)
+# 示例：
+#HOST="rhbdp-ch-000245-clickhouse-0-0"
+if [[ $HOST =~ (.*)-([0-9]+)-([0-9]+)$ ]]; then
+  NAME=${BASH_REMATCH[1]}
+  SHRAD_INDEX=${BASH_REMATCH[2]}
+  REPLICA_INDEX=${BASH_REMATCH[3]}
+#  HEAD=${BASH_REMATCH[3]}
+#  SUFFIX=${BASH_REMATCH[4]}
+else
+  echo "Fialed to parse name and ordinal of Pod"
+  exit 1
+fi
+echo "name=" ${NAME}
+echo "shard_index=" $SHRAD_INDEX
+echo "replica_index=" $REPLICA_INDEX
+#echo "head=" $HEAD
+#echo "SUFFIX=" $SUFFIX
+hostname=${NAME}
+
+# 判断环境变量是否存在
+# 1.公共环境变量
+if [ ! $SHARD ]; then
+  echo "env SHARD not exist"
+  exit 1
+elif [ ! $CNP_APP_NAME ]; then
+  echo "env CNP_APP_NAME not exist"
+  exit 1
+elif [ ! $CNP_REGION ]; then
+  echo "env CNP_REGION not exist"
+  exit 1
+elif [ ! $CNP_COMPONENT ]; then
+  echo "env CNP_COMPONENT not exist"
+  exit 1
+fi
+# 2.当前Region的环境变量
+if [ ! $REPLICAS ]; then
+  echo "env REPLICAS not exist"
+  exit 1
+elif [ ! ${CNP_APP_LABEL} ]; then
+  echo "env CNP_APP_LABEL not exist"
+  exit 1
+elif [ ! ${CNP_NAMESPACE} ]; then
+  echo "env CNP_NAMESPACE not exist"
+  exit 1
+elif [ ! ${CNP_DOMAIN_SUFFIX} ]; then
+  echo "env CNP_DOMAIN_SUFFIX not exist"
+  exit 1
+fi
+
+# Region列表,如果是跨集群的模式,列表不能为空且数量大于1
+regions=()
+echo "env REGION_LIST $REGION_LIST"
+if [ $REGION_LIST ] && [ -n $REGION_LIST ]; then 
+  regions=(`echo $REGION_LIST | sed -e "s/,/ /g"`);
+fi
+
+# 部署类型
+# 0代表单Region模式
+# 1代表跨Region模式
+deploy_mode=0
+if [[ ${#regions[*]} -gt 1 ]];
+then
+  echo "deploy a multi-region cluster";
+  deploy_mode=1
+else
+  echo "deploy a single-region cluster";
+fi
+
+# 3.检查各个Region的环境变量
+if [[ ${#regions[*]} -gt 1 ]]
+then
+  for r in ${regions[*]}
+  do
+    r=`echo $r | tr '[:lower:]' '[:upper:]'`
+    replicasRegion=`eval echo '$'"REPLICAS_${r}"`
+    if [ -z $replicasRegion ]
+    then
+      echo "env REPLICAS_${r} not exist"
+      exit 1
+    fi
+    namespaceRegion=`eval echo '$'"CNP_NAMESPACE_${r}"`
+    if [ -z $namespaceRegion ]
+    then
+      echo "env CNP_NAMESPACE_${r} not exist"
+      exit 1
+    fi
+    domainSuffixRegion=`eval echo '$'"CNP_DOMAIN_SUFFIX_${r}"`
+    if [ -z $domainSuffixRegion ]
+    then
+      echo "env CNP_DOMAIN_SUFFIX_${r} not exist"
+      exit 1
+    fi
+  done
+fi
+
+shardCount=$SHARD
+replicaCount=$REPLICAS
+clusterName=${CNP_APP_LABEL}
+namespace=${CNP_NAMESPACE}
+domainSuffix=${CNP_DOMAIN_SUFFIX}
+region=${CNP_REGION}
+regionUpper=`echo $region | tr '[:lower:]' '[:upper:]'`
+appName=${CNP_APP_NAME} 		# 单集群模式rhbdp-ch-000245; 跨集群模式ch-000245
+component=${CNP_COMPONENT}
+
+# 磁盘类型
+# -1代表本地
+# 0代表chubaofs冷热
+# 1代表chubaofs共享
+# 2代表clouddisk冷热
+# 3代表clouddisk共享
+# 4代表cloudfile冷热
+# 5代表cloudfile共享
+diskType="local"
+if [ ! ${CH_DISK_TYPE} ]; then
+  diskType="local"
+else
+  diskType=${CH_DISK_TYPE}
+fi
+
+tcpPort=9600
+password="NTliOGQ3YjRiY2MyNTc4"
+FULL_HOST_NAME=$HOST.$namespace.svc.$domainSuffix
+
+if [ $TCP_PORT ];then
+    tcpPort=$TCP_PORT
+fi
+
+if [ $PASSWORD ];then
+    password=$PASSWORD
+fi
+
+CH_CONFIGD=${CHROOT}/config.d #config.xml的子文件
+CH_USERS_DIR=${CHROOT}/users
+CH_METRIKA_DIR=${CHROOT}/metrika
+
+mkdir -p ${CH_CONFIGD}
+mkdir -p ${CH_USERS_DIR}
+mkdir -p ${CH_METRIKA_DIR}
+
+createConfigFileBase() {
+  /usr/bin/mkdir -p ${CHROOT}/user_scripts/udf
+
+  if [ -d /cnp/config ]; then
+    cp -L -r /cnp/config//*function_udf.xml ${CHROOT}
+    cp -L -r /cnp/config//*function_udf.py ${CHROOT}/user_scripts/udf
+    cp -L -r /cnp/config/ch_base_config.xml ${CHROOT}/config.xml
+    cp -L -r /cnp/config/ch_zookeeper.xml ${CH_CONFIGD}/zookeeper.xml
+    cp -L -r /cnp/config/ch_users.xml ${CH_USERS_DIR}/users.xml
+  fi
+
+  # offline文件处理
+  if [ -f "/cnp/config/offline" ]; then
+    cp -L -r /cnp/config/offline ${CHROOT}/offline
+  else
+    # 旧的offline文件需要删除
+    if [ -f "${CHROOT}/offline" ]; then
+      /usr/bin/rm ${CHROOT}/offline
+    fi
+  fi
+
+  # py脚本添加可执行权限
+  /usr/bin/chmod +x ${CHROOT}/user_scripts/udf/*function_udf.py
+
+  # 修改host配置
+  sed -i -e '$!N;/\n.*interserver_http_host/!P;D' ${CHROOT}/config.xml
+  sed -i "s/.*<interserver_http_host>.*<\/interserver_http_host>-->$/    <interserver_http_host>$FULL_HOST_NAME<\/interserver_http_host>/" ${CHROOT}/config.xml
+
+  # 修改磁盘类型,打开存算分离开关
+  #chubaofs冷热
+  if [ $diskType == "chubaofs-cold" ]; then
+    echo "volumes is chubaofs cold"
+    #挂载chubaofs
+    /usr/bin/mkdir -p /mnt/chubaofs0
+    cd /usr/local/bin && python cfs-mount.py  --volname $clusterName --mountpoint /mnt/chubaofs0 >> ./cfs-client.log
+    #生成配置
+    volumes="chubaofs0"
+    type="local"
+    path="\/mnt\/chubaofs0\/0$SHRAD_INDEX\/0$REPLICA_INDEX\/data\/"
+    sed -i "s/<!--\$DISKS>/<disks>/" ${CHROOT}/config.xml
+    sed -i "s/<\$DISKTYPE>/<$volumes>/" ${CHROOT}/config.xml
+    sed -i "s/\$TYPE/$type/" ${CHROOT}/config.xml
+    sed -i "s/\$PATH/$path/" ${CHROOT}/config.xml
+    sed -i "s/<\/\$DISKTYPE>/<\/$volumes>/" ${CHROOT}/config.xml
+    sed -i "s/<\/\$DISKS-->/<\/disks>/" ${CHROOT}/config.xml
+    sed -i "s/<!--\$COLD>/<cold>/" ${CHROOT}/config.xml
+    sed -i "s/\$COLDDISKTYPE/$volumes/" ${CHROOT}/config.xml
+    sed -i "s/<\/\$COLD-->/<\/cold>/" ${CHROOT}/config.xml
+    
+    regex="<!--\\\$MOVE_FACTOR:(.*)-->"
+    replacement="<move_factor>\1</move_factor>"
+    sed -E -i "s|$regex|$replacement|g" ${CHROOT}/config.xml
+
+  #chubaofs共享
+  elif [ $diskType == "chubaofs-shared" ]; then
+    echo "volumes is chubaofs share"
+    #挂载chubaofs
+    /usr/bin/mkdir -p /mnt/chubaofs0
+    cd /usr/local/bin && python cfs-mount.py  --volname $clusterName --mountpoint /mnt/chubaofs0 >> ./cfs-client.log
+    #生成配置
+    volumes="chubaofs0_cache"
+    type="nfs"
+    path="\/mnt\/chubaofs0\/0$SHRAD_INDEX\/data\/"
+    sed -i "s/<!--\$DISKS>/<disks>/" ${CHROOT}/config.xml
+    sed -i "s/<\$DISKTYPE>/<$volumes>/" ${CHROOT}/config.xml
+    sed -i "s/\$TYPE/$type/" ${CHROOT}/config.xml
+    sed -i "s/\$PATH/$path/" ${CHROOT}/config.xml
+    sed -i "s/<\/\$DISKTYPE>/<\/$volumes>/" ${CHROOT}/config.xml
+    sed -i "s/<\/\$DISKS-->/<\/disks>/" ${CHROOT}/config.xml
+    sed -i "s/<!--\$DISKTYPE-->default/$volumes/" ${CHROOT}/config.xml
+
+    #开启存算配置
+    sed -i "s#<allow_remote_fs_zero_copy_replication>0</allow_remote_fs_zero_copy_replication>#<allow_remote_fs_zero_copy_replication>1</allow_remote_fs_zero_copy_replication>#" ${CHROOT}/config.xml
+
+  #chubaofs共享用于冷热模式
+  elif [ $diskType == "chubaofs-shared-for-cold" ]; then
+    echo "volumes is chubaofs share for cold"
+    #挂载chubaofs
+    /usr/bin/mkdir -p /mnt/chubaofs0
+    cd /usr/local/bin && python cfs-mount.py  --volname $clusterName --mountpoint /mnt/chubaofs0 >> ./cfs-client.log
+    #生成配置
+    coldDisk="chubaofs0"
+    volumes="chubaofs0_cache"
+    type="nfs"
+    path="\/mnt\/chubaofs0\/0$SHRAD_INDEX\/data\/"
+    sed -i "s/<!--\$DISKS>/<disks>/" ${CHROOT}/config.xml
+    sed -i "s/<\/\$DISKS-->/<\/disks>/" ${CHROOT}/config.xml
+    #冷热模式暂不使用cache
+    sed -i "s/\$TYPE/$type/" ${CHROOT}/config.xml
+    sed -i "s/\$PATH/$path/" ${CHROOT}/config.xml
+    sed -i "s/<\$DISKTYPE>/<!--$volumes>/" ${CHROOT}/config.xml
+    sed -i "s/<\/\$DISKTYPE>/<\/$volumes-->/" ${CHROOT}/config.xml
+    sed -i "s/<!--\$COLD>/<cold>/" ${CHROOT}/config.xml
+    sed -i "s/\$COLDDISKTYPE/$coldDisk/" ${CHROOT}/config.xml
+    sed -i "s/<\/\$COLD-->/<\/cold>/" ${CHROOT}/config.xml
+    regex="<!--\\\$MOVE_FACTOR:(.*)-->"
+    replacement="<move_factor>\1</move_factor>"
+    sed -E -i "s|$regex|$replacement|g" ${CHROOT}/config.xml
+
+    #开启存算配置
+    sed -i "s#<allow_remote_fs_zero_copy_replication>0</allow_remote_fs_zero_copy_replication>#<allow_remote_fs_zero_copy_replication>1</allow_remote_fs_zero_copy_replication>#" ${CHROOT}/config.xml
+  #local本地
+  else
+    echo "volumes is local"
+  fi
+
+  # 修改users配置的密码
+  sed -i -e "s/<password>NTliOGQ3YjRiY2MyNTc4<\/password>/<password>$password<\/password>/" ${CH_USERS_DIR}/users.xml
+  
+  # 修改负载均衡方式
+  # 跨集群部署模式需要使用"NEAREST_HOSTNAME"负载均衡算法
+  loadBalancing="random"
+  if [ $deploy_mode == 1 ]
+  then
+    loadBalancing="nearest_hostname"
+  fi
+  sed -i -e "s/<load_balancing>random<\/load_balancing>/<load_balancing>$loadBalancing<\/load_balancing>/" ${CH_USERS_DIR}/users.xml
+}
+
+# writes indented line with \n into metrika file.
+writeILineToMetrika() {
+  indent=$1
+  line=$2
+  iLine=""
+  if [ $indent -gt 0 ]; then
+		# Prepare indentation template %16s
+		iLine=$(printf "%*s" $indent " ") # 使用空格填充左边部分
+	fi
+	iLine+=$line
+	echo "$iLine" >> ${CH_METRIKA_DIR}/metrika.xml #echo必须加双引号，否则会忽略左边空格
+}
+
+createConfigFileMetrika() {
+  cat /dev/null > ${CH_METRIKA_DIR}/metrika.xml
+
+  writeILineToMetrika 0 "<yandex>"
+
+  writeILineToMetrika 0 "<clickhouse_remote_servers>"
+  # set cluster.
+  writeILineToMetrika 4 "<$clusterName>"
+  if [ $deploy_mode == 0 ]
+  then
+    for((i=0;i<$shardCount;i++))
+    do
+      writeILineToMetrika 12 "<shard>"
+      writeILineToMetrika 16 "<internal_replication>true</internal_replication>"
+      for((j=0;j<$replicaCount;j++))
+      do
+        remoteServersReplicaHostname="$hostname-$i-$j.$namespace.svc.$domainSuffix"
+        writeILineToMetrika 16 "<replica>"
+        writeILineToMetrika 16 "    <host>$remoteServersReplicaHostname</host>"
+        writeILineToMetrika 16 "    <port>$tcpPort</port>"
+        writeILineToMetrika 16 "    <user>default</user>"
+        writeILineToMetrika 16 "    <password>$password</password>"
+        writeILineToMetrika 16 "</replica>"
+      done
+      writeILineToMetrika 12 "</shard>"
+    done
+  else
+    for((i=0;i<$shardCount;i++))
+    do
+      writeILineToMetrika 12 "<shard>"
+      writeILineToMetrika 16 "<internal_replication>true</internal_replication>"
+      for r in ${regions[*]}
+      do
+        rUpper=`echo $r | tr '[:lower:]' '[:upper:]'`
+        replicaCountRegion=`eval echo '$'"REPLICAS_${rUpper}"`
+        namespaceRegion=`eval echo '$'"CNP_NAMESPACE_${rUpper}"`
+        domainSuffixRegion=`eval echo '$'"CNP_DOMAIN_SUFFIX_${rUpper}"`
+        for((j=0;j<$replicaCountRegion;j++))
+        do
+          remoteServersReplicaHostname="$r-$appName-$component-$i-$j.$namespaceRegion.svc.$domainSuffixRegion"
+          writeILineToMetrika 16 "<replica>"
+          writeILineToMetrika 16 "    <host>$remoteServersReplicaHostname</host>"
+          writeILineToMetrika 16 "    <port>$tcpPort</port>"
+          writeILineToMetrika 16 "    <user>default</user>"
+          writeILineToMetrika 16 "    <password>$password</password>"
+          writeILineToMetrika 16 "</replica>"
+        done
+      done
+      writeILineToMetrika 12 "</shard>"
+    done
+  fi
+  writeILineToMetrika 4 "</$clusterName>"
+
+  # set system_cluster.
+  writeILineToMetrika 4 "<system_cluster>"
+  if [ $deploy_mode == 0 ]
+  then
+    for((i=0;i<$shardCount;i++))
+    do
+      for((j=0;j<$replicaCount;j++))
+      do
+        writeILineToMetrika 12 "<shard>"
+        writeILineToMetrika 16 "<internal_replication>false</internal_replication>"
+        remoteServersReplicaHostname="$hostname-$i-$j.$namespace.svc.$domainSuffix"
+        writeILineToMetrika 16 "<replica>"
+        writeILineToMetrika 16 "    <host>$remoteServersReplicaHostname</host>"
+        writeILineToMetrika 16 "    <port>$tcpPort</port>"
+        writeILineToMetrika 16 "    <user>default</user>"
+        writeILineToMetrika 16 "    <password>$password</password>"
+        writeILineToMetrika 16 "</replica>"
+        writeILineToMetrika 12 "</shard>"
+      done
+    done
+  else
+    for((i=0;i<$shardCount;i++))
+    do
+      for r in ${regions[*]}
+      do
+        rUpper=`echo $r | tr '[:lower:]' '[:upper:]'`
+        replicaCountRegion=`eval echo '$'"REPLICAS_${rUpper}"`
+        namespaceRegion=`eval echo '$'"CNP_NAMESPACE_${rUpper}"`
+        domainSuffixRegion=`eval echo '$'"CNP_DOMAIN_SUFFIX_${rUpper}"`
+        for((j=0;j<$replicaCountRegion;j++))
+        do
+          writeILineToMetrika 12 "<shard>"
+          writeILineToMetrika 16 "<internal_replication>false</internal_replication>"
+          remoteServersReplicaHostname="$r-$appName-$component-$i-$j.$namespaceRegion.svc.$domainSuffixRegion"
+          writeILineToMetrika 16 "<replica>"
+          writeILineToMetrika 16 "    <host>$remoteServersReplicaHostname</host>"
+          writeILineToMetrika 16 "    <port>$tcpPort</port>"
+          writeILineToMetrika 16 "    <user>default</user>"
+          writeILineToMetrika 16 "    <password>$password</password>"
+          writeILineToMetrika 16 "</replica>"
+          writeILineToMetrika 12 "</shard>"
+        done
+      done
+    done
+  fi
+  writeILineToMetrika 4 "</system_cluster>"
+  writeILineToMetrika 0 "</clickhouse_remote_servers>"
+
+  #set macros.
+  #check SHRAD_INDEX,REPLICA_INDEX
+  #判断是否大于上限
+  if [ $SHRAD_INDEX -ge $shardCount ]; then
+    echo "shard index invalid, current is "$SHRAD_INDEX
+    exit 1
+  fi
+  if [ $REPLICA_INDEX -ge $replicaCount ]; then
+    echo "replica index invalid, current is "$REPLICA_INDEX
+    exit 1
+  fi
+  
+  replicaCountRegion=`eval echo '$'"REPLICAS_${regionUpper}"`
+  if [ $deploy_mode == 1 ] && [ $REPLICA_INDEX -ge $replicaCountRegion ]; then
+    echo "replica index invalid, current is "$REPLICA_INDEX
+    exit 1
+  fi
+
+  if [ $deploy_mode == 0 ]
+  then
+    writeILineToMetrika 0 ""
+    writeILineToMetrika 0 "<macros>"
+    writeILineToMetrika 0 "    <shard_dict>1</shard_dict>"
+    writeILineToMetrika 0 "    <replica_dict>0$SHRAD_INDEX-0$REPLICA_INDEX</replica_dict>"
+    writeILineToMetrika 0 "    <shard>0$SHRAD_INDEX</shard>"
+    writeILineToMetrika 0 "    <replica>0$REPLICA_INDEX</replica>"
+    writeILineToMetrika 0 "</macros>"
+    writeILineToMetrika 0 ""
+  else
+    writeILineToMetrika 0 ""
+    writeILineToMetrika 0 "<macros>"
+    writeILineToMetrika 0 "    <shard_dict>1</shard_dict>"
+    writeILineToMetrika 0 "    <replica_dict>${region}_0$SHRAD_INDEX-0$REPLICA_INDEX</replica_dict>"
+    writeILineToMetrika 0 "    <shard>0$SHRAD_INDEX</shard>"
+    writeILineToMetrika 0 "    <replica>${region}_0$REPLICA_INDEX</replica>"
+    writeILineToMetrika 0 "</macros>"
+    writeILineToMetrika 0 ""  
+  fi
+
+  # set zookeepers.
+  cat >> ${CH_METRIKA_DIR}/metrika.xml << EOF
+<networks>
+   <ip>::/0</ip>
+</networks>
+
+<clickhouse_compression>
+<case>
+  <min_part_size>10000000000</min_part_size>
+  <min_part_size_ratio>0.01</min_part_size_ratio>
+  <method>lz4</method>
+</case>
+</clickhouse_compression>
+
+</yandex>
+EOF
+}
+
+deleteOfflineNode() {
+  if [ -f "${CHROOT}/offline" ]; then
+    for OFFLINE_POD in  `cat ${CHROOT}/offline`
+    do
+      if [[ "${OFFLINE_POD}" =~ ^[a-z0-9]{1,9}-ch-[0-9]{1,9}-clickhouse-[0-9]{1,3}-.*[0-9]{1,3}$ ]];then
+        POS_1=`grep "${OFFLINE_POD}" ${CH_METRIKA_DIR}/metrika.xml -n|cut -f1 -d:|head -n 1`
+        let POS_TMP=${POS_1}+0
+        # if pod not exist,print warn info and ignore,POS_1 must start >= 6
+        if [ ${POS_TMP} -le 6 ]; then
+          echo "delete pod ${OFFLINE_POD} from ${CH_METRIKA_DIR}/metrika.xml faild, pod not exist"
+        else
+          let OFFSET_1_START=${POS_1}-1
+          let OFFSET_1_END=${POS_1}+4
+
+          # 删从OFFSET_1-1到OFFSET_1+4
+          sed -i ${OFFSET_1_START}','${OFFSET_1_END}'d' ${CH_METRIKA_DIR}/metrika.xml
+
+          pos_2=`grep "${OFFLINE_POD}" ${CH_METRIKA_DIR}/metrika.xml -n|cut -f1 -d:|tail -n 1`
+          # if pod not exist,print warn info and ignore
+          let OFFSET_2_START=${pos_2}-3
+          let OFFSET_2_END=${pos_2}+5
+
+          # 删从OFFSET_2-3到OFFSET_2+5
+          sed -i ${OFFSET_2_START}','${OFFSET_2_END}'d' ${CH_METRIKA_DIR}/metrika.xml
+
+          echo "delete pod ${OFFLINE_POD} from ${CH_METRIKA_DIR}/metrika.xml success"
+        fi
+      else
+        echo "invlid pod ${OFFLINE_POD} for delete"
+      fi
+    done
+  fi
+}
+
+createConfigFileBase
+createConfigFileMetrika
+deleteOfflineNode
