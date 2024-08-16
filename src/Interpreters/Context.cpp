@@ -19,6 +19,8 @@
 #include <Common/SharedLockGuard.h>
 #include <Common/PageCache.h>
 #include <Coordination/KeeperDispatcher.h>
+#include <Storages/Consensus/RaftDispatcher.h>
+#include <Compression/ICompressionCodec.h>
 #include <Core/BackgroundSchedulePool.h>
 #include <Formats/FormatFactory.h>
 #include <Databases/IDatabase.h>
@@ -416,6 +418,8 @@ struct ContextSharedPart : boost::noncopyable
 #if USE_NURAFT
     mutable std::mutex keeper_dispatcher_mutex;
     mutable std::shared_ptr<KeeperDispatcher> keeper_dispatcher TSA_GUARDED_BY(keeper_dispatcher_mutex);
+    mutable std::mutex raft_dispatcher_mutex;
+    mutable std::shared_ptr<RaftDispatcher> raft_dispatcher TSA_GUARDED_BY(raft_dispatcher_mutex);
 #endif
 
     ContextSharedPart()
@@ -3455,7 +3459,6 @@ void Context::shutdownKeeperDispatcher() const
 #endif
 }
 
-
 void Context::updateKeeperConfiguration([[maybe_unused]] const Poco::Util::AbstractConfiguration & config)
 {
 #if USE_NURAFT
@@ -3467,6 +3470,62 @@ void Context::updateKeeperConfiguration([[maybe_unused]] const Poco::Util::Abstr
 #endif
 }
 
+void Context::initializeRaftDispatcher() const
+{
+#if USE_NURAFT
+    std::lock_guard lock(shared->raft_dispatcher_mutex);
+
+    if (shared->raft_dispatcher)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Trying to initialize Raft multiple times");
+
+    const auto & config = getConfigRef();
+    if (config.has("raft_server"))
+    {
+        shared->raft_dispatcher = std::make_shared<RaftDispatcher>();
+        shared->raft_dispatcher->initialize(config);
+    }
+#endif
+}
+
+void Context::shutdownRaftDispatcher() const
+{
+#if USE_NURAFT
+    std::lock_guard lock(shared->raft_dispatcher_mutex);
+    if (shared->raft_dispatcher)
+    {
+        shared->raft_dispatcher->shutdown();
+        shared->raft_dispatcher.reset();
+    }
+#endif
+}
+
+void Context::updateRaftConfiguration([[maybe_unused]] const Poco::Util::AbstractConfiguration & config)
+{
+#if USE_NURAFT
+    std::lock_guard lock(shared->raft_dispatcher_mutex);
+    if (!shared->raft_dispatcher)
+        return;
+
+    shared->raft_dispatcher->updateConfiguration(config);
+#endif
+}
+
+#if USE_NURAFT
+std::shared_ptr<RaftDispatcher> Context::getRaftDispatcher() const
+{
+    std::lock_guard lock(shared->raft_dispatcher_mutex);
+    if (!shared->raft_dispatcher)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Raft must be initialized before requests");
+
+    return shared->raft_dispatcher;
+}
+
+std::shared_ptr<RaftDispatcher> Context::tryGetRaftDispatcher() const
+{
+    std::lock_guard lock(shared->raft_dispatcher_mutex);
+    return shared->raft_dispatcher;
+}
+#endif
 
 zkutil::ZooKeeperPtr Context::getAuxiliaryZooKeeper(const String & name) const
 {

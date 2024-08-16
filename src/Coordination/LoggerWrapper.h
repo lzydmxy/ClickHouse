@@ -7,6 +7,12 @@
 namespace DB
 {
 
+
+namespace ErrorCodes
+{
+    extern const int BAD_ARGUMENTS;
+}
+
 class LoggerWrapper : public nuraft::logger
 {
 private:
@@ -29,7 +35,11 @@ public:
         : log(getLogger(name))
         , level(level_)
     {
-        log->setLevel(static_cast<int>(LEVELS.at(level)));
+        if (LEVELS.find(level) != LEVELS.end())
+            log->setLevel(static_cast<int>(LEVELS.at(level)));
+        else
+            throw Exception(ErrorCodes::BAD_ARGUMENTS, "Unknown log level {}",
+                SettingFieldLogsLevelTraits::toString(level));
     }
 
     void put_details(

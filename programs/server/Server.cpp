@@ -102,6 +102,7 @@
 #include <Server/KeeperReadinessHandler.h>
 #include <Server/HTTP/HTTPServer.h>
 #include <Server/CloudPlacementInfo.h>
+#include <Storages/Consensus/RaftConnectionHandlerFactory.h>
 #include <Interpreters/AsynchronousInsertQueue.h>
 #include <Core/ServerSettings.h>
 #include <filesystem>
@@ -758,6 +759,8 @@ try
           *  table engines could use Context on destroy.
           */
         LOG_INFO(log, "Shutting down storages.");
+
+        global_context->shutdownRaftDispatcher();
 
         global_context->shutdown();
 
@@ -1445,6 +1448,9 @@ try
             if (config->has("keeper_server"))
                 global_context->updateKeeperConfiguration(*config);
 
+            if (config->has("raft_server"))
+                global_context->updateRaftConfiguration(*config);
+
             /// Reload the number of threads for global pools.
             /// Note: If you specified it in the top level config (not it config of default profile)
             /// then ClickHouse will use it exactly.
@@ -1880,6 +1886,47 @@ try
     }
 
     LOG_DEBUG(log, "Loaded metadata.");
+
+    if (config().has("raft_server"))
+    {
+#if USE_NURAFT
+        /// Initialize keeper RAFT.
+        global_context->initializeRaftDispatcher();
+        auto config_getter = [this] () -> const Poco::Util::AbstractConfiguration &
+        {
+            return global_context->getConfigRef();
+        };
+
+        for (const auto & listen_host : listen_hosts)
+        {
+            /// TCP Keeper
+            const char * port_name = "raft_server.server_port";
+            createServer(
+                config(), listen_host, port_name, listen_try, false, servers,
+                [&](UInt16 port) -> ProtocolServerAdapter
+                {
+                    Poco::Net::ServerSocket socket;
+                    auto address = socketBindListen(config(), socket, listen_host, port);
+                    auto receive_timeout_sec = config().getUInt64("raft_server.socket_receive_timeout_sec", DBMS_DEFAULT_RECEIVE_TIMEOUT_SEC);
+                    auto send_timeout_sec = config().getUInt64("raft_server.socket_receive_timeout_sec", DBMS_DEFAULT_RECEIVE_TIMEOUT_SEC);
+                    socket.setReceiveTimeout(receive_timeout_sec);
+                    socket.setSendTimeout(send_timeout_sec);
+                    return ProtocolServerAdapter(
+                        listen_host,
+                        port_name,
+                        "Raft (tcp): " + address.toString(),
+                        std::make_unique<TCPServer>(
+                            new RaftConnectionHandlerFactory(
+                                config_getter, global_context,
+                                global_context->getSettingsRef().receive_timeout.totalSeconds(),
+                                global_context->getSettingsRef().send_timeout.totalSeconds(),
+                                false), server_pool, socket));
+                });
+        }
+#else
+        throw Exception(ErrorCodes::SUPPORT_IS_DISABLED, "ClickHouse server built without NuRaft library. Cannot use internal coordination.");
+#endif
+    }
 
     /// Init trace collector only after trace_log system table was created
     /// Disable it if we collect test coverage information, because it will work extremely slow.

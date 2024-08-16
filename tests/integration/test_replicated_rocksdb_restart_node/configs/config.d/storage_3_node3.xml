@@ -1,0 +1,39 @@
+<clickhouse>
+     <raft_server>
+        <server_id>3</server_id>
+        <server_port>9001</server_port>
+        <internal_port>9002</internal_port>
+        <snapshot_interval_seconds>1</snapshot_interval_seconds>
+        <raft_configuration>
+            <operation_timeout_ms>1000</operation_timeout_ms>
+            <election_timeout_lower_bound_ms>1000</election_timeout_lower_bound_ms>
+            <election_timeout_upper_bound_ms>2000</election_timeout_upper_bound_ms>
+            <snapshot_distance>1000</snapshot_distance>
+        </raft_configuration>
+        <cluster>
+            <server>
+                <id>1</id>
+                <host>node1</host>
+                <port>9001</port>
+                <internal_port>9002</internal_port>
+            </server>
+            <server>
+                <id>2</id>
+                <host>node2</host>
+                <port>9001</port>
+                <internal_port>9002</internal_port>
+            </server>
+            <server>
+                <id>3</id>
+                <host>node3</host>
+                <port>9001</port>
+                <internal_port>9002</internal_port>
+            </server>
+        </cluster>
+    </raft_server>
+
+    <macros>
+        <shard>0</shard>
+    </macros>
+
+</clickhouse>

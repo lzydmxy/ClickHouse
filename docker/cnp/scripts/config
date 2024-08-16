@@ -2,34 +2,34 @@
 
 set -x
 
-# 公共环境变量
-#export REGION_LIST=rhbdp,lf06           # Region列表,如果大于2个则表示是跨集群的部署方式
-#export CNP_REGION=rhbdp			# 当前Region: rhbdp
-#export SHARD=3  			# CK Shard数量 
-#export CNP_APP_NAME=ch-000245		# 单集群模式rhbdp-ch-000245; 跨集群模式ch-000245
+# global env
+#export REGION_LIST=rhbdp,lf06      # Region list, If list length more than 2, it means a cross-cluster deployment method.
+#export CNP_REGION=rhbdp			# current Region: rhbdp
+#export SHARD=3
+#export CNP_APP_NAME=ch-000245		# example: single-cluster: rhbdp-ch-000245; cross-cluster:ch-000245
 #export CNP_COMPONENT="clickhouse"	# clickhouse
 
-# 当前Region的环境变量
+# env of current region
 #export CNP_APP_LABEL="RLRH_CK_Pub_85"
-#export REPLICAS=2			# 当前Region的Replica数量
+#export REPLICAS=2
 #export CNP_NAMESPACE="realtime-data-platform"
 #export CNP_DOMAIN_SUFFIX="rhbdp.n.jd.local"
 
-# Region rhbdp的环境变量
+# env of Region rhbdp
 #export REPLICAS_rhbdp=2
 #export CNP_NAMESPACE_rhbdp=realtime-data-platform
 #export CNP_DOMAIN_SUFFIX_rhbdp=rhbdp.n.jd.local
 
-# Region lf06的环境变量
+# env of Region lf06
 #export REPLICAS_lf06=2
 #export CNP_NAMESPACE_lf06=realtime-data-platform
 #export CNP_DOMAIN_SUFFIX_lf06=lf06.n.jd.local
 
-CHROOT=/etc/clickhouse-server		# 生成的配置文件的路径
+CHROOT=/etc/clickhouse-server		# path of clickhouse config file
 #CHROOT=.				
 
 HOST=$(hostname -s)
-# 示例：
+# Example
 #HOST="rhbdp-ch-000245-clickhouse-0-0"
 if [[ $HOST =~ (.*)-([0-9]+)-([0-9]+)$ ]]; then
   NAME=${BASH_REMATCH[1]}
@@ -48,8 +48,8 @@ echo "replica_index=" $REPLICA_INDEX
 #echo "SUFFIX=" $SUFFIX
 hostname=${NAME}
 
-# 判断环境变量是否存在
-# 1.公共环境变量
+# check env
+# 1.global env
 if [ ! $SHARD ]; then
   echo "env SHARD not exist"
   exit 1
@@ -63,7 +63,7 @@ elif [ ! $CNP_COMPONENT ]; then
   echo "env CNP_COMPONENT not exist"
   exit 1
 fi
-# 2.当前Region的环境变量
+# 2.env of current region
 if [ ! $REPLICAS ]; then
   echo "env REPLICAS not exist"
   exit 1
@@ -78,16 +78,16 @@ elif [ ! ${CNP_DOMAIN_SUFFIX} ]; then
   exit 1
 fi
 
-# Region列表,如果是跨集群的模式,列表不能为空且数量大于1
+# Region list, if it is a cross-cluster mode, the list cannot be empty and the length is greater than 1
 regions=()
 echo "env REGION_LIST $REGION_LIST"
 if [ $REGION_LIST ] && [ -n $REGION_LIST ]; then 
   regions=(`echo $REGION_LIST | sed -e "s/,/ /g"`);
 fi
 
-# 部署类型
-# 0代表单Region模式
-# 1代表跨Region模式
+# deploy_mode
+# 0: single Region mode
+# 1: cross-Region mode
 deploy_mode=0
 if [[ ${#regions[*]} -gt 1 ]];
 then
@@ -97,7 +97,7 @@ else
   echo "deploy a single-region cluster";
 fi
 
-# 3.检查各个Region的环境变量
+# 3.check env of Region
 if [[ ${#regions[*]} -gt 1 ]]
 then
   for r in ${regions[*]}
@@ -131,22 +131,25 @@ namespace=${CNP_NAMESPACE}
 domainSuffix=${CNP_DOMAIN_SUFFIX}
 region=${CNP_REGION}
 regionUpper=`echo $region | tr '[:lower:]' '[:upper:]'`
-appName=${CNP_APP_NAME} 		# 单集群模式rhbdp-ch-000245; 跨集群模式ch-000245
+appName=${CNP_APP_NAME} 		# single-cluster: rhbdp-ch-000245; cross-cluster: ch-000245
 component=${CNP_COMPONENT}
 
-# 磁盘类型
-# -1代表本地
-# 0代表chubaofs冷热
-# 1代表chubaofs共享
-# 2代表clouddisk冷热
-# 3代表clouddisk共享
-# 4代表cloudfile冷热
-# 5代表cloudfile共享
+# disk type
 diskType="local"
 if [ ! ${CH_DISK_TYPE} ]; then
   diskType="local"
 else
   diskType=${CH_DISK_TYPE}
+fi
+
+# storage type
+# mixed-row-and-column: mixed row and column storage
+# column: just for colum
+storageType="column"
+if [ ! ${CH_STORAGE_TYPE} ]; then
+  storageType="column"
+else
+  storageType=${CH_STORAGE_TYPE}
 fi
 
 tcpPort=9600
@@ -161,7 +164,7 @@ if [ $PASSWORD ];then
     password=$PASSWORD
 fi
 
-CH_CONFIGD=${CHROOT}/config.d #config.xml的子文件
+CH_CONFIGD=${CHROOT}/config.d #sub config file of config.xml
 CH_USERS_DIR=${CHROOT}/users
 CH_METRIKA_DIR=${CHROOT}/metrika
 
@@ -180,31 +183,30 @@ createConfigFileBase() {
     cp -L -r /cnp/config/ch_users.xml ${CH_USERS_DIR}/users.xml
   fi
 
-  # offline文件处理
+  # handle offline file
   if [ -f "/cnp/config/offline" ]; then
     cp -L -r /cnp/config/offline ${CHROOT}/offline
   else
-    # 旧的offline文件需要删除
+    # old offline file need to delete
     if [ -f "${CHROOT}/offline" ]; then
       /usr/bin/rm ${CHROOT}/offline
     fi
   fi
 
-  # py脚本添加可执行权限
+  # add executable permissions of python file
   /usr/bin/chmod +x ${CHROOT}/user_scripts/udf/*function_udf.py
 
-  # 修改host配置
+  # modify host
   sed -i -e '$!N;/\n.*interserver_http_host/!P;D' ${CHROOT}/config.xml
   sed -i "s/.*<interserver_http_host>.*<\/interserver_http_host>-->$/    <interserver_http_host>$FULL_HOST_NAME<\/interserver_http_host>/" ${CHROOT}/config.xml
 
-  # 修改磁盘类型,打开存算分离开关
-  #chubaofs冷热
+  # chubaofs for cold without shared mode
   if [ $diskType == "chubaofs-cold" ]; then
     echo "volumes is chubaofs cold"
-    #挂载chubaofs
+    #mount chubaofs
     /usr/bin/mkdir -p /mnt/chubaofs0
     cd /usr/local/bin && python cfs-mount.py  --volname $clusterName --mountpoint /mnt/chubaofs0 >> ./cfs-client.log
-    #生成配置
+    #generate config
     volumes="chubaofs0"
     type="local"
     path="\/mnt\/chubaofs0\/0$SHRAD_INDEX\/0$REPLICA_INDEX\/data\/"
@@ -222,13 +224,13 @@ createConfigFileBase() {
     replacement="<move_factor>\1</move_factor>"
     sed -E -i "s|$regex|$replacement|g" ${CHROOT}/config.xml
 
-  #chubaofs共享
+  #chubaofs-shared
   elif [ $diskType == "chubaofs-shared" ]; then
     echo "volumes is chubaofs share"
-    #挂载chubaofs
+    #mount chubaofs
     /usr/bin/mkdir -p /mnt/chubaofs0
     cd /usr/local/bin && python cfs-mount.py  --volname $clusterName --mountpoint /mnt/chubaofs0 >> ./cfs-client.log
-    #生成配置
+    #generate config
     volumes="chubaofs0_cache"
     type="nfs"
     path="\/mnt\/chubaofs0\/0$SHRAD_INDEX\/data\/"
@@ -240,23 +242,23 @@ createConfigFileBase() {
     sed -i "s/<\/\$DISKS-->/<\/disks>/" ${CHROOT}/config.xml
     sed -i "s/<!--\$DISKTYPE-->default/$volumes/" ${CHROOT}/config.xml
 
-    #开启存算配置
+    #open allow_remote_fs_zero_copy_replication
     sed -i "s#<allow_remote_fs_zero_copy_replication>0</allow_remote_fs_zero_copy_replication>#<allow_remote_fs_zero_copy_replication>1</allow_remote_fs_zero_copy_replication>#" ${CHROOT}/config.xml
 
-  #chubaofs共享用于冷热模式
+  #local disk for hot, chubaofs for cold with share mode
   elif [ $diskType == "chubaofs-shared-for-cold" ]; then
     echo "volumes is chubaofs share for cold"
-    #挂载chubaofs
+    #mount chubaofs
     /usr/bin/mkdir -p /mnt/chubaofs0
     cd /usr/local/bin && python cfs-mount.py  --volname $clusterName --mountpoint /mnt/chubaofs0 >> ./cfs-client.log
-    #生成配置
+    #generate config
     coldDisk="chubaofs0"
     volumes="chubaofs0_cache"
     type="nfs"
     path="\/mnt\/chubaofs0\/0$SHRAD_INDEX\/data\/"
     sed -i "s/<!--\$DISKS>/<disks>/" ${CHROOT}/config.xml
     sed -i "s/<\/\$DISKS-->/<\/disks>/" ${CHROOT}/config.xml
-    #冷热模式暂不使用cache
+    #chubaofs-shared-for-cold not use cache disk
     sed -i "s/\$TYPE/$type/" ${CHROOT}/config.xml
     sed -i "s/\$PATH/$path/" ${CHROOT}/config.xml
     sed -i "s/<\$DISKTYPE>/<!--$volumes>/" ${CHROOT}/config.xml
@@ -268,18 +270,44 @@ createConfigFileBase() {
     replacement="<move_factor>\1</move_factor>"
     sed -E -i "s|$regex|$replacement|g" ${CHROOT}/config.xml
 
-    #开启存算配置
+    # open allow_remote_fs_zero_copy_replication
     sed -i "s#<allow_remote_fs_zero_copy_replication>0</allow_remote_fs_zero_copy_replication>#<allow_remote_fs_zero_copy_replication>1</allow_remote_fs_zero_copy_replication>#" ${CHROOT}/config.xml
-  #local本地
   else
     echo "volumes is local"
   fi
 
-  # 修改users配置的密码
+  # gen mixed-row-and-column config
+  if [ $storageType == "mixed-row-and-column" ]; then
+    sed -i '/MIXED-ROW-AND-COLUMN-CONFIG/d' ${CHROOT}/config.xml
+
+    echo "storageType is mixed-row-and-column"
+    replicaNO=`echo ${POD_NAME} | sed 's#^.*-clickhouse-[0-9]\{1,\}-##'`
+    replicaNO=$((${replicaNO} + 1))
+    sed -i 's#<server_id>$SERVER_ID</server_id>#<server_id>'${replicaNO}'</server_id>#g' ${CHROOT}/config.xml
+
+    prePodName=`echo ${POD_NAME} | sed 's#-[0-9]$##'`
+    raftClusters="\n"
+
+    for r in `seq 1 ${REPLICAS}`
+    do
+      replicaHost="${prePodName}-$((${r}-1)).${CNP_NAMESPACE}.svc.${CNP_DOMAIN_SUFFIX}"
+      raftClusters="${raftClusters}""\t\t\t<server>\n"
+      raftClusters="${raftClusters}""\t\t\t\t<id>${r}</id>\n"
+      raftClusters="${raftClusters}""\t\t\t\t<host>${replicaHost}</host>\n"
+      raftClusters="${raftClusters}""\t\t\t\t<port>9025</port>\n"
+      raftClusters="${raftClusters}""\t\t\t\t<internal_port>9026</internal_port>\n"
+      raftClusters="${raftClusters}""\t\t\t</server>\n"
+    done
+    sed -i 's#<server>$RAFT_SERVER_LIST</server>#'${raftClusters}'#g' ${CHROOT}/config.xml
+  else
+    echo "storageType is column"
+  fi
+
+  # modify default users pwd
   sed -i -e "s/<password>NTliOGQ3YjRiY2MyNTc4<\/password>/<password>$password<\/password>/" ${CH_USERS_DIR}/users.xml
   
-  # 修改负载均衡方式
-  # 跨集群部署模式需要使用"NEAREST_HOSTNAME"负载均衡算法
+  # Modify load balancing method
+  # Cross-cluster deployment mode requires the use of "NEAREST_HOSTNAME" load balancing method
   loadBalancing="random"
   if [ $deploy_mode == 1 ]
   then
@@ -295,10 +323,10 @@ writeILineToMetrika() {
   iLine=""
   if [ $indent -gt 0 ]; then
 		# Prepare indentation template %16s
-		iLine=$(printf "%*s" $indent " ") # 使用空格填充左边部分
+		iLine=$(printf "%*s" $indent " ") # Use spaces to fill the left margin
 	fi
 	iLine+=$line
-	echo "$iLine" >> ${CH_METRIKA_DIR}/metrika.xml #echo必须加双引号，否则会忽略左边空格
+	echo "$iLine" >> ${CH_METRIKA_DIR}/metrika.xml #echo command must add double quotes, otherwise the left space will be ignored.
 }
 
 createConfigFileMetrika() {
@@ -404,7 +432,6 @@ createConfigFileMetrika() {
 
   #set macros.
   #check SHRAD_INDEX,REPLICA_INDEX
-  #判断是否大于上限
   if [ $SHRAD_INDEX -ge $shardCount ]; then
     echo "shard index invalid, current is "$SHRAD_INDEX
     exit 1
@@ -473,7 +500,7 @@ deleteOfflineNode() {
           let OFFSET_1_START=${POS_1}-1
           let OFFSET_1_END=${POS_1}+4
 
-          # 删从OFFSET_1-1到OFFSET_1+4
+          # delete from OFFSET_1-1 to OFFSET_1+4
           sed -i ${OFFSET_1_START}','${OFFSET_1_END}'d' ${CH_METRIKA_DIR}/metrika.xml
 
           pos_2=`grep "${OFFLINE_POD}" ${CH_METRIKA_DIR}/metrika.xml -n|cut -f1 -d:|tail -n 1`
@@ -481,7 +508,7 @@ deleteOfflineNode() {
           let OFFSET_2_START=${pos_2}-3
           let OFFSET_2_END=${pos_2}+5
 
-          # 删从OFFSET_2-3到OFFSET_2+5
+          # delete from OFFSET_2-3 to OFFSET_2+5
           sed -i ${OFFSET_2_START}','${OFFSET_2_END}'d' ${CH_METRIKA_DIR}/metrika.xml
 
           echo "delete pod ${OFFLINE_POD} from ${CH_METRIKA_DIR}/metrika.xml success"

@@ -285,14 +285,16 @@
     M(HTTPConnectionsTotal, "Total count of all sessions: stored in the pool and actively used right now for http hosts") \
     \
     M(AddressesActive, "Total count of addresses which are used for creation connections with connection pools") \
-
+    \
+    M(RaftThreads, "Number of total threads in the raft server for requests.") \
+    M(RaftThreadsActive, "Number of active threads in the raft server for requests.") \
+    M(RaftThreadsScheduled, "Number of scheduled threads in the raft server for requests.")
 
 #ifdef APPLY_FOR_EXTERNAL_METRICS
     #define APPLY_FOR_METRICS(M) APPLY_FOR_BUILTIN_METRICS(M) APPLY_FOR_EXTERNAL_METRICS(M)
 #else
     #define APPLY_FOR_METRICS(M) APPLY_FOR_BUILTIN_METRICS(M)
 #endif
-
 
 namespace CurrentMetrics
 {

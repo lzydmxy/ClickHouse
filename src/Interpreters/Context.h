@@ -174,6 +174,8 @@ using OrdinaryBackgroundExecutorPtr = std::shared_ptr<OrdinaryBackgroundExecutor
 struct PartUUIDs;
 using PartUUIDsPtr = std::shared_ptr<PartUUIDs>;
 class KeeperDispatcher;
+class RaftDispatcher;
+class Session;
 struct WriteSettings;
 
 class IInputFormat;
@@ -949,10 +951,17 @@ public:
 #if USE_NURAFT
     std::shared_ptr<KeeperDispatcher> getKeeperDispatcher() const;
     std::shared_ptr<KeeperDispatcher> tryGetKeeperDispatcher() const;
+
+    std::shared_ptr<RaftDispatcher> getRaftDispatcher() const;
+    std::shared_ptr<RaftDispatcher> tryGetRaftDispatcher() const;
 #endif
     void initializeKeeperDispatcher(bool start_async) const;
     void shutdownKeeperDispatcher() const;
     void updateKeeperConfiguration(const Poco::Util::AbstractConfiguration & config);
+
+    void initializeRaftDispatcher() const;
+    void shutdownRaftDispatcher() const;
+    void updateRaftConfiguration(const Poco::Util::AbstractConfiguration & config);
 
     /// Set auxiliary zookeepers configuration at server starting or configuration reloading.
     void reloadAuxiliaryZooKeepersConfigIfChanged(const ConfigurationPtr & config);

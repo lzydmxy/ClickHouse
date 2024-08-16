@@ -78,6 +78,7 @@ void registerStorageNATS(StorageFactory & factory);
 
 #if USE_ROCKSDB
 void registerStorageEmbeddedRocksDB(StorageFactory & factory);
+void registerStorageReplicatedRocksDB(StorageFactory & factory);
 #endif
 
 #if USE_LIBPQXX
@@ -184,6 +185,7 @@ void registerStorages()
 
     #if USE_ROCKSDB
     registerStorageEmbeddedRocksDB(factory);
+    registerStorageReplicatedRocksDB(factory);
     #endif
 
     #if USE_LIBPQXX

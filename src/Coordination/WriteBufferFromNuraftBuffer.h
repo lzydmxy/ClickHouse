@@ -22,7 +22,7 @@ private:
 
     nuraft::ptr<nuraft::buffer> buffer;
 
-    static constexpr size_t initial_size = 32;
+    static constexpr size_t initial_size = DBMS_DEFAULT_BUFFER_SIZE * 2;
     static constexpr size_t size_multiplier = 2;
 };
 
