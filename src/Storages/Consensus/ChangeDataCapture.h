@@ -111,10 +111,10 @@ private:
     void localConsume(StoragePtr target_table, ChangeDataPtr & data);
     bool tryExecuteQuery(std::string name, std::string query);
     bool is_exit {false};
+    RaftResponsePtr sink_res{nullptr};
     RaftDispatcherPtr dispatcher;
     Poco::Logger* log;
     Poco::Event sink_event;
-    RaftResponsePtr sink_res{nullptr};
 
     SettingsPtr settings;
     Poco::Event consume_event;
