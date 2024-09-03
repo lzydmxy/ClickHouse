@@ -107,10 +107,10 @@ void ChangeDataCapture::sink(ChangeDataPtr & data)
 
     sink_event.reset();
     sink_res = nullptr;
-    request->finish_callback = [this] (const RaftResponsePtr & response)
+    request->finish_callback = [self = shared_from_this()] (const RaftResponsePtr & response)
     {
-        sink_res = response;
-        sink_event.set();
+        self->sink_res = response;
+        self->sink_event.set();
     };
 
     dispatcher->putRequest(request);

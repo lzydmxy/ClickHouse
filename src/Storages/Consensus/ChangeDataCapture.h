@@ -93,7 +93,7 @@ struct ChangeDataBatchQueue
 
 using ChangeDataQueue = ConcurrentBoundedQueue<ChangeDataPtr>;
 
-class ChangeDataCapture 
+class ChangeDataCapture : public std::enable_shared_from_this<ChangeDataCapture>
 {
 public:
     ChangeDataCapture(RaftDispatcherPtr dispatcher_);

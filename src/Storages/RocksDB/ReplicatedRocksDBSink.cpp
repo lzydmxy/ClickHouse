@@ -63,10 +63,10 @@ void ReplicatedRocksDBSink::consume(Chunk chunk)
 
     change_data->block = std::make_shared<Block>(getHeader().cloneWithColumns(chunk.detachColumns()));
     LOG_DEBUG(log, "Sink consume to cdc, header {}", change_data->dumpHeader());
-    ChangeDataCapture cdc(dispatcher);
+    auto cdc = std::make_shared<ChangeDataCapture>(dispatcher);
     try
     {
-        cdc.sink(change_data);
+        cdc->sink(change_data);
     }
     catch(Exception ex)
     {

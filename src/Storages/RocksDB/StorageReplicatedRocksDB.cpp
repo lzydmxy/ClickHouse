@@ -281,10 +281,10 @@ void StorageReplicatedRocksDB::innerDelete(const MutationCommands & commands, Bl
 
     LOG_DEBUG(log, "Sink delete cdc header {}", change_data->dumpHeader());
 
-    ChangeDataCapture cdc(dispatcher);
+    auto cdc = std::make_shared<ChangeDataCapture>(dispatcher);
     try
     {
-        cdc.sink(change_data);
+        cdc->sink(change_data);
     }
     catch(Exception ex)
     {
