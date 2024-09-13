@@ -641,7 +641,7 @@ void LogSegmentStore::init()
         first_log_index.load(), last_log_index.load(),
         settings->logfile_segment_mb, settings->logfile_keep_count, settings->logfile_keep_minutes);
 
-    //remove_thread = std::make_unique<ThreadFromGlobalPool>([this] { removeSegmentThread(); });
+    remove_thread = std::make_unique<ThreadFromGlobalPool>([this] { removeSegmentThread(); });
 }
 
 void LogSegmentStore::close()
