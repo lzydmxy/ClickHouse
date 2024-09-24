@@ -7045,11 +7045,18 @@ MergeTreeData & MergeTreeData::checkStructureAndGetMergeTreeData(IStorage & sour
     if (query_to_string(my_snapshot->getPrimaryKeyAST()) != query_to_string(src_snapshot->getPrimaryKeyAST()))
         throw Exception(ErrorCodes::BAD_ARGUMENTS, "Tables have different primary key");
 
-    const auto check_definitions = [](const auto & my_descriptions, const auto & src_descriptions)
+    const auto check_definitions = [this](const auto & my_descriptions, const auto & src_descriptions)
     {
-        if (my_descriptions.size() != src_descriptions.size())
-            return false;
-
+        if (getSettings()->check_table_structure_completely)
+        {
+            if (my_descriptions.size() != src_descriptions.size())
+                return false;
+        }
+        else
+        {
+            if (my_descriptions.size() < src_descriptions.size())
+                return false;
+        }
         std::unordered_set<std::string> my_query_strings;
         for (const auto & description : my_descriptions)
             my_query_strings.insert(queryToString(description.definition_ast));
