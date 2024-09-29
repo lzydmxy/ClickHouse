@@ -7047,16 +7047,10 @@ MergeTreeData & MergeTreeData::checkStructureAndGetMergeTreeData(IStorage & sour
 
     const auto check_definitions = [this](const auto & my_descriptions, const auto & src_descriptions)
     {
-        if (getSettings()->check_table_structure_completely)
-        {
-            if (my_descriptions.size() != src_descriptions.size())
-                return false;
-        }
-        else
-        {
-            if (my_descriptions.size() < src_descriptions.size())
-                return false;
-        }
+        if ((getSettings()->check_table_structure_completely && my_descriptions.size() != src_descriptions.size())
+        || (!getSettings()->check_table_structure_completely && my_descriptions.size() < src_descriptions.size()))
+            return false;
+
         std::unordered_set<std::string> my_query_strings;
         for (const auto & description : my_descriptions)
             my_query_strings.insert(queryToString(description.definition_ast));

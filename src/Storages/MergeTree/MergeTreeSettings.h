@@ -81,7 +81,7 @@ struct Settings;
     M(UInt64, min_delay_to_mutate_ms, 10, "Min delay of mutating MergeTree table in milliseconds, if there are a lot of unfinished mutations", 0) \
     M(UInt64, max_delay_to_mutate_ms, 1000, "Max delay of mutating MergeTree table in milliseconds, if there are a lot of unfinished mutations", 0) \
     M(Bool, exclude_deleted_rows_for_part_size_in_merge, false, "Use an estimated source part size (excluding lightweight deleted rows) when selecting parts to merge", 0) \
-	M(Bool, check_table_structure_completely, false, "If true, tables must have same definitions. Otherwise, the dest table should have at least the same definitions as the source table, and can have more projections and secondary indices.", 0) \
+	M(Bool, check_table_structure_completely, false, "If true, tables must have identical definitions, including projections and secondary indices. Otherwise, the source table's projections and secondary indices must be a subset of those in the target table.", 0) \
     \
     /** Inserts settings. */ \
     M(UInt64, parts_to_delay_insert, 1000, "If table contains at least that many active parts in single partition, artificially slow down insert into table. Disabled if set to 0", 0) \
