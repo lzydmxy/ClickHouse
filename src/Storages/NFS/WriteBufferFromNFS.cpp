@@ -1,7 +1,9 @@
 #include "config.h"
 #include <IO/WriteHelpers.h>
 #include <Storages/NFS/WriteBufferFromNFS.h>
+#include <Common/filesystemHelpers.h>
 #include <Common/Throttler.h>
+#include <Common/logger_useful.h>
 #include <sys/uio.h>
 
 namespace ProfileEvents
@@ -21,6 +23,7 @@ extern const int CANNOT_OPEN_FILE;
 extern const int CANNOT_FSYNC;
 extern const int CANNOT_WRITE_TO_FILE_DESCRIPTOR;
 extern const int FILE_DOESNT_EXIST;
+extern const int CANNOT_CLOSE_FILE;
 }
 
 
@@ -54,7 +57,7 @@ struct WriteBufferFromNFS::WriteBufferFromNFSImpl
         if (o_direct)
         {
             if (fcntl(fd, F_NOCACHE, 1) == -1)
-                throw Exception(ErrorCodes::CANNOT_OPEN_FILE, "Cannot set F_NOCACHE on file {}", file_name);
+                throw Exception(ErrorCodes::CANNOT_OPEN_FILE, "Cannot set F_NOCACHE on file {}", nfs_file_path);
         }
 #endif
     }
@@ -63,7 +66,15 @@ struct WriteBufferFromNFS::WriteBufferFromNFSImpl
     {
         if (fd < 0)
             return;
-        ::close(fd);
+
+        int err = ::close(fd);
+        /// Everything except for EBADF should be ignored in dtor, since all of
+        /// others (EINTR/EIO/ENOSPC/EDQUOT) could be possible during writing to
+        /// fd, and then write already failed and the error had been reported to
+        /// the user/caller.
+        ///
+        /// Note, that for close() on Linux, EINTR should *not* be retried.
+        chassert(!(err && errno == EBADF));
     }
 
     int write(const char * start, size_t size) const
@@ -71,7 +82,7 @@ struct WriteBufferFromNFS::WriteBufferFromNFSImpl
         int bytes_written = 0;
         ssize_t res = 0;
         {
-            //res = ::write(fd, start, size);
+            // res = ::write(fd, start, size);
             struct iovec vec[1];
             vec[0].iov_base = const_cast<char*>(start);
             vec[0].iov_len = size;
@@ -112,6 +123,7 @@ struct WriteBufferFromNFS::WriteBufferFromNFSImpl
 
 WriteBufferFromNFS::WriteBufferFromNFS(
         const std::string & nfs_file_path_,
+        const String & meta_file_path_,
         const Poco::Util::AbstractConfiguration & config_,
         const WriteSettings write_settings_,
         size_t buf_size_,
@@ -119,6 +131,7 @@ WriteBufferFromNFS::WriteBufferFromNFS(
     : WriteBufferFromFileBase(buf_size_, nullptr, 0)
     , impl(std::make_unique<WriteBufferFromNFSImpl>(nfs_file_path_, config_, write_settings_, flags))
     , filename(nfs_file_path_)
+    , meta_file_path(meta_file_path_)
 {
 }
 
@@ -136,26 +149,40 @@ void WriteBufferFromNFS::nextImpl()
 
 void WriteBufferFromNFS::sync()
 {
+    /// If buffer has pending data - write it.
+    next();
     impl->sync();
 }
 
 
 void WriteBufferFromNFS::finalizeImpl()
 {
+    /// If buffer has pending data - write it.
     try
     {
         next();
     }
-    catch (...)
+    catch (Exception & e)
     {
-        tryLogCurrentException(__PRETTY_FUNCTION__);
+        e.addMessage(fmt::format( "while finalize nfs file for metadata {}, remote {}.", meta_file_path, filename));
+        throw;
     }
 }
 
 
 WriteBufferFromNFS::~WriteBufferFromNFS()
 {
-    finalize();
+    /// That destructor could be call with finalized=false in case of exceptions
+    if (!finalized)
+    {
+        LOG_ERROR(
+            getLogger("WriteBufferFromNFS"),
+            "It's a bug, WriteBufferFromNFS is not finalized in destructor. "
+            "The file might not be written to nfs. "
+            "metadata {}, remote {}.",
+            meta_file_path,
+            filename);
+    }
 }
 
 }

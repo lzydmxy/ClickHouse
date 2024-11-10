@@ -49,7 +49,7 @@ void NFSObjectStorage::shutdown()
 {
 }
 
-ObjectStorageKey NFSObjectStorage::generateObjectKeyForPath(const std::string & /* path */) const
+ObjectStorageKey NFSObjectStorage::generateObjectKeyForPath(const std::string & path/* path */) const
 {
     /// Path to store the new NFS object.
     /// Total length is 32 a-z characters for enough randomness.
@@ -63,6 +63,8 @@ ObjectStorageKey NFSObjectStorage::generateObjectKeyForPath(const std::string & 
                        date,
                        getRandomASCIIString(key_name_prefix_size),
                        getRandomASCIIString(key_name_total_size - key_name_prefix_size));
+
+    LOG_TEST(log, "Generate object path {} for path {}.", path, obj_path);
 
     return ObjectStorageKey::createAsRelative(root_path, obj_path);
 }
@@ -152,7 +154,7 @@ std::unique_ptr<WriteBufferFromFileBase> NFSObjectStorage::writeObject( /// NOLI
         }
     }
     int flags = (mode == WriteMode::Append) ? (O_APPEND | O_CREAT | O_WRONLY) : -1;
-    return std::make_unique<WriteBufferFromNFS>(object.remote_path, config, write_settings,
+    return std::make_unique<WriteBufferFromNFS>(object.remote_path, object.local_path, config, write_settings,
         buf_size, flags);
 }
 

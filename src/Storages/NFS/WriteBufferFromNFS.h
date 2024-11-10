@@ -22,6 +22,7 @@ class WriteBufferFromNFS final : public WriteBufferFromFileBase
 public:
     WriteBufferFromNFS(
         const String & nfs_file_path_,
+        const String & meta_file_path_,
         const Poco::Util::AbstractConfiguration & config_,
         const WriteSettings write_settings_ = {},
         size_t buf_size_ = DBMS_DEFAULT_BUFFER_SIZE,
@@ -42,6 +43,7 @@ private:
     struct WriteBufferFromNFSImpl;
     std::unique_ptr<WriteBufferFromNFSImpl> impl;
     const std::string filename;
+    const std::string meta_file_path;
 };
 
 }
