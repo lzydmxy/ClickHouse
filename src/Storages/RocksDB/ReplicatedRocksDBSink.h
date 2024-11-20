@@ -30,7 +30,6 @@ private:
     ContextPtr context;
     const StorageReplicatedRocksDB & storage;
     StorageMetadataPtr metadata_snapshot;
-    size_t primary_key_pos = 0;
     Consensus::RaftOpNum op_num;
     Poco::Logger * log;
 };

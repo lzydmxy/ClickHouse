@@ -30,13 +30,6 @@ ReplicatedRocksDBSink::ReplicatedRocksDBSink(
     , op_num(op_num_)
     , log(&Poco::Logger::get("ReplicatedRocksDBSink"))
 {
-    for (const auto & elem : getHeader())
-    {
-        if (elem.name == storage.primary_key)
-            break;
-        ++primary_key_pos;
-    }
-
     if (op_num != RaftOpNum::Insert && op_num != RaftOpNum::Update)
         throw Exception(ErrorCodes::ROCKSDB_ERROR, "Replicated rocksDB sink only support insert and update, operator number {}",
             toString(op_num));
@@ -78,6 +71,7 @@ void ReplicatedRocksDBSink::localConsume(Chunk chunk)
 {
     auto rows = chunk.getNumRows();
     auto block = getHeader().cloneWithColumns(chunk.detachColumns());
+    const auto & primary_key_pos = storage.getPrimaryKeyPos();
 
     WriteBufferFromOwnString wb_key;
     WriteBufferFromOwnString wb_value;
@@ -94,7 +88,13 @@ void ReplicatedRocksDBSink::localConsume(Chunk chunk)
         for (const auto & elem : block)
         {
             auto column = elem.column;
-            elem.type->getDefaultSerialization()->serializeBinary(*column, i, idx == primary_key_pos ? wb_key : wb_value, {});
+            if (std::find(primary_key_pos.begin(), primary_key_pos.end(), idx) != primary_key_pos.end())
+            {
+                elem.type->getDefaultSerialization()->serializeBinary(*column, i, wb_key, {});
+            } else
+            {
+                elem.type->getDefaultSerialization()->serializeBinary(*column, i, wb_value, {});
+            }
             ++idx;
         }
         status = batch.Put(wb_key.str(), wb_value.str());
