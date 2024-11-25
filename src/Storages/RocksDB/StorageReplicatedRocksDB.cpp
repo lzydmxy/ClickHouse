@@ -744,7 +744,7 @@ static StoragePtr create(const StorageFactory::Arguments & args)
     metadata.primary_key = KeyDescription::getKeyFromAST(args.storage_def->primary_key->ptr(), metadata.columns, args.getContext());
     auto primary_key_names = metadata.getColumnsRequiredForPrimaryKey();
     if (primary_key_names.empty())
-        throw Exception(ErrorCodes::BAD_ARGUMENTS, "StorageEmbeddedRocksDB must require at least one column in primary key");
+        throw Exception(ErrorCodes::BAD_ARGUMENTS, "StorageReplicatedRocksDB must require at least one column in primary key");
     return std::make_shared<StorageReplicatedRocksDB>(args.table_id, args.relative_data_path, metadata, args.mode, args.getContext(),
         std::move(primary_key_names), std::move(second_table), ttl, std::move(rocksdb_dir), read_only);
 }
