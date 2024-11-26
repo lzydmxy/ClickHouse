@@ -51,6 +51,13 @@ RaftStateManager::RaftStateManager(
     save_index_thread = std::make_unique<ThreadFromGlobalPool>([this] { saveIndexThread(); });
 }
 
+RaftStateManager::~RaftStateManager(){
+    shutdown_called = true;
+    committed_queue.finish();
+    if (save_index_thread && save_index_thread->joinable())
+        save_index_thread->join();
+}
+
 NuClusterConfigPtr RaftStateManager::load_config()
 {
     if (!Poco::File(cluster_config_file).exists())
@@ -149,7 +156,11 @@ void RaftStateManager::saveIndexThread()
             LOG_TRACE(log, "Saved committed index {}, last committed index {}", save_index, committed_index.load());
         }
     }
-    out_file->close();
+
+    if (out_file != nullptr) {
+        out_file->close();
+    }
+
     LOG_INFO(log, "Exit save thread");
 }
 

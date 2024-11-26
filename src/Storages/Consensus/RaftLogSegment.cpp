@@ -71,6 +71,11 @@ bool compareSegment(LogSegmentPtr & seg1, LogSegmentPtr & seg2)
     return seg1->firstIndex() < seg2->firstIndex();
 }
 
+LogSegmentStore::~LogSegmentStore()
+{
+    close();
+}
+
 std::string LogSegment::getOpenFileName()
 {
     char buf[1024];
@@ -654,6 +659,9 @@ void LogSegmentStore::close()
         open_segment->close(false);
         open_segment = nullptr;
     }
+
+    if (remove_thread && remove_thread->joinable())
+        remove_thread->join();
 }
 
 UInt64 LogSegmentStore::flush()

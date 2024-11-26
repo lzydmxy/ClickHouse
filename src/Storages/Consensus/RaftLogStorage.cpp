@@ -76,6 +76,7 @@ void RaftLogStorage::setServer(DB::RaftServer * server)
 void RaftLogStorage::shutdown()
 {
     shutdown_called = true;
+    segment_store->close();
 }
 
 RaftLogStorage::~RaftLogStorage()

@@ -136,7 +136,7 @@ public:
 
 public:
     LogSegmentStore(const std::string & log_dir_, const SettingsPtr & settings_);
-    virtual ~LogSegmentStore() { }
+    virtual ~LogSegmentStore();
 
 public:
     static LogSegmentStorePtr getInstance(const std::string & log_dir, const SettingsPtr & settings_, bool force_new = false);
@@ -199,7 +199,7 @@ private:
     LogSegments segments;
     mutable std::shared_mutex seg_mutex;
     LogSegmentPtr open_segment;
-    bool shutdown_called { false };
+    std::atomic<bool> shutdown_called{false};
     GlobalThreadPtr remove_thread;
     Poco::Logger * log;
 };
