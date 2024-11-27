@@ -9,7 +9,7 @@ namespace DB
 class MergeTreeChangeData : public ChangeData
 {
 public:
-    MergeTreeChangeData();
+    MergeTreeChangeData(const SettingsPtr & settings_);
 protected:
     void serializeImpl(WriteBuffer & buffer) override;
     void deserializeImpl(ReadBuffer & buffer) override;

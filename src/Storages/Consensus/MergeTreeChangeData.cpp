@@ -4,7 +4,7 @@
 namespace DB
 {
 
-MergeTreeChangeData::MergeTreeChangeData()
+MergeTreeChangeData::MergeTreeChangeData(const SettingsPtr & settings_): ChangeData(settings_)
 {
     storage_type = StorageType::MergeTree;
 }

@@ -1,7 +1,9 @@
 #include <Storages/checkAndGetLiteralArgument.h>
 #include <Storages/RocksDB/StorageReplicatedRocksDB.h>
 #include <Storages/RocksDB/ReplicatedRocksDBSink.h>
+#include <Storages/RocksDB/ReplicatedRocksDBBulkSink.h>
 #include <Storages/MutationCommands.h>
+#include <Storages/AlterCommands.h>
 #include <Storages/Consensus/ChangeDataCapture.h>
 #include <Storages/Consensus/RocksDBChangeData.h>
 
@@ -9,6 +11,7 @@
 
 #include <Storages/StorageFactory.h>
 #include <Storages/KVStorageUtils.h>
+#include <Storages/RocksDB/RocksDBSettings.h>
 
 #include <Parsers/ASTCreateQuery.h>
 
@@ -16,7 +19,6 @@
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Processors/ISource.h>
 
-#include <Interpreters/castColumn.h>
 #include <Interpreters/Context.h>
 #include <Interpreters/TreeRewriter.h>
 #include <Interpreters/MutationsInterpreter.h>
@@ -175,6 +177,7 @@ StorageReplicatedRocksDB::StorageReplicatedRocksDB(const StorageID & table_id_,
         const StorageInMemoryMetadata & metadata_,
         LoadingStrictnessLevel mode,
         ContextPtr context_,
+        std::unique_ptr<RocksDBSettings> settings_,
         const String & primary_key_,
         String second_table_,
         Int32 ttl_,
@@ -190,6 +193,7 @@ StorageReplicatedRocksDB::StorageReplicatedRocksDB(const StorageID & table_id_,
     , log(&Poco::Logger::get("StorageReplicatedRocksDB"))
 {
     setInMemoryMetadata(metadata_);
+    setSettings(std::move(settings_));
     if (rocksdb_dir.empty())
     {
         rocksdb_dir = context_->getPath() + relative_data_path_;
@@ -269,7 +273,15 @@ void StorageReplicatedRocksDB::innerDelete(const MutationCommands & commands, Bl
     auto dispatcher = getContext()->getRaftDispatcher();
     auto storage_id = getStorageID();
 
-    ChangeDataPtr change_data = std::make_shared<RocksDBChangeData>();
+    Consensus::SettingsPtr settings;
+    if (dispatcher)
+        settings = dispatcher->getSettings();
+
+    // Just use default Consensus::settings
+    if (!settings)
+        settings = std::make_shared<Consensus::Settings>();
+
+    ChangeDataPtr change_data = std::make_shared<RocksDBChangeData>(settings);
     change_data->database = storage_id.getDatabaseName();
     change_data->table = storage_id.getTableName();
     change_data->leader_storage = getName();
@@ -281,10 +293,10 @@ void StorageReplicatedRocksDB::innerDelete(const MutationCommands & commands, Bl
 
     LOG_DEBUG(log, "Sink delete cdc header {}", change_data->dumpHeader());
 
-    ChangeDataCapture cdc(dispatcher);
+    auto cdc = std::make_shared<ChangeDataCapture>(dispatcher);
     try
     {
-        cdc.sink(change_data);
+        cdc->sink(change_data);
     }
     catch(Exception ex)
     {
@@ -546,7 +558,9 @@ void ReadFromReplicatedRocksDB::applyFilters(ActionDAGNodes added_filter_nodes)
 SinkToStoragePtr StorageReplicatedRocksDB::write(
     const ASTPtr & /*query*/, const StorageMetadataPtr & metadata_snapshot, ContextPtr context_, bool /*async_insert*/)
 {
-    auto storage_id = getStorageID();
+    if (getSettings().optimize_for_bulk_insert)
+        return std::make_shared<ReplicatedRocksDBBulkSink>(context_, *this, metadata_snapshot, RaftOpNum::Insert);
+
     return std::make_shared<ReplicatedRocksDBSink>(context_, *this, metadata_snapshot, RaftOpNum::Insert);
 }
 
@@ -730,13 +744,53 @@ static StoragePtr create(const StorageFactory::Arguments & args)
     {
         throw Exception(ErrorCodes::BAD_ARGUMENTS, "StorageReplicatedRocksDB must require one column in primary key");
     }
+
+    auto settings = std::make_unique<RocksDBSettings>();
+    settings->loadFromQuery(*args.storage_def, args.getContext());
+    if (args.storage_def->settings)
+        metadata.settings_changes = args.storage_def->settings->ptr();
+    else
+    {
+        /// A workaround because embedded rocksdb doesn't have default immutable settings
+        /// But InterpreterAlterQuery requires settings_changes to be set to run ALTER MODIFY
+        /// SETTING queries. So we just add a setting with its default value.
+        auto settings_changes = std::make_shared<ASTSetQuery>();
+        settings_changes->is_standalone = false;
+        settings_changes->changes.insertSetting("optimize_for_bulk_insert", settings->optimize_for_bulk_insert.value);
+        metadata.settings_changes = settings_changes;
+    }
+
     return std::make_shared<StorageReplicatedRocksDB>(args.table_id, args.relative_data_path, metadata, args.mode,
-        args.getContext(), primary_key_names[0], std::move(second_table), ttl, std::move(rocksdb_dir), read_only);
+        args.getContext(), std::move(settings), primary_key_names[0], std::move(second_table), ttl, std::move(rocksdb_dir), read_only);
+}
+
+void StorageReplicatedRocksDB::alter(
+    const AlterCommands & params,
+    ContextPtr query_context,
+    AlterLockHolder & holder)
+{
+    IStorage::alter(params, query_context, holder);
+    auto new_metadata = getInMemoryMetadataPtr();
+    if (new_metadata->settings_changes)
+    {
+        const auto & settings_changes = new_metadata->settings_changes->as<const ASTSetQuery &>();
+        auto new_settings = std::make_unique<RocksDBSettings>();
+        new_settings->applyChanges(settings_changes.changes);
+        setSettings(std::move(new_settings));
+    }
+}
+
+void StorageReplicatedRocksDB::checkAlterIsPossible(const AlterCommands & commands, ContextPtr /* context */) const
+{
+    for (const auto & command : commands)
+        if (!command.isCommentAlter() && !command.isSettingsAlter())
+            throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Alter of type '{}' is not supported by storage {}", command.type, getName());
 }
 
 void registerStorageReplicatedRocksDB(StorageFactory & factory)
 {
     StorageFactory::StorageFeatures features{
+        .supports_settings = true,
         .supports_sort_order = true,
         .supports_ttl = true,
         .supports_parallel_insert = true,

@@ -163,6 +163,9 @@ namespace CurrentMetrics
     extern const Metric AttachedTable;
     extern const Metric AttachedDatabase;
     extern const Metric PartsActive;
+    extern const Metric RocksDBBulkInsertionsThreads;
+    extern const Metric RocksDBBulkInsertionsThreadsActive;
+    extern const Metric RocksDBBulkInsertionsThreadsScheduled;
 }
 
 
@@ -285,6 +288,8 @@ struct ContextSharedPart : boost::noncopyable
     mutable UncompressedCachePtr uncompressed_cache TSA_GUARDED_BY(mutex);            /// The cache of decompressed blocks.
     mutable MarkCachePtr mark_cache TSA_GUARDED_BY(mutex);                            /// Cache of marks in compressed files.
     mutable OnceFlag load_marks_threadpool_initialized;
+    mutable OnceFlag rocksdb_bulk_insertions_threadpool_initialized;
+    mutable std::unique_ptr<ThreadPool> rocksdb_bulk_insertions_threadpool;  /// Threadpool for rocksDB bulk load.
     mutable std::unique_ptr<ThreadPool> load_marks_threadpool;  /// Threadpool for loading marks cache.
     mutable OnceFlag prefetch_threadpool_initialized;
     mutable std::unique_ptr<ThreadPool> prefetch_threadpool;    /// Threadpool for loading marks cache.
@@ -2854,6 +2859,19 @@ ThreadPool & Context::getLoadMarksThreadpool() const
     return *shared->load_marks_threadpool;
 }
 
+ThreadPool & Context::getRocksDBBulkInsertionsThreadpool() const
+{
+    callOnce(shared->rocksdb_bulk_insertions_threadpool_initialized, [&] {
+        const auto & config = getConfigRef();
+        auto pool_size = config.getUInt(".rocksdb_bulk_insertions_threadpool_pool_size", 16);
+        auto queue_size = config.getUInt(".rocksdb_bulk_insertions_threadpool_queue_size", 320);
+        shared->rocksdb_bulk_insertions_threadpool = std::make_unique<ThreadPool>(
+            CurrentMetrics::RocksDBBulkInsertionsThreads, CurrentMetrics::RocksDBBulkInsertionsThreadsActive, CurrentMetrics::RocksDBBulkInsertionsThreadsScheduled, pool_size, pool_size, queue_size);
+    });
+
+    return *shared->rocksdb_bulk_insertions_threadpool;
+}
+
 void Context::setIndexUncompressedCache(const String & cache_policy, size_t max_size_in_bytes, double size_ratio)
 {
     std::lock_guard lock(shared->mutex);
@@ -3515,7 +3533,8 @@ std::shared_ptr<RaftDispatcher> Context::getRaftDispatcher() const
 {
     std::lock_guard lock(shared->raft_dispatcher_mutex);
     if (!shared->raft_dispatcher)
-        throw Exception(ErrorCodes::LOGICAL_ERROR, "Raft must be initialized before requests");
+        return nullptr;
+        // throw Exception(ErrorCodes::LOGICAL_ERROR, "Raft must be initialized before requests");
 
     return shared->raft_dispatcher;
 }

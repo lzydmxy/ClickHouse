@@ -10,7 +10,7 @@
 #include <Poco/DateTimeFormatter.h>
 #include <Common/ConcurrentBoundedQueue.h>
 #include <Common/ZooKeeper/ZooKeeperIO.h>
-#include <Coordination/ReadBufferFromNuraftBuffer.h>
+#include <Common/setThreadName.h>
 #include <Coordination/WriteBufferFromNuraftBuffer.h>
 
 #include <Storages/Consensus/Settings.h>
@@ -44,6 +44,50 @@ RaftStateMachine::RaftStateMachine(
     , log(&(Poco::Logger::get("RaftStateMachine")))
 {
     LOG_DEBUG(log, "Construct, log storage last index {}", log_store_->last_durable_index());
+    request_process_thread = ThreadFromGlobalPool([this] { requestProcess(); });
+}
+
+void RaftStateMachine::requestProcess()
+{
+    setThreadName("ReqProcessor");
+
+    RaftRequestPtr request;
+
+    while (!shutdown_called)
+    {
+        if (committed_queue.tryPop(request, 1000))
+        {
+            if (shutdown_called)
+                break;
+
+            try
+            {
+                LOG_DEBUG(log, "Process request {}", request->toString());
+
+                if (request->create_time > 0)
+                {
+                    Int64 elapsed = Poco::Timestamp().epochMicroseconds() / 1000 - request->create_time;
+                    if (elapsed > 1000)
+                        LOG_WARNING(log, "Request {} process time {} ms, req type {}",
+                            request->id, elapsed, Consensus::toString(request->getOpNum()));
+                }
+
+                auto response = raft_storage.processRequest(request);
+
+                LOG_DEBUG(log, "Push response to queue, last commit index {}, id {}", last_committed_idx, toString(request->id));
+                if (!responses_queue.push(response))
+                {
+                    throw Exception(DB::ErrorCodes::SYSTEM_ERROR,
+                        "Could not push error response id {} to responses queue",
+                        response->id);
+                }
+            }
+            catch (...)
+            {
+                tryLogCurrentException(__PRETTY_FUNCTION__);
+            }
+        }
+    }
 }
 
 void RaftStateMachine::replayLog()
@@ -107,50 +151,16 @@ NuBufferPtr RaftStateMachine::pre_commit(const ulong log_idx, NuBuffer & data)
 
 NuBufferPtr RaftStateMachine::commit(const ulong log_idx, NuBuffer & data)
 {
-    LOG_DEBUG(log, "Commit log index {}", log_idx);
-    return commit(log_idx, data, true);
-}
-
-NuBufferPtr RaftStateMachine::commit(const ulong log_idx, NuBuffer & data, bool return_response)
-{
     auto request = RaftRequest::read(data);
 
-    LOG_DEBUG(log, "Commit log index {}, request {}", log_idx, request->toString());
-    if (request->create_time > 0)
-    {
-        Int64 elapsed = Poco::Timestamp().epochMicroseconds() / 1000 - request->create_time;
-        if (elapsed > 1000)
-            LOG_WARNING(log, "Commit log {} request process time {} ms, req type {}",
-                log_idx, elapsed, Consensus::toString(request->getOpNum()));
-    }
+    LOG_DEBUG(log, "Committing log index {}, request {}", log_idx, request->toString());
 
-    auto response = raft_storage.processRequest(request);
-    if (response->error == Error::ZOK)
-    {
-        last_committed_idx.store(log_idx);
-        raft_server->getStateManager()->saveCommittedIndex(log_idx);
-    }
+    committed_queue.push(request);
 
-    if (!raft_server->isLeader())
-        return nullptr;
+    last_committed_idx = log_idx;
+    raft_server->getStateManager()->saveCommittedIndex(log_idx);
 
-    //Only leader commit need push response to queue!
-    if (return_response)
-    {
-        LOG_DEBUG(log, "Return response, last commit index {}, id {}", last_committed_idx, toString(request->id));
-        return response->write();
-    }
-    else
-    {
-        LOG_DEBUG(log, "Leader push response to queue, last commit index {}, id {}", last_committed_idx, toString(request->id));
-        if (!responses_queue.push(response))
-        {
-            throw Exception(DB::ErrorCodes::SYSTEM_ERROR,
-                "Could not push error response id {} to responses queue",
-                response->id);
-        }
-        return nullptr;
-    }
+    return nullptr;
 }
 
 void RaftStateMachine::rollback(const ulong log_idx, NuBuffer & data)
@@ -290,6 +300,8 @@ void RaftStateMachine::shutdown()
         return;
     shutdown_called = true;
     raft_storage.finalize();
+    if (request_process_thread.joinable())
+        request_process_thread.join();
     LOG_INFO(log, "Shut down raft state machine");
 }
 

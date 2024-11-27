@@ -141,7 +141,7 @@ void RaftStorage::finalize()
 
 RaftResponsePtr RaftStorage::processRequest(RaftRequestPtr & request)
 {
-    LOG_DEBUG(log, "[Process request]Opnum {}", Consensus::toString(request->getOpNum()));
+    LOG_DEBUG(log, "[Processing request]Opnum {}", Consensus::toString(request->getOpNum()));
 
     if (request->getOpNum() == RaftOpNum::Error)
         return nullptr;
@@ -161,6 +161,17 @@ RaftResponsePtr RaftStorage::processRequest(RaftRequestPtr & request)
 
     try
     {
+        if (auto dispatcher = Context::getGlobalContextInstance()->getRaftDispatcher())
+        {
+            if (auto request_cdc = dispatcher->getRequestCdc(request))
+            {
+                LOG_DEBUG(log, "Request {} use self cdc to consume.", request->id);
+                request_cdc->consumeSync(data);
+                response->error = Consensus::Error::ZOK;
+                LOG_DEBUG(log, "[Processed request]Opnum {}", Consensus::toString(request->getOpNum()));
+                return response;
+            }
+        }
         cdc->consume(data);
         response->error = Consensus::Error::ZOK;
     }
@@ -168,8 +179,10 @@ RaftResponsePtr RaftStorage::processRequest(RaftRequestPtr & request)
     {
         response->error = Consensus::Error::STORAGEERROR;
         response->message = ex.displayText();
-        LOG_WARNING(log, "CDC comsume exception : {}", ex.displayText());
+        LOG_WARNING(log, "CDC consume exception : {}", ex.displayText());
     }
+
+    LOG_DEBUG(log, "[Processed request]Opnum {}", Consensus::toString(request->getOpNum()));
     return response;
 }
 
@@ -285,7 +298,7 @@ SnapshotSegmentPtr RaftStorage::nextSegment(NuSnapshot & snapshot, uint64_t obj_
             auto chunk = rocksdb_storage->getByIterator(table->iterator, snapshot_table.max_block_size - segment->row_count);
             if (chunk.getNumRows() > 0)
             {
-                auto change_data = std::make_shared<RocksDBChangeData>();
+                auto change_data = std::make_shared<RocksDBChangeData>(settings);
                 auto storage_id = rocksdb_storage->getStorageID();
                 change_data->database = storage_id.getDatabaseName();
                 change_data->table = storage_id.getTableName();

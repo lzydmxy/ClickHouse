@@ -5,7 +5,6 @@
 #include <Common/ConcurrentBoundedQueue.h>
 #include <Storages/IStorage_fwd.h>
 #include <Storages/Consensus/RaftDispatcher.h>
-#include <Storages/Consensus/ChangeData.h>
 
 
 namespace DB
@@ -18,6 +17,7 @@ namespace ErrorCodes
 
 class ChangeDataCapture;
 using ChangeDataCapturePtr = std::shared_ptr<ChangeDataCapture>;
+class ReplicatedRocksDBBulkSink;
 
 struct CreateQuery;
 
@@ -93,22 +93,26 @@ struct ChangeDataBatchQueue
 
 using ChangeDataQueue = ConcurrentBoundedQueue<ChangeDataPtr>;
 
-class ChangeDataCapture 
+class ChangeDataCapture : public std::enable_shared_from_this<ChangeDataCapture>
 {
 public:
     ChangeDataCapture(RaftDispatcherPtr dispatcher_);
     ChangeDataCapture(const SettingsPtr & settings_);
+    ChangeDataCapture(RaftDispatcherPtr dispatcher_, const std::weak_ptr<ReplicatedRocksDBBulkSink> & rocks_sink_);
     void init();
     void exit();
     //Sink storages change data to raft framework
     void sink(ChangeDataPtr & data);
     void createMeta(std::map<std::string, CreateQuery> & queries);
-    //Consum data from raft framework
+    //Consume data from raft framework
     void consume(ChangeDataPtr & data);
+    //Consume data sync
+    void consumeSync(ChangeDataPtr & data);
+    const SettingsPtr getSettings() const { return settings; }
 private:
     void consumeThread();
     void batchThread();
-    void localConsume(StoragePtr target_table, ChangeDataPtr & data);
+    void localConsume(StoragePtr target_table, ChangeDataPtr & data, bool sync = false);
     bool tryExecuteQuery(std::string name, std::string query);
     bool is_exit {false};
     RaftDispatcherPtr dispatcher;
@@ -116,6 +120,7 @@ private:
     Poco::Event sink_event;
     RaftResponsePtr sink_res{nullptr};
 
+    std::weak_ptr<ReplicatedRocksDBBulkSink> rocks_sink_weak_ptr;
     SettingsPtr settings;
     Poco::Event consume_event;
     ChangeDataQueue consume_queue;

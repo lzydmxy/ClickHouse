@@ -1,20 +1,14 @@
 #pragma once
 
-#include <map>
 #include <unordered_map>
-#include <mutex>
-#include <chrono>
 #include <vector>
 #include <memory>
-#include <thread>
-#include <atomic>
 #include <cstdint>
 #include <optional>
 #include <functional>
 #include <Poco/FIFOBuffer.h>
 #include <boost/noncopyable.hpp>
 #include <IO/ReadBuffer.h>
-#include <IO/WriteBuffer.h>
 #include <Storages/Consensus/NuRaft.h>
 #include <Storages/Consensus/IRaftCommon.h>
 #include <Storages/Consensus/ThreadSafeQueue.h>

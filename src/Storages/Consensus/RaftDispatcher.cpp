@@ -205,7 +205,7 @@ void RaftDispatcher::responseThread()
                     }
                 }
                 else
-                    LOG_WARNING(log,"Can't find reponse callback, id {}", toString(response->id));
+                    LOG_WARNING(log, "Can't find reponse callback, id {}", toString(response->id));
             }
             catch (...)
             {
@@ -279,6 +279,39 @@ bool RaftDispatcher::putRequest(const RaftRequestPtr & request)
             "Cannot push request to queue within operation timeout, requests_queue size {}",
             requests_queue->size());
     return true;
+}
+
+bool RaftDispatcher::putRequest(const RaftRequestPtr & request, const std::weak_ptr<ChangeDataCapture> & cdc)
+{
+    {
+        std::lock_guard lock(requests_cdc_mutex);
+        requests_cdc.emplace(request->id, cdc);
+    }
+
+    return putRequest(request);
+}
+
+std::shared_ptr<ChangeDataCapture> RaftDispatcher::getRequestCdc(const RaftRequestPtr & request)
+{
+    decltype(requests_cdc.begin()) iter;
+    {
+        std::lock_guard lock(requests_cdc_mutex);
+        iter = requests_cdc.find(request->id);
+
+        if (iter == requests_cdc.end())
+        {
+            return nullptr;
+        }
+    }
+
+    auto result = iter->second.lock();
+
+    {
+        std::lock_guard lock(requests_cdc_mutex);
+        requests_cdc.erase(request->id);
+    }
+
+    return result;
 }
 
 void RaftDispatcher::updateConfiguration(const Poco::Util::AbstractConfiguration & config)

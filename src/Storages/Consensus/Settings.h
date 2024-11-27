@@ -57,6 +57,8 @@ using SettingsPtr = std::shared_ptr<Settings>;
 struct RaftSettings;
 using RaftSettingsPtr = std::shared_ptr<RaftSettings>;
 
+static constexpr UInt32 MAX_ROWS_FOR_ROW_STORAGE = 1000;
+
 struct Settings
 {
 public:
@@ -87,6 +89,8 @@ public:
     int consume_batch_size;
     int consume_queue_size;
     int consume_waittime_ms;
+    /// The maximum number of rows for log using row-oriented storage.
+    UInt32 max_rows_for_row_store{MAX_ROWS_FOR_ROW_STORAGE};
 
     RaftSettingsPtr raft_settings;
 };

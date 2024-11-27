@@ -1,18 +1,19 @@
-#include <Poco/Event.h>
-#include <Common/CurrentMetrics.h>
-#include <Interpreters/Context.h>
-#include <Interpreters/StorageID.h>
-#include <Interpreters/DatabaseCatalog.h>
 #include <IO/ReadBufferFromString.h>
+#include <Interpreters/Context.h>
+#include <Interpreters/DatabaseCatalog.h>
+#include <Interpreters/StorageID.h>
 #include <Interpreters/executeQuery.h>
 #include <Storages/Consensus/ChangeDataCapture.h>
 #include <Storages/Consensus/RocksDBChangeData.h>
-#include <Storages/Consensus/MergeTreeChangeData.h>
-#include <Storages/RocksDB/StorageReplicatedRocksDB.h>
-#include <Storages/RocksDB/ReplicatedRocksDBSink.h>
-#include <Storages/MergeTree/MergeTreeSink.h>
-#include <Storages/IStorage.h>
 #include <Storages/Consensus/RaftStorage.h>
+#include <Storages/IStorage.h>
+#include <Storages/MergeTree/MergeTreeSink.h>
+#include <Storages/RocksDB/ReplicatedRocksDBBulkSink.h>
+#include <Storages/RocksDB/ReplicatedRocksDBSink.h>
+#include <Storages/RocksDB/StorageReplicatedRocksDB.h>
+#include <Poco/Event.h>
+#include <Common/CurrentMetrics.h>
+
 
 namespace CurrentMetrics
 {
@@ -37,6 +38,20 @@ ChangeDataCapture::ChangeDataCapture(RaftDispatcherPtr dispatcher_)
     , log(&Poco::Logger::get("ChangeDataCapture"))
     , consume_queue(0)
 {
+    if (dispatcher)
+    {
+        settings = dispatcher->getSettings();
+    }
+    else
+    {
+        settings = std::make_shared<Consensus::Settings>();
+        settings->consume_mode = ConsumeMode::SYNC_SINGLE;
+    }
+}
+
+ChangeDataCapture::ChangeDataCapture(RaftDispatcherPtr dispatcher_, const std::weak_ptr<ReplicatedRocksDBBulkSink> & rocks_sink_) : ChangeDataCapture(dispatcher_)
+{
+    rocks_sink_weak_ptr = rocks_sink_;
 }
 
 ChangeDataCapture::ChangeDataCapture(const SettingsPtr & settings_)
@@ -78,6 +93,7 @@ void ChangeDataCapture::sink(ChangeDataPtr & data)
     if (!dispatcher)
     {
         LOG_WARNING(log, "Dispatcher is null");
+        consumeSync(data);
         return;
     }
 
@@ -107,17 +123,27 @@ void ChangeDataCapture::sink(ChangeDataPtr & data)
 
     sink_event.reset();
     sink_res = nullptr;
-    request->finish_callback = [this] (const RaftResponsePtr & response)
+    request->finish_callback = [self = shared_from_this()] (const RaftResponsePtr & response)
     {
-        sink_res = response;
-        sink_event.set();
+        self->sink_res = response;
+        self->sink_event.set();
     };
 
-    dispatcher->putRequest(request);
+    LOG_DEBUG(log, "CDC push request {} to raft", request->id);
+
+    if (!rocks_sink_weak_ptr.expired())
+    {
+        dispatcher->putRequest(request, shared_from_this());
+    }
+    else
+    {
+        dispatcher->putRequest(request);
+    }
+
 
     //sync response
     Stopwatch time_waiting;
-    bool return_reponse = false;
+    bool return_response = false;
     time_waiting.start();
     while (time_waiting.elapsedMilliseconds() < static_cast<UInt64>(dispatcher->max_wait_ms()))
     {
@@ -125,7 +151,7 @@ void ChangeDataCapture::sink(ChangeDataPtr & data)
         {
             if (sink_event.tryWait(std::chrono::milliseconds(1000).count()))
             {
-                return_reponse = true;
+                return_response = true;
                 if (sink_res->error != Error::ZOK)
                     throw RaftException("CDC Sink data to raft error", sink_res->error);
                 else
@@ -141,7 +167,7 @@ void ChangeDataCapture::sink(ChangeDataPtr & data)
             throw;
         }
     }
-    if (!return_reponse)
+    if (!return_response)
     {
         if (time_waiting.elapsedMilliseconds() >= static_cast<UInt64>(dispatcher->max_wait_ms()))
         {
@@ -151,6 +177,8 @@ void ChangeDataCapture::sink(ChangeDataPtr & data)
         else
             throw RaftException("CDC Sink data to raft server error", Error::ZUNIMPLEMENTED);
     }
+
+    LOG_TRACE(log, "CDC get response for request {} from nuraft", request->id);
 }
 
 bool ChangeDataCapture::tryExecuteQuery(std::string name, std::string query)
@@ -223,7 +251,7 @@ void ChangeDataCapture::createMeta(std::map<std::string, CreateQuery> & queries)
     }
 }
 
-void ChangeDataCapture::localConsume(StoragePtr target_table, ChangeDataPtr & data)
+void ChangeDataCapture::localConsume(StoragePtr target_table, ChangeDataPtr & data, bool sync)
 {
     auto storage_name = target_table->getName();
     auto target_type = matchType(storage_name);
@@ -236,13 +264,38 @@ void ChangeDataCapture::localConsume(StoragePtr target_table, ChangeDataPtr & da
             {
                 if (target_type == StorageType::RocksDB)
                 {
-                    LOG_DEBUG(log, "Consum data to storage RocksDB, opnum {}", toString(data->op_num));
+                    LOG_DEBUG(log, "Consume data to storage RocksDB, opnum {}", toString(data->op_num));
+                    auto rocksdb_data = std::dynamic_pointer_cast<RocksDBChangeData>(data);
+
+                    if (!rocksdb_data)
+                    {
+                        throw Exception(ErrorCodes::LOGICAL_ERROR, "Can't get RocksDBChangeData from StorageType::RocksDB");
+                    }
+
                     auto rocksdb_table = dynamic_cast<StorageReplicatedRocksDB*>(target_table.get());
                     if (data->op_num == RaftOpNum::Insert || data->op_num == RaftOpNum::Update)
                     {
+                        if (auto sinkPtr = rocks_sink_weak_ptr.lock()) {
+                            LOG_DEBUG(log, "Consume data to storage RocksDB {} rows to exists sink", data->block->rows());
+                            sinkPtr->localConsume(Chunk{data->block->getColumns(), data->block->rows()});
+                            return;
+                        }
                         auto sink = target_table->write(nullptr, target_table->getInMemoryMetadataPtr(), global_ctx, false);
-                        auto replicated_sink = dynamic_cast<ReplicatedRocksDBSink*>(sink.get());
-                        replicated_sink->localConsume(Chunk{data->block->getColumns(), data->block->rows()});
+
+                        if (auto rocks_bulk_sink = std::dynamic_pointer_cast<ReplicatedRocksDBBulkSink>(sink))
+                        {
+                            rocks_bulk_sink->localConsume(Chunk{data->block->getColumns(), data->block->rows()});
+                            LOG_DEBUG(log, "Consume data to storage RocksDB, force flush {} rows", data->block->rows());
+                            rocks_bulk_sink->onFinish();
+                        }
+                        else if (auto rocks_sink = std::dynamic_pointer_cast<ReplicatedRocksDBSink>(sink))
+                        {
+                            rocks_sink->localConsume(Chunk{data->block->getColumns(), data->block->rows()});
+                        }
+                        else
+                        {
+                            throw Exception(ErrorCodes::UNSUPPORTED_METHOD, "Not support sink for rocksdb");
+                        }
                     }
                     else if (data->op_num == RaftOpNum::Delete)
                     {
@@ -251,34 +304,29 @@ void ChangeDataCapture::localConsume(StoragePtr target_table, ChangeDataPtr & da
                 }
                 else if (target_type == StorageType::MergeTree)
                 {
-                    LOG_DEBUG(log, "Consum data to storage MergeTree, opnum {}, consume mode {}",
+                    LOG_DEBUG(log, "Consume data to storage MergeTree, opnum {}, consume mode {}",
                         toString(data->op_num), ConsumeModeNS::toString(settings->consume_mode));
 
-                    switch(settings->consume_mode)
+                    if (sync || settings->consume_mode == ConsumeMode::SYNC_SINGLE)
                     {
-                        case ConsumeMode::SYNC_SINGLE:
+                        if (data->op_num == RaftOpNum::Insert || data->op_num == RaftOpNum::Update)
                         {
-                            if (data->op_num == RaftOpNum::Insert || data->op_num == RaftOpNum::Update)
-                            {
-                                auto sink = target_table->write(nullptr, target_table->getInMemoryMetadataPtr(), global_ctx, false);
-                                auto mergetree_sink = dynamic_cast<MergeTreeSink*>(sink.get());
-                                mergetree_sink->onStart();
-                                mergetree_sink->consume(Chunk{data->block->getColumns(), data->block->rows()});
-                                mergetree_sink->onFinish();
-                            }
-                            else if (data->op_num == RaftOpNum::Delete)
-                            {
-                                target_table->mutate(data->commands, global_ctx);
-                            }
-                            break;
+                            auto sink = target_table->write(nullptr, target_table->getInMemoryMetadataPtr(), global_ctx, false);
+                            auto mergetree_sink = dynamic_cast<MergeTreeSink*>(sink.get());
+                            mergetree_sink->onStart();
+                            mergetree_sink->consume(Chunk{data->block->getColumns(), data->block->rows()});
+                            mergetree_sink->onFinish();
                         }
-                        case ConsumeMode::ASYNC_BATCH:
-                        case ConsumeMode::SYNC_BATCH:
+                        else if (data->op_num == RaftOpNum::Delete)
                         {
-                            data->target_table = target_table;
-                            batch_queue.push(data);
-                            break;
+                            target_table->mutate(data->commands, global_ctx);
                         }
+                    }
+                    else
+                    {
+                        data->target_table = target_table;
+                        batch_queue.push(data);
+
                     }
                 }
                 break;
@@ -288,10 +336,12 @@ void ChangeDataCapture::localConsume(StoragePtr target_table, ChangeDataPtr & da
                 if (target_type == StorageType::MergeTree)
                 {
                     //TODO
+                    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "CDC is not supported from MergeTree to MergeTree.");
                 }
                 else if (target_type == StorageType::RocksDB)
                 {
                     //TODO
+                    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "CDC is not supported from MergeTree to RocksDB.");
                 }
                 break;
             }
@@ -448,6 +498,49 @@ void ChangeDataCapture::consume(ChangeDataPtr & data)
     }
     else
         LOG_WARNING(log, "Cant push data to queue {}.", data->dumpHeader());
+}
+
+void ChangeDataCapture::consumeSync(ChangeDataPtr & data)
+{
+    StoragePtr first_table, second_table;
+    //first table
+    if (!data->table.empty())
+    {
+        auto first_storage_id = StorageID(data->database, data->table);
+        first_table = DatabaseCatalog::instance().tryGetTable(first_storage_id, nullptr);
+    }
+
+    //second table
+    if (!data->second_table.empty())
+    {
+        auto second_storage_id = StorageID(data->database, data->second_table);
+        second_table = DatabaseCatalog::instance().tryGetTable(second_storage_id, nullptr);
+    }
+
+    //Support only exist one table
+    if (!first_table && !second_table)
+    {
+        LOG_WARNING(log, "Cant find first table {}.{} and second table {}.{}", data->database, data->table,
+            data->database, data->second_table);
+    }
+
+    if (first_table)
+    {
+        LOG_DEBUG(log, "CDC Sync to first table {}", first_table->getName());
+        localConsume(first_table, data, true);
+    }
+    else
+        LOG_DEBUG(log, "CDC first table is null");
+
+    if (second_table)
+    {
+        LOG_DEBUG(log, "CDC Sync to second table {}", second_table->getName());
+        localConsume(second_table, data, true);
+    }
+    else
+        LOG_DEBUG(log, "CDC second table is null");
+
+    LOG_DEBUG(log, "CDC Sync done");
 }
 
 }

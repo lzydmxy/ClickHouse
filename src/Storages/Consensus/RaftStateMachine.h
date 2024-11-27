@@ -41,9 +41,7 @@ public:
 
     NuBufferPtr pre_commit(const ulong log_idx, NuBuffer & data) override;
     NuBufferPtr commit(const ulong log_idx, NuBuffer & data) override;
-    /// @ignore_response whether push response into queue
-    /// Just for unit test
-    NuBufferPtr commit(const ulong log_idx, NuBuffer & data, bool return_response);
+
     void rollback(const ulong log_idx, NuBuffer & data) override;
 
     /**
@@ -144,6 +142,14 @@ private:
     // Last committed Raft log number.
     std::atomic<uint64_t> last_committed_idx;
     std::atomic<bool> shutdown_called{false};
+
+    /// Raft committed write requests which can be local or from other nodes.
+    ThreadSafeQueue<RaftRequestPtr> committed_queue;
+
+    void push(RaftRequestPtr request_for_session);
+    void requestProcess();
+
+    ThreadFromGlobalPool request_process_thread;
 
     std::string snapshot_dir;
     std::mutex snapshot_mutex;

@@ -86,6 +86,9 @@
     M(RestoreThreads, "Number of threads in the thread pool for RESTORE.") \
     M(RestoreThreadsActive, "Number of threads in the thread pool for RESTORE running a task.") \
     M(RestoreThreadsScheduled, "Number of queued or active jobs for RESTORE.") \
+    M(RocksDBBulkInsertionsThreads, "Number of threads in thread pool for rocksDB bulk insert.") \
+    M(RocksDBBulkInsertionsThreadsActive, "Number of threads in the thread pool for rocksDB bulk insert.") \
+    M(RocksDBBulkInsertionsThreadsScheduled, "Number of queued or active jobs in the thread pool for rocksDB bulk insert.") \
     M(MarksLoaderThreads, "Number of threads in thread pool for loading marks.") \
     M(MarksLoaderThreadsActive, "Number of threads in the thread pool for loading marks running a task.") \
     M(MarksLoaderThreadsScheduled, "Number of queued or active jobs in the thread pool for loading marks.") \

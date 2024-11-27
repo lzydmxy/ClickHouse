@@ -106,6 +106,7 @@ SettingsPtr Settings::loadFromConfig(const Poco::Util::AbstractConfiguration & c
     /// Use 300KB/req * 10K = 3GB memory space
     ret->request_queue_size = config.getInt("raft_server.request_queue_size", 8192);
 
+    ret->max_rows_for_row_store = config.getUInt("raft_server.max_rows_for_row_store", MAX_ROWS_FOR_ROW_STORAGE);
     ret->consume_mode = ConsumeModeNS::parseConsumeMode(config.getString("raft_server.consume_mode","sync_single"));
     ret->consume_batch_size = config.getInt("raft_server.consume_batch_size", 100);      //100 * 500 = 5w
     ret->consume_queue_size = config.getInt("raft_server.consume_queue_size", 100);      //100 * 100 * 1K = 10M

@@ -2,6 +2,7 @@
 #include <Storages/RocksDB/StorageReplicatedRocksDB.h>
 #include <Storages/Consensus/ChangeDataCapture.h>
 #include <Storages/Consensus/RocksDBChangeData.h>
+#include <Storages/AlterCommands.h>
 
 #include <Storages/StorageInMemoryMetadata.h>
 #include <Common/logger_useful.h>
@@ -47,7 +48,16 @@ void ReplicatedRocksDBSink::consume(Chunk chunk)
     LOG_DEBUG(log, "Sink consume to cdc");
     auto dispatcher = context->getRaftDispatcher();
     auto storage_id = storage.getStorageID();
-    ChangeDataPtr change_data = std::make_shared<RocksDBChangeData>();
+
+    Consensus::SettingsPtr settings;
+    if (dispatcher)
+        settings = dispatcher->getSettings();
+
+    // Just use default Consensus::settings
+    if (!settings)
+        settings = std::make_shared<Consensus::Settings>();
+
+    ChangeDataPtr change_data = std::make_shared<RocksDBChangeData>(settings);
     change_data->database = storage_id.getDatabaseName();
     change_data->table = storage_id.getTableName();
     auto storage_type = DB::matchType(storage.getName());
@@ -63,10 +73,10 @@ void ReplicatedRocksDBSink::consume(Chunk chunk)
 
     change_data->block = std::make_shared<Block>(getHeader().cloneWithColumns(chunk.detachColumns()));
     LOG_DEBUG(log, "Sink consume to cdc, header {}", change_data->dumpHeader());
-    ChangeDataCapture cdc(dispatcher);
+    auto cdc = std::make_shared<ChangeDataCapture>(dispatcher);
     try
     {
-        cdc.sink(change_data);
+        cdc->sink(change_data);
     }
     catch(Exception ex)
     {

@@ -3,6 +3,7 @@
 #include <memory>
 #include <Common/SharedMutex.h>
 #include <Storages/IStorage.h>
+#include <Storages/RocksDB/RocksDBSettings.h>
 #include <Interpreters/IKeyValueEntity.h>
 #include <rocksdb/status.h>
 
@@ -28,6 +29,7 @@ using RocksDBIterator = std::shared_ptr<rocksdb::Iterator>;
 class StorageReplicatedRocksDB final : public IStorage, public IKeyValueEntity, WithContext
 {
     friend class ReplicatedRocksDBSink;
+    friend class ReplicatedRocksDBBulkSink;
     friend class ReadFromReplicatedRocksDB;
 public:
     StorageReplicatedRocksDB(const StorageID & table_id_,
@@ -35,6 +37,7 @@ public:
         const StorageInMemoryMetadata & metadata,
         LoadingStrictnessLevel mode,
         ContextPtr context_,
+        std::unique_ptr<RocksDBSettings> settings_,
         const String & primary_key_,
         String second_table_ = "",
         Int32 ttl_ = 0,
@@ -98,8 +101,19 @@ public:
     std::optional<UInt64> totalRows(const Settings & settings) const override;
 
     std::optional<UInt64> totalBytes(const Settings & settings) const override;
+
+    const RocksDBSettings & getSettings() const { return *storage_settings.get(); }
+
+    void setSettings(std::unique_ptr<RocksDBSettings> && settings_) { storage_settings.set(std::move(settings_)); }
+
+    void checkAlterIsPossible(const AlterCommands & commands, ContextPtr /* context */) const override;
+
+    void alter(const AlterCommands & params, ContextPtr query_context, AlterLockHolder &) override;
 private:
     using RocksDBPtr = std::unique_ptr<rocksdb::DB>;
+
+    MultiVersion<RocksDBSettings> storage_settings;
+
     RocksDBPtr rocksdb_ptr;
     mutable SharedMutex rocksdb_ptr_mx;
     String second_table;

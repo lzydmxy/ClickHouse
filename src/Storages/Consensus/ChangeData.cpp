@@ -1,9 +1,11 @@
-#include <Common/ZooKeeper/ZooKeeperIO.h>
 #include <DataTypes/DataTypeFactory.h>
-#include <Storages/Consensus/ChangeData.h>
-#include <Storages/Consensus/RocksDBChangeData.h>
-#include <Storages/Consensus/MergeTreeChangeData.h>
 #include <IO/ReadBufferFromString.h>
+#include <Interpreters/Context.h>
+#include <Storages/Consensus/ChangeData.h>
+#include <Storages/Consensus/RaftDispatcher.h>
+#include <Storages/Consensus/MergeTreeChangeData.h>
+#include <Storages/Consensus/RocksDBChangeData.h>
+#include <Common/ZooKeeper/ZooKeeperIO.h>
 
 
 namespace DB
@@ -65,8 +67,10 @@ void ChangeData::serialize(WriteBuffer & out)
 
 void ChangeData::innerSerialize(WriteBuffer & out)
 {
+    LOG_DEBUG(log, "Serializing header database {}, table {}, opnum {}",
+    database, table, toString(op_num));
     // 1.write version, storage_type, query, database and table
-    writeIntBinary(version, out);
+    writeIntBinary(static_cast<uint8_t>(version), out);
     write(storage_type, out);                //Create diffrent child change data object by storage_type
     writeStringBinary(query, out);
     writeStringBinary(database, out);
@@ -85,8 +89,17 @@ void ChangeData::innerSerialize(WriteBuffer & out)
         writeStringBinary(cmd_buf.str(), out);
     }
 
-    LOG_DEBUG(log, "Serialize database {}, table {}, opnum {}, mutations {}, byte size {}, columns {}, rows {}",
-        database, table, toString(op_num), commands.size(), cmd_buf.str().size(), block->columns(), block->rows());
+    auto row_count = block->rows();
+    ChangeDataStorageType data_storage_type{ChangeDataStorageType::ROW_STORE};
+
+    if (row_count > settings->max_rows_for_row_store)
+    {
+        data_storage_type = ChangeDataStorageType::COLUMN_STORE;
+    }
+    writeIntBinary(static_cast<uint8_t>(data_storage_type), out);
+
+    LOG_DEBUG(log, "Serializing body, database {}, table {}, opnum {}, commands size {}, commands byte size {}, data storage type {}, columns {}, rows {}",
+        database, table, toString(op_num), commands.size(), cmd_buf.str().size(), data_storage_type, block->columns(), block->rows());
 
     // 3.write column name and type
     writeVarUInt(static_cast<UInt64>(block->columns()), out);
@@ -97,12 +110,24 @@ void ChangeData::innerSerialize(WriteBuffer & out)
     }
 
     // 4.write data by row and column
-    writeVarUInt(static_cast<UInt64>(block->rows()), out);
-    for (size_t i = 0; i < block->rows(); ++i)
+    writeVarUInt(static_cast<UInt64>(row_count), out);
+
+    if (data_storage_type == ChangeDataStorageType::COLUMN_STORE)
     {
         for (const auto & elem : *block)
-            elem.type->getDefaultSerialization()->serializeBinary(*elem.column, i, out, {});
+            elem.type->getDefaultSerialization()->serializeBinaryBulk(*elem.column, out, 0, row_count);
     }
+    else
+    {
+        for (size_t i = 0; i < row_count; ++i)
+        {
+            for (const auto & elem : *block)
+                elem.type->getDefaultSerialization()->serializeBinary(*elem.column, i, out, {});
+        }
+    }
+
+    LOG_DEBUG(log, "Serialized, database {}, table {}, opnum {}, commands size {}, commands byte size {}, data storage type {}, columns {}, rows {}",
+    database, table, toString(op_num), commands.size(), cmd_buf.str().size(), data_storage_type, block->columns(), block->rows());
 }
 
 ChangeDataPtr ChangeData::readFromBuffer(ReadBuffer & in)
@@ -110,30 +135,45 @@ ChangeDataPtr ChangeData::readFromBuffer(ReadBuffer & in)
     ChangeDataPtr data = nullptr;
     std::uint8_t version;
     readIntBinary(version, in);
-    if (version != CDC_VERSION)
+    auto change_data_version = static_cast<ChangeDataVersion>(version);
+    if (change_data_version > CURRENT_CHANGE_DATA_VERSION)
         throw Exception(ErrorCodes::UNKNOWN_FORMAT_VERSION, "Unknown ChangeData version {}", version);
 
     StorageType storage_type;
     read(storage_type, in);
+
+    Consensus::SettingsPtr settings;
+
+    if (const auto & dispatcher = Context::getGlobalContextInstance()->getRaftDispatcher())
+    {
+        settings = dispatcher->getSettings();
+    }
+
+    if (!settings)
+    {
+        settings = std::make_shared<Consensus::Settings>();
+    }
+
     switch(storage_type)
     {
         case StorageType::RocksDB:
         {
-            data = std::make_shared<RocksDBChangeData>();
-            data->version = version;
+            data = std::make_shared<RocksDBChangeData>(std::move(settings));
+            data->version = change_data_version;
             data->deserialize(in);
-            return data;
+            break;
         }
         case StorageType::MergeTree:
         {
-            data = std::make_shared<MergeTreeChangeData>();
-            data->version = version;
+            data = std::make_shared<MergeTreeChangeData>(std::move(settings));
+            data->version = change_data_version;
             data->deserialize(in);
-            return data;
+            break;
         }
         case StorageType::NotSupport:
-            return data;
+            break;
     }
+    return data;
 }
 
 void ChangeData::deserialize(ReadBuffer & in)
@@ -146,7 +186,7 @@ void ChangeData::deserialize(ReadBuffer & in)
     read(op_num, in);
     readStringBinary(second_table, in);
 
-    LOG_DEBUG(log, "Deserialize header database {}, table {}, opnum {}",
+    LOG_DEBUG(log, "Deserializing header, database {}, table {}, opnum {}",
         database, table, toString(op_num));
 
     //invoke child class method
@@ -161,7 +201,17 @@ void ChangeData::deserialize(ReadBuffer & in)
         commands.readText(cmd_buf);
     }
 
+    ChangeDataStorageType data_storage_type{ChangeDataStorageType::ROW_STORE};
+
     //3. read column and type
+    if (version >= ChangeDataVersion::V2)
+    {
+        uint8_t data_storage_type_value;
+        readIntBinary(data_storage_type_value, in);
+
+        data_storage_type = static_cast<ChangeDataStorageType>(data_storage_type_value);
+    }
+
     UInt64 column_count;
     readVarUInt(column_count, in);
     block = std::make_shared<Block>();
@@ -180,23 +230,43 @@ void ChangeData::deserialize(ReadBuffer & in)
     auto types = block->getDataTypes();
     auto columns = block->mutateColumns();
 
-    LOG_DEBUG(log, "Deserialize body commands {}, byte size {}, columns {}, read rows {}",
-        commands.size(), cmd_str.size(), block->columns(), row_count);
+    LOG_DEBUG(log, "Deserializing body, database {}, table {}, opnum {}, commands size {}, data storage type {}, columns {}, rows {}",
+    database, table, toString(op_num), commands.size(), data_storage_type, block->columns(), row_count);
 
-    for (UInt64 i = 0; i < row_count; ++i)
+    if (data_storage_type == ChangeDataStorageType::ROW_STORE)
     {
-        for (size_t j = 0; j < columns.size(); j++)
+        FormatSettings default_format_settings{};
+        for (UInt64 i = 0; i < row_count; ++i)
         {
-            Field val;
-            types[j]->getDefaultSerialization()->deserializeBinary(val, in, {});
-            columns[j]->insert(val);
+            for (size_t j = 0; j < columns.size(); j++)
+            {
+                Field val;
+                types[j]->getDefaultSerialization()->deserializeBinary(val, in, default_format_settings);
+                columns[j]->insert(val);
+            }
+        }
+        for (size_t i = 0 ; i < columns.size(); i++)
+        {
+            auto ctn = block->getByPosition(i);
+            block->setColumn(i, ColumnWithTypeAndName{std::move(columns[i]), ctn.type, ctn.name});
         }
     }
-    for (size_t i = 0 ; i < columns.size(); i++)
+    else
     {
-        auto ctn = block->getByPosition(i);
-        block->setColumn(i, ColumnWithTypeAndName{std::move(columns[i]), ctn.type, ctn.name});
+        for (size_t i = 0; i < columns.size(); i++)
+        {
+            types[i]->getDefaultSerialization()->deserializeBinaryBulk(*columns[i], in, row_count, 0);
+        }
+
+        for (size_t i = 0 ; i < columns.size(); i++)
+        {
+            auto ctn = block->getByPosition(i);
+            block->setColumn(i, ColumnWithTypeAndName{std::move(columns[i]), ctn.type, ctn.name});
+        }
     }
+
+    LOG_DEBUG(log, "Deserialized, database {}, table {}, opnum {}, commands size {}, data storage type {}, columns {}, rows {}",
+    database, table, toString(op_num), commands.size(), data_storage_type, block->columns(), block->rows());
 }
 
 void ChangeData::merge(ChangeDataPtr data)
@@ -219,7 +289,7 @@ std::string ChangeData::dumpHeader()
 {
     WriteBufferFromOwnString out;
     out << "storage type " << storage_type << ",";
-    out << "verion " << version << ",";
+    out << "verion " << static_cast<int8_t>(version) << ",";
     out << "query " << query << ",";
     out << "database " << database << ",";
     out << "table " << table << ",";

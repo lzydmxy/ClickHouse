@@ -5,6 +5,7 @@
 #include <Storages/Consensus/NuRaft.h>
 #include <Storages/Consensus/RaftCommon.h>
 #include <Storages/MutationCommands.h>
+#include <Storages/Consensus/Settings.h>
 
 
 namespace DB
@@ -34,7 +35,19 @@ void read(StorageType & x, ReadBuffer & in);
 class ChangeData;
 using ChangeDataPtr = std::shared_ptr<ChangeData>;
 
-const static std::uint8_t CDC_VERSION = 1;
+enum class ChangeDataVersion : uint8_t
+{
+    V1 = 1, /// Row storage only
+    V2 = 2, /// Support for row storage or column storage.
+};
+
+enum class ChangeDataStorageType : uint8_t
+{
+    ROW_STORE = 1,     /// Row storage
+    COLUMN_STORE = 2,  /// Column storage
+};
+
+static constexpr auto CURRENT_CHANGE_DATA_VERSION = ChangeDataVersion::V2;
 
 using ConsumeCallback = std::function<void()>;
 
@@ -45,7 +58,7 @@ using ConsumeCallback = std::function<void()>;
 class ChangeData
 {
 public:
-    ChangeData() : log(&Poco::Logger::get("ChangeData")) {}
+    ChangeData(const SettingsPtr & settings_) : settings(settings_), log(&Poco::Logger::get("ChangeData")) {}
     virtual ~ChangeData() {}
     void serialize(WriteBuffer & out);
     static ChangeDataPtr readFromBuffer(ReadBuffer & in);
@@ -53,7 +66,7 @@ public:
     std:: string dumpHeader();
 public:
     StorageType storage_type {StorageType::NotSupport};
-    std::uint8_t version {CDC_VERSION};
+    ChangeDataVersion version {CURRENT_CHANGE_DATA_VERSION};
     std::string query;
     std::string database;
     std::string table;
@@ -64,6 +77,7 @@ public:
     std::string second_table;
     ConsumeCallback callback;
     StoragePtr target_table;
+    SettingsPtr settings;
 protected:
     void deserialize(ReadBuffer & in);
     void innerSerialize(WriteBuffer & out);

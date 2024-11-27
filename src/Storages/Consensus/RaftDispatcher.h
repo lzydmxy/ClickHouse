@@ -30,6 +30,10 @@ public:
 
     bool putRequest(const RaftRequestPtr & request);
 
+    bool putRequest(const RaftRequestPtr & request, const std::weak_ptr<ChangeDataCapture> & cdc);
+
+    std::shared_ptr<ChangeDataCapture> getRequestCdc(const RaftRequestPtr & request);
+
     /// Registered in ConfigReloader callback. Add new configuration changes to
     /// update_configuration_queue. Keeper Dispatcher apply them asynchronously.
     void updateConfiguration(const Poco::Util::AbstractConfiguration & config);
@@ -65,6 +69,9 @@ private:
     std::mutex process_response_mutex;
     RaftResponseQueuePtr responses_queue;
     std::map<UUID, RaftFinishCallback> finish_callbacks;
+
+    std::mutex requests_cdc_mutex;
+    std::unordered_map<UUID, std::weak_ptr<ChangeDataCapture>> requests_cdc;
 
     ThreadPoolPtr request_thread;
     GlobalThreadPtr response_thread;

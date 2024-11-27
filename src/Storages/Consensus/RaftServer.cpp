@@ -160,14 +160,15 @@ void RaftServer::putRequest(const RaftRequestPtr & request)
                 result->get_accepted(),
                 result->get_result_code(),
                 result->get_result_str());
+
+        return;
     }
-    else
-    {
-        LOG_WARNING(log, "Nuraft error, accepted {}, error code {}, message {}",
-            result->get_accepted(),
-            result->get_result_code(),
-            result->get_result_str());
-    }
+
+    LOG_WARNING(log, "Nuraft error, accepted {}, error code {}, message {}",
+        result->get_accepted(),
+        result->get_result_code(),
+        result->get_result_str());
+
     if (!responses_queue.push(response))
     {
         throw Exception(ErrorCodes::SYSTEM_ERROR,
