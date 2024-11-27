@@ -105,7 +105,7 @@ private:
     RaftResponseQueue & responses_queue;
     Poco::Logger * log;
 
-    NuRaftLauncher launcher;
+    NuRaftLauncherPtr launcher;
     NuRaftServerPtr raft_instance;
     RaftStateMachinePtr state_machine;
     RaftStateManagerPtr state_manager;

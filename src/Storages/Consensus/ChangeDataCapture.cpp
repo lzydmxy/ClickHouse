@@ -432,8 +432,18 @@ void ChangeDataCapture::batchThread()
                 {
                     auto first = it.second->change_datas[0];
                     auto sink = first->target_table->write(nullptr, first->target_table->getInMemoryMetadataPtr(), global_ctx, false);
+                    if (!sink) {
+                        LOG_WARNING(log, "sink is null");
+                        continue;
+                    }
 
                     auto mergetree_sink = dynamic_cast<MergeTreeSink*>(sink.get());
+                    if (!mergetree_sink) {
+                        LOG_WARNING(log, "mergetree_sink is null");
+                        continue;
+                    }
+
+
                     LOG_DEBUG(log, "Consume data from {}.{} batch size {}",
                             first->database, first->table, it.second->change_datas.size());
 

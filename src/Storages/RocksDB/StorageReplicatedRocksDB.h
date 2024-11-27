@@ -38,7 +38,7 @@ public:
         LoadingStrictnessLevel mode,
         ContextPtr context_,
         std::unique_ptr<RocksDBSettings> settings_,
-        const String & primary_key_,
+        Names primary_key_,
         String second_table_ = "",
         Int32 ttl_ = 0,
         String rocksdb_dir_ = "",
@@ -71,7 +71,7 @@ public:
 
     std::shared_ptr<rocksdb::Statistics> getRocksDBStatistics() const;
     std::vector<rocksdb::Status> multiGet(const std::vector<rocksdb::Slice> & slices_keys, std::vector<String> & values) const;
-    Names getPrimaryKey() const override { return {primary_key}; }
+    Names getPrimaryKey() const override { return primary_key; }
 
     Chunk getByKeys(const ColumnsWithTypeAndName & keys, PaddedPODArray<UInt8> & null_map, const Names &) const override;
 
@@ -93,8 +93,6 @@ public:
     /// full scan rows data from the begin iterator
     Chunk getByIterator(RocksDBIterator & iterator, size_t max_block_size);
 
-    const String primary_key;
-
     /// To turn on the optimization optimize_trivial_approximate_count_query=1 should be set for a query.
     bool supportsTrivialCountOptimization() const override { return true; }
 
@@ -109,7 +107,21 @@ public:
     void checkAlterIsPossible(const AlterCommands & commands, ContextPtr /* context */) const override;
 
     void alter(const AlterCommands & params, ContextPtr query_context, AlterLockHolder &) override;
+
+    /// Returns the columns pos of primary key.
+    const std::vector<size_t> getPrimaryKeyPos() const { return primary_key_pos; }
+
+    /// Returns the column pos of non-primary key columns.
+    const std::vector<size_t> getValueColumnPos() const { return value_column_pos; }
+
+    /// Returns types of primary key columns.
+    const DataTypes & getPrimaryKeyTypes() const { return primary_key_types; }
+
 private:
+    const Names primary_key;
+    std::vector<size_t> primary_key_pos;
+    std::vector<size_t> value_column_pos;
+    DataTypes primary_key_types;
     using RocksDBPtr = std::unique_ptr<rocksdb::DB>;
 
     MultiVersion<RocksDBSettings> storage_settings;

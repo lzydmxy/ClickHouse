@@ -166,7 +166,7 @@ void RaftConnection::receive(ServerResponse & response)
     if (num_tries == 3)
     {
         disconnect();
-        throw Exception(ErrorCodes::NETWORK_ERROR,  "Cant poll data, reach max retry times {}", num_tries);
+        throw Exception(ErrorCodes::NETWORK_ERROR,  "Can not poll data, reach max retry times {}", num_tries);
     }
 
     try

@@ -62,7 +62,6 @@ private:
 
     const StorageReplicatedRocksDB & storage;
     StorageMetadataPtr metadata_snapshot;
-    size_t primary_key_pos = 0;
     Serializations serializations;
     Consensus::RaftOpNum op_num;
 

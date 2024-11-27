@@ -36,6 +36,7 @@ RaftServer::RaftServer(
     , responses_queue(responses_queue_)
     , log(&(Poco::Logger::get("RaftServer")))
 {
+    launcher = RaftNew<NuRaftLauncher>();
     state_manager = RaftNew<RaftStateManager>(server_id, config, settings_);
 
     state_machine = RaftNew<RaftStateMachine>(
@@ -103,7 +104,7 @@ void RaftServer::startup()
     state_machine->replayLog();
 
     LOG_DEBUG(log, "Launcher init port {}", settings->internal_port);
-    raft_instance = launcher.init(
+    raft_instance = launcher->init(
         state_machine,
         state_manager,
         RaftNew<LoggerWrapper>("NuRaft", raft_settings->raft_logs_level),
@@ -135,7 +136,7 @@ void RaftServer::shutdown()
 
     dynamic_cast<RaftLogStorage &>(*state_manager->load_log_store()).shutdown();
 
-    if (!launcher.shutdown(settings->raft_settings->shutdown_timeout))
+    if (!launcher->shutdown(settings->raft_settings->shutdown_timeout))
         LOG_WARNING(log, "Failed to shutdown RAFT server in {} seconds", 5);
     LOG_INFO(log, "Shut down raft server");
 }

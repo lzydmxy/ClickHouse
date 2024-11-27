@@ -115,10 +115,10 @@ private:
     void localConsume(StoragePtr target_table, ChangeDataPtr & data, bool sync = false);
     bool tryExecuteQuery(std::string name, std::string query);
     bool is_exit {false};
+    RaftResponsePtr sink_res{nullptr};
     RaftDispatcherPtr dispatcher;
     Poco::Logger* log;
     Poco::Event sink_event;
-    RaftResponsePtr sink_res{nullptr};
 
     std::weak_ptr<ReplicatedRocksDBBulkSink> rocks_sink_weak_ptr;
     SettingsPtr settings;

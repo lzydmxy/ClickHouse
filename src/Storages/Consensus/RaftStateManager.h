@@ -40,7 +40,7 @@ public:
         const Poco::Util::AbstractConfiguration & config_,
         SettingsPtr settings_);
 
-    ~RaftStateManager() override = default;
+    ~RaftStateManager() override;
 
     NuClusterConfigPtr parseClusterConfig(const Poco::Util::AbstractConfiguration & config, const String & config_name, size_t thread_count) const;
 
@@ -99,7 +99,7 @@ private:
     NuClusterConfigPtr cur_cluster_config;
 
     GlobalThreadPtr save_index_thread;
-    bool shutdown_called { false };
+    std::atomic<bool> shutdown_called{false};
 
     mutable std::mutex clients_mutex;
     mutable std::unordered_map<UInt32, std::vector<RaftConnectionPtr>> clients;

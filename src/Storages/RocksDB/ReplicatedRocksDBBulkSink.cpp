@@ -90,13 +90,6 @@ ReplicatedRocksDBBulkSink::ReplicatedRocksDBBulkSink(
 , op_num(op_num_)
 , log(&Poco::Logger::get("ReplicatedRocksDBBulkSink"))
 {
-    for (const auto & elem : getHeader())
-    {
-        if (elem.name == storage.primary_key)
-            break;
-        ++primary_key_pos;
-    }
-
     serializations = getHeader().getSerializations();
     min_block_size_rows = std::max(storage.getSettings().bulk_insert_block_size, getContext()->getSettingsRef().min_insert_block_size_rows);
 
@@ -187,6 +180,8 @@ std::pair<MutableColumnPtr, MutableColumnPtr> ReplicatedRocksDBBulkSink::seriali
     auto serialized_key_column = ColumnString::create();
     auto serialized_value_column = ColumnString::create();
 
+    const auto & primary_key_pos = storage.getPrimaryKeyPos();
+
     {
         auto & serialized_key_data = serialized_key_column->getChars();
         auto & serialized_key_offsets = serialized_key_column->getOffsets();
@@ -201,24 +196,24 @@ std::pair<MutableColumnPtr, MutableColumnPtr> ReplicatedRocksDBBulkSink::seriali
         {
             const auto & columns = chunk.getColumns();
             auto rows = chunk.getNumRows();
-            for (size_t i = 0; i < rows; ++i)
-            {
-                serializations[primary_key_pos]->serializeBinary(*columns[primary_key_pos], i,writer_key, format_settings);
-                writeChar('\0', writer_key);
-                serialized_key_offsets.emplace_back(writer_key.count());
-            }
 
             for (size_t i = 0; i < rows; ++i)
             {
                 for (size_t idx = 0; idx < columns.size(); ++idx)
                 {
-                    if (idx == primary_key_pos)
+                    if (std::find(primary_key_pos.begin(), primary_key_pos.end(), idx) != primary_key_pos.end())
                     {
-                        continue;
+                        serializations[idx]->serializeBinary(*columns[idx], i, writer_key, format_settings);
                     }
-                    serializations[idx]->serializeBinary(*columns[idx], i, writer_value, format_settings);
+                    else
+                    {
+                        serializations[idx]->serializeBinary(*columns[idx], i, writer_value, format_settings);
+                    }
                 }
                 /// String in ColumnString must be null-terminated
+                writeChar('\0', writer_key);
+                serialized_key_offsets.emplace_back(writer_key.count());
+
                 writeChar('\0', writer_value);
                 serialized_value_offsets.emplace_back(writer_value.count());
             }
@@ -239,15 +234,14 @@ void ReplicatedRocksDBBulkSink::consume(Chunk chunk)
     if (cdc == nullptr)
     {
         auto dispatcher = getContext()->getRaftDispatcher();
-        cdc = std::make_shared<ChangeDataCapture>(dispatcher);
+        cdc = std::make_shared<ChangeDataCapture>(dispatcher, shared_from_this());
 
         if (dispatcher)
             settings = dispatcher->getSettings();
     }
     else
-    {
         settings = cdc->getSettings();
-    }
+
 
     // Just use default Consensus::settings
     if (!settings)
