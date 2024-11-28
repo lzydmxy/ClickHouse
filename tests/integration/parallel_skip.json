@@ -96,5 +96,18 @@
 
   "test_ttl_move/test.py::TestCancelBackgroundMoving::test_cancel_background_moving_on_stop_moves_query",
   "test_ttl_move/test.py::TestCancelBackgroundMoving::test_cancel_background_moving_on_table_detach",
-  "test_ttl_move/test.py::TestCancelBackgroundMoving::test_cancel_background_moving_on_zookeeper_disconnect"
+  "test_ttl_move/test.py::TestCancelBackgroundMoving::test_cancel_background_moving_on_zookeeper_disconnect",
+
+  "test_dns_cache/test.py::test_ip_change_drop_dns_cache",
+  "test_dns_cache/test.py::test_ip_change_update_dns_cache",
+  "test_dns_cache/test.py::test_dns_cache_update",
+  "test_dns_cache/test.py::test_user_access_ip_change",
+  "test_dns_cache/test.py::test_host_is_drop_from_cache_after_consecutive_failures",
+  "test_dns_cache/test.py::test_dns_resolver_filter",
+
+  "test_https_replication/test_change_ip.py::test_replication_when_node_ip_changed",
+
+  "test_host_regexp_multiple_ptr_records/test.py::test_host_regexp_multiple_ptr_v4_fails_with_wrong_resolution",
+  "test_host_regexp_multiple_ptr_records/test.py::test_host_regexp_multiple_ptr_v4",
+  "test_host_regexp_multiple_ptr_records/test.py::test_host_regexp_multiple_ptr_v6"
 ]
