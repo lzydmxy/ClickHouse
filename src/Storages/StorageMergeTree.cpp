@@ -2209,6 +2209,30 @@ std::map<int64_t, MutationCommands> StorageMergeTree::getAlterMutationCommandsFo
     return result;
 }
 
+std::vector<std::map<int64_t, MutationCommands>> StorageMergeTree::getAlterMutationCommandsForParts(const DataPartsVector & parts) const
+{
+    std::vector<std::map<int64_t, MutationCommands>> results;
+    results.reserve(parts.size());
+
+    std::lock_guard lock(currently_processing_in_background_mutex);
+    for (const auto & part : parts)
+    {
+        std::map<int64_t, MutationCommands> result;
+        UInt64 part_data_version = part->info.getDataVersion();
+
+        for (const auto & [mutation_version, entry] : current_mutations_by_version | std::views::reverse)
+        {
+            if (mutation_version > part_data_version)
+                result[mutation_version] = entry.commands;
+            else
+                break;
+        }
+        results.emplace_back(std::move(result));
+    }
+
+    return results;
+}
+
 void StorageMergeTree::startBackgroundMovesIfNeeded()
 {
     if (areBackgroundMovesNeeded())

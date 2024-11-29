@@ -859,6 +859,7 @@ private:
         const Strings & replicas, const String & mutation_id) const;
 
     std::map<int64_t, MutationCommands> getAlterMutationCommandsForPart(const DataPartPtr & part) const override;
+    std::vector<std::map<int64_t, MutationCommands>> getAlterMutationCommandsForParts(const DataPartsVector & parts) const override;
 
     void startBackgroundMovesIfNeeded() override;
 

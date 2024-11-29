@@ -8104,6 +8104,12 @@ std::map<int64_t, MutationCommands> StorageReplicatedMergeTree::getAlterMutation
     return queue.getAlterMutationCommandsForPart(part);
 }
 
+std::vector<std::map<int64_t, MutationCommands>> StorageReplicatedMergeTree::getAlterMutationCommandsForParts(const DataPartsVector & parts) const
+{
+    return queue.getAlterMutationCommandsForParts(parts);
+}
+
+
 
 void StorageReplicatedMergeTree::startBackgroundMovesIfNeeded()
 {

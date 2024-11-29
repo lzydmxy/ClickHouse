@@ -917,6 +917,9 @@ public:
     /// Return alter conversions for part which must be applied on fly.
     AlterConversionsPtr getAlterConversionsForPart(MergeTreeDataPartPtr part) const;
 
+    /// Return alter conversions for part which must be applied on fly.
+    std::vector<AlterConversionsPtr> getAlterConversionsForParts(const DataPartsVector & parts) const;
+
     /// Returns destination disk or volume for the TTL rule according to current storage policy.
     SpacePtr getDestinationForMoveTTL(const TTLDescription & move_ttl) const;
 
@@ -1319,6 +1322,8 @@ protected:
     /// method has different implementations for replicated and non replicated
     /// MergeTree because they store mutations in different way.
     virtual std::map<int64_t, MutationCommands> getAlterMutationCommandsForPart(const DataPartPtr & part) const = 0;
+
+    virtual std::vector<std::map<int64_t, MutationCommands>> getAlterMutationCommandsForParts(const DataPartsVector & parts) const = 0;
     /// Moves part to specified space, used in ALTER ... MOVE ... queries
     MovePartsOutcome movePartsToSpace(const DataPartsVector & parts, SpacePtr space);
 
