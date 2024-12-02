@@ -412,6 +412,8 @@ public:
     /// without actual data modification on disk.
     MutationCommands getAlterMutationCommandsForPart(const MergeTreeData::DataPartPtr & part) const;
 
+    std::vector<std::map<int64_t, MutationCommands>> getAlterMutationCommandsForParts(const MergeTreeData::DataPartsVector & parts) const;
+
     /// Mark finished mutations as done. If the function needs to be called again at some later time
     /// (because some mutations are probably done but we are not sure yet), returns true.
     bool tryFinalizeMutations(zkutil::ZooKeeperPtr zookeeper);

@@ -309,6 +309,7 @@ private:
 
 protected:
     MutationCommands getAlterMutationCommandsForPart(const DataPartPtr & part) const override;
+    std::vector<std::map<int64_t, MutationCommands>> getAlterMutationCommandsForParts(const DataPartsVector & parts) const override;
 };
 
 }

@@ -1940,6 +1940,55 @@ MutationCommands ReplicatedMergeTreeQueue::getAlterMutationCommandsForPart(const
     return result;
 }
 
+std::vector<std::map<int64_t, MutationCommands>> ReplicatedMergeTreeQueue::getAlterMutationCommandsForParts(const MergeTreeData::DataPartsVector & parts) const
+{
+    std::vector<std::map<int64_t, MutationCommands>> results;
+    results.reserve(parts.size());
+
+    std::unique_lock lock(state_mutex);
+
+    for (const auto part : parts)
+    {
+        auto in_partition = mutations_by_partition.find(part->info.partition_id);
+        if (in_partition == mutations_by_partition.end())
+        {
+            results.emplace_back(std::map<int64_t, MutationCommands>{});
+            continue;
+        }
+
+
+        Int64 part_data_version = part->info.getDataVersion();
+        Int64 part_metadata_version = part->getMetadataVersion();
+        // LOG_DEBUG(log, "Looking for mutations for part {} (part data version {}, part metadata version {})", part->name, part_data_version, part_metadata_version);
+
+        std::map<int64_t, MutationCommands> result;
+        /// Here we return mutation commands for part which has bigger alter version than part metadata version.
+        /// Please note, we don't use getDataVersion(). It's because these alter commands are used for in-fly conversions
+        /// of part's metadata.
+        for (const auto & [mutation_version, mutation_status] : in_partition->second | std::views::reverse)
+        {
+            auto alter_version = mutation_status->entry->alter_version;
+            if (alter_version != -1)
+            {
+                if (alter_version > storage.getInMemoryMetadataPtr()->getMetadataVersion())
+                    continue;
+
+                /// We take commands with bigger metadata version
+                if (alter_version > part_metadata_version)
+                    result[mutation_version] = mutation_status->entry->commands;
+            }
+            else if (mutation_version > part_data_version)
+            {
+                result[mutation_version] = mutation_status->entry->commands;
+            }
+        }
+
+        results.emplace_back(std::move(result));
+    }
+
+    return results;
+}
+
 MutationCommands ReplicatedMergeTreeQueue::getMutationCommands(
     const MergeTreeData::DataPartPtr & part, Int64 desired_mutation_version, Strings & mutation_ids) const
 {

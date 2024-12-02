@@ -7994,6 +7994,22 @@ AlterConversionsPtr MergeTreeData::getAlterConversionsForPart(MergeTreeDataPartP
     return result;
 }
 
+std::vector<AlterConversionsPtr> MergeTreeData::getAlterConversionsForParts(const DataPartsVector & parts) const
+{
+    auto parts_commands_map = getAlterMutationCommandsForParts(parts);
+    auto results = std::vector<AlterConversionsPtr>();
+    results.reserve(parts.size());
+    for (const auto & commands_map : parts_commands_map)
+    {
+        auto result = std::make_shared<AlterConversions>();
+        for (const auto & [_, commands] : commands_map)
+            for (const auto & command : commands)
+                result->addMutationCommand(command);
+        results.emplace_back(std::move(result));
+    }
+    return results;
+}
+
 size_t MergeTreeData::getTotalMergesWithTTLInMergeList() const
 {
     return getContext()->getMergeList().getMergesWithTTLCount();
@@ -8290,9 +8306,11 @@ StorageSnapshotPtr MergeTreeData::getStorageSnapshot(const StorageMetadataPtr & 
         object_columns_copy = object_columns;
     }
 
-    snapshot_data->alter_conversions.reserve(snapshot_data->parts.size());
-    for (const auto & part : snapshot_data->parts)
-        snapshot_data->alter_conversions.push_back(getAlterConversionsForPart(part));
+    snapshot_data->alter_conversions = getAlterConversionsForParts(snapshot_data->parts);
+
+    // snapshot_data->alter_conversions.reserve(snapshot_data->parts.size());
+    // for (const auto & part : snapshot_data->parts)
+    //     snapshot_data->alter_conversions.push_back(getAlterConversionsForPart(part));
 
     return std::make_shared<StorageSnapshot>(*this, metadata_snapshot, std::move(object_columns_copy), std::move(snapshot_data));
 }
