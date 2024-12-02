@@ -281,7 +281,7 @@ bool RaftDispatcher::putRequest(const RaftRequestPtr & request)
     return true;
 }
 
-bool RaftDispatcher::putRequest(const RaftRequestPtr & request, const std::weak_ptr<ChangeDataCapture> & cdc)
+bool RaftDispatcher::putRequestCDC(const RaftRequestPtr & request, const std::weak_ptr<ChangeDataCapture> & cdc)
 {
     {
         std::lock_guard lock(requests_cdc_mutex);
@@ -291,7 +291,7 @@ bool RaftDispatcher::putRequest(const RaftRequestPtr & request, const std::weak_
     return putRequest(request);
 }
 
-std::shared_ptr<ChangeDataCapture> RaftDispatcher::getRequestCdc(const RaftRequestPtr & request)
+std::shared_ptr<ChangeDataCapture> RaftDispatcher::getRequestCDC(const RaftRequestPtr & request)
 {
     decltype(requests_cdc.begin()) iter;
     {

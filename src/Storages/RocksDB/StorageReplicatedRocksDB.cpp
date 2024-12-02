@@ -285,7 +285,7 @@ void StorageReplicatedRocksDB::mutate(const MutationCommands & commands, Context
 
 void StorageReplicatedRocksDB::innerDelete(const MutationCommands & commands, Block block)
 {
-    auto dispatcher = getContext()->getRaftDispatcher();
+    auto dispatcher = getContext()->tryGetRaftDispatcher();
     auto storage_id = getStorageID();
 
     Consensus::SettingsPtr settings;

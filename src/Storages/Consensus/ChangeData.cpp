@@ -144,7 +144,7 @@ ChangeDataPtr ChangeData::readFromBuffer(ReadBuffer & in)
 
     Consensus::SettingsPtr settings;
 
-    if (const auto & dispatcher = Context::getGlobalContextInstance()->getRaftDispatcher())
+    if (const auto & dispatcher = Context::getGlobalContextInstance()->tryGetRaftDispatcher())
     {
         settings = dispatcher->getSettings();
     }

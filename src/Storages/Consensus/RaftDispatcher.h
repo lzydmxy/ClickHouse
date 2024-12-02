@@ -30,9 +30,9 @@ public:
 
     bool putRequest(const RaftRequestPtr & request);
 
-    bool putRequest(const RaftRequestPtr & request, const std::weak_ptr<ChangeDataCapture> & cdc);
+    bool putRequestCDC(const RaftRequestPtr & request, const std::weak_ptr<ChangeDataCapture> & cdc);
 
-    std::shared_ptr<ChangeDataCapture> getRequestCdc(const RaftRequestPtr & request);
+    std::shared_ptr<ChangeDataCapture> getRequestCDC(const RaftRequestPtr & request);
 
     /// Registered in ConfigReloader callback. Add new configuration changes to
     /// update_configuration_queue. Keeper Dispatcher apply them asynchronously.

@@ -3533,8 +3533,7 @@ std::shared_ptr<RaftDispatcher> Context::getRaftDispatcher() const
 {
     std::lock_guard lock(shared->raft_dispatcher_mutex);
     if (!shared->raft_dispatcher)
-        return nullptr;
-        // throw Exception(ErrorCodes::LOGICAL_ERROR, "Raft must be initialized before requests");
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Raft must be initialized before requests");
 
     return shared->raft_dispatcher;
 }

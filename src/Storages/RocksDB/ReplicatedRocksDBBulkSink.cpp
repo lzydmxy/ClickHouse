@@ -44,7 +44,7 @@ static const IColumn::Permutation & getAscendingPermutation(const IColumn & colu
 static rocksdb::Status buildSSTFile(const String & path, MutableColumnPtr && keys, MutableColumnPtr && values, const std::optional<IColumn::Permutation> & perm_ = {})
 {
     /// rocksdb::SstFileWriter requires keys to be sorted in ascending order
-    auto logger = &Poco::Logger::get("ReplicatedRocksDBBulkSink::buildSSTFile");
+    auto logger = &Poco::Logger::get("ReplicatedRocksDBBulkSink");
     LOG_DEBUG(logger, "Create sst file {}, size {}", path, values->size());
     IColumn::Permutation calculated_perm;
     const IColumn::Permutation & perm = perm_ ? *perm_ : getAscendingPermutation(*keys, calculated_perm);
@@ -55,7 +55,7 @@ static rocksdb::Status buildSSTFile(const String & path, MutableColumnPtr && key
     auto status = sst_file_writer.Open(path);
     if (!status.ok())
     {
-        LOG_DEBUG(logger, "sst_file_writer {} status {}", path, status.ToString());
+        LOG_WARNING(logger, "sst_file_writer {} status {}", path, status.ToString());
         return status;
     }
 
@@ -91,7 +91,7 @@ ReplicatedRocksDBBulkSink::ReplicatedRocksDBBulkSink(
 , log(&Poco::Logger::get("ReplicatedRocksDBBulkSink"))
 {
     serializations = getHeader().getSerializations();
-    min_block_size_rows = std::max(storage.getSettings().bulk_insert_block_size, getContext()->getSettingsRef().min_insert_block_size_rows);
+    min_block_size_rows = storage.getSettings().bulk_insert_block_size;
 
     rocksdb_bulk_insertions_threadpool = getContext()->getSettingsRef().rocksdb_bulk_insertions_parallel ? & getContext()->getRocksDBBulkInsertionsThreadpool() : nullptr;
 
@@ -233,7 +233,7 @@ void ReplicatedRocksDBBulkSink::consume(Chunk chunk)
     Consensus::SettingsPtr settings;
     if (cdc == nullptr)
     {
-        auto dispatcher = getContext()->getRaftDispatcher();
+        auto dispatcher = getContext()->tryGetRaftDispatcher();
         cdc = std::make_shared<ChangeDataCapture>(dispatcher, shared_from_this());
 
         if (dispatcher)

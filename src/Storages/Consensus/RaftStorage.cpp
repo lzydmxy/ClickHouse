@@ -161,16 +161,13 @@ RaftResponsePtr RaftStorage::processRequest(RaftRequestPtr & request)
 
     try
     {
-        if (auto dispatcher = Context::getGlobalContextInstance()->getRaftDispatcher())
+        if (auto request_cdc = Context::getGlobalContextInstance()->getRaftDispatcher()->getRequestCDC(request))
         {
-            if (auto request_cdc = dispatcher->getRequestCdc(request))
-            {
-                LOG_DEBUG(log, "Request {} use self cdc to consume.", request->id);
-                request_cdc->consumeSync(data);
-                response->error = Consensus::Error::ZOK;
-                LOG_DEBUG(log, "[Processed request]Opnum {}", Consensus::toString(request->getOpNum()));
-                return response;
-            }
+            LOG_DEBUG(log, "Request {} use self cdc to consume.", request->id);
+            request_cdc->consumeSync(data);
+            response->error = Consensus::Error::ZOK;
+            LOG_DEBUG(log, "[Processed request]Opnum {}", Consensus::toString(request->getOpNum()));
+            return response;
         }
         cdc->consume(data);
         response->error = Consensus::Error::ZOK;

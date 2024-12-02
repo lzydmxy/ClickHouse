@@ -39,7 +39,7 @@ ReplicatedRocksDBSink::ReplicatedRocksDBSink(
 void ReplicatedRocksDBSink::consume(Chunk chunk)
 {
     LOG_DEBUG(log, "Sink consume to cdc");
-    auto dispatcher = context->getRaftDispatcher();
+    auto dispatcher = context->tryGetRaftDispatcher();
     auto storage_id = storage.getStorageID();
 
     Consensus::SettingsPtr settings;

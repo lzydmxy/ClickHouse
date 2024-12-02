@@ -133,7 +133,7 @@ void ChangeDataCapture::sink(ChangeDataPtr & data)
 
     if (!rocks_sink_weak_ptr.expired())
     {
-        dispatcher->putRequest(request, shared_from_this());
+        dispatcher->putRequestCDC(request, shared_from_this());
     }
     else
     {
