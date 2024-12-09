@@ -40,7 +40,15 @@ ConnectionPoolWithFailover::ConnectionPoolWithFailover(
     {
         ConnectionPool & connection_pool = dynamic_cast<ConnectionPool &>(*nested_pools[i]);
         get_priority_load_balancing.hostname_prefix_distance[i] = getHostNamePrefixDistance(local_hostname, connection_pool.getHost());
-        get_priority_load_balancing.hostname_levenshtein_distance[i] = getHostNameLevenshteinDistance(local_hostname, connection_pool.getHost());
+        auto get_first_part = [](const String & s)
+        {
+            size_t pos = s.find('.');
+            if (pos != std::string::npos) {
+                return s.substr(0, pos);
+            }
+            return s;
+        };
+        get_priority_load_balancing.hostname_levenshtein_distance[i] = getHostNameLevenshteinDistance(get_first_part(local_hostname), get_first_part(connection_pool.getHost()));
     }
 }
 
