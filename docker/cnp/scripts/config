@@ -200,32 +200,8 @@ createConfigFileBase() {
   sed -i -e '$!N;/\n.*interserver_http_host/!P;D' ${CHROOT}/config.xml
   sed -i "s/.*<interserver_http_host>.*<\/interserver_http_host>-->$/    <interserver_http_host>$FULL_HOST_NAME<\/interserver_http_host>/" ${CHROOT}/config.xml
 
-  # chubaofs for cold without shared mode
-  if [ $diskType == "chubaofs-cold" ]; then
-    echo "volumes is chubaofs cold"
-    #mount chubaofs
-    /usr/bin/mkdir -p /mnt/chubaofs0
-    cd /usr/local/bin && python cfs-mount.py  --volname $clusterName --mountpoint /mnt/chubaofs0 >> ./cfs-client.log
-    #generate config
-    volumes="chubaofs0"
-    type="local"
-    path="\/mnt\/chubaofs0\/0$SHRAD_INDEX\/0$REPLICA_INDEX\/data\/"
-    sed -i "s/<!--\$DISKS>/<disks>/" ${CHROOT}/config.xml
-    sed -i "s/<\$DISKTYPE>/<$volumes>/" ${CHROOT}/config.xml
-    sed -i "s/\$TYPE/$type/" ${CHROOT}/config.xml
-    sed -i "s/\$PATH/$path/" ${CHROOT}/config.xml
-    sed -i "s/<\/\$DISKTYPE>/<\/$volumes>/" ${CHROOT}/config.xml
-    sed -i "s/<\/\$DISKS-->/<\/disks>/" ${CHROOT}/config.xml
-    sed -i "s/<!--\$COLD>/<cold>/" ${CHROOT}/config.xml
-    sed -i "s/\$COLDDISKTYPE/$volumes/" ${CHROOT}/config.xml
-    sed -i "s/<\/\$COLD-->/<\/cold>/" ${CHROOT}/config.xml
-    
-    regex="<!--\\\$MOVE_FACTOR:(.*)-->"
-    replacement="<move_factor>\1</move_factor>"
-    sed -E -i "s|$regex|$replacement|g" ${CHROOT}/config.xml
-
-  #chubaofs-shared
-  elif [ $diskType == "chubaofs-shared" ]; then
+  # chubaofs-shared
+  if [ $diskType == "chubaofs-shared" ]; then
     echo "volumes is chubaofs share"
     #mount chubaofs
     /usr/bin/mkdir -p /mnt/chubaofs0
@@ -235,9 +211,9 @@ createConfigFileBase() {
     type="nfs"
     path="\/mnt\/chubaofs0\/0$SHRAD_INDEX\/data\/"
     sed -i "s/<!--\$DISKS>/<disks>/" ${CHROOT}/config.xml
-    sed -i "s/<\$DISKTYPE>/<$volumes>/" ${CHROOT}/config.xml
     sed -i "s/\$TYPE/$type/" ${CHROOT}/config.xml
     sed -i "s/\$PATH/$path/" ${CHROOT}/config.xml
+    sed -i "s/<\$DISKTYPE>/<$volumes>/" ${CHROOT}/config.xml
     sed -i "s/<\/\$DISKTYPE>/<\/$volumes>/" ${CHROOT}/config.xml
     sed -i "s/<\/\$DISKS-->/<\/disks>/" ${CHROOT}/config.xml
     sed -i "s/<!--\$DISKTYPE-->default/$volumes/" ${CHROOT}/config.xml
@@ -252,19 +228,17 @@ createConfigFileBase() {
     /usr/bin/mkdir -p /mnt/chubaofs0
     cd /usr/local/bin && python cfs-mount.py  --volname $clusterName --mountpoint /mnt/chubaofs0 >> ./cfs-client.log
     #generate config
-    coldDisk="chubaofs0"
     volumes="chubaofs0_cache"
     type="nfs"
     path="\/mnt\/chubaofs0\/0$SHRAD_INDEX\/data\/"
     sed -i "s/<!--\$DISKS>/<disks>/" ${CHROOT}/config.xml
-    sed -i "s/<\/\$DISKS-->/<\/disks>/" ${CHROOT}/config.xml
-    #chubaofs-shared-for-cold not use cache disk
     sed -i "s/\$TYPE/$type/" ${CHROOT}/config.xml
     sed -i "s/\$PATH/$path/" ${CHROOT}/config.xml
-    sed -i "s/<\$DISKTYPE>/<!--$volumes>/" ${CHROOT}/config.xml
-    sed -i "s/<\/\$DISKTYPE>/<\/$volumes-->/" ${CHROOT}/config.xml
+    sed -i "s/<\$DISKTYPE>/<$volumes>/" ${CHROOT}/config.xml
+    sed -i "s/<\/\$DISKTYPE>/<\/$volumes>/" ${CHROOT}/config.xml
+    sed -i "s/<\/\$DISKS-->/<\/disks>/" ${CHROOT}/config.xml
     sed -i "s/<!--\$COLD>/<cold>/" ${CHROOT}/config.xml
-    sed -i "s/\$COLDDISKTYPE/$coldDisk/" ${CHROOT}/config.xml
+    sed -i "s/\$COLDDISKTYPE/$volumes/" ${CHROOT}/config.xml
     sed -i "s/<\/\$COLD-->/<\/cold>/" ${CHROOT}/config.xml
     regex="<!--\\\$MOVE_FACTOR:(.*)-->"
     replacement="<move_factor>\1</move_factor>"
