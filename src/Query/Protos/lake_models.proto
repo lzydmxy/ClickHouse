@@ -1,0 +1,41 @@
+syntax = "proto2";
+package DB.Protos;
+
+message HudiProperties {
+  message KeyValue {
+    optional string key = 1;
+    optional string value = 2;
+  }
+
+  repeated KeyValue properties = 1;
+}
+
+message FileScanInfo {
+  required uint32 format_type = 1;
+  required string uri = 2;
+  optional uint64 size = 3;
+  optional string partition_id = 4;
+}
+
+message PaimonJNIScanInfo {
+  required string encoded_table = 1;
+  optional string encoded_predicate = 2;
+  repeated string encoded_splits = 3;
+}
+
+message HudiJNIScanInfo {
+  optional string partition_id = 1;
+  optional HudiProperties properties = 2;
+  optional bytes input_split_bytes = 3;
+}
+
+message LakeScanInfo {
+  required uint32 storage_type = 1;
+  optional FileScanInfo file_scan_info = 2;
+  optional HudiJNIScanInfo hudi_jni_scan_info = 3;
+  optional PaimonJNIScanInfo paimon_jni_scan_info = 4;
+}
+
+message LakeScanInfos {
+  repeated LakeScanInfo scan_infos = 1;
+}

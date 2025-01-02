@@ -1,0 +1,278 @@
+#pragma once
+#include <cstdint>
+#include <functional>
+#include <optional>
+#include <ostream>
+#include <string>
+#include <vector>
+#include <fmt/core.h>
+#include <base/getFQDNOrHostName.h>
+#include <Interpreters/Context_fwd.h>
+#include <Core/Types.h>
+
+namespace DB
+{
+class HostWithPorts;
+using HostWithPortsVec = std::vector<HostWithPorts>;
+
+std::string truncateNetworkInterfaceIfHas(const std::string & s);
+
+inline const std::string & getHostIPFromEnv()
+{
+    const auto get_host_ip_lambda = [] () -> std::string
+    {
+        {
+            const char * byted_ipv6 = getenv("BYTED_HOST_IPV6");
+            if (byted_ipv6 && byted_ipv6[0])
+                return byted_ipv6;
+        }
+
+        {
+            const char * my_ipv6 = getenv("MY_HOST_IPV6");
+            if (my_ipv6 && my_ipv6[0])
+                return my_ipv6;
+        }
+
+        {
+            const char * byted_ipv4 = getenv("BYTED_HOST_IP");
+            if (byted_ipv4 && byted_ipv4[0])
+                return byted_ipv4;
+        }
+
+        {
+            const char * my_ipv4 = getenv("MY_HOST_IP");
+            if (my_ipv4 && my_ipv4[0])
+                return my_ipv4;
+        }
+
+        return truncateNetworkInterfaceIfHas(getFQDNOrHostName());
+    };
+
+    static std::string host_ip = get_host_ip_lambda();
+    return host_ip;
+}
+
+inline const char * getLoopbackIPFromEnv()
+{
+    const auto get_loopback_ip_lambda = [] () -> const char *
+    {
+        {
+            const char * byted_ipv6 = getenv("BYTED_HOST_IPV6");
+            if (byted_ipv6 && byted_ipv6[0])
+                return "::1";
+        }
+
+        {
+            const char * my_ipv6 = getenv("MY_HOST_IPV6");
+            if (my_ipv6 && my_ipv6[0])
+                return "::1";
+        }
+
+        {
+            const char * byted_ipv4 = getenv("BYTED_HOST_IP");
+            if (byted_ipv4 && byted_ipv4[0])
+                return "127.0.0.1";
+        }
+
+        {
+            const char * my_ipv4 = getenv("MY_HOST_IP");
+            if (my_ipv4 && my_ipv4[0])
+                return "127.0.0.1";
+        }
+
+        return "127.0.0.1";
+    };
+
+    static const char * loopback_ip = get_loopback_ip_lambda();
+    return loopback_ip;
+}
+
+inline const char * getConsulIPFromEnv()
+{
+    const auto get_consul_ip_lambda = []() -> const char * {
+        {
+            const char * consul_http_ipv6 = getenv("CONSUL_HTTP_HOST");
+            if (consul_http_ipv6 && consul_http_ipv6[0])
+                return consul_http_ipv6;
+        }
+
+        {
+            const char * byted_ipv6 = getenv("BYTED_HOST_IPV6");
+            if (byted_ipv6 && byted_ipv6[0])
+                return byted_ipv6;
+        }
+
+        {
+            const char * my_ipv6 = getenv("MY_HOST_IPV6");
+            if (my_ipv6 && my_ipv6[0])
+                return my_ipv6;
+        }
+
+        return "::1";
+    };
+
+    static const char * consul_ip = get_consul_ip_lambda();
+    return consul_ip;
+}
+
+inline std::string addBracketsIfIpv6(const std::string & host_name)
+{
+    if (host_name.find_first_of(':') != std::string::npos && !host_name.empty() && host_name.back() != ']')
+        return fmt::format("[{}]", host_name);
+    else
+        return host_name;
+}
+
+inline std::string createHostPortString(const std::string & host, uint16_t port)
+{
+    return fmt::format("{}:{}", addBracketsIfIpv6(host), port);
+}
+
+inline std::string createHostPortString(const std::string & host, const std::string & port)
+{
+    return fmt::format("{}:{}", addBracketsIfIpv6(host), port);
+}
+
+std::string getWorkerID(ContextPtr context);
+std::string getWorkerGroupID(ContextPtr context);
+std::string getVirtualWareHouseID(ContextPtr context);
+
+inline std::string_view removeBracketsIfIpv6(const std::string & host_name)
+{
+    if (host_name.find_first_of(':') != std::string::npos &&
+        !host_name.empty() &&
+        host_name.back() == ']' &&
+        host_name.front() == '['
+    )
+        return std::string_view(host_name.data() + 1, host_name.size() - 2);
+    return std::string_view(host_name.c_str());
+}
+
+inline bool isSameHost(const std::string & lhs, const std::string & rhs)
+{
+    if (lhs == rhs)
+        return true;
+    return removeBracketsIfIpv6(lhs) == removeBracketsIfIpv6(rhs);
+}
+
+class HostWithPorts
+{
+public:
+    HostWithPorts() = default;
+    HostWithPorts(const std::string & host_, uint16_t rpc_port_ = 0, uint16_t tcp_port_ = 0, uint16_t http_port_ = 0, [[maybe_unused]] uint16_t exchange_port_ = 0, [[maybe_unused]] uint16_t exchange_status_port_ = 0, std::string id_ = {})
+        : host{removeBracketsIfIpv6(host_)},
+            id{std::move(id_)},
+          rpc_port{rpc_port_},
+          tcp_port{tcp_port_},
+          http_port{http_port_},
+          exchange_port{rpc_port_},
+          exchange_status_port{rpc_port_}
+    {
+        (void)exchange_port_;
+        (void)exchange_status_port_;
+    }
+
+    std::string host;
+    std::string id;
+    uint16_t rpc_port{0};
+    uint16_t tcp_port{0};
+    uint16_t http_port{0};
+    uint16_t exchange_port{0};
+    uint16_t exchange_status_port{0};
+    PairInt64 topology_version = PairInt64{0, 0};
+    std::optional<String> real_id;
+public:
+
+    bool empty() const { return host.empty() || (rpc_port == 0 && tcp_port == 0); }
+
+    std::string getRPCAddress() const { return fmt::format("{}:{}", addBracketsIfIpv6(host), std::to_string(rpc_port)); }
+    std::string getTCPAddress() const { return fmt::format("{}:{}", addBracketsIfIpv6(host), std::to_string(tcp_port)); }
+    std::string getHTTPAddress() const { return fmt::format("{}:{}", addBracketsIfIpv6(host), std::to_string(http_port)); }
+    std::string getExchangeAddress() const { return getRPCAddress(); }
+    std::string getExchangeStatusAddress() const { return getRPCAddress(); }
+
+    bool operator<(const HostWithPorts & rhs) const { return id < rhs.getId(); }
+    const std::string & getHost() const { return host; }
+    uint16_t getTCPPort() const { return tcp_port; }
+    uint16_t getHTTPPort() const { return http_port; }
+    uint16_t getRPCPort() const { return rpc_port; }
+    std::string toDebugString() const;
+    void replaceId(const String & id_) { id = id_; }
+    String getId() const { return id; }
+    void setRealId(const String & id_) { real_id = id_; }
+
+    static HostWithPorts fromRPCAddress(const std::string & s);
+
+    /// NOTE: PLEASE DO NOT implement any comparison operator which is a kind of bad code style
+
+    struct IsSameEndpoint
+    {
+        bool operator()(const HostWithPorts & lhs, const HostWithPorts & rhs) const
+        {
+            return isSameHost(lhs.host, rhs.host) && lhs.rpc_port == rhs.rpc_port && lhs.tcp_port == rhs.tcp_port;
+        }
+    };
+
+    struct IsExactlySame
+    {
+        bool operator()(const HostWithPorts & lhs, const HostWithPorts & rhs) const
+        {
+            return lhs.id == rhs.id && isSameHost(lhs.host, rhs.host) && lhs.rpc_port == rhs.rpc_port && lhs.tcp_port == rhs.tcp_port
+                && lhs.http_port == rhs.http_port && lhs.exchange_port == rhs.exchange_port
+                && lhs.exchange_status_port == rhs.exchange_status_port;
+        }
+    };
+
+    bool isSameEndpoint(const HostWithPorts & rhs) const
+    {
+        return IsSameEndpoint{}(*this, rhs);
+    }
+
+    bool isExactlySame(const HostWithPorts & rhs) const { return IsExactlySame{}(*this, rhs); }
+
+    static bool isExactlySameVec(const HostWithPortsVec & lhs, const HostWithPortsVec & rhs);
+};
+
+std::ostream & operator<<(std::ostream & os, const HostWithPorts & host_ports);
+
+struct WGWorkerInfo
+{
+    WGWorkerInfo(const String & worker_id_, size_t num_workers_, size_t index_)
+        : worker_id(worker_id_), num_workers(num_workers_), index(index_) {}
+
+    bool operator==(const WGWorkerInfo & other) const
+    {
+        return (worker_id == other.worker_id) && (num_workers == other.num_workers) && (index == other.index);
+    }
+
+    String worker_id;
+    UInt64 num_workers;
+    UInt64 index;
+};
+
+using WGWorkerInfoPtr = std::shared_ptr<WGWorkerInfo>;
+
+}
+
+namespace std
+{
+
+template <>
+struct hash<DB::HostWithPorts>
+{
+    std::size_t operator()(const DB::HostWithPorts & hp) const
+    {
+        return std::hash<string>()(DB::addBracketsIfIpv6(hp.getHost())) ^ std::hash<uint16_t>()(hp.rpc_port) ^ (std::hash<uint16_t>()(hp.tcp_port) << 16);
+    }
+};
+
+template <>
+struct equal_to<DB::HostWithPorts>
+{
+    bool operator()(const DB::HostWithPorts & lhs, const DB::HostWithPorts & rhs) const
+    {
+        return DB::HostWithPorts::IsSameEndpoint{}(lhs, rhs);
+    }
+};
+
+}

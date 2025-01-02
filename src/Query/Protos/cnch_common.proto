@@ -1,0 +1,153 @@
+syntax = "proto2";
+
+package DB.Protos;
+
+message UUID {
+  required fixed64 low = 1;
+  required fixed64 high = 2;
+}
+
+message StorageID
+{
+  required string database = 1;
+  required string table = 2;
+  required UUID uuid = 3;
+  optional string server_vw_name = 4;
+}
+
+message HostWithPorts
+{
+  required string hostname = 1;
+  required string host = 2;
+  required uint32 rpc_port = 3;
+  required uint32 tcp_port = 4;
+  optional uint32 http_port = 5;
+  optional uint32 exchange_port = 6;
+  optional uint32 exchange_status_port = 7;
+}
+
+message ClientInfo
+{
+  required string hostname = 1;
+  required string rpc_port = 2;
+  required uint32 client_revision = 3;
+  /// Add more info like Interpreters/ClientInfo.h
+}
+
+/// vw queue
+message ResourceUsageEntry
+{
+  required uint32 queued_queries = 1;
+  required uint32 running_queries = 2;
+  required uint64 last_sync = 3;
+  required uint64 last_used = 4;
+}
+
+message BpQueryKey
+{
+  required string query = 1;
+  required string settings_string = 2;
+  required string stage = 3;
+  required string concat_cols = 4;
+  optional int32 num_rows = 5;
+  optional float duration = 6;
+}
+
+message BpObjIdentifier
+{
+  required string path = 1;
+  required int64 estimated_size = 2;
+  required int64 aio_threshold = 3;
+  required string mode = 4;
+}
+
+message QueryWorkerMetricElement
+{
+  required string initial_query_id = 1;
+  required string current_query_id = 2;
+  required string query = 3;
+  required uint32 state = 4;
+  required uint32 type = 5;
+  required string database = 6;
+  required string table = 7;
+  required string worker_id = 8;
+  required uint64 event_time = 9;
+  required uint32 latency = 10;
+  required uint32 runtime_latency = 11;
+  required uint32 selected_parts = 12;
+  required uint32 selected_ranges = 13;
+  required uint32 selected_marks = 14;
+  required uint32 vfs_time = 15;
+  required uint64 peak_memory = 17;
+  required uint32 read_rows = 18;
+  required uint64 read_bytes = 19;
+  required uint64 read_cached_bytes = 20;
+  required uint32 write_rows = 21;
+  required uint64 write_bytes = 22;
+  required uint64 write_duration = 23;
+  required string operator_level = 24;
+  required string exception = 25;
+  required string stack_trace = 26;
+  required uint32 revision = 27;
+  required string version_scm = 28;
+}
+
+message AsyncQueryStatus {
+  enum Status {
+    NotStarted = 0;
+    Running = 1;
+    Finished = 2;
+    Failed = 3;
+  };
+  required string id = 1;
+  optional string query_id = 2;
+  required Status status = 3;
+  optional string error_msg = 4;
+  required uint64 start_time = 5;
+  required uint64 update_time = 6;
+  required uint64 max_execution_time = 7;
+}
+
+message LeaderLease {
+  required uint64 elected_time = 1;
+  required uint64 last_refresh_time = 2;
+
+  //Leader should refresh "last_refresh_time" in every "refresh_interval_ms".
+  required uint64 refresh_interval_ms = 3;
+
+  //If any follower found "last_refresh_time" was not changed in "expired_interval_ms",
+  //then it can safely try to elect.
+  required uint64 expired_interval_ms = 4;
+
+  enum Status {
+    //Clients can safely connect to these status leader if the status is Ready.
+    Ready = 0;
+
+    //A process have already become leader but did not wanto to provide service temporary.
+    //Other follower should stop to try to become leader but monitor the last_refresh_time
+    Wait = 1;
+
+    //Current leader does not want to become leader now.
+    //Followers can start election now.
+    //Usually, when the leader is required to shut down or restart, it can set the status before.
+    Yield = 2;
+  };
+  required Status status = 5[default = Ready];
+}
+
+message TraceInfo {
+  optional string query_id = 1;
+  optional uint64 txn_id = 2;
+}
+
+message LeaderInfo {
+  required HostWithPorts address = 1;
+  required LeaderLease lease = 2;
+  optional HostWithPorts previous_leader_address = 3;
+  optional LeaderLease previous_leader_lease = 4;
+}
+
+enum ResourceRequestType {
+  RESOURCE_REQUEST = 0;
+  RESOURCE_RELEASE = 1;
+};

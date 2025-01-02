@@ -1,0 +1,35 @@
+syntax = "proto2";
+package DB.Protos;
+
+option cc_generic_services = true;
+
+message TransferRuntimeFilterRequest {
+  required string query_id = 1;
+  required uint64 builder_id = 2;
+  required uint32 parallel_id = 3;
+  required uint64 require_parallel_size = 4;
+  required bytes filter_data = 5;
+}
+
+message TransferRuntimeFilterResponse {
+  optional string message = 1;
+}
+
+message DispatchRuntimeFilterRequest {
+  required string query_id = 1;
+  required uint64 filter_id = 2;
+  required uint64 ref_segment = 3;
+  required bytes filter_data = 4;
+}
+
+message DispatchRuntimeFilterResponse {
+  optional string message = 1;
+}
+
+service RuntimeFilterService {
+
+  rpc transferRuntimeFilter(TransferRuntimeFilterRequest) returns (TransferRuntimeFilterResponse);
+
+  rpc dispatchRuntimeFilter(DispatchRuntimeFilterRequest) returns (DispatchRuntimeFilterResponse);
+};
+

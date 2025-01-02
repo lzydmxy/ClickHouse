@@ -1,0 +1,109 @@
+syntax = "proto2";
+package DB.Protos;
+
+message IndexEntry {
+    required uint32 key = 1;
+    required uint32 address = 2;
+    optional uint32 size_hint = 3;
+    optional uint32 total_hits = 4;
+    optional uint32 current_hits = 5;
+}
+
+message IndexBucket {
+    required uint32 bucket_id = 1;
+    repeated IndexEntry entries = 2;
+}
+
+message Region {
+    required uint32 region_id = 1;
+    required uint32 last_entry_end_offset = 2;
+    required uint32 num_items = 3;
+    optional uint32 priority = 4;
+}
+
+message RegionData {
+    repeated Region regions = 1;
+    required uint32 region_size = 2;
+}
+
+message BlockCacheConfig {
+    required uint64 version = 1;
+    required uint64 cache_base_offset = 2;
+    required uint64 cache_size = 3;
+    required uint32 alloc_align_size = 4;
+    required bool checksum = 5;
+    optional uint64 hole_count = 6;
+    optional uint64 hole_size_total = 7;
+    optional bool reinsertion_policy_enabled = 8;
+    optional uint64 used_size_bytes = 9;
+}
+
+message BigHashPersistentData {
+    required uint32 format_version = 1;
+    required uint64 generation_time = 2;
+    required uint64 item_count = 3;
+    required uint64 bucket_size = 4;
+    required uint64 cache_base_offset = 5;
+    required uint64 num_buckets = 6;
+    optional uint64 used_size_bytes = 7;
+}
+
+message BloomFilterPersistentData {
+    required uint32 num_filters = 1;
+    required uint64 hash_table_bit_size = 2;
+    required uint64 filter_byte_size = 3;
+    required uint32 fragment_size = 4;
+    repeated uint64 seeds = 5;
+}
+
+message NexusFSIndexEntry {
+    required uint32 key = 1;
+    required uint32 address_rid = 2;
+    required uint32 address_offset = 3;
+    optional uint32 size = 4;
+    optional uint32 total_hits = 5;
+    optional uint32 current_hits = 6;
+}
+
+message NexusFSIndexBucket {
+    required uint32 bucket_id = 1;
+    repeated NexusFSIndexEntry entries = 2;
+}
+
+message NexusFSFileSegment {
+    required uint64 segment_id = 1;
+    required uint32 address_rid = 2;
+    required uint32 address_offset = 3;
+    required uint32 size = 4;
+}
+
+message NexusFSFileMeta
+{
+    required string file_name = 1;
+    required uint64 file_size = 2;
+    repeated NexusFSFileSegment segments = 3;
+}
+
+message NexusFSInode {
+    required string node_key = 1;
+    required uint64 node_id = 2;
+    repeated NexusFSFileMeta files = 3;
+}
+
+message NexusFSInodeManager {
+    required string prefix = 1;
+    required string surfix = 2;
+    required NexusFSInode root_inode = 3;
+    repeated NexusFSInode inodes = 4;
+}
+
+message NexusFSConfig {
+    required uint64 version = 1;
+    required uint64 cache_size = 2;
+    required uint64 metadata_size = 3;
+    required uint32 alloc_align_size = 4;
+    required uint32 region_size = 5;
+    required uint32 segment_size = 6;
+    required string file_prefix = 7;
+    required string file_surfix = 8;
+}

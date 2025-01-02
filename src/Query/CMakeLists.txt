@@ -1,0 +1,7 @@
+#add_subdirectory(Analyzer)
+add_subdirectory(Protos)
+add_subdirectory(Executor)
+#add_subdirectory(Optimizer)
+#add_subdirectory(QueryPlan)
+#add_subdirectory(Runtime)
+#add_subdirectory(Schedule)
