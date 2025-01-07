@@ -1,6 +1,11 @@
+if (TARGET ch_contrib::grpc)
+    add_subdirectory(Protos)
+    add_subdirectory(ProtosWrapper)
+endif()
+
+#add_subdirectory(Executor)
 #add_subdirectory(Analyzer)
-add_subdirectory(Protos)
-add_subdirectory(Executor)
+#add_subdirectory(ProtosWrapper)
 #add_subdirectory(Optimizer)
 #add_subdirectory(QueryPlan)
 #add_subdirectory(Runtime)
