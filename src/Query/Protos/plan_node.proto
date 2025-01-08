@@ -1,427 +1,792 @@
-syntax = "proto2";
-import "enum.proto";
-import "plan_node_utils.proto";
-import "cnch_common.proto";
-
+syntax = "proto3";
+import "common.proto";
 package DB.Protos;
 
+message AddressInfo {
+    string host_name = 1;
+    uint32 port = 2;
+    bytes user = 3;
+    bytes password = 4;
+    uint32 exchange_port = 5;
+}
+
+message PlanSegmentPartitionSource {
+    uint64 exchange_id = 1;
+    AddressInfo address = 2;
+    repeated uint32 partition_ids = 3;
+}
+
+message SourceTaskFilter {
+    uint32 index = 1;
+    uint32 count = 2;
+    repeated int64 buckets = 3;
+}
+
+message NameAndTypePair {
+    string name = 1;
+    string type = 2;
+    string type_in_storage = 3;
+    uint64 subcolumn_delimiter_position = 4;
+}
+
+message Block {
+    bytes blob = 1;
+    repeated NameAndTypePair names_and_types = 2;
+}
+
+message Field {
+    enum Enum {
+        Null = 0;
+        UInt64 = 1;
+        Int64 = 2;
+        Float64 = 3;
+        UInt128 = 4;
+        Int128 = 5;
+        String = 16;
+        Array = 17;
+        Tuple = 18;
+        Decimal32 = 19;
+        Decimal64 = 20;
+        Decimal128 = 21;
+        AggregateFunctionState = 22;
+        Decimal256 = 23;
+        UInt256 = 24;
+        Int256 = 25;
+        Map = 26;
+        UUID = 27;
+        ByteMap = 28;
+        BitMap64 = 29;
+        SketchBinary = 30;
+        IPv4 = 31;
+        IPv6 = 32;
+        Object = 33;
+        JSONB= 34;
+        NegativeInfinity = 254;
+        PositiveInfinity = 255;
+    }
+    Field.Enum type = 1;
+    bytes blob = 2;
+}  
+
+message IPlanSegment {
+    enum Enum {
+        UNKNOWN = 0;
+        SOURCE = 1;
+        EXCHANGE = 2;
+        OUTPUT = 3;
+    }
+    Block header = 1;
+    IPlanSegment.Enum type = 2;
+    ExchangeMode.Enum exchange_mode = 3;
+    uint64 exchange_id = 4;
+    uint64 exchange_parallel_size = 5;
+    string name = 6;
+    uint64 segment_id = 7;
+    repeated string shuffle_keys = 8;
+}
+
+message PlanSegmentInput {
+    IPlanSegment base_plan_segment = 1;
+    uint64 parallel_index = 2;
+    bool keep_order = 3;
+    AddressInfo source_addresses = 4;
+    StorageID storage_id = 5;
+}
+ 
+message PlanSegmentOutput {
+    IPlanSegment base_plan_segment = 1;
+    string shuffle_hash_function = 2;
+    uint32 parallel_size = 3;
+    bool keep_order = 4;
+    repeated Field shuffle_function_parameters = 5;
+}
+
+
+//---------------- Query Plan --------------
+
+message FillColumnDescription {
+    Field fill_from = 1;
+    Field fill_to = 2;
+    Field fill_step = 3;
+}
+
+message SortColumnDescription {
+    string column_name = 1;
+    uint64 column_number = 2;
+    int32 direction = 3;
+    int32 nulls_direction = 4;
+    string collator = 5;
+    bool with_fill = 6;
+    FillColumnDescription fill_description = 7;
+}
+
+message DataStream {
+    enum SortMode {
+        Chunk = 0;   /// Separate chunks are sorted
+        Port = 1;    /// Data from each port is sorted
+        Stream = 2;  /// Data is globally sorted
+    }
+    Block header = 1;
+    string distinct_columns = 2;
+    bool has_single_port = 3;
+    repeated SortColumnDescription sort_description = 4;
+    SortMode sort_mode = 5;
+}
+
+message StringVec {
+    repeated string values = 1;
+}
+
+message SizeOrVariable {
+    oneof size_or_variable {
+      uint64 size = 1;
+      string variable = 2;
+    }
+}
+
+message AST {
+    bytes blob = 1; // exact binary
+    string text = 2; // only for read
+}
+
+message Partitioning {
+    enum Handle {
+        SINGLE = 0;
+        HCOORDINATOR = 1;
+        FIXED_HASH = 2;
+        FIXED_ARBITRARY = 3;
+        FIXED_BROADCAST = 4;
+        SCALED_WRITER = 5;
+        BUCKET_TABLE = 6;
+        ARBITRARY = 7;
+        FIXED_PASSTHROUGH = 8;
+        UNKNOWN = 9;
+    }
+    enum Component {
+        ANY = 0;
+        CCOORDINATOR = 1;
+        WORKER = 2;
+    }
+    Handle handle = 1;
+    repeated string columns = 2;
+    bool require_handle = 3;
+    uint64 buckets = 4;
+    bool enforce_round_robin = 5;
+    Component component = 6;
+    bool exactly_match = 7;
+    optional AST bucket_expr = 8;
+}
+
+message SizeLimits {
+    uint64 max_rows = 1;
+    uint64 max_bytes = 2;
+    OverflowMode.Enum overflow_mode = 3;
+}
+
+message RuntimeFilter {
+    enum Enum {
+        LOCAL = 0;
+        DISTRIBUTED = 1;
+        UNKNOWN = 2;
+    }
+    uint32 id = 1;
+    RuntimeFilter.Enum distribution = 2;
+}
+
+message Assignments {
+    message KV {
+        string key = 1;
+        AST value = 2;
+    }
+    repeated KV pairs = 1;
+}
+
+message GroupingSetsParams {
+    repeated string used_key_names = 1;
+    repeated uint64 used_keys = 2;
+    repeated uint64 missing_keys = 3;
+}
+
+message GroupingDescription {
+    repeated string argument_names = 1;
+    string output_name = 2;
+}
+
+message FieldVector {
+    repeated Field fields = 1;
+}
+
+message AggregateFunction {
+    string func_name = 1;
+    repeated string arg_types = 2;
+    FieldVector parameters = 3;
+}
+
+message AggregateDescription {
+    AggregateFunction function = 1;
+    repeated uint64 arguments = 3;
+    repeated string argument_names = 4;
+    string column_name = 5;
+    string mask_column = 6;
+}
+
+message AggregatorParams {
+    Block src_header = 1;
+    Block intermediate_header = 2;
+    repeated uint64 keys = 3;
+    repeated AggregateDescription aggregates = 4;
+    bool overflow_row = 5;
+    uint64 max_rows_to_group_by = 6;
+    OverflowMode.Enum group_by_overflow_mode = 7;
+    uint64 group_by_two_level_threshold = 8;
+    uint64 group_by_two_level_threshold_bytes = 9;
+    uint64 max_bytes_before_external_group_by = 10;
+    bool empty_result_for_aggregation_by_empty_set = 11;
+    uint64 max_threads = 12;
+    uint64 min_free_disk_space = 13;
+    bool compile_aggregate_expressions = 14;
+    uint64 min_count_to_compile_aggregate_expression = 15;
+    optional bool enable_lc_group_by_opt = 16;
+    optional uint64 spill_buffer_bytes_before_external_group_by = 17;
+    optional bool enable_adaptive_spill = 18;
+}
+
+message AggregatingTransformParams {
+    AggregatorParams params = 1;
+    bool final = 2;
+}
+
+message NameWithAliasPair {
+    string name = 1;
+    string alias = 2;
+}
+
+//---------- Query plan step ----------
+
 message ITransformingStep {
-  required string step_description = 1;
-  required DataStream input_stream = 2;
+    string step_description = 1;
+    DataStream input_stream = 2;
 }
 
 message ISourceStep {
-  required Block output_header = 1;
+    Block output_header = 1;
 }
 
 message SetOperationStep {
-  repeated DataStream input_streams = 1;
-  required DataStream output_stream = 2;
-  map<string, StringVec> output_to_inputs = 3;
+    repeated DataStream input_streams = 1;
+    DataStream output_stream = 2;
+    map<string, StringVec> output_to_inputs = 3;
 }
 
 message AssignUniqueIdStep {
-  required ITransformingStep query_plan_base = 1;
-  required string unique_id = 2;
+    ITransformingStep query_plan_base = 1;
+    string unique_id = 2;
 }
 
 message EnforceSingleRowStep {
-  required ITransformingStep query_plan_base = 1;
+    ITransformingStep query_plan_base = 1;
 }
 
 message ExtremesStep {
-  required ITransformingStep query_plan_base = 1;
+    ITransformingStep query_plan_base = 1;
 }
 
 message FillingStep {
-  required ITransformingStep query_plan_base = 1;
-  repeated SortColumnDescription sort_description = 2;
+    ITransformingStep query_plan_base = 1;
+    repeated SortColumnDescription sort_description = 2;
 }
 
 message FinishSortingStep {
-  required ITransformingStep query_plan_base = 1;
-  repeated SortColumnDescription prefix_description = 2;
-  repeated SortColumnDescription result_description = 3;
-  required uint64 max_block_size = 4;
-  required uint64 limit = 5;
+    ITransformingStep query_plan_base = 1;
+    repeated SortColumnDescription prefix_description = 2;
+    repeated SortColumnDescription result_description = 3;
+    uint64 max_block_size = 4;
+    uint64 limit = 5;
 }
 
 message LimitByStep {
-  required ITransformingStep query_plan_base = 1;
-  required uint64 group_length = 2;
-  required uint64 group_offset = 3;
-  repeated string columns = 4;
+    ITransformingStep query_plan_base = 1;
+    uint64 group_length = 2;
+    uint64 group_offset = 3;
+    repeated string columns = 4;
 }
 
 message LimitStep {
-  required ITransformingStep query_plan_base = 1;
-  required uint64 limit = 2; // deprecated, use limit_or_var instead
-  required uint64 offset = 3; // deprecated, use offset_or_var instead
-  required bool always_read_till_end = 4;
-  required bool with_ties = 5;
-  repeated SortColumnDescription description = 6;
-  required bool partial = 7;
-  optional SizeOrVariable limit_or_var = 8;
-  optional SizeOrVariable offset_or_var = 9;
+    ITransformingStep query_plan_base = 1;
+    uint64 limit = 2; // deprecated, use limit_or_var instead
+    uint64 offset = 3; // deprecated, use offset_or_var instead
+    bool always_read_till_end = 4;
+    bool with_ties = 5;
+    repeated SortColumnDescription description = 6;
+    bool partial = 7;
+    optional SizeOrVariable limit_or_var = 8;
+    optional SizeOrVariable offset_or_var = 9;
 }
 
 message MarkDistinctStep {
-  required ITransformingStep query_plan_base = 1;
-  required string marker_symbol = 2;
-  repeated string distinct_symbols = 3;
+    ITransformingStep query_plan_base = 1;
+    string marker_symbol = 2;
+    repeated string distinct_symbols = 3;
 }
 
 message MergingSortedStep {
-  required ITransformingStep query_plan_base = 1;
-  repeated SortColumnDescription sort_description = 2;
-  required uint64 max_block_size = 3;
-  required uint64 limit = 4;
+    ITransformingStep query_plan_base = 1;
+    repeated SortColumnDescription sort_description = 2;
+    uint64 max_block_size = 3;
+    uint64 limit = 4;
 }
 
 message OffsetStep {
-  required ITransformingStep query_plan_base = 1;
-  required uint64 offset = 2;
+    ITransformingStep query_plan_base = 1;
+    uint64 offset = 2;
 }
 
 message SortingStep {
-  message Stage {
-    enum Enum {
-        FULL = 0;
-        MERGE = 1;
-        PARTIAL = 2;
-        PARTIAL_NO_MERGE = 3;
+    message Stage {
+        enum Enum {
+            FULL = 0;
+            MERGE = 1;
+            PARTIAL = 2;
+            PARTIAL_NO_MERGE = 3;
+        }
     }
-  }
-
-  required ITransformingStep query_plan_base = 1;
-  repeated SortColumnDescription result_description = 2;
-  required uint64 limit = 3; // deprecated, use limit_or_var instead
-  required bool partial = 4;
-  repeated SortColumnDescription prefix_description = 5;
-  optional Stage.Enum stage = 6;
-  optional SizeOrVariable limit_or_var = 7;
+    ITransformingStep query_plan_base = 1;
+    repeated SortColumnDescription result_description = 2;
+    uint64 limit = 3; // deprecated, use limit_or_var instead
+    bool partial = 4;
+    repeated SortColumnDescription prefix_description = 5;
+    optional Stage.Enum stage = 6;
+    optional SizeOrVariable limit_or_var = 7;
 }
 
 message ValuesStep {
-  required ISourceStep query_plan_base = 1;
-  repeated Field fields = 2;
-  required uint64 rows = 3;
+    ISourceStep query_plan_base = 1;
+    repeated Field fields = 2;
+    uint64 rows = 3;
 }
 
 message ExceptStep {
-  required SetOperationStep query_plan_base = 1;
-  required bool distinct = 2;
+    SetOperationStep query_plan_base = 1;
+    bool distinct = 2;
 }
 
 message IntersectStep {
-  required SetOperationStep query_plan_base = 1;
-  required bool distinct = 2;
+    SetOperationStep query_plan_base = 1;
+    bool distinct = 2;
 }
 
 message UnionStep {
-  required SetOperationStep query_plan_base = 1;
-  required uint64 max_threads = 2;
-  required bool local = 3;
+    SetOperationStep query_plan_base = 1;
+    uint64 max_threads = 2;
+    bool local = 3;
 }
 
 message ExchangeStep {
-  repeated DataStream input_streams = 1;
-  required ExchangeMode.Enum exchange_type = 2;
-  required Partitioning schema = 3;
-  required bool keep_order = 4;
+    repeated DataStream input_streams = 1;
+    ExchangeMode.Enum exchange_type = 2;
+    Partitioning schema = 3;
+    bool keep_order = 4;
 }
 
 message CTERefStep {
-  required ISourceStep query_plan_base = 1;
-  required uint32 id = 2;
-  map<string, string> output_columns = 3;
-  required bool has_filter = 4;
+    ISourceStep query_plan_base = 1;
+    uint32 id = 2;
+    map<string, string> output_columns = 3;
+    bool has_filter = 4;
 }
 
 message DistinctStep {
-  required ITransformingStep query_plan_base = 1;
-  required SizeLimits set_size_limits = 2;
-  required uint64 limit_hint = 3;
-  repeated string columns = 4;
-  required bool pre_distinct = 5;
+    ITransformingStep query_plan_base = 1;
+    SizeLimits set_size_limits = 2;
+    uint64 limit_hint = 3;
+    repeated string columns = 4;
+    bool pre_distinct = 5;
 }
 
 message PartialSortingStep {
-  required ITransformingStep query_plan_base = 1;
-  repeated SortColumnDescription sort_description = 2;
-  required uint64 limit = 3;
-  required SizeLimits size_limits = 4;
+    ITransformingStep query_plan_base = 1;
+    repeated SortColumnDescription sort_description = 2;
+    uint64 limit = 3;
+    SizeLimits size_limits = 4;
 }
-
+ 
 message PartitionTopNStep {
-  required ITransformingStep query_plan_base = 1;
-  repeated string partition = 2;
-  repeated string order_by = 3;
-  required uint64 limit = 4;
-  required TopNModel.Enum model = 5;
+    ITransformingStep query_plan_base = 1;
+    repeated string partition = 2;
+    repeated string order_by = 3;
+    uint64 limit = 4;
+    TopNModel.Enum model = 5;
 }
 
 message ReadNothingStep {
-  required ISourceStep query_plan_base = 1;
+    ISourceStep query_plan_base = 1;
 }
 
 message ApplyStep {
-  // unimplemented
-  message ApplyType {
-    enum Enum {
-      CROSS = 0;
-      LEFT = 1;
-      SEMI = 2;
-      ANTI = 3;
+    message ApplyType {
+        enum Enum {
+            CROSS = 0;
+            LEFT = 1;
+            SEMI = 2;
+            ANTI = 3;
+        }
     }
-  }
-  message SubqueryType {
-    enum Enum {
-      SCALAR = 0;
-      IN = 1;
-      EXISTS = 2;
-      QUANTIFIED_COMPARISON = 3;
-    }
-  }
+    message SubqueryType {
+        enum Enum {
+            SCALAR = 0;
+            IN = 1;
+            EXISTS = 2;
+            QUANTIFIED_COMPARISON = 3;
+        }
+        }
 }
 
 message TopNFilteringStep {
-  required ITransformingStep query_plan_base = 1;
-  repeated SortColumnDescription sort_description = 2;
-  required uint64 size = 3;
-  required TopNModel.Enum model = 4;
-  optional TopNFilteringAlgorithm.Enum algorithm = 5;
+    ITransformingStep query_plan_base = 1;
+    repeated SortColumnDescription sort_description = 2;
+    uint64 size = 3;
+    TopNModel.Enum model = 4;
+    optional TopNFilteringAlgorithm.Enum algorithm = 5;
 }
 
 message TableWriteStep {
-  message InsertTarget {
-    required StorageID storage_id = 1;
-    repeated NameAndTypePair columns = 2;
-    optional AST query = 3;
-  }
-
-  message Target {
-    oneof target {
-      InsertTarget insert_target = 1;
+    message InsertTarget {
+        StorageID storage_id = 1;
+        repeated NameAndTypePair columns = 2;
+        optional AST query = 3;
     }
-  }
-
-  required ITransformingStep query_plan_base = 1;
-  required Target target = 2;
-  optional bool insert_select_with_profiles = 3;
-  optional string output_affected_row_count_symbol = 4;
+    message Target {
+        oneof target {
+            InsertTarget insert_target = 1;
+        }
+    }
+    ITransformingStep query_plan_base = 1;
+    Target target = 2;
+    optional bool insert_select_with_profiles = 3;
+    optional string output_affected_row_count_symbol = 4;
 }
 
 message TableFinishStep {
-  required ITransformingStep query_plan_base = 1;
-  required TableWriteStep.Target target = 2;
-  required string output_affected_row_count_symbol = 3;
-  optional AST query = 4;
-  optional bool insert_select_with_profiles = 5;
+    ITransformingStep query_plan_base = 1;
+    TableWriteStep.Target target = 2;
+    string output_affected_row_count_symbol = 3;
+    optional AST query = 4;
+    optional bool insert_select_with_profiles = 5;
 }
 
 message OutfileWriteStep {
-  message OutfileTarget {
-    required string request_uri = 1;
-    required string format = 2;
-    required string compression_method_str = 3;
-    required uint64 compression_level = 4;
-  }
-
-  required ITransformingStep query_plan_base = 1;
-  required OutfileTarget outfile_target = 2;
+    message OutfileTarget {
+        string request_uri = 1;
+        string format = 2;
+        string compression_method_str = 3;
+        uint64 compression_level = 4;
+    }
+    ITransformingStep query_plan_base = 1;
+    OutfileTarget outfile_target = 2;
 }
 
 message OutfileFinishStep {}
 
 message FilterStep {
-  required ITransformingStep query_plan_base = 1;
-  required AST filter = 2;
-  required bool remove_filter_column = 3;
+    ITransformingStep query_plan_base = 1;
+    AST filter = 2;
+    bool remove_filter_column = 3;
 }
 
 message ProjectionStep {
-  required ITransformingStep query_plan_base = 1;
-  required Assignments assignments = 2;
-  map<string, DataType> name_to_type = 3;
-  required bool final_project = 4;
-  map<string, RuntimeFilterBuildInfos> dynamic_filters = 5;
-  required bool index_project = 6;
+    ITransformingStep query_plan_base = 1;
+    Assignments assignments = 2;
+    map<string, string> name_to_type = 3;
+    bool final_project = 4;
+    map<string, RuntimeFilter> dynamic_filters = 5;
+    bool index_project = 6;
 }
 
 message JoinStep {
-  message RuntimeFilterBuilders {
-    required string key = 1;
-    required RuntimeFilterBuildInfos value = 2;
-  }
-  repeated DataStream input_streams = 1;
-  optional DataStream output_stream = 2;
-  required string step_description = 3;
-  required ASTTableJoin.Kind.Enum kind = 4;
-  required ASTTableJoin.Strictness.Enum strictness = 5;
-  required uint64 max_streams = 6;
-  required bool keep_left_read_in_order = 7;
-  repeated string left_keys = 8;
-  repeated string right_keys = 9;
-  required AST filter = 10;
-  required bool has_using = 11;
-  required bool flag_require_right_keys = 12;
-  repeated bool require_right_keys = 13;
-  required ASOF.Inequality.Enum asof_inequality = 14;
-  required DistributionType.Enum distribution_type = 15;
-  required JoinAlgorithm.Enum join_algorithm = 16;
-  required bool is_magic = 17;
-  required bool is_ordered = 18;
-  repeated RuntimeFilterBuilders runtime_filter_builders = 19;
-  repeated bool key_ids_null_safe = 25;
+    message RuntimeFilterBuilders {
+        string key = 1;
+        RuntimeFilter value = 2;
+    }
+    enum Strictness {
+        Unspecified = 0;
+        RightAny = 1;
+        Any = 2;
+        All = 3;
+        Asof = 4;
+        Semi = 5;
+        Anti = 6;
+    }  
+    enum Kind {
+        Inner = 0;
+        Left = 1;
+        Right = 2;
+        Full = 3;
+        Cross = 4;
+        Comma = 5;
+    }
+    repeated DataStream input_streams = 1;
+    DataStream output_stream = 2;
+    string step_description = 3;
+    Kind kind = 4;
+    Strictness strictness = 5;
+    uint64 max_streams = 6;
+    bool keep_left_read_in_order = 7;
+    repeated string left_keys = 8;
+    repeated string right_keys = 9;
+    AST filter = 10;
+    bool has_using = 11;
+    bool flag_require_right_keys = 12;
+    repeated bool require_right_keys = 13;
+    ASOF.Inequality asof_inequality = 14;
+    DistributionType.Enum distribution_type = 15;
+    JoinAlgorithm.Enum join_algorithm = 16;
+    bool is_magic = 17;
+    bool is_ordered = 18;
+    repeated RuntimeFilterBuilders runtime_filter_builders = 19;
+    repeated bool key_ids_null_safe = 25;
 }
 
 message MergeSortingStep {
-  required ITransformingStep query_plan_base = 1;
-  repeated SortColumnDescription description = 2;
-  required uint64 max_merged_block_size = 3;
-  required uint64 limit = 4;
-  required uint64 max_bytes_before_remerge = 5;
-  required double remerge_lowered_memory_bytes_ratio = 6;
-  required uint64 max_bytes_before_external_sort = 7;
-  required uint64 min_free_disk_space = 8;
-  optional bool enable_adaptive_spill = 9;
+    ITransformingStep query_plan_base = 1;
+    repeated SortColumnDescription description = 2;
+    uint64 max_merged_block_size = 3;
+    uint64 limit = 4;
+    uint64 max_bytes_before_remerge = 5;
+    double remerge_lowered_memory_bytes_ratio = 6;
+    uint64 max_bytes_before_external_sort = 7;
+    uint64 min_free_disk_space = 8;
+    optional bool enable_adaptive_spill = 9;
 }
 
 message MergingAggregatedStep {
-  required ITransformingStep query_plan_base = 1;
-  repeated string keys = 2;
-  repeated GroupingSetsParams grouping_sets_params = 3;
-  repeated GroupingDescription groupings = 4;
-  required AggregatingTransformParams params = 5;
-  required bool memory_efficient_aggregation = 6;
-  required uint64 max_threads = 7;
-  required uint64 memory_efficient_merge_threads = 8;
+    ITransformingStep query_plan_base = 1;
+    repeated string keys = 2;
+    repeated GroupingSetsParams grouping_sets_params = 3;
+    repeated GroupingDescription groupings = 4;
+    AggregatingTransformParams params = 5;
+    bool memory_efficient_aggregation = 6;
+    uint64 max_threads = 7;
+    uint64 memory_efficient_merge_threads = 8;
+}
+
+message InputOrderInfo {
+    repeated SortColumnDescription order_key_prefix_descr = 1;
+    int32 direction = 2;
 }
 
 message AggregatingStep {
-  required ITransformingStep query_plan_base = 1;
-  repeated string keys = 2;
-  required AggregatorParams params = 3;
-  repeated GroupingSetsParams grouping_sets_params = 4;
-  required bool final = 5;
-  required uint64 max_block_size = 6;
-  required uint64 merge_threads = 7;
-  required uint64 temporary_data_merge_threads = 8;
-  required bool storage_has_evenly_distributed_read = 9;
-  optional InputOrderInfo group_by_info = 10;
-  repeated SortColumnDescription group_by_sort_description = 11;
-  repeated GroupingDescription groupings = 12;
-  required bool should_produce_results_in_order_of_bucket_number = 13;
-  repeated string keys_not_hashed = 14;
-  optional bool streaming_for_cache = 15;
-
+    ITransformingStep query_plan_base = 1;
+    repeated string keys = 2;
+    AggregatorParams params = 3;
+    repeated GroupingSetsParams grouping_sets_params = 4;
+    bool final = 5;
+    uint64 max_block_size = 6;
+    uint64 merge_threads = 7;
+    uint64 temporary_data_merge_threads = 8;
+    bool storage_has_evenly_distributed_read = 9;
+    optional InputOrderInfo group_by_info = 10;
+    repeated SortColumnDescription group_by_sort_description = 11;
+    repeated GroupingDescription groupings = 12;
+    bool should_produce_results_in_order_of_bucket_number = 13;
+    repeated string keys_not_hashed = 14;
+    optional bool streaming_for_cache = 15; 
 }
 
 message TotalsHavingStep {
-  required ITransformingStep query_plan_base = 1;
-  required bool overflow_row = 2;
-  optional AST having_filter = 3;
-  required string filter_column_name = 4;
-  required TotalsMode.Enum totals_mode = 5;
-  required double auto_include_threshold = 6;
-  required bool final = 7;
+    ITransformingStep query_plan_base = 1;
+    bool overflow_row = 2;
+    optional AST having_filter = 3;
+    string filter_column_name = 4;
+    TotalsMode.Enum totals_mode = 5;
+    double auto_include_threshold = 6;
+    bool final = 7;
+}
+
+message ArrayJoinAction {
+    repeated string columns = 1;
+    bool is_left = 2;
 }
 
 message ArrayJoinStep {
-  required ITransformingStep query_plan_base = 1;
-  required ArrayJoinAction array_join = 2;
+    ITransformingStep query_plan_base = 1;
+    ArrayJoinAction array_join = 2;
 }
 
-message TableScanStep {
-  required StorageID storage_id = 1;
-  repeated NameWithAliasPair column_alias = 2;
-  required SelectQueryInfo query_info = 3;
-  required uint64 max_block_size = 4;
+message CacheDependentScanInfo {
+    bytes required_digest = 1;
+    uint64 table_index = 2;
+}
+  
+message TableScanCacheInfo {
+    enum Status {
+        CACHE_TABLE = 0;
+        CACHE_DEPENDENT_TABLE = 1;
+        NO_CACHE = 2;
+    }
+    Status status = 1;
+    bytes cache_digest = 2;
+    uint64 dependent_table_count = 3;
+    repeated CacheDependentScanInfo cache_dependent_info = 4;
+}
 
-  optional AggregatingStep pushdown_aggregation = 5;
-  optional ProjectionStep pushdown_projection = 6;
-  optional FilterStep pushdown_filter = 7;
-  optional Assignments inline_expressions = 14;
-  optional DataStream output_stream = 15;
-  optional DataStream table_output_stream = 16;
+message SelectQueryInfo {
+    AST query = 1;
+    AST view_query = 2;
+    optional AST partition_filter = 3;
+    optional TableScanCacheInfo cache_info = 4;
+    optional InputOrderInfo input_order_info = 5;
+}
+  
+message TableScanStep {
+    StorageID storage_id = 1;
+    repeated NameWithAliasPair column_alias = 2;
+    SelectQueryInfo query_info = 3;
+    uint64 max_block_size = 4;
+    optional AggregatingStep pushdown_aggregation = 5;
+    optional ProjectionStep pushdown_projection = 6;
+    optional FilterStep pushdown_filter = 7;
+    optional Assignments inline_expressions = 14;
+    optional DataStream output_stream = 15;
+    optional DataStream table_output_stream = 16;
 }
 
 message RemoteExchangeSourceStep {
-  required DataStream input_stream = 1;
-  required string step_description = 2;
-  repeated PlanSegmentInput inputs = 3;
-  optional bool is_add_totals = 4;
-  optional bool is_add_extremes = 5;
+    DataStream input_stream = 1;
+    string step_description = 2;
+    repeated PlanSegmentInput inputs = 3;
+    optional bool is_add_totals = 4;
+    optional bool is_add_extremes = 5;
 }
 
 message FinalSampleStep {
-  required ITransformingStep query_plan_base = 1;
-  required uint64 sample_size = 2;
-  required uint64 max_chunk_size = 3;
+    ITransformingStep query_plan_base = 1;
+    uint64 sample_size = 2;
+    uint64 max_chunk_size = 3;
 }
 
 message ReadStorageRowCountStep {
-  required ISourceStep query_plan_base = 1;
-  required AST query = 3;
-  required AggregateDescription agg_desc = 4;
-  required uint64 num_rows = 5;
-  required bool is_final_agg = 6;
-  optional StorageID storage_id = 7;
+    ISourceStep query_plan_base = 1;
+    AST query = 3;
+    AggregateDescription agg_desc = 4;
+    uint64 num_rows = 5;
+    bool is_final_agg = 6;
+    optional StorageID storage_id = 7;
+}
+
+message WindowFrame {
+    enum FrameType {
+        Rows = 0;
+        Groups = 1;
+        Range = 2;
+    }
+    enum BoundaryType {
+        Unbounded = 0;
+        Current = 1;
+        Offset = 2;
+    }
+    enum ExcludeType {
+        NoOthers = 0;
+        CurrentRow = 1;
+        Group = 2;
+        Tie = 3;
+    }
+    bool is_default = 1;
+    FrameType type = 2;
+    BoundaryType begin_type = 3;
+    Field begin_offset = 4;
+    bool begin_preceding = 5;
+    BoundaryType end_type = 6;
+    Field end_offset = 7;
+    bool end_preceding = 8;
+  }
+  
+message WindowFunctionDescription {
+    string column_name = 1;
+    AggregateFunction aggregate_function = 2;
+    repeated string argument_names = 4;
+}
+
+message WindowDescription {
+    string window_name = 1;
+    repeated SortColumnDescription partition_by = 2;
+    repeated SortColumnDescription order_by = 3;
+    repeated SortColumnDescription full_sort_description = 4;
+    WindowFrame frame = 5;
+    repeated WindowFunctionDescription window_functions = 6;
 }
 
 message WindowStep {
-  required ITransformingStep query_plan_base = 1;
-  required WindowDescription window_description = 2;
-  repeated WindowFunctionDescription window_functions = 3;
-  required bool need_sort = 4;
-  repeated SortColumnDescription prefix_description = 5;
+    ITransformingStep query_plan_base = 1;
+    WindowDescription window_description = 2;
+    repeated WindowFunctionDescription window_functions = 3;
+    bool need_sort = 4;
+    repeated SortColumnDescription prefix_description = 5;
 }
 
 message IntersectOrExceptStep {
-  repeated DataStream input_streams = 1;
-  required IntersectExceptOperator.Enum current_operator = 2;
-  required uint64 max_threads = 3;
+    repeated DataStream input_streams = 1;
+    IntersectExceptOperator.Enum current_operator = 2;
+    uint64 max_threads = 3;
 }
 
 message BufferStep {
-  required ITransformingStep query_plan_base = 1;
+    ITransformingStep query_plan_base = 1;
 }
 
 message ExplainAnalyzeStep {}
 
+message CacheParam {
+    bytes digest = 1;
+    map<uint64, uint64> output_pos_to_cache_pos = 2;
+    map<uint64, uint64> cache_pos_to_output_pos = 3;
+    StorageID cached_table = 4;
+    repeated StorageID dependent_tables = 5;
+}
+
 message IntermediateResultCacheStep {
-  required string step_description = 1;
-  required DataStream input_stream = 2;
-  required CacheParam cache_param = 3;
-  required AggregatorParams aggregator_params = 4;
+    string step_description = 1;
+    DataStream input_stream = 2;
+    CacheParam cache_param = 3;
+    AggregatorParams aggregator_params = 4;
 }
 
 message LocalExchangeStep {
-  required ITransformingStep query_plan_base = 1;
-  required ExchangeMode.Enum exchange_type = 2;
-  required Partitioning schema = 3;
+    ITransformingStep query_plan_base = 1;
+    ExchangeMode.Enum exchange_type = 2;
+    Partitioning schema = 3;
+}
+
+message Edge {
+    uint64 from = 1;
+    uint64 to = 2;
+    string source = 3;
+    string target = 4;
+}
+  
+message Graph {
+    repeated uint64 node = 1;
+    repeated Edge edges = 2;
+    AST filter = 3;
 }
 
 message MultiJoinStep {
-  required Graph graph = 1;
+    Graph graph = 1;
 }
 
 message SampleRatioStep {
-  required ITransformingStep query_plan_base = 1;
-  required float sample_ratio = 2;
+    ITransformingStep query_plan_base = 1;
+    float sample_ratio = 2;
 }
 
 message ExpandStep {
-  required ITransformingStep query_plan_base = 1;
-  required Assignments assignments = 2;
-  map<string, DataType> name_to_type = 3;
-  required string group_id_symbol = 4;
-  repeated uint32 group_id_value = 5;
-  map<uint32, StringVec> group_id_non_null_symbol = 6;
-
+    ITransformingStep query_plan_base = 1;
+    Assignments assignments = 2;
+    map<string, string> name_to_type = 3;
+    string group_id_symbol = 4;
+    repeated uint32 group_id_value = 5;
+    map<uint32, StringVec> group_id_non_null_symbol = 6;
 }
-
+  
 // this must be identical to APPLY_STEP_PROTOBUF_TYPES_AND_NAMES
 //    with Step/_step postfix
 //    in src/QueryPlan/IQueryPlanStep.h
@@ -429,80 +794,72 @@ message ExpandStep {
 //    by converting variable underscore name to CamelCase,
 // the CamelCase and underscore name must be perfectly matched
 message QueryPlanStep {
-  oneof step {
-    AggregatingStep aggregating_step = 1;
-    ArrayJoinStep array_join_step = 2;
-    AssignUniqueIdStep assign_unique_id_step = 3;
-    CTERefStep c_t_e_ref_step = 4;  // must be perfectly matched
-    DistinctStep distinct_step = 5;
-    EnforceSingleRowStep enforce_single_row_step = 6;
-    ExceptStep except_step = 7;
-    ExchangeStep exchange_step = 8;
-    ExtremesStep extremes_step = 9;
-    FillingStep filling_step = 10;
-    FilterStep filter_step = 11;
-    FinalSampleStep final_sample_step = 12;
-    FinishSortingStep finish_sorting_step = 13;
-    IntersectStep intersect_step = 14;
-    JoinStep join_step = 15;
-    LimitByStep limit_by_step = 16;
-    LimitStep limit_step = 17;
-    MarkDistinctStep mark_distinct_step = 18;
-    MergeSortingStep merge_sorting_step = 19;
-    MergingAggregatedStep merging_aggregated_step = 20;
-    MergingSortedStep merging_sorted_step = 21;
-    OffsetStep offset_step = 22;
-    PartialSortingStep partial_sorting_step = 23;
-    PartitionTopNStep partition_top_n_step = 24;
-    ProjectionStep projection_step = 25;
-    ReadNothingStep read_nothing_step = 26;
-    ReadStorageRowCountStep read_storage_row_count_step = 27;
-    RemoteExchangeSourceStep remote_exchange_source_step = 28;
-    SortingStep sorting_step = 29;
-    TableFinishStep table_finish_step = 30;
-    TableScanStep table_scan_step = 31;
-    TableWriteStep table_write_step = 32;
-    TopNFilteringStep top_n_filtering_step = 33;
-    UnionStep union_step = 34;
-    WindowStep window_step = 35;
-    ValuesStep values_step = 36;
-    IntersectOrExceptStep intersect_or_except_step = 37;
-    BufferStep buffer_step = 38;
-    ApplyStep apply_step = 39;
-    OutfileWriteStep outfile_write_step = 40;
-    OutfileFinishStep outfile_finish_step = 41;
-    ExplainAnalyzeStep explain_analyze_step = 44;
-    TotalsHavingStep totals_having_step = 50;
-    IntermediateResultCacheStep intermediate_result_cache_step = 53;
-    LocalExchangeStep local_exchange_step = 54;
-    MultiJoinStep multi_join_step = 55;
-    SampleRatioStep sample_ratio_step = 56;
-    ExpandStep expand_step = 57;
-  }
+    oneof step {
+        AggregatingStep aggregating_step = 1;
+        ArrayJoinStep array_join_step = 2;
+        AssignUniqueIdStep assign_unique_id_step = 3;
+        CTERefStep c_t_e_ref_step = 4;  // must be perfectly matched
+        DistinctStep distinct_step = 5;
+        EnforceSingleRowStep enforce_single_row_step = 6;
+        ExceptStep except_step = 7;
+        ExchangeStep exchange_step = 8;
+        ExtremesStep extremes_step = 9;
+        FillingStep filling_step = 10;
+        FilterStep filter_step = 11;
+        FinalSampleStep final_sample_step = 12;
+        FinishSortingStep finish_sorting_step = 13;
+        IntersectStep intersect_step = 14;
+        JoinStep join_step = 15;
+        LimitByStep limit_by_step = 16;
+        LimitStep limit_step = 17;
+        MarkDistinctStep mark_distinct_step = 18;
+        MergeSortingStep merge_sorting_step = 19;
+        MergingAggregatedStep merging_aggregated_step = 20;
+        MergingSortedStep merging_sorted_step = 21;
+        OffsetStep offset_step = 22;
+        PartialSortingStep partial_sorting_step = 23;
+        PartitionTopNStep partition_top_n_step = 24;
+        ProjectionStep projection_step = 25;
+        ReadNothingStep read_nothing_step = 26;
+        ReadStorageRowCountStep read_storage_row_count_step = 27;
+        RemoteExchangeSourceStep remote_exchange_source_step = 28;
+        SortingStep sorting_step = 29;
+        TableFinishStep table_finish_step = 30;
+        TableScanStep table_scan_step = 31;
+        TableWriteStep table_write_step = 32;
+        TopNFilteringStep top_n_filtering_step = 33;
+        UnionStep union_step = 34;
+        WindowStep window_step = 35;
+        ValuesStep values_step = 36;
+        IntersectOrExceptStep intersect_or_except_step = 37;
+        BufferStep buffer_step = 38;
+        ApplyStep apply_step = 39;
+        OutfileWriteStep outfile_write_step = 40;
+        OutfileFinishStep outfile_finish_step = 41;
+        ExplainAnalyzeStep explain_analyze_step = 44;
+        TotalsHavingStep totals_having_step = 50;
+        IntermediateResultCacheStep intermediate_result_cache_step = 53;
+        LocalExchangeStep local_exchange_step = 54;
+        MultiJoinStep multi_join_step = 55;
+        SampleRatioStep sample_ratio_step = 56;
+        ExpandStep expand_step = 57;
+    }
 }
 
 message QueryPlanNode {
-  required uint64 plan_id = 1;
-  // plan_ids of children
-  repeated uint64 children = 2;
-  required QueryPlanStep step = 3;
+    uint64 plan_id = 1;
+    repeated uint64 children = 2;
+    QueryPlanStep step = 3;
 }
 
 message QueryPlan {
-  message PlanMode {
-    enum Enum{
-      TreeLike = 1;
-      Flatten = 2;
+    enum Enum {
+        TreeLike = 0;
+        Flatten = 1;
     }
-  }
-  required uint64 root_id = 1;
-  map<uint64, QueryPlanNode> plan_nodes = 2;
-  // CteId -> plan_id
-  map<uint64, uint64> cte_id_mapping = 3;
-  required PlanMode.Enum mode = 4;
+    uint64 root_id = 1;
+    map<uint64, QueryPlanNode> plan_nodes = 2;
+    // CteId -> plan_id
+    map<uint64, uint64> cte_id_mapping = 3;
+    QueryPlan.Enum mode = 4;
 }
-
-message PreparedStatement {
-  required string query = 1;
-}
-

@@ -1,0 +1,17 @@
+syntax = "proto3";
+import "common.proto";
+import "plan_node.proto";
+package DB.Protos;
+
+message PlanSegment {
+    string cluster_name = 1;
+    uint32 parallel = 2;
+    uint32  exchange_parallel_size = 3;
+    QueryPlan query_plan = 4;
+    repeated PlanSegmentOutput outputs = 5;
+    repeated uint32 runtime_filter_id = 6;
+    uint32 segment_id = 7;
+    string query_id = 8;
+    AddressInfo coordinator_address = 9;
+    ReportProfileType.Enum profile_type = 10;
+}

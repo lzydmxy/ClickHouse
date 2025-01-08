@@ -13,4 +13,96 @@ message ExchangeMode {
     }
 }
 
+message ReportProfileType {
+    enum Enum {
+      Unspecified = 0;
+      QueryPlan = 1;
+      QueryPipeline = 2;
+    }
+}
 
+message OverflowMode {
+    enum Enum {
+      THROW = 0;
+      BREAK = 1;
+      ANY = 2;
+    }
+}
+
+message TopNModel {
+    enum Enum {
+      ROW_NUMBER = 0;
+      RANKER = 1;
+      DENSE_RANK = 2;
+    }
+}
+
+message TopNFilteringAlgorithm {
+    enum Enum {
+        Unspecified = 0;
+        SortAndLimit = 1;
+        Limit = 2;
+        Heap = 3;
+    }
+}
+
+message ASOF {
+    enum Inequality {
+        None = 0;
+        Less = 1;
+        Greater = 2;
+        LessOrEquals = 3;
+        GreaterOrEquals = 4;
+    }
+}
+
+message DistributionType {
+    enum Enum {
+      UNKNOWN = 0;
+      REPARTITION = 1;
+      BROADCAST = 2;
+    }
+}
+
+message JoinAlgorithm {
+    enum Enum {
+      AUTO = 0;
+      HASH = 1;
+      PARTIAL_MERGE = 2;
+      PREFER_PARTIAL_MERGE = 3;
+      NESTED_LOOP_JOIN = 4;
+      PARALLEL_HASH = 5;
+      GRACE_HASH = 6;
+    }
+}
+
+message TotalsMode {
+    enum Enum {
+      BEFORE_HAVING = 0;
+      AFTER_HAVING_INCLUSIVE = 1;
+      AFTER_HAVING_EXCLUSIVE = 2;
+      AFTER_HAVING_AUTO = 3;
+    }
+}
+
+message IntersectExceptOperator {
+  enum Enum {
+    UNKNOWN = 0;
+    EXCEPT_ALL = 1;
+    EXCEPT_DISTINCT = 2;
+    INTERSECT_ALL = 3;
+    INTERSECT_DISTINCT = 4;
+  }
+}
+
+message UUID {
+    fixed64 low = 1;
+    fixed64 high = 2;
+}
+
+message StorageID {
+    string database = 1;
+    string table = 2;
+    UUID uuid = 3;
+    string server_vw_name = 4;
+}
