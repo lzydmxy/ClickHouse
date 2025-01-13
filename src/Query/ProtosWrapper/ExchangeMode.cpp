@@ -4,30 +4,30 @@
 namespace DB
 {
 
-String exchangeModeToString(const RPCExchangeMode & exchange_mode)
+String exchangeModeToString(const RExchangeMode & exchange_mode)
 {
     std::ostringstream ostr;
     switch(exchange_mode)
     {
-        case RPCExchangeMode::UNKNOWN:
+        case RExchangeMode::UNKNOWN:
             ostr << "UNKNOWN";
             break;
-        case RPCExchangeMode::LOCAL_NO_NEED_REPARTITION:
+        case RExchangeMode::LOCAL_NO_NEED_REPARTITION:
             ostr << "LOCAL_NO_NEED_REPARTITION";
             break;
-        case RPCExchangeMode::LOCAL_MAY_NEED_REPARTITION:
+        case RExchangeMode::LOCAL_MAY_NEED_REPARTITION:
             ostr << "LOCAL_MAY_NEED_REPARTITION";
             break;
-        case RPCExchangeMode::REPARTITION:
+        case RExchangeMode::REPARTITION:
             ostr << "REPARTITION";
             break;
-        case RPCExchangeMode::BROADCAST:
+        case RExchangeMode::BROADCAST:
             ostr << "BROADCAST";
             break;
-        case RPCExchangeMode::GATHER:
+        case RExchangeMode::GATHER:
             ostr << "GATHER";
             break;
-        case RPCExchangeMode::BUCKET_REPARTITION:
+        case RExchangeMode::BUCKET_REPARTITION:
             ostr << "BUCKET_REPARTITION";
             break;
     }
@@ -35,9 +35,9 @@ String exchangeModeToString(const RPCExchangeMode & exchange_mode)
     return ostr.str();
 }
 
-bool isLocalExchange(RPCExchangeMode mode)
+bool isLocalExchange(RExchangeMode mode)
 {
-    return mode == RPCExchangeMode::LOCAL_NO_NEED_REPARTITION || mode == RPCExchangeMode::LOCAL_MAY_NEED_REPARTITION;
+    return mode == RExchangeMode::LOCAL_NO_NEED_REPARTITION || mode == RExchangeMode::LOCAL_MAY_NEED_REPARTITION;
 }
 
 }

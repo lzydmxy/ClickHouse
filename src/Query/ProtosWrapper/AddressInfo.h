@@ -17,12 +17,12 @@ public:
     AddressInfo() = default;
     AddressInfo(const String & host_name_, UInt16 port_, const String & user_, const String & password_);
     AddressInfo(const String & host_name_, UInt16 port_, const String & user_, const String & password_, UInt16 exchange_port_);
-    AddressInfo(const RPCAddressInfo & proto_);
+    AddressInfo(const RAddressInfo & proto_);
 
     void serialize(WriteBuffer &) const;
     void deserialize(ReadBuffer &);
-    void toProto(RPCAddressInfo & proto) const;
-    void fillFromProto(const RPCAddressInfo & proto);
+    void toProto(RAddressInfo & proto) const;
+    void fillFromProto(const RAddressInfo & proto);
 
     const String & getHostName() const { return host_name; }
     UInt16 getPort() const { return port; }
@@ -78,8 +78,8 @@ struct PlanSegmentPartitionSource
     UInt64 exchange_id;
     AddressInfoPtr address;
     std::vector<UInt32> partition_ids;
-    void toProto(RPCPlanSegmentPartitionSource & proto) const;
-    void fillFromProto(const RPCPlanSegmentPartitionSource & proto);
+    void toProto(RPlanSegmentPartitionSource & proto) const;
+    void fillFromProto(const RPlanSegmentPartitionSource & proto);
     String toString() const;
 };
 

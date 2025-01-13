@@ -6,12 +6,18 @@ namespace DB
 {
 
 AddressInfo::AddressInfo(const String &host_name_, UInt16 port_, const String &user_, const String &password_)
-        : host_name(host_name_), port(port_), user(user_), password(password_) {}
+        : host_name(host_name_), port(port_), user(user_), password(password_)
+{
+}
 
-AddressInfo::AddressInfo(const String &host_name_, UInt16 port_, const String &user_, const String &password_, UInt16 exchange_port_)
-        : host_name(host_name_), port(port_), user(user_), password(password_), exchange_port(exchange_port_) {}
+AddressInfo::AddressInfo(const String &host_name_, UInt16 port_, const String &user_, const String &password_, 
+    UInt16 exchange_port_)
+    : host_name(host_name_), port(port_), user(user_), password(password_), exchange_port(exchange_port_) 
+{
+}
 
-AddressInfo::AddressInfo(const Protos::AddressInfo & proto) : host_name(proto.host_name()), port(proto.port()), exchange_port(proto.exchange_port())
+AddressInfo::AddressInfo(const RAddressInfo & proto) 
+        : host_name(proto.host_name()), port(proto.port()), exchange_port(proto.exchange_port())
 {
     if (proto.has_user())
         user = proto.user();
@@ -39,7 +45,7 @@ void AddressInfo::deserialize(ReadBuffer &buf)
     readBinary(exchange_port, buf);
 }
 
-void AddressInfo::toProto(Protos::AddressInfo & proto) const
+void AddressInfo::toProto(RAddressInfo & proto) const
 {
     proto.set_host_name(host_name);
     proto.set_port(port);
@@ -48,7 +54,7 @@ void AddressInfo::toProto(Protos::AddressInfo & proto) const
     proto.set_exchange_port(exchange_port);
 }
 
-void AddressInfo::fillFromProto(const Protos::AddressInfo & proto)
+void AddressInfo::fillFromProto(const RAddressInfo & proto)
 {
     host_name = proto.host_name();
     port = proto.port();
@@ -67,7 +73,7 @@ String AddressInfo::toShortString() const
     return fmt::format("{}:{}/{}", host_name, port, exchange_port);
 }
 
-void PlanSegmentMultiPartitionSource::toProto(Protos::PlanSegmentMultiPartitionSource & proto) const
+void PlanSegmentPartitionSource::toProto(RPlanSegmentPartitionSource & proto) const
 {
     proto.set_exchange_id(exchange_id);
     address->toProto(*proto.mutable_address());
@@ -75,7 +81,7 @@ void PlanSegmentMultiPartitionSource::toProto(Protos::PlanSegmentMultiPartitionS
         proto.add_partition_ids(p_id);
 }
 
-void PlanSegmentMultiPartitionSource::fillFromProto(const Protos::PlanSegmentMultiPartitionSource & proto)
+void PlanSegmentPartitionSource::fillFromProto(const RPlanSegmentPartitionSource & proto)
 {
     exchange_id = proto.exchange_id();
     address = std::make_shared<AddressInfo>();
@@ -87,7 +93,7 @@ void PlanSegmentMultiPartitionSource::fillFromProto(const Protos::PlanSegmentMul
     }
 }
 
-String PlanSegmentMultiPartitionSource::toString() const
+String PlanSegmentPartitionSource::toString() const
 {
     return fmt::format(
         "source[{} - partition_ids:{} - exchange_id:{}]",
