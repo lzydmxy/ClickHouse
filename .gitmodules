@@ -501,4 +501,5 @@
     url = git@github.com/gflags/gflags.git
 [submodule "contrib/protobuf"]
 	path = contrib/protobuf
-	url = https://github.com/ClickHouse-Extras/protobuf.git
+#	url = https://github.com/ClickHouse-Extras/protobuf.git
+    url = git@github.com/ClickHouse-Extras/protobuf.git
