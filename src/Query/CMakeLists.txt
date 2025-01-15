@@ -1,4 +1,4 @@
-if (TARGET ch_contrib::grpc)
+if (TARGET ch_contrib::brpc)
     add_subdirectory(Protos)
     add_subdirectory(ProtosWrapper)
 endif()

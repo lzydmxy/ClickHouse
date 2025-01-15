@@ -12,4 +12,4 @@ set (CMAKE_CXX_CLANG_TIDY "")
 
 add_library(dbms_query_protos ${dbms_query_proto_headers} ${dbms_query_proto_srcs})
 target_include_directories(dbms_query_protos SYSTEM PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries (dbms_query_protos PUBLIC ch_contrib::grpc)
+target_link_libraries (dbms_query_protos PUBLIC ch_contrib::protobuf ch_contrib::brpc)
