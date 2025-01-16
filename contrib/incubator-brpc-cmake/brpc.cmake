@@ -159,7 +159,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         "-Wl,-U,_ProfilerStop")
 endif()
 
-set (_bRPC_GFLAGS_INCLUDE_PATH "${ClickHouse_BINARY_DIR}/contrib/gflags/src/include")
+set (_bRPC_GFLAGS_INCLUDE "${ClickHouse_SOURCE_DIR}/contrib/gflags/include")
 #set(_bRPC_GFLAGS_INCLUDE "")
 set(_bRPC_GFLAGS_LIBRARY ch_contrib::gflags)
 
