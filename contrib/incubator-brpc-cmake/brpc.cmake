@@ -52,8 +52,18 @@ endif()
 
 set(WITH_RDMA_VAL "0")
 
-set(_bRPC_GFLAGS_LIBRARIES ch_contrib::gflag)
-set(_bRPC_PROTOBUF_LIBRARIES ch_contrib::protobuf)
+set (_bRPC_GFLAGS_INCLUDE ${ClickHouse_SOURCE_DIR}/contrib/gflags-cmake/include)
+set(_bRPC_GFLAGS_LIBRARY ch_contrib::gflags)
+
+set(_bRPC_SSL_INCLUDE ${ClickHouse_SOURCE_DIR}/contrib/openssl)
+set(_bRPC_SSL_LIBRARIES OpenSSL::Crypto OpenSSL::SSL)
+
+set(_bRPC_PROTOBUF_INCLUDE ${ClickHouse_SOURCE_DIR}/contrib/google-protobuf/src)
+set(_bRPC_PROTOBUF_LIBRARY ch_contrib::protobuf)
+
+set(_bRPC_PROTOBUF_PROTOC "protoc")
+set(_bRPC_PROTOBUF_PROTOC_EXECUTABLE $<TARGET_FILE:protoc>)
+set(_bRPC_PROTOBUF_PROTOC_LIBRARIES ch_contrib::protoc)
 
 include(GNUInstallDirs)
 
@@ -65,6 +75,17 @@ include_directories(
     ${_bRPC_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
 )
+
+execute_process(
+    COMMAND bash -c "grep \"namespace [_A-Za-z0-9]\\+ {\" ${_bRPC_GFLAGS_INCLUDE}/gflags/gflags_declare.h | head -1 | awk '{print $2}' | tr -d '\n'"
+    OUTPUT_VARIABLE GFLAGS_NS
+)
+if(${GFLAGS_NS} STREQUAL "GFLAGS_NAMESPACE")
+    execute_process(
+        COMMAND bash -c "grep \"#define GFLAGS_NAMESPACE [_A-Za-z0-9]\\+\" ${_bRPC_GFLAGS_INCLUDE}/gflags/gflags_declare.h | head -1 | awk '{print $3}' | tr -d '\n'"
+        OUTPUT_VARIABLE GFLAGS_NS
+    )
+endif()
 
 execute_process(
     COMMAND bash -c "${_bRPC_SOURCE_DIR}/tools/get_brpc_revision.sh ${_bRPC_SOURCE_DIR} | tr -d '\n'"
@@ -159,31 +180,24 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         "-Wl,-U,_ProfilerStop")
 endif()
 
-set (_bRPC_GFLAGS_INCLUDE "${ClickHouse_SOURCE_DIR}/contrib/gflags/include")
-#set(_bRPC_GFLAGS_INCLUDE "")
-set(_bRPC_GFLAGS_LIBRARY ch_contrib::gflags)
-
-set(_bRPC_SSL_INCLUDE_DIR "")
-set(_bRPC_SSL_LIBRARIES OpenSSL::Crypto OpenSSL::SSL)
 
 # set(PROTOC_LIB ${Protobuf_PROTOC_LIBRARY})
-# set(PROTOBUF_LIBRARIES ${Protobuf_LIBRARY})
-
-# set(PROTOBUF_INCLUDE_DIRS ${Protobuf_INCLUDE_DIR})
 
 set(PROTOBUF_PROTOC_EXECUTABLE ${Protobuf_PROTOC_EXECUTABLE})
 
 include_directories(
         ${_bRPC_GFLAGS_INCLUDE}
         ${_bRPC_PROTOBUF_INCLUDE}
+        ${_bRPC_SSL_INCLUDE}
+        ${ClickHouse_SOURCE_DIR}/contrib/abseil-cpp
+        ${ClickHouse_SOURCE_DIR}/contrib/openssl-cmake/linux_x86_64/include
 #        ${LEVELDB_INCLUDE_PATH}
-#        ${OPENSSL_INCLUDE_DIR}
-        )
+)
 
 set(DYNAMIC_LIB
     ${_bRPC_GFLAGS_LIBRARY}
-    ${_bRPC_PROTOBUF_LIBRARIES}
-    ${_bRPC_PROTOC_LIB}
+    ${_bRPC_PROTOBUF_LIBRARY}
+    ${_bRPC_SSL_LIBRARIES}
 #    ${CMAKE_THREAD_LIBS_INIT}
     dl)
 
@@ -483,12 +497,6 @@ set(PROTO_FILES
     ${_bRPC_SOURCE_DIR}/src/brpc/proto_base.proto
 )
 
-#set(_bRPC_PROTOBUF_INCLUDE ${Protobuf_INCLUDE_DIR})
-set(_bRPC_PROTOBUF_INCLUDE "")
-set(_bRPC_PROTOBUF_LIBRARIES ch_contrib::protobuf)
-set(_bRPC_PROTOBUF_PROTOC "protoc")
-set(_bRPC_PROTOBUF_PROTOC_EXECUTABLE $<TARGET_FILE:protoc>)
-set(_bRPC_PROTOBUF_PROTOC_LIBRARIES ch_contrib::protoc)
 
 #file(MAKE_DIRECTORY ${_bRPC_BINARY_DIR}/output/include/brpc)
 #set(PROTOC_FLAGS ${PROTOC_FLAGS} -I${PROTOBUF_INCLUDE_DIR})

@@ -5,15 +5,20 @@ if (NOT ENABLE_GFLAGS)
     return()
 endif()
 
-set(_gFlags_INCLUDE_DIR "${ClickHouse_SOURCE_DIR}/contrib/gflags/include")
+set (PACKAGE_NAME "gflags")
+
+set(_gFlags_INCLUDE_DIR
+    ${ClickHouse_SOURCE_DIR}/contrib/gflags-cmake/include/
+    ${ClickHouse_SOURCE_DIR}/contrib/gflags-cmake/include/gflags
+)
 set(_gFlags_SOURCE_DIR "${ClickHouse_SOURCE_DIR}/contrib/gflags/src")
 set(_gFlags_LIBRARY_DIR "${ClickHouse_SOURCE_DIR}/contrib/gflags/lib")
 
-configure_file(${_gFlags_SOURCE_DIR}/defines.h.in ${_gFlags_INCLUDE_DIR}/gflags/defines.h)
-configure_file(${_gFlags_SOURCE_DIR}/gflags.h.in ${_gFlags_INCLUDE_DIR}/gflags/gflags.h)
-configure_file(${_gFlags_SOURCE_DIR}/gflags_declare.h.in ${_gFlags_INCLUDE_DIR}/gflags/gflags_declare.h)
-configure_file(${_gFlags_SOURCE_DIR}/gflags_completions.h.in ${_gFlags_INCLUDE_DIR}/gflags/gflags_completions.h)
-#configure_file(${_gFlags_SOURCE_DIR}/defines.h.in ${_gFlags_INCLUDE_DIR}/defines.h)
+# configure_file(${_gFlags_SOURCE_DIR}/defines.h.in ${_gFlags_INCLUDE_DIR}/gflags/defines.h)
+# configure_file(${_gFlags_SOURCE_DIR}/gflags.h.in ${_gFlags_INCLUDE_DIR}/gflags/gflags.h)
+# configure_file(${_gFlags_SOURCE_DIR}/gflags_declare.h.in ${_gFlags_INCLUDE_DIR}/gflags/gflags_declare.h)
+# configure_file(${_gFlags_SOURCE_DIR}/gflags_completions.h.in ${_gFlags_INCLUDE_DIR}/gflags/gflags_completions.h)
+# configure_file(${_gFlags_SOURCE_DIR}/gflags_ns.h.in ${_gFlags_INCLUDE_DIR}/gflags_gflags.h)
 
 set (GFLAGS_SRCS
     ${_gFlags_SOURCE_DIR}/gflags.cc

@@ -171,7 +171,8 @@ function(protobuf_generate_brpc)
     get_filename_component(_basename ${_proto} NAME_WE)
     file(RELATIVE_PATH _rel_dir ${CMAKE_CURRENT_SOURCE_DIR} ${_abs_dir})
 
-    get_filename_component(_parent_dir ${_abs_dir} DIRECTORY)
+    #get_filename_component(_parent_dir ${_abs_dir} DIRECTORY)
+    set(_parent_dir, "${ClickHouse_SOURCE_DIR}/contrib/incubator-brpc/src")
     #list(APPEND _protobuf_include_path -I ${_abs_dir})
     #list(APPEND _file_protobuf_include_path -I ${_abs_dir})
 
@@ -196,9 +197,9 @@ function(protobuf_generate_brpc)
       OUTPUT ${_generated_srcs}
       COMMAND $<TARGET_FILE:protoc>
       ARGS --${protobuf_generate_brpc_LANGUAGE}_out ${_dll_export_decl}${protobuf_generate_brpc_PROTOC_OUT_DIR}
-           --grpc_out ${_dll_export_decl}${protobuf_generate_brpc_PROTOC_OUT_DIR}
+           #--grpc_out ${_dll_export_decl}${protobuf_generate_brpc_PROTOC_OUT_DIR}
            --plugin=protoc-gen-grpc=$<TARGET_FILE:${protobuf_generate_brpc_PLUGIN}>
-           --proto_path=${_parent_dir}
+           --proto_path=${ClickHouse_SOURCE_DIR}/contrib/incubator-brpc/src
            ${_dll_desc_out} ${_protobuf_include_path} ${_abs_file}
       DEPENDS ${_abs_file} protoc ${protobuf_generate_brpc_PLUGIN}
       COMMENT "Running ${protobuf_generate_brpc_LANGUAGE} protocol buffer compiler on ${_proto}"

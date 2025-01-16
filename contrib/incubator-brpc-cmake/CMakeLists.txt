@@ -11,7 +11,7 @@ set(_bRPC_SOURCE_DIR "${ClickHouse_SOURCE_DIR}/contrib/incubator-brpc")
 set(_bRPC_BINARY_DIR "${ClickHouse_BINARY_DIR}/contrib/incubator-bprc")
 set(_bRPC_INCLUDE_DIRS "${ClickHouse_SOURCE_DIR}/contrib/incubator-brpc")
 
-set(_gFlags_INCLUDE_DIR "${ClickHouse_SOURCE_DIR}/contrib/gflags/include")
+set(_gFlags_INCLUDE_DIR "${ClickHouse_SOURCE_DIR}/contrib/gflags-cmake/include")
 
 include(protobuf_generate_brpc.cmake)
 include(brpc.cmake)
