@@ -230,8 +230,8 @@ add_contrib (ulid-c-cmake ulid-c)
 
 add_contrib (libssh-cmake libssh)
 
-add_contrib(gflags-cmake gflags)
-add_subdirectory(incubator-brpc-cmake brpc)
+add_contrib (gflags-cmake gflags)
+add_contrib (incubator-brpc-cmake incubator-brpc)
 
 # Put all targets defined here and in subdirectories under "contrib/<immediate-subdir>" folders in GUI-based IDEs.
 # Some of third-party projects may override CMAKE_FOLDER or FOLDER property of their targets, so they would not appear

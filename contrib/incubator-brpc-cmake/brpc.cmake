@@ -52,8 +52,18 @@ endif()
 
 set(WITH_RDMA_VAL "0")
 
-set(_bRPC_GFLAGS_LIBRARIES ch_contrib::gflag)
-set(_bRPC_PROTOBUF_LIBRARIES ch_contrib::protobuf)
+set (_bRPC_GFLAGS_INCLUDE ${ClickHouse_SOURCE_DIR}/contrib/gflags-cmake/include)
+set(_bRPC_GFLAGS_LIBRARY ch_contrib::gflags)
+
+set(_bRPC_SSL_INCLUDE ${ClickHouse_SOURCE_DIR}/contrib/openssl)
+set(_bRPC_SSL_LIBRARIES OpenSSL::Crypto OpenSSL::SSL)
+
+set(_bRPC_PROTOBUF_INCLUDE ${ClickHouse_SOURCE_DIR}/contrib/google-protobuf/src)
+set(_bRPC_PROTOBUF_LIBRARY ch_contrib::protobuf)
+
+set(_bRPC_PROTOBUF_PROTOC "protoc")
+set(_bRPC_PROTOBUF_PROTOC_EXECUTABLE $<TARGET_FILE:protoc>)
+set(_bRPC_PROTOBUF_PROTOC_LIBRARIES ch_contrib::protoc)
 
 include(GNUInstallDirs)
 
@@ -65,6 +75,17 @@ include_directories(
     ${_bRPC_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
 )
+
+execute_process(
+    COMMAND bash -c "grep \"namespace [_A-Za-z0-9]\\+ {\" ${_bRPC_GFLAGS_INCLUDE}/gflags/gflags_declare.h | head -1 | awk '{print $2}' | tr -d '\n'"
+    OUTPUT_VARIABLE GFLAGS_NS
+)
+if(${GFLAGS_NS} STREQUAL "GFLAGS_NAMESPACE")
+    execute_process(
+        COMMAND bash -c "grep \"#define GFLAGS_NAMESPACE [_A-Za-z0-9]\\+\" ${_bRPC_GFLAGS_INCLUDE}/gflags/gflags_declare.h | head -1 | awk '{print $3}' | tr -d '\n'"
+        OUTPUT_VARIABLE GFLAGS_NS
+    )
+endif()
 
 execute_process(
     COMMAND bash -c "${_bRPC_SOURCE_DIR}/tools/get_brpc_revision.sh ${_bRPC_SOURCE_DIR} | tr -d '\n'"
@@ -159,45 +180,32 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         "-Wl,-U,_ProfilerStop")
 endif()
 
-#set (_bRPC_GFLAGS_INCLUDE_PATH "${ClickHouse_BINARY_DIR}/contrib/gflags/include")
-set(_bRPC_GFLAGS_INCLUDE "")
-set(_bRPC_GFLAGS_LIBRARY ch_contrib::gflags)
-
-#set(_bRPC_PROTOBUF_INCLUDE ${Protobuf_INCLUDE_DIR})
-set(_bRPC_PROTOBUF_INCLUDE "")
-set(_bRPC_PROTOBUF_LIBRARIES ch_contrib::protobuf)
-set(_bRPC_PROTOBUF_PROTOC "protoc")
-set(_bRPC_PROTOBUF_PROTOC_EXECUTABLE $<TARGET_FILE:protoc>)
-set(_bRPC_PROTOBUF_PROTOC_LIBRARIES ch_contrib::protoc)
-
-set(_bRPC_SSL_INCLUDE_DIR "")
-set(_bRPC_SSL_LIBRARIES OpenSSL::Crypto OpenSSL::SSL)
 
 # set(PROTOC_LIB ${Protobuf_PROTOC_LIBRARY})
-# set(PROTOBUF_LIBRARIES ${Protobuf_LIBRARY})
 
-# set(PROTOBUF_INCLUDE_DIRS ${Protobuf_INCLUDE_DIR})
-# set(PROTOBUF_PROTOC_EXECUTABLE ${Protobuf_PROTOC_EXECUTABLE})
+set(PROTOBUF_PROTOC_EXECUTABLE ${Protobuf_PROTOC_EXECUTABLE})
 
 include_directories(
         ${_bRPC_GFLAGS_INCLUDE}
         ${_bRPC_PROTOBUF_INCLUDE}
+        ${_bRPC_SSL_INCLUDE}
+        ${ClickHouse_SOURCE_DIR}/contrib/abseil-cpp
+        ${ClickHouse_SOURCE_DIR}/contrib/openssl-cmake/linux_x86_64/include
 #        ${LEVELDB_INCLUDE_PATH}
-#        ${OPENSSL_INCLUDE_DIR}
-        )
+)
 
 set(DYNAMIC_LIB
     ${_bRPC_GFLAGS_LIBRARY}
-    ${_bRPC_PROTOBUF_LIBRARIES}
-    ${_bRPC_PROTOC_LIB}
+    ${_bRPC_PROTOBUF_LIBRARY}
+    ${_bRPC_SSL_LIBRARIES}
 #    ${CMAKE_THREAD_LIBS_INIT}
     dl)
 
-# if(WITH_MESALINK)
-#     list(APPEND DYNAMIC_LIB ${MESALINK_LIB})
-# else()
-#     list(APPEND DYNAMIC_LIB ${OPENSSL_SSL_LIBRARY})
-# endif()
+if(WITH_MESALINK)
+    list(APPEND DYNAMIC_LIB ${MESALINK_LIB})
+else()
+    list(APPEND DYNAMIC_LIB ${OPENSSL_SSL_LIBRARY})
+endif()
 
 set(BRPC_PRIVATE_LIBS "-lgflags -lprotobuf -lleveldb -lprotoc -lssl -lcrypto -ldl -lz")
 
@@ -383,31 +391,130 @@ set(MCPACK2PB_SOURCES
     ${_bRPC_SOURCE_DIR}/src/mcpack2pb/parser.cpp
     ${_bRPC_SOURCE_DIR}/src/mcpack2pb/serializer.cpp)
 
-include(CompileProto)
-set(PROTO_FILES idl_options.proto
-                brpc/rtmp.proto
-                brpc/rpc_dump.proto
-                brpc/get_favicon.proto
-                brpc/span.proto
-                brpc/builtin_service.proto
-                brpc/get_js.proto
-                brpc/errno.proto
-                brpc/nshead_meta.proto
-                brpc/options.proto
-                brpc/policy/baidu_rpc_meta.proto
-                brpc/policy/hulu_pbrpc_meta.proto
-                brpc/policy/public_pbrpc_meta.proto
-                brpc/policy/sofa_pbrpc_meta.proto
-                brpc/policy/mongo.proto
-                brpc/trackme.proto
-                brpc/streaming_rpc_meta.proto
-                brpc/proto_base.proto)
-file(MAKE_DIRECTORY ${_bRPC_BINARY_DIR}/output/include/brpc)
-set(PROTOC_FLAGS ${PROTOC_FLAGS} -I${PROTOBUF_INCLUDE_DIR})
-compile_proto(PROTO_HDRS PROTO_SRCS ${_bRPC_BINARY_DIR}
-                                    ${_bRPC_BINARY_DIR}/output/include
-                                    ${_bRPC_SOURCE_DIR}/src
-                                    "${PROTO_FILES}")
+#include(CompileProto)
+
+function(compile_proto OUT_HDRS OUT_SRCS DESTDIR HDR_OUTPUT_DIR PROTO_DIR PROTO_FILES)
+  foreach(P ${PROTO_FILES})
+    string(REPLACE .proto .pb.h HDR ${P})
+    set(HDR_RELATIVE ${HDR})
+    set(HDR ${DESTDIR}/${HDR})
+    string(REPLACE .proto .pb.cc SRC ${P})
+    set(SRC ${DESTDIR}/${SRC})
+    list(APPEND HDRS ${HDR})
+    list(APPEND SRCS ${SRC})
+    add_custom_command(
+      OUTPUT ${HDR} ${SRC}
+      COMMAND ${_bRPC_PROTOBUF_PROTOC_EXECUTABLE} ${PROTOC_FLAGS} 
+      -I${PROTO_DIR} 
+      --cpp_out=${DESTDIR} ${PROTO_DIR}/${P}
+      COMMAND ${CMAKE_COMMAND} -E copy ${HDR} ${HDR_OUTPUT_DIR}/${HDR_RELATIVE}
+      DEPENDS ${PROTO_DIR}/${P} protobuf::protoc
+    )
+  endforeach()
+  set(${OUT_HDRS} ${HDRS} PARENT_SCOPE)
+  set(${OUT_SRCS} ${SRCS} PARENT_SCOPE)
+endfunction()
+
+FUNCTION(AUTO_SOURCES RETURN_VALUE PATTERN SOURCE_SUBDIRS)
+
+	IF ("${SOURCE_SUBDIRS}" STREQUAL "RECURSE")
+		SET(PATH ".")
+		IF (${ARGC} EQUAL 4)
+			LIST(GET ARGV 3 PATH)
+		ENDIF ()
+	ENDIF()
+
+	IF ("${SOURCE_SUBDIRS}" STREQUAL "RECURSE")
+		UNSET(${RETURN_VALUE})
+		FILE(GLOB SUBDIR_FILES "${PATH}/${PATTERN}")
+		LIST(APPEND ${RETURN_VALUE} ${SUBDIR_FILES})
+
+		FILE(GLOB SUBDIRS RELATIVE ${PATH} ${PATH}/*)
+
+		FOREACH(DIR ${SUBDIRS})
+			IF (IS_DIRECTORY ${PATH}/${DIR})
+				IF (NOT "${DIR}" STREQUAL "CMAKEFILES")
+					FILE(GLOB_RECURSE SUBDIR_FILES "${PATH}/${DIR}/${PATTERN}")
+					LIST(APPEND ${RETURN_VALUE} ${SUBDIR_FILES})
+				ENDIF()
+			ENDIF()
+		ENDFOREACH()
+	ELSE ()
+		FILE(GLOB ${RETURN_VALUE} "${PATTERN}")
+
+		FOREACH (PATH ${SOURCE_SUBDIRS})
+			FILE(GLOB SUBDIR_FILES "${PATH}/${PATTERN}")
+			LIST(APPEND ${RETURN_VALUE} ${SUBDIR_FILES})
+		ENDFOREACH(PATH ${SOURCE_SUBDIRS})
+	ENDIF ()
+
+	IF (${FILTER_OUT})
+		LIST(REMOVE_ITEM ${RETURN_VALUE} ${FILTER_OUT})
+	ENDIF()
+
+	SET(${RETURN_VALUE} ${${RETURN_VALUE}} PARENT_SCOPE)
+ENDFUNCTION(AUTO_SOURCES)
+
+# set(PROTO_FILES 
+#     idl_options.proto
+#     brpc/rtmp.proto
+#     brpc/rpc_dump.proto
+#     brpc/get_favicon.proto
+#     brpc/span.proto
+#     brpc/builtin_service.proto
+#     brpc/get_js.proto
+#     brpc/errno.proto
+#     brpc/nshead_meta.proto
+#     brpc/options.proto
+#     brpc/policy/baidu_rpc_meta.proto
+#     brpc/policy/hulu_pbrpc_meta.proto
+#     brpc/policy/public_pbrpc_meta.proto
+#     brpc/policy/sofa_pbrpc_meta.proto
+#     brpc/policy/mongo.proto
+#     brpc/trackme.proto
+#     brpc/streaming_rpc_meta.proto
+#     brpc/proto_base.proto
+# )
+
+set(PROTO_FILES 
+    ${_bRPC_SOURCE_DIR}/src/idl_options.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/rtmp.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/rpc_dump.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/get_favicon.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/span.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/builtin_service.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/get_js.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/errno.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/nshead_meta.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/options.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/policy/baidu_rpc_meta.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/policy/hulu_pbrpc_meta.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/policy/public_pbrpc_meta.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/policy/sofa_pbrpc_meta.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/policy/mongo.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/trackme.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/streaming_rpc_meta.proto
+    ${_bRPC_SOURCE_DIR}/src/brpc/proto_base.proto
+)
+
+
+#file(MAKE_DIRECTORY ${_bRPC_BINARY_DIR}/output/include/brpc)
+#set(PROTOC_FLAGS ${PROTOC_FLAGS} -I${PROTOBUF_INCLUDE_DIR})
+
+# compile_proto(PROTO_HDRS PROTO_SRCS ${_bRPC_BINARY_DIR}
+#                                     ${_bRPC_BINARY_DIR}/output/include
+#                                     ${_bRPC_SOURCE_DIR}/src
+#                                     "${PROTO_FILES}")
+
+AUTO_SOURCES(brpc_PROTO_FILES "*.proto" "RECURSE" "${_bRPC_SOURCE_DIR}/src")
+SET(brpc_PROTO_FILES ${brpc_PROTO_FILES} PARENT_SCOPE)
+
+PROTOBUF_GENERATE_BRPC_CPP(PROTO_SRCS PROTO_HDRS 
+     ${brpc_PROTO_FILES}
+)
+
+#${_bRPC_BINARY_DIR}/output/
+
 add_library(PROTO_LIB OBJECT ${PROTO_SRCS} ${PROTO_HDRS})
 
 set(SOURCES
@@ -419,7 +526,7 @@ set(SOURCES
     ${THRIFT_SOURCES}
     )
 
-file(COPY ${CMAKE_CURRENT_BINARY_DIR}/brpc/
+file(COPY ${_bRPC_SOURCE_DIR}/src/brpc/
         DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/output/include/brpc/
         FILES_MATCHING
         PATTERN "*.h"
@@ -461,49 +568,49 @@ add_library(brpc-static STATIC $<TARGET_OBJECTS:BUTIL_LIB>
                                $<TARGET_OBJECTS:SOURCES_LIB>
                                $<TARGET_OBJECTS:PROTO_LIB>)
 
-if(BRPC_WITH_THRIFT)
-   target_link_libraries(brpc-static thrift)
-endif()
+# if(BRPC_WITH_THRIFT)
+#    target_link_libraries(brpc-static thrift)
+# endif()
 
 SET_TARGET_PROPERTIES(brpc-static PROPERTIES OUTPUT_NAME brpc CLEAN_DIRECT_OUTPUT 1)
 
 # for protoc-gen-mcpack
 set(EXECUTABLE_OUTPUT_PATH ${_bRPC_BINARY_DIR}/output/bin)
     
-set(protoc_gen_mcpack_SOURCES
-    ${_bRPC_SOURCE_DIR}/src/mcpack2pb/generator.cpp
- )
+# set(protoc_gen_mcpack_SOURCES
+#     ${_bRPC_SOURCE_DIR}/src/mcpack2pb/generator.cpp
+# )
+# add_executable(protoc-gen-mcpack ${protoc_gen_mcpack_SOURCES})
+
+# if(BUILD_SHARED_LIBS)
+#     add_library(brpc-shared SHARED $<TARGET_OBJECTS:BUTIL_LIB> 
+#                                    $<TARGET_OBJECTS:SOURCES_LIB>
+#                                    $<TARGET_OBJECTS:PROTO_LIB>)
+#     target_link_libraries(brpc-shared ${DYNAMIC_LIB})
+#     if(BRPC_WITH_GLOG)
+#         target_link_libraries(brpc-shared ${GLOG_LIB})
+#     endif()
+#     # if(BRPC_WITH_THRIFT)
+#     #     target_link_libraries(brpc-shared thrift)
+#     # endif()
+#     SET_TARGET_PROPERTIES(brpc-shared PROPERTIES OUTPUT_NAME brpc CLEAN_DIRECT_OUTPUT 1)
+
+#     target_link_libraries(protoc-gen-mcpack brpc-shared ${DYNAMIC_LIB} pthread)
+
+#     install(TARGETS brpc-shared
+#             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+#             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#             )
+#     target_include_directories(brpc-shared SYSTEM PUBLIC ${GFLAGS_INCLUDE_PATH} INTERFACE ${_bRPC_BINARY_DIR}/output/include)
+# else()
     
-add_executable(protoc-gen-mcpack ${protoc_gen_mcpack_SOURCES})
-
-if(BUILD_SHARED_LIBS)
-    add_library(brpc-shared SHARED $<TARGET_OBJECTS:BUTIL_LIB> 
-                                   $<TARGET_OBJECTS:SOURCES_LIB>
-                                   $<TARGET_OBJECTS:PROTO_LIB>)
-    target_link_libraries(brpc-shared ${DYNAMIC_LIB})
-    if(BRPC_WITH_GLOG)
-        target_link_libraries(brpc-shared ${GLOG_LIB})
-    endif()
-    if(BRPC_WITH_THRIFT)
-        target_link_libraries(brpc-shared thrift)
-    endif()
-    SET_TARGET_PROPERTIES(brpc-shared PROPERTIES OUTPUT_NAME brpc CLEAN_DIRECT_OUTPUT 1)
-
-    target_link_libraries(protoc-gen-mcpack brpc-shared ${DYNAMIC_LIB} pthread)
-
-    install(TARGETS brpc-shared
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            )
-    target_include_directories(brpc-shared SYSTEM PUBLIC ${GFLAGS_INCLUDE_PATH} INTERFACE ${_bRPC_BINARY_DIR}/output/include)
-else()
-    target_link_libraries(protoc-gen-mcpack brpc-static ${DYNAMIC_LIB} pthread)
+    #target_link_libraries(protoc-gen-mcpack brpc-static ${DYNAMIC_LIB} pthread)
+    target_link_libraries(brpc-static ${DYNAMIC_LIB} pthread)
     target_link_libraries(brpc-static PUBLIC ${_bRPC_GFLAGS_LIBRARY})
     target_include_directories(brpc-static SYSTEM PUBLIC ${_bRPC_GFLAGS_INCLUDE} INTERFACE ${_bRPC_BINARY_DIR}/output/include)
-endif()
 
-
+# endif()
 
 install(TARGETS brpc-static
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
