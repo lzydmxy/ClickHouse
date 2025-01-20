@@ -1,0 +1,139 @@
+syntax = "proto3";
+import "common.proto";
+import "plan_node.proto";
+package DB.Protos;
+
+message PlanSegment {
+    string cluster_name = 1;
+    uint32 parallel = 2;
+    uint32  exchange_parallel_size = 3;
+    QueryPlan query_plan = 4;
+    repeated PlanSegmentOutput outputs = 5;
+    repeated uint32 runtime_filter_id = 6;
+    uint32 segment_id = 7;
+    string query_id = 8;
+    AddressInfo coordinator_address = 9;
+    ReportProfileType.Enum profile_type = 10;
+}
+
+message Progress {
+    // below should sync with Progress.h
+    uint64 read_rows = 1;          /// Rows (source) processed.
+    uint64 read_bytes = 2;         /// Bytes (uncompressed, source) processed.
+    uint64 read_raw_bytes = 3;     /// Raw bytes processed.
+    uint64 total_rows_to_read = 4;
+    uint64 total_raw_bytes_to_read = 5;
+    uint64 written_rows = 6;
+    uint64 written_bytes = 7;
+    uint64 written_elapsed_milliseconds = 8;
+    uint64 disk_cache_read_bytes = 9;
+  }
+  
+message RuntimeSegmentsMetrics {
+    int64 cpu_micros = 1;
+    Progress progress = 2;
+}
+
+message PlanSegmentHeader {
+    uint32 major_revision = 1;
+    AddressInfo execution_address = 2;
+    uint32 query_common_buf_size = 3;
+    uint32 query_settings_buf_size = 4;
+}
+
+message PlanSegmentBody {
+    uint32 parallel_id = 1;
+    uint32 plan_segment_id = 2;
+    uint32 plan_segment_buf_size = 3;
+    uint32 attempt_id = 4;
+    SourceTaskFilter source_task_filter = 5;
+    repeated PlanSegmentPartitionSource sources = 6;
+    uint32 worker_epoch = 7;
+}
+
+message PlanSegmentRequest {
+    PlanSegmentHeader plan_segment_header = 1;
+    PlanSegmentBody plan_segment_body = 2;
+}
+
+message PlanSegmentResponse {
+    uint32 plan_segment_id = 1;
+    int32 status_code = 2;
+    string message = 3;
+    string address = 4;
+}
+
+message PlanSegmentsRequest {
+    PlanSegmentHeader plan_segment_header = 1;
+    repeated PlanSegmentBody plan_segment_body = 2;
+}
+
+message PlanSegmentsResponse {
+    repeated PlanSegmentResponse responses = 1;
+}
+
+message CancelPlanSegmentRequest {
+    string query_id = 1;
+    string coordinator_address = 2;
+}
+
+message SendBytesByParallelIndex {
+    uint64 parallel_index = 1;
+    uint64 bytes_sent = 2;
+}
+
+message SendBytes {
+    uint64 exchange_id = 1;
+    repeated SendBytesByParallelIndex bytes_by_index = 2;
+}
+
+message SenderMetrics {
+    AddressInfo address = 1;
+    repeated SendBytes send_bytes = 2;
+}
+
+message SendPlanSegmentStatusRequest {
+    string query_id = 1;
+    int32 segment_id = 2;
+    bool is_succeed = 3;
+    bool is_canceled = 4;
+    int32 status_code = 5;
+    string message = 6;
+    RuntimeSegmentsMetrics metrics = 7;
+    uint64 parallel_index = 8;
+    SenderMetrics sender_metrics = 9;
+    int32 attempt_id = 10;
+}
+
+message SendPlanSegmentStatusResponse {
+    string query_id = 1;
+    int32 status_code = 2;
+    string message = 3;
+    string address = 4;
+}
+
+message ReportPlanSegmentErrorRequest {
+    string query_id = 1;
+    int32 status_code = 2;
+    string message = 3;
+}
+
+message SendProgressRequest {
+    string query_id = 1;
+    uint64 segment_id = 2;
+    uint64 parallel_id = 3;
+    Progress progress = 4;
+}
+
+/*
+* The RPC service for query plan segment execution includes four services: 
+* single execution, batch execution, cancellation, and reporting. 
+* Batch execution is used for queuing or asynchronous execution when pressure is high.
+* and priority or execution strategy needs to be increased later.
+*/
+service ExecutePlanService {
+    rpc executePlanSegment(PlanSegmentRequest) returns (PlanSegmentResponse);
+    rpc executePlanSegments(PlanSegmentsRequest) returns (PlanSegmentsResponse);
+    rpc cancelPlanSegment(CancelPlanSegmentRequest) returns (PlanSegmentResponse);
+    rpc sendPlanSegmentStatus(SendPlanSegmentStatusRequest) returns (SendPlanSegmentStatusResponse);
+};
