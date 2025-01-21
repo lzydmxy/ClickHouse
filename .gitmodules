@@ -498,8 +498,14 @@
 [submodule "contrib/gflags"]
 	path = contrib/gflags
 #	url = https://github.com/gflags/gflags.git
-    url = git@github.com/gflags/gflags.git
+    url = git@github.com:gflags/gflags.git
 [submodule "contrib/protobuf"]
 	path = contrib/protobuf
 #	url = https://github.com/ClickHouse-Extras/protobuf.git
-    url = git@github.com/ClickHouse-Extras/protobuf.git
+    url = git@github.com:ClickHouse/google-protobuf.git
+[submodule "contrib/brpc"]
+	path = contrib/brpc
+	url = https://github.com/apache/brpc.git
+[submodule "contrib/leveldb"]
+	path = contrib/leveldb
+	url = git@github.com:google/leveldb.git

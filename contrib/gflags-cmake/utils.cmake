@@ -125,7 +125,7 @@ function (configure_headers out)
       configure_file ("${_gFlags_SOURCE_DIR}/src/${src}.in" "${_gFlags_BINARY_DIR}/include/${GFLAGS_INCLUDE_DIR}/${src}" @ONLY)
       list (APPEND tmp "${_gFlags_BINARY_DIR}/include/${GFLAGS_INCLUDE_DIR}/${src}")
     else ()
-	    configure_file ("${_gFlags_SOURCE_DIR}/src/${src}" "${_gFlags_BINARY_DIR}/include/${GFLAGS_INCLUDE_DIR}/${src}" COPYONLY)
+      configure_file ("${_gFlags_SOURCE_DIR}/src/${src}" "${_gFlags_BINARY_DIR}/include/${GFLAGS_INCLUDE_DIR}/${src}" COPYONLY)
       list (APPEND tmp "${_gFlags_BINARY_DIR}/include/${GFLAGS_INCLUDE_DIR}/${src}")
     endif ()
   endforeach ()
@@ -156,15 +156,15 @@ endfunction ()
 # sets environment variables needed by the --fromenv/--tryfromenv tests.
 macro (add_gflags_test name expected_rc expected_output unexpected_output cmd)
   set (args "--test_tmpdir=${_gFlags_BINARY_DIR}/Testing/Temporary"
-            "--srcdir=${_gFlags_SOURCE_DIR}/test")
+          "--srcdir=${_gFlags_SOURCE_DIR}/test")
   add_test (
-    NAME    ${name}
-    COMMAND "${CMAKE_COMMAND}" "-DCOMMAND:STRING=$<TARGET_FILE:${cmd}>;${args};${ARGN}"
-                               "-DEXPECTED_RC:STRING=${expected_rc}"
-                               "-DEXPECTED_OUTPUT:STRING=${expected_output}"
-                               "-DUNEXPECTED_OUTPUT:STRING=${unexpected_output}"
-                               -P "${_gFlags_SOURCE_DIR}/cmake/execute_test.cmake"
-    WORKING_DIRECTORY "${GFLAGS_FLAGFILES_DIR}"
+          NAME    ${name}
+          COMMAND "${CMAKE_COMMAND}" "-DCOMMAND:STRING=$<TARGET_FILE:${cmd}>;${args};${ARGN}"
+          "-DEXPECTED_RC:STRING=${expected_rc}"
+          "-DEXPECTED_OUTPUT:STRING=${expected_output}"
+          "-DUNEXPECTED_OUTPUT:STRING=${unexpected_output}"
+          -P "${_gFlags_SOURCE_DIR}/cmake/execute_test.cmake"
+          WORKING_DIRECTORY "${GFLAGS_FLAGFILES_DIR}"
   )
 endmacro ()
 
@@ -183,7 +183,7 @@ function (register_gflags_package CONFIG_DIR)
   string (MD5 REGISTRY_ENTRY "${CONFIG_DIR}")
   if (WIN32)
     install (CODE
-      "execute_process (
+            "execute_process (
          COMMAND reg add \"HKCU\\\\Software\\\\Kitware\\\\CMake\\\\Packages\\\\${PACKAGE_NAME}\" /v \"${REGISTRY_ENTRY}\" /d \"${CONFIG_DIR}\" /t REG_SZ /f
          RESULT_VARIABLE RT
          ERROR_VARIABLE  ERR
@@ -199,9 +199,9 @@ function (register_gflags_package CONFIG_DIR)
   elseif (IS_DIRECTORY "$ENV{HOME}")
     file (WRITE "${_gFlags_BINARY_DIR}/${PACKAGE_NAME}-registry-entry" "${CONFIG_DIR}")
     install (
-      FILES       "${_gFlags_BINARY_DIR}/${PACKAGE_NAME}-registry-entry"
-      DESTINATION "$ENV{HOME}/.cmake/packages/${PACKAGE_NAME}"
-      RENAME      "${REGISTRY_ENTRY}"
+            FILES       "${_gFlags_BINARY_DIR}/${PACKAGE_NAME}-registry-entry"
+            DESTINATION "$ENV{HOME}/.cmake/packages/${PACKAGE_NAME}"
+            RENAME      "${REGISTRY_ENTRY}"
     )
   endif ()
 endfunction ()
