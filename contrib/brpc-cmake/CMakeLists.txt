@@ -282,8 +282,9 @@ set(DYNAMIC_LIB
         ch_contrib::protobuf ${protobuf_ABSL_USED_TARGETS}
         ch_contrib::leveldb
         ch_contrib::protoc
-        dl
-        z)
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        dl)
 
 #if(WITH_BORINGSSL)
 #    list(APPEND DYNAMIC_LIB ${BORINGSSL_SSL_LIBRARY})
@@ -301,7 +302,7 @@ if(WITH_RDMA)
     list(APPEND DYNAMIC_LIB ${RDMA_LIB})
 endif()
 
-set(BRPC_PRIVATE_LIBS "-lgflags -lprotobuf -lleveldb -lprotoc -lssl -lcrypto -ldl -lz")
+set(BRPC_PRIVATE_LIBS "-lgflags -lprotobuf -lleveldb -lprotoc -lssl -lcrypto -ldl")
 
 if(WITH_GLOG)
     set(DYNAMIC_LIB ${DYNAMIC_LIB} ${GLOG_LIB})
@@ -528,12 +529,18 @@ set(PROTO_FILES idl_options.proto
         brpc/streaming_rpc_meta.proto
         brpc/proto_base.proto)
 file(MAKE_DIRECTORY ${_BRPC_BINARY_DIR}/output/include/brpc)
-set(PROTOC_FLAGS ${PROTOC_FLAGS} -I${PROTOBUF_INCLUDE_DIR})
+
+get_target_property(PROTOBUF_INCLUDE_DIRS ch_contrib::protobuf INTERFACE_INCLUDE_DIRECTORIES)
+message(STATUS "Include directories for PROTOBUF_INCLUDE_DIRS: ${PROTOBUF_INCLUDE_DIRS}")
+
+set(PROTOC_FLAGS ${PROTOC_FLAGS} -I${PROTOBUF_INCLUDE_DIRS})
+include(CompileProto.cmake)
 compile_proto(PROTO_HDRS PROTO_SRCS ${_BRPC_BINARY_DIR}
         ${_BRPC_BINARY_DIR}/output/include
         ${_BRPC_SOURCE_DIR}/src
         "${PROTO_FILES}")
 add_library(BRPC_PROTO_LIB OBJECT ${PROTO_SRCS} ${PROTO_HDRS})
+target_link_libraries(BRPC_PROTO_LIB ${DYNAMIC_LIB})
 
 include_directories("${_BRPC_BINARY_DIR}/output/include")
 
@@ -547,6 +554,7 @@ set(BRPC_SOURCES
 )
 
 include(src.cmake)
+include(protobuf_generate_brpc.cmake)
 
 file(COPY ${CMAKE_CURRENT_BINARY_DIR}/brpc/
         DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/output/include/brpc/
@@ -570,3 +578,5 @@ install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/output/include/
 # Install pkgconfig
 configure_file(brpc.pc.in ${_BRPC_BINARY_DIR}/brpc.pc @ONLY)
 install(FILES ${_BRPC_BINARY_DIR}/brpc.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
+add_library(ch_contrib::brpc ALIAS brpc-static)

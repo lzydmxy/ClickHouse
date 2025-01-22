@@ -24,7 +24,11 @@ include_directories(${__BRPC_BINARY_DIR})
 include_directories(${_BRPC_SOURCE_DIR}/src)
 
 add_library(BRPC_BUTIL_LIB OBJECT ${BRPC_BUTIL_SOURCES})
+target_compile_options(BRPC_BUTIL_LIB PRIVATE -Wno-macro-redefined)
+target_link_libraries(BRPC_BUTIL_LIB ${DYNAMIC_LIB})
 add_library(BRPC_SOURCES_LIB OBJECT ${BRPC_SOURCES})
+target_compile_options(BRPC_SOURCES_LIB PRIVATE -Wno-deprecated-declarations -Wno-macro-redefined)
+target_link_libraries(BRPC_SOURCES_LIB ${DYNAMIC_LIB})
 add_dependencies(BRPC_SOURCES_LIB BRPC_PROTO_LIB)
 
 # shared library needs POSITION_INDEPENDENT_CODE
@@ -34,6 +38,8 @@ set_property(TARGET ${BRPC_BUTIL_LIB} PROPERTY POSITION_INDEPENDENT_CODE 1)
 add_library(brpc-static STATIC $<TARGET_OBJECTS:BRPC_BUTIL_LIB>
         $<TARGET_OBJECTS:BRPC_SOURCES_LIB>
         $<TARGET_OBJECTS:BRPC_PROTO_LIB>)
+
+target_link_libraries(brpc-static ${DYNAMIC_LIB})
 
 function(check_thrift_version target_arg)
     #use thrift command to get version
@@ -99,8 +105,7 @@ add_executable(protoc-gen-mcpack ${protoc_gen_mcpack_SOURCES})
 #else()
 #    target_link_libraries(protoc-gen-mcpack brpc-static ${DYNAMIC_LIB} pthread)
 #endif()
-
-target_link_libraries(protoc-gen-mcpack brpc-static ${DYNAMIC_LIB} pthread)
+target_link_libraries(protoc-gen-mcpack brpc-static ${DYNAMIC_LIB})
 target_include_directories(brpc-static
         PUBLIC
         "${_BRPC_BINARY_DIR}/output/include"

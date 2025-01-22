@@ -414,6 +414,7 @@ if (NOT GFLAGS_IS_SUBPROJECT)
     set (CMAKE_LIBRARY_OUTPUT_DIRECTORY "lib")
     set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 endif ()
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${_gFlags_BINARY_DIR}/lib")
 # Set postfixes for generated libraries based on buildtype.
 set(CMAKE_RELEASE_POSTFIX "")
 set(CMAKE_DEBUG_POSTFIX "_debug")
