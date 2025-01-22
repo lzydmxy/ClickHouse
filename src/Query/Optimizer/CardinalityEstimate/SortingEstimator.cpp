@@ -1,0 +1,56 @@
+#include <Query/Optimizer/CardinalityEstimate/LimitEstimator.h>
+#include <Query/Optimizer/CardinalityEstimate/SortingEstimator.h>
+
+namespace DB
+{
+PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const SortingStep & step)
+{
+    if (!step.hasPreparedParam() && step.getLimitValue() > 0)
+    {
+        size_t limit = step.getLimitValue();
+        return LimitEstimator::getLimitStatistics(child_stats, limit);
+    }
+    return child_stats;
+}
+
+PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const PartialSortingStep & step)
+{
+    if (step.getLimit() > 0)
+    {
+        size_t limit = step.getLimit();
+        return LimitEstimator::getLimitStatistics(child_stats, limit);
+    }
+    return child_stats;
+}
+
+PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const MergeSortingStep & step)
+{
+    if (step.getLimit() > 0)
+    {
+        size_t limit = step.getLimit();
+        return LimitEstimator::getLimitStatistics(child_stats, limit);
+    }
+    return child_stats;
+}
+
+PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const MergingSortedStep & step)
+{
+    if (step.getLimit() > 0)
+    {
+        size_t limit = step.getLimit();
+        return LimitEstimator::getLimitStatistics(child_stats, limit);
+    }
+    return child_stats;
+}
+
+PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const FinishSortingStep & step)
+{
+    if (step.getLimit() > 0)
+    {
+        size_t limit = step.getLimit();
+        return LimitEstimator::getLimitStatistics(child_stats, limit);
+    }
+    return child_stats;
+}
+
+}
