@@ -1,0 +1,46 @@
+#pragma once
+
+#include <Query/Optimizer/Property/Property.h>
+#include <QueryPlan/PlanVisitor.h>
+#include <QueryPlan/TableWriteStep.h>
+#include <QueryPlan/TotalsHavingStep.h>
+
+#include <utility>
+
+namespace DB
+{
+class PropertyDeterminer
+{
+public:
+    static PropertySets determineRequiredProperty(QueryPlanStepPtr step, const Property & property, Context & context);
+};
+
+class DeterminerContext
+{
+public:
+    DeterminerContext(Property required_, Context & context_) : required(required_), context(context_) { }
+    Property getRequired() const { return required; }
+    Context & getContext() const { return context; }
+
+private:
+    Property required;
+    Context & context;
+};
+
+class DeterminerVisitor : public StepVisitor<PropertySets, DeterminerContext>
+{
+public:
+    PropertySets visitStep(const IQueryPlanStep &, DeterminerContext &) override;
+
+#define VISITOR_DEF(TYPE) PropertySets visit##TYPE##Step(const TYPE##Step &, DeterminerContext &) override;
+    APPLY_STEP_TYPES(VISITOR_DEF)
+#undef VISITOR_DEF
+
+private:
+    static PropertySet single()
+    {
+        return {Property{Partitioning{Partitioning::Handle::SINGLE}, Partitioning{Partitioning::Handle::SINGLE}}};
+    }
+};
+
+}
