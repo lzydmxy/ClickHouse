@@ -52,12 +52,14 @@ add_custom_target(copy_protocol ALL
 
 
 add_library(BRPC_BUTIL_LIB OBJECT ${BRPC_BUTIL_SOURCES})
+#target_compile_options(BRPC_BUTIL_LIB PRIVATE -Wno-macro-redefined)
 target_compile_options(BRPC_BUTIL_LIB PRIVATE -Wno-macro-redefined -Wno-vla-cxx-extension)
+
 target_link_libraries(BRPC_BUTIL_LIB ${DYNAMIC_LIB})
 add_library(BRPC_SOURCES_LIB OBJECT ${BRPC_SOURCES})
-add_dependencies(BRPC_SOURCES_LIB copy_mutex copy_json2pb copy_protocol)
-
+#target_compile_options(BRPC_SOURCES_LIB PRIVATE -Wno-deprecated-declarations -Wno-macro-redefined)
 target_compile_options(BRPC_SOURCES_LIB PRIVATE -Wno-deprecated-declarations -Wno-macro-redefined -Wno-vla-cxx-extension)
+
 target_link_libraries(BRPC_SOURCES_LIB ${DYNAMIC_LIB})
 add_dependencies(BRPC_SOURCES_LIB BRPC_PROTO_LIB)
 

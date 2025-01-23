@@ -1,22 +1,20 @@
 #include "QueryProto.h"
 
+namespace DB
+{
+
 String planSegmentTypeToString(const RIPlanSegment::Enum & type)
 {
     std::ostringstream ostr;
-    switch(type)
-    {
-        case PlanSegmentType::UNKNOWN:
-            ostr << "UNKNOWN";
-            break;
-        case PlanSegmentType::SOURCE:
-            ostr << "SOURCE";
-            break;
-        case PlanSegmentType::EXCHANGE:
-            ostr << "EXCHANGE";
-            break;
-        case PlanSegmentType::OUTPUT:
-            ostr << "OUTPUT";
-            break;
-    }
+    if(type == RIPlanSegment::UNKNOWN)
+        ostr << "UNKNOWN";
+    else if (type == RIPlanSegment::SOURCE)
+        ostr << "SOURCE";
+    else if (type == RIPlanSegment::EXCHANGE)
+        ostr << "EXCHANGE";
+    else if (type == RIPlanSegment::OUTPUT)
+        ostr << "OUTPUT";
     return ostr.str();
+}
+
 }

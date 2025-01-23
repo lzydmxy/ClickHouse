@@ -1,6 +1,7 @@
 #include "AddressInfo.h"
 #include <string>
 #include <IO/ReadHelpers.h>
+#include <Query/Common/QueryCommon.h>
 
 namespace DB
 {
@@ -19,10 +20,8 @@ AddressInfo::AddressInfo(const String &host_name_, UInt16 port_, const String &u
 AddressInfo::AddressInfo(const RAddressInfo & proto) 
         : host_name(proto.host_name()), port(proto.port()), exchange_port(proto.exchange_port())
 {
-    if (proto.has_user())
-        user = proto.user();
-    if (proto.has_password())
-        password = proto.password();
+    user = proto.user();
+    password = proto.password();
 }
 
 void AddressInfo::serialize(WriteBuffer &buf) const
@@ -98,7 +97,7 @@ String PlanSegmentPartitionSource::toString() const
     return fmt::format(
         "source[{} - partition_ids:{} - exchange_id:{}]",
         address->toShortString(),
-        boost::algorithm::join(partition_ids | boost::adaptors::transformed([](UInt32 id) { return std::to_string(id); }), ","),
+        containerToString<std::vector<UInt32>>(partition_ids),
         exchange_id);
 }
 }

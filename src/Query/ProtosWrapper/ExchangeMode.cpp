@@ -4,38 +4,27 @@
 namespace DB
 {
 
-String exchangeModeToString(const RExchangeMode & exchange_mode)
+String exchangeModeToString(const RExchangeMode::Enum & exchange_mode)
 {
-    std::ostringstream ostr;
-    switch(exchange_mode)
-    {
-        case RExchangeMode::UNKNOWN:
-            ostr << "UNKNOWN";
-            break;
-        case RExchangeMode::LOCAL_NO_NEED_REPARTITION:
-            ostr << "LOCAL_NO_NEED_REPARTITION";
-            break;
-        case RExchangeMode::LOCAL_MAY_NEED_REPARTITION:
-            ostr << "LOCAL_MAY_NEED_REPARTITION";
-            break;
-        case RExchangeMode::REPARTITION:
-            ostr << "REPARTITION";
-            break;
-        case RExchangeMode::BROADCAST:
-            ostr << "BROADCAST";
-            break;
-        case RExchangeMode::GATHER:
-            ostr << "GATHER";
-            break;
-        case RExchangeMode::BUCKET_REPARTITION:
-            ostr << "BUCKET_REPARTITION";
-            break;
-    }
-
-    return ostr.str();
+    if (exchange_mode == RExchangeMode::UNKNOWN)
+        return "UNKNOWN";
+    else if (exchange_mode == RExchangeMode::LOCAL_NO_NEED_REPARTITION)
+        return "LOCAL_NO_NEED_REPARTITION";
+    else if (exchange_mode == RExchangeMode::LOCAL_MAY_NEED_REPARTITION)
+        return "LOCAL_MAY_NEED_REPARTITION";
+    else if (exchange_mode == RExchangeMode::REPARTITION)
+        return "REPARTITION";
+    else if (exchange_mode == RExchangeMode::BROADCAST)
+        return "BROADCAST";
+    else if (exchange_mode == RExchangeMode::GATHER)
+        return "GATHER";
+    else if (exchange_mode == RExchangeMode::BUCKET_REPARTITION)
+        return "BUCKET_REPARTITION";
+    else
+        return "";
 }
 
-bool isLocalExchange(RExchangeMode mode)
+bool isLocalExchange(const RExchangeMode::Enum & mode)
 {
     return mode == RExchangeMode::LOCAL_NO_NEED_REPARTITION || mode == RExchangeMode::LOCAL_MAY_NEED_REPARTITION;
 }

@@ -48,4 +48,6 @@ if (COMPILER_CLANG)
     no_warning(unsafe-buffer-usage) # too aggressive
     no_warning(switch-default) # conflicts with "defaults in a switch covering all enum values"
     # TODO Enable conversion, sign-conversion, double-promotion warnings.
+    no_warning(reserved-identifier)
+    no_warning(extra-semi-stmt)
 endif ()

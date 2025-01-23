@@ -6,6 +6,7 @@
 #include <fmt/core.h>
 #include <base/types.h>
 #include <Query/Common/QueryCommon.h>
+#include <Query/ProtosWrapper/QueryProto.h>
 
 namespace DB
 {
@@ -41,22 +42,18 @@ struct SourceTaskPayloadOnWorker
 
 struct SourceTaskFilter
 {
-    std::optional<size_t> index;
-    std::optional<size_t> count;
-    std::optional<std::set<Int64>> buckets;
+    UInt32 index;
+    UInt32 count;
+    std::set<Int64> buckets;
     bool isValid() const
     {
-        return (index && count) || buckets;
+        return (index > 0 && count > 0) || buckets.size() > 0;
     }
     RSourceTaskFilter toProto() const;
     void fromProto(const RSourceTaskFilter & proto);
     String toString() const
     {
-        if (index && count)
-            return fmt::format("SourceTaskFilter(idx:{},cnt:{})", *index, *count);
-        else if (buckets)
-            return fmt::format("SourceTaskFilter(buckets:{})", setToString<Int64>(*buckets));
-        return "SourceTaskFilter(invalid)";
+        return fmt::format("SourceTaskFilter(idx:{}, cnt:{}, buckets:{})", index, count, containerToString<std::set<Int64>>(buckets));
     }
 };
 

@@ -7,6 +7,6 @@ namespace DB
 {
 
 String exchangeModeToString(const RExchangeMode::Enum & exchange_mode);
-bool isLocalExchange(RExchangeMode::Enum mode);
+bool isLocalExchange(const RExchangeMode::Enum & mode);
 
 }
