@@ -83,6 +83,8 @@ public:
     const CostModel & getCostModel() const { return cost_model; }
 
 private:
+    using RuleTrace = std::unordered_map<RuleType, std::unordered_map<String, Metric>>;
+
     ContextMutablePtr context;
     CTEInfo & cte_info;
     CTEDefPropertyRequirements cte_property_requirements;
@@ -105,7 +107,7 @@ private:
         UInt64 elapsed_ns;
         UInt64 counts;
     };
-    std::unordered_map<RuleType, std::unordered_map<String, Metric>> rule_trace;
+    RuleTrace rule_trace;
     
     LoggerPtr log;
 };
