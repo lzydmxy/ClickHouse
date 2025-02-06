@@ -1,5 +1,8 @@
 #include <Query/Analyzer/Analysis.h>
 
+#include <DataTypes/DataTypeNullable.h>
+
+
 namespace DB
 {
 
