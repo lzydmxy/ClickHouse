@@ -31,7 +31,7 @@ public:
             auto * step = dynamic_cast<const T *>(node->getStep().get());
 
             if (!step)
-                throw Exception("Unexpected plan step found in pattern matching", ErrorCodes::LOGICAL_ERROR);
+                throw Exception(ErrorCodes::LOGICAL_ERROR, "Unexpected plan step found in pattern matching");
 
             return step_property(*step);
         };
@@ -55,7 +55,7 @@ public:
             auto * step = dynamic_cast<const T *>(istep.get());
 
             if (!step)
-                throw Exception("Unexpected plan step found in pattern matching", ErrorCodes::LOGICAL_ERROR);
+                throw Exception(ErrorCodes::LOGICAL_ERROR, "Unexpected plan step found in pattern matching");
 
             constexpr auto func_type1 = boost::hana::is_valid([](auto && x) -> decltype(x(*step)) {});
 

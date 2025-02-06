@@ -37,23 +37,23 @@ PatternBuilder & PatternBuilder::matching(PatternPredicate predicate, const std:
     if (auto * type_pattern = dynamic_cast<TypeOfPattern *>(current.get()))
     {
         if (type_pattern->attaching_predicate)
-           throw Exception(
-                "TypeOfPattern already has an attaching_predicate", ErrorCodes::LOGICAL_ERROR);
+           throw Exception(ErrorCodes::LOGICAL_ERROR,
+                "TypeOfPattern already has an attaching_predicate");
         else
             type_pattern->attaching_predicate = predicate;
     }
     else if (auto * capture_pattern = dynamic_cast<CapturePattern *>(current.get()))
     {
         if (capture_pattern->attaching_predicate)
-           throw Exception(
-                "CapturePattern already has an attaching_predicate", ErrorCodes::LOGICAL_ERROR);
+           throw Exception(ErrorCodes::LOGICAL_ERROR,
+                "CapturePattern already has an attaching_predicate");
         else
             capture_pattern->attaching_predicate = predicate;
     }
     else
     {
-        throw Exception(
-            "Previous pattern of FilterPattern must be a TypeOfPattern/CapturePattern", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR,
+            "Previous pattern of FilterPattern must be a TypeOfPattern/CapturePattern");
     }
 
     return *this;

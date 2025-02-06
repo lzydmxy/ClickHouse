@@ -23,7 +23,7 @@ public:
         auto next = iters.first;
 
         if (iters.first == iters.second || ++next != iters.second) {
-            throw Exception("Not unique capture for this capture key: " + String{capture}, ErrorCodes::LOGICAL_ERROR);
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "Not unique capture for this capture key: " + String{capture});
         }
 
         return std::any_cast<T>(iters.first->second);
