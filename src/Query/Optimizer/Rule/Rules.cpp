@@ -1,4 +1,3 @@
-
 #include <memory>
 #include <Query/Optimizer/Rule/Rules.h>
 

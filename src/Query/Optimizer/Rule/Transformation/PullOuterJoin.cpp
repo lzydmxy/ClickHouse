@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/Rule/Transformation/PullOuterJoin.h>
 
 #include <Query/Optimizer/PredicateUtils.h>

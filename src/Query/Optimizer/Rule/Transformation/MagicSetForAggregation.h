@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <Query/Optimizer/Cascades/GroupExpression.h>

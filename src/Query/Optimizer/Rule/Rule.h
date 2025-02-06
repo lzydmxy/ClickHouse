@@ -1,4 +1,3 @@
-
 #pragma once
 #include <Interpreters/Context.h>
 #include <Query/Optimizer/Rule/Pattern.h>

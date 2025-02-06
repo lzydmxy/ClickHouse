@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/Rule/Transformation/MagicSetForAggregation.h>
 
 #include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>

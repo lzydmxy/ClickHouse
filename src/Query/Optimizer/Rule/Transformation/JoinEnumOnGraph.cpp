@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
 
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>

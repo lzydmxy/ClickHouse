@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <Query/Optimizer/Rewriter/Rewriter.h>

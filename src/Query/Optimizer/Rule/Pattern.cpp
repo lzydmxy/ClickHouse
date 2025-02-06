@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/Rule/Pattern.h>
 
 #include <Query/Optimizer/Rule/Patterns.h>

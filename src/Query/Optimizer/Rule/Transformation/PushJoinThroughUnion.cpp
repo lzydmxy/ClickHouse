@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/Rule/Transformation/PushJoinThroughUnion.h>
 
 #include <Core/Names.h>

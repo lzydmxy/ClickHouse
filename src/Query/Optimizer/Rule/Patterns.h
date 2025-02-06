@@ -1,11 +1,8 @@
-
 #pragma once
 
 #include <Query/Optimizer/Rule/Pattern.h>
 #include <QueryPlan/IQueryPlanStep.h>
-#include "QueryPlan/QueryPlan.h"
-
-#include <boost/hana.hpp>
+#include <QueryPlan/QueryPlan.h>
 
 #include <sstream>
 

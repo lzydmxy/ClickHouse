@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/Rule/Transformation/InlineCTE.h>
 
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>

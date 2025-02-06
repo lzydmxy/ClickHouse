@@ -1,4 +1,3 @@
-
 #pragma once
 #include <Functions/FunctionsHashing.h>
 #include <Query/Optimizer/PredicateUtils.h>

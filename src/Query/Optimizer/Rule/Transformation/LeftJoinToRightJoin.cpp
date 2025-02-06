@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Optimizer/Rule/Transformation/LeftJoinToRightJoin.h>
