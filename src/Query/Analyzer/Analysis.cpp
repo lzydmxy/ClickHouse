@@ -1,8 +1,5 @@
 #include <Query/Analyzer/Analysis.h>
 
-#include <DataStreams/materializeBlock.h>
-#include <Interpreters/executeSubQuery.h>
-
 namespace DB
 {
 
@@ -11,13 +8,13 @@ namespace DB
                 if(auto iter = (container).find(key); iter != (container).end())                           \
                     return iter->second;                                                                   \
                 else                                                                                       \
-                    throw Exception("Object not found in " #container, ErrorCodes::LOGICAL_ERROR);         \
+                    throw QueryException("Object not found in " #container, ErrorCodes::LOGICAL_ERROR);         \
             } while(false)
 
 #define MAP_SET(container, key, val)                                                                       \
             do {                                                                                           \
                 if(!(container).emplace((key), (val)).second)                                              \
-                    throw Exception("Object already exists in " #container, ErrorCodes::LOGICAL_ERROR);    \
+                    throw QueryException("Object already exists in " #container, ErrorCodes::LOGICAL_ERROR);    \
             } while(false)                                                                                 \
 
 namespace ErrorCodes
@@ -95,7 +92,7 @@ DataTypePtr Analysis::getExpressionType(const ASTPtr & expression)
     if(auto it = expression_column_with_types.find(expression); it != expression_column_with_types.end())
         return expression_column_with_types[expression].type;
     else
-        throw Exception("Object not found in expression_column_with_types", ErrorCodes::LOGICAL_ERROR);
+        throw QueryException("Object not found in expression_column_with_types", ErrorCodes::LOGICAL_ERROR);
 }
 
 ExpressionTypes Analysis::getExpressionTypes()
@@ -132,7 +129,7 @@ JoinOnAnalysis & Analysis::getJoinOnAnalysis(ASTTableJoin & table_join)
 const StorageAnalysis & Analysis::getStorageAnalysis(const IAST & ast)
 {
     if (storage_results.count(&ast) == 0)
-        throw Exception("storage not found in storage_results", ErrorCodes::LOGICAL_ERROR);
+        throw QueryException("storage not found in storage_results", ErrorCodes::LOGICAL_ERROR);
     return storage_results[&ast];
 }
 
@@ -414,14 +411,14 @@ void Analysis::addUsedFunctionArgument(const String & func_name, ColumnsWithType
     {
         auto & arg = processed_arguments[0];
         if (arg.column && !arg.column->empty())
-        function_arguments[func_name].emplace_back((*arg.column)[0].toString());
+        function_arguments[func_name].emplace_back(toString((*arg.column)[0]));
     }
 }
 
 const Block & Analysis::getScalarSubqueryResult(const ASTPtr & subquery, ContextPtr context)
 {
-    auto hash = subquery->getTreeHash();
-    String hash_str = toString(hash.first) + "_" + toString(hash.second);
+    auto hash = subquery->getTreeHash(false);
+    String hash_str = toString(hash.low64) + "_" + toString(hash.high64);
 
     if (!executed_scalar_subqueries.count(hash_str))
     {
@@ -506,8 +503,8 @@ const Block & Analysis::getScalarSubqueryResult(const ASTPtr & subquery, Context
 
 SetPtr Analysis::getInSubqueryResult(const ASTPtr & subquery, ContextPtr context)
 {
-    auto hash = subquery->getTreeHash();
-    String hash_str = toString(hash.first) + "_" + toString(hash.second);
+    auto hash = subquery->getTreeHash(false);
+    String hash_str = toString(hash.low64) + "_" + toString(hash.high64);
 
     if (!executed_in_subqueries.count(hash_str))
     {
