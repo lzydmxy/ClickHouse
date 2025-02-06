@@ -3,7 +3,7 @@
 #include <Core/Types.h>
 #include <Parsers/formatAST.h>
 #include <Common/ErrorCodes.h>
-#include <Common/Exception.h>
+#include <Query/Common/QueryException.h>
 
 #include <boost/hana.hpp>
 
@@ -18,6 +18,9 @@
 
 namespace DB
 {
+
+using ConstASTPtr = std::shared_ptr<const IAST>;
+
 namespace ErrorCodes
 {
     extern const ErrorCode LOGICAL_ERROR;
@@ -41,7 +44,7 @@ public:
         auto index = ordered_storage.size();
         if (mapping.count(key_arg))
         {
-            throw Exception("duplicated key is not allowed", ErrorCodes::LOGICAL_ERROR);
+            throw QueryException("duplicated key is not allowed", ErrorCodes::LOGICAL_ERROR);
         }
         mapping[key_arg] = index;
         ordered_storage.emplace_back(std::forward<KeyArg>(key_arg), std::forward<ValueArg>(value_args));
@@ -143,7 +146,7 @@ public:
         auto iter = mapping.find(key);
         if (iter == mapping.end())
         {
-            throw Exception("out of bounds", ErrorCodes::LOGICAL_ERROR);
+            throw QueryException("out of bounds", ErrorCodes::LOGICAL_ERROR);
         }
         auto index = iter->second;
         return ordered_storage.at(index).second;

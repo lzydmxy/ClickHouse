@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Common/Logger.h>
+#include <DataTypes/DataTypeTuple.h>
 #include <AggregateFunctions/IAggregateFunction.h>
 #include <Query/Analyzer/ASTEquals.h>
 #include <Query/Analyzer/ResolvedWindow.h>
@@ -24,6 +25,22 @@
 #include <utility>
 #include <vector>
 #include <unordered_map>
+
+namespace std
+{
+
+template <>
+struct hash<DB::StorageID>
+{
+    using argument_type = DB::StorageID;
+    using result_type = size_t;
+
+    result_type operator()(const argument_type & storage_id) const
+    {
+        return storage_id.getQualifiedName().hash();
+    }
+};
+}
 
 namespace DB
 {

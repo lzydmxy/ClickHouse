@@ -7,14 +7,18 @@
 #include <type_traits>
 #include <unordered_set>
 #include <vector>
+#include <sstream>
 #include <Parsers/formatAST.h>
 #include <Common/ErrorCodes.h>
-#include <Common/Exception.h>
+#include <Query/Common/QueryException.h>
 
 #include <boost/hana.hpp>
 
 namespace DB
 {
+
+using ConstASTPtr = std::shared_ptr<const IAST>;
+
 namespace ErrorCodes
 {
     extern const ErrorCode LOGICAL_ERROR;
@@ -29,7 +33,7 @@ public:
     template <typename KeyArg>
     void emplace(KeyArg && arg)
     {
-        if (set.template emplace(arg).second)
+        if (set.emplace(arg).second)
         {
             ordered_storage.emplace_back(std::forward<KeyArg>(arg));
         }
