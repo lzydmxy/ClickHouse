@@ -106,3 +106,13 @@ message StorageID {
     UUID uuid = 3;
     string server_vw_name = 4;
 }
+
+message HostWithPorts {
+    string hostname = 1;
+    string host = 2;
+    uint32 rpc_port = 3;
+    uint32 tcp_port = 4;
+    uint32 http_port = 5;
+    uint32 exchange_port = 6;
+    uint32 exchange_status_port = 7;
+}
