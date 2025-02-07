@@ -1,0 +1,171 @@
+#pragma once
+
+#include <Query/Optimizer/Rule/Match.h>
+#include "QueryPlan/IQueryPlanStep.h"
+
+#include <functional>
+#include <memory>
+#include <unordered_set>
+#include <utility>
+
+/**
+ * Pattern matching is used to match a plan node with a specified
+ * structure(`WithPattern`) or by some criteria(`FilterPattern`),
+ * and retrieve properties of a plan node(`CapturePattern`).
+ */
+namespace DB
+{
+class Pattern;
+using PatternPtr = std::unique_ptr<Pattern>;
+using ConstRefPatternPtr = const std::unique_ptr<Pattern> &;
+using PatternPtrs = std::vector<PatternPtr>;
+using PatternRawPtr = const Pattern *;
+using PatternRawPtrs = std::vector<PatternRawPtr>;
+class PatternVisitor;
+using PatternProperty = std::function<std::any(const PlanNodePtr &)>;
+using PatternPredicate = std::function<bool(const QueryPlanStepPtr &, Captures &)>;
+enum class PatternQuantifier;
+
+class Pattern
+{
+public:
+    virtual ~Pattern() = default;
+
+    IQueryPlanStep::Type getTargetType() const;
+    std::unordered_set<IQueryPlanStep::Type> getTargetTypes() const;
+    String toString() const;
+
+    bool matches(const PlanNodePtr & node) const { return match(node).has_value(); }
+
+    std::optional<Match> match(const PlanNodePtr & node) const
+    {
+        Captures captures;
+        return match(node, captures);
+    }
+
+    std::optional<Match> match(const PlanNodePtr & node, Captures & captures) const;
+    virtual std::optional<Match> accept(const PlanNodePtr & node, Captures & captures) const = 0;
+    virtual void accept(PatternVisitor & pattern_visitor) const = 0;
+    PatternRawPtr getPrevious() const { return previous.get(); }
+
+    PatternRawPtrs getChildrenPatterns() const;
+
+protected:
+    Pattern() = default;
+    explicit Pattern(PatternPtr previous_) : previous(std::move(previous_)){}
+
+private:
+    PatternPtr previous;
+};
+
+class TypeOfPattern : public Pattern
+{
+public:
+    explicit TypeOfPattern(IQueryPlanStep::Type type_) : Pattern(), type(type_){}
+    TypeOfPattern(IQueryPlanStep::Type type_, PatternPtr previous) : Pattern(std::move(previous)), type(type_){}
+    std::optional<Match> accept(const PlanNodePtr & node, Captures & captures) const override;
+    void accept(PatternVisitor & pattern_visitor) const override;
+
+    IQueryPlanStep::Type type;
+    PatternPredicate attaching_predicate;
+};
+
+class CapturePattern : public Pattern
+{
+public:
+    CapturePattern(std::string name_, PatternProperty property_, Capture capture_, PatternPtr previous)
+        : Pattern(std::move(previous)), name(std::move(name_)), property(std::move(property_)), capture(std::move(capture_)){}
+    std::optional<Match> accept(const PlanNodePtr & node, Captures & captures) const override;
+    void accept(PatternVisitor & pattern_visitor) const override;
+
+    std::string name;
+    PatternProperty property;
+    Capture capture;
+    PatternPredicate attaching_predicate;
+};
+
+enum class PatternQuantifier
+{
+    EMPTY,
+    SINGLE,
+    ANY,
+    ALL
+};
+
+class WithPattern : public Pattern
+{
+public:
+    WithPattern(PatternQuantifier quantifier_, PatternPtr sub_pattern, PatternPtr previous)
+        : Pattern(std::move(previous)), quantifier(quantifier_)
+    {
+        if (sub_pattern)
+            sub_patterns.emplace_back(std::move(sub_pattern));
+    }
+
+    WithPattern(PatternQuantifier quantifier_, PatternPtrs sub_patterns_, PatternPtr previous)
+        : Pattern(std::move(previous)), quantifier(quantifier_), sub_patterns{std::move(sub_patterns_)} {}
+    std::optional<Match> accept(const PlanNodePtr & node, Captures & captures) const override;
+    void accept(PatternVisitor & pattern_visitor) const override;
+
+    PatternQuantifier getQuantifier() const { return quantifier; }
+    PatternRawPtrs getSubPatterns() const;
+
+private:
+    PatternQuantifier quantifier;
+    PatternPtrs sub_patterns;
+};
+
+class OneOfPattern : public Pattern
+{
+public:
+    explicit OneOfPattern(PatternPtrs sub_patterns_) : sub_patterns{std::move(sub_patterns_)}
+    {
+        assert(!sub_patterns.empty());
+    }
+
+    OneOfPattern(PatternPtrs sub_patterns_, PatternPtr previous) : Pattern(std::move(previous)), sub_patterns{std::move(sub_patterns_)}
+    {
+        assert(!sub_patterns.empty());
+    }
+
+    std::optional<Match> accept(const PlanNodePtr & node, Captures & captures) const override;
+    void accept(PatternVisitor & pattern_visitor) const override;
+
+    PatternRawPtrs getSubPatterns() const;
+
+private:
+    PatternPtrs sub_patterns;
+};
+
+class PatternVisitor
+{
+public:
+    virtual ~PatternVisitor() = default;
+    virtual void visitTypeOfPattern(const TypeOfPattern & pattern) = 0;
+    virtual void visitCapturePattern(const CapturePattern & pattern) = 0;
+    virtual void visitWithPattern(const WithPattern & pattern) = 0;
+    virtual void visitOneOfPattern(const OneOfPattern & pattern) = 0;
+
+    void visitPrevious(const Pattern & pattern)
+    {
+        if (const auto * prev = pattern.getPrevious())
+            prev->accept(*this);
+    }
+};
+
+class PatternPrinter : public PatternVisitor
+{
+public:
+    void visitTypeOfPattern(const TypeOfPattern & pattern) override;
+    void visitCapturePattern(const CapturePattern & pattern) override;
+    void visitWithPattern(const WithPattern & pattern) override;
+    void visitOneOfPattern(const OneOfPattern & pattern) override;
+
+    void appendLine(const std::string & str);
+
+    std::stringstream formatted_str;
+    int level = 0;
+    bool first = true;
+};
+
+}
