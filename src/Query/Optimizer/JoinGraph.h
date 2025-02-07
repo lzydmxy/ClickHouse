@@ -102,7 +102,7 @@ struct JoinGraphContext
     {
         if (symbol_sources.contains(symbol))
             return symbol_sources.at(symbol);
-        throw Exception("Symbol not exists : " + symbol, ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Symbol not exists : " + symbol);
     }
 
     std::unordered_map<String, PlanNodePtr> symbol_sources = {};

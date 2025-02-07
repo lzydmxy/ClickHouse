@@ -204,7 +204,7 @@ bool QueryUseOptimizerChecker::check(ASTPtr node, ContextMutablePtr context, boo
     if (!support)
     {
         if (throw_exception)
-            throw Exception("query is unsupported for optimizer, reason: " + reason, ErrorCodes::INCORRECT_QUERY);
+            throw Exception(ErrorCodes::INCORRECT_QUERY, "query is unsupported for optimizer, reason: " + reason);
         else
             turnOffOptimizer(context, node);
     }

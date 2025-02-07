@@ -74,7 +74,7 @@ const Field & DiscreteValueSet::getSingleValue() const
 {
     if (!isSingleValue())
     {
-        throw Exception("DiscreteValueSet does not have just a single value", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "DiscreteValueSet does not have just a single value");
     }
     return *(values.begin());
 }
@@ -156,35 +156,35 @@ Range::Range(const DataTypePtr & type_, bool low_inclusive_, Field low_value_, b
     , type(type_)
 {
     if (low_value.isNull() && low_inclusive)
-        throw Exception("low bound must be exclusive for low unbounded range", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "low bound must be exclusive for low unbounded range");
 
     if (high_value.isNull() && high_inclusive)
-        throw Exception("high bound must be exclusive for high unbounded range", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "high bound must be exclusive for high unbounded range");
 
     is_single_value = false;
     if (!low_value.isNull() && !high_value.isNull())
     {
         if (low_value > high_value)
-            throw Exception("high bound must be exclusive for low unbounded range", ErrorCodes::LOGICAL_ERROR);
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "high bound must be exclusive for low unbounded range");
 
         if (low_value == high_value)
         {
             if (!high_inclusive || !low_inclusive)
             {
-                throw Exception("invalid bounds for single value range", ErrorCodes::LOGICAL_ERROR);
+                throw Exception(ErrorCodes::LOGICAL_ERROR, "invalid bounds for single value range");
             }
             is_single_value = true;
         }
     }
     if ((!low_value.isNull() && DB::Utils::isFloatingPointNaN(type, low_value))
         || (!high_value.isNull() && DB::Utils::isFloatingPointNaN(type, high_value)))
-        throw Exception("invalid bounds", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "invalid bounds");
 }
 
 bool Range::operator==(const Range & other) const
 {
     if (type->getTypeId() != other.getType()->getTypeId())
-        throw Exception("types not match", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "types not match");
     return low_inclusive == other.isLowInclusive() && low_value == other.getLowValue() && high_inclusive == other.isHighInclusive()
         && high_value == other.getHighValue();
 }
@@ -286,7 +286,7 @@ std::optional<Range> Range::intersect(const Range & other) const
 std::optional<Range> Range::merge(const Range & next) const
 {
     if (compareLowBound(next) > 0)
-        throw Exception("next before this", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "next before this");
 
     if (isHighUnbounded())
         return *this;
@@ -319,7 +319,7 @@ std::optional<Range> Range::merge(const Range & next) const
 const Field & Range::getSingleValue() const
 {
     if (!isSingleValue())
-        throw Exception("Range is not a single value", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Range is not a single value");
     return low_value;
 }
 
@@ -349,7 +349,7 @@ bool SortedRangeSet::isSingleValue() const
 const Field & SortedRangeSet::getSingleValue() const
 {
     if (!isSingleValue())
-        throw Exception("SortedRangeSet does not have just a single value", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "SortedRangeSet does not have just a single value");
 
     return getRange(0).getSingleValue();
 }
@@ -375,7 +375,7 @@ Array SortedRangeSet::getDiscreteSet() const
 bool SortedRangeSet::containsValue(const Field & value) const
 {
     if (value.isNull())
-        throw Exception("value is null", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "value is null");
 
     if (DB::Utils::isFloatingPointNaN(type, value))
         return isAll();
@@ -586,7 +586,7 @@ SortedRangeSet SortedRangeSet::complement() const
 Range SortedRangeSet::getSpan() const
 {
     if (isNone())
-        throw Exception("Cannot get span if no ranges exist", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Cannot get span if no ranges exist");
 
     return {
         type, ranges.front().isLowInclusive(), ranges.front().getLowValue(), ranges.back().isHighInclusive(), ranges.back().getHighValue()};
@@ -595,7 +595,7 @@ Range SortedRangeSet::getSpan() const
 SortedRangeSet SortedRangeSet::createFromUnsortedRanges(Ranges ranges)
 {
     if (ranges.empty())
-        throw Exception("ranges can not be empty, please use the methode 'createNone'", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "ranges can not be empty, please use the methode 'createNone'");
     // 1. sort range
     std::sort(ranges.begin(), ranges.end());
 
@@ -672,7 +672,7 @@ auto visitOnSameType(const F & visitor, const ValueSet & value_set_1, const Valu
             if constexpr (std::is_same_v<TA, TB>)
                 return visitor(a, b);
             else
-                throw Exception("Incompatible value set types", ErrorCodes::LOGICAL_ERROR);
+                throw Exception(ErrorCodes::LOGICAL_ERROR, "Incompatible value set types");
         },
         value_set_1,
         value_set_2);
@@ -708,7 +708,7 @@ ValueSet createValueSet(const DataTypePtr & type, const Array & values)
     if (isTypeComparable(type))
         return DiscreteValueSet::createFromValues(type, values);
 
-    throw Exception("Cannot create discrete ValueSet with non-comparable type", DB::ErrorCodes::LOGICAL_ERROR);
+    throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Cannot create discrete ValueSet with non-comparable type");
 }
 
 ValueSet createValueSet(const Ranges & ranges)

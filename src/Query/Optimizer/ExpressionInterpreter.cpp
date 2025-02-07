@@ -239,7 +239,7 @@ struct LogicalFunctionRewriter
             else if (value == Ternary::Null)
                 return Null{};
             else
-                throw Exception("Unknown ternary value: " + std::to_string(value), ErrorCodes::LOGICAL_ERROR);
+                throw Exception(ErrorCodes::LOGICAL_ERROR, "Unknown ternary value: " + std::to_string(value));
         };
 
         if (has_const)

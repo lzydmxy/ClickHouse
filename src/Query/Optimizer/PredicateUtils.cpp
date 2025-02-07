@@ -569,7 +569,7 @@ String PredicateUtils::flip(const String & fun_name)
     {
         return PredicateConst::AND;
     }
-    throw Exception("Unsupported function type : " + fun_name, ErrorCodes::LOGICAL_ERROR);
+    throw Exception(ErrorCodes::LOGICAL_ERROR, "Unsupported function type : " + fun_name);
 }
 
 std::vector<std::pair<ConstASTPtr, String>>

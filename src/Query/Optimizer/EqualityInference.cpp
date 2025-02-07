@@ -404,11 +404,11 @@ bool DisjointSet::union_(ConstHashAST & element_1, ConstHashAST & element_2)
 
     if (entry1_rank < 0)
     {
-        throw Exception("Rank < 0", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Rank < 0");
     }
     if (entry2_rank < 0)
     {
-        throw Exception("Rank < 0", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Rank < 0");
     }
 
     if (entry1_rank < entry2_rank)

@@ -45,12 +45,12 @@ namespace Predicate
         bool isDiscreteSet() const { return false; } // NOLINT(readability-convert-member-functions-to-static)
 
         // ValueSet operation
-        const Field & getSingleValue() const { throw Exception("Unsupported method", DB::ErrorCodes::UNSUPPORTED_METHOD); } // NOLINT(readability-convert-member-functions-to-static)
-        Array getDiscreteSet() const { throw Exception ("Unsupported method", DB::ErrorCodes::UNSUPPORTED_METHOD); } // NOLINT(readability-convert-member-functions-to-static)
+        const Field & getSingleValue() const { throw Exception(DB::ErrorCodes::UNSUPPORTED_METHOD, "Unsupported method"); } // NOLINT(readability-convert-member-functions-to-static)
+        Array getDiscreteSet() const { throw Exception (DB::ErrorCodes::UNSUPPORTED_METHOD, "Unsupported method"); } // NOLINT(readability-convert-member-functions-to-static)
         bool containsValue(const Field & value) const
         {
             if (value.isNull())
-                throw Exception("value is null", DB::ErrorCodes::LOGICAL_ERROR);
+                throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "value is null");
             return all;
         }
         AllOrNoneValueSet intersect(const AllOrNoneValueSet & other) const

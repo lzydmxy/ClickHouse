@@ -8,7 +8,7 @@ namespace DB::Predicate
 Domain Domain::multipleValues(const DataTypePtr & type, const Array & values, bool null_allowed)
 {
     if (values.empty())
-        throw Exception("values cannot be empty", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "values cannot be empty");
 
     return {createValueSet(type, values), null_allowed};
 }
@@ -26,7 +26,7 @@ static Domain unionDomainsImpl(const Domains & domains, size_t cur_id) // NOLINT
 Domain Domain::unionDomains(const Domains & domains)
 {
     if (domains.empty())
-        throw Exception("domains cannot be empty for union", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "domains cannot be empty for union");
 
     return unionDomainsImpl(domains, domains.size() - 1);
 }
@@ -34,7 +34,7 @@ Domain Domain::unionDomains(const Domains & domains)
 const Field & Domain::getSingleValue() const
 {
     if (!isSingleValue())
-        throw Exception("Domain is not a single value", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Domain is not a single value");
 
     return std::visit([](auto & v) -> const Field & {return v.getSingleValue();}, value_set);
 }
@@ -42,7 +42,7 @@ const Field & Domain::getSingleValue() const
 Field Domain::getNullableSingleValue() const
 {
     if (!isNullableSingleValue())
-        throw Exception("Domain is not a nullable single value", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Domain is not a nullable single value");
 
     if (null_allowed)
         return Null();
@@ -67,7 +67,7 @@ bool Domain::isNullableDiscreteSet() const
 Array Domain::getNullableDiscreteSet() const
 {
     if (!isNullableDiscreteSet())
-        throw Exception("Domain is not a nullable discrete set", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Domain is not a nullable discrete set");
 
     Array res;
 
@@ -420,7 +420,7 @@ TupleDomainImpl<T, Hash, Equal>
 TupleDomainImpl<T, Hash, Equal>::columnWiseUnion(const std::vector<TupleDomainImpl<T, Hash, Equal>> & tuple_domains)
 {
     if (tuple_domains.empty()) {
-        throw Exception("tuple_domains must have at least one element", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "tuple_domains must have at least one element");
     }
 
     if (tuple_domains.size() == 1) {

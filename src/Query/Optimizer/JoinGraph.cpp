@@ -40,7 +40,7 @@ JoinGraph JoinGraph::withJoinGraph(
 {
     for (auto & node : other.nodes)
         if (edges.contains(node->getId()))
-            throw Exception("Node appeared in two JoinGraphs, id : " + std::to_string(node->getId()), ErrorCodes::LOGICAL_ERROR);
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "Node appeared in two JoinGraphs, id : " + std::to_string(node->getId()));
 
     std::vector<PlanNodePtr> nodes_merged;
     nodes_merged.insert(nodes_merged.end(), nodes.begin(), nodes.end());

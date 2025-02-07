@@ -27,7 +27,7 @@ FieldWithType FunctionInvoker::execute(const String & function_name, const Colum
     auto result_column = function_base->execute(arguments, result_type, 1);
 
     if (!result_column || result_column->size() != 1)
-        throw Exception("Invalid result.", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Invalid result.");
 
     return {result_type, (*result_column)[0]};
 }

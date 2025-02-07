@@ -42,7 +42,7 @@ Void ReadNothingChecker::visitPlanNode(PlanNodeBase & node, Void & context)
 
 Void ReadNothingChecker::visitReadNothingNode(ReadNothingNode &, Void &)
 {
-    throw Exception("ReadNothingNode must removed in query optimization", ErrorCodes::LOGICAL_ERROR);
+    throw Exception(ErrorCodes::LOGICAL_ERROR, "ReadNothingNode must removed in query optimization");
 }
 
 void SymbolChecker::check(QueryPlan & plan, ContextMutablePtr & context, bool check_filter)
@@ -111,12 +111,12 @@ Void TableScanChecker::visitTableScanNode(TableScanNode & node, ContextMutablePt
     if (!context->getSettingsRef().allow_map_access_without_key && step->getStorage() && step->getStorage()->supportsMapImplicitColumn())
     {
         if (!step->getStorageSnapshot())
-            throw Exception("StorageSnapshot is nullptr in TableScan", ErrorCodes::LOGICAL_ERROR);
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "StorageSnapshot is nullptr in TableScan");
         Block header = step->getStorageSnapshot()->getSampleBlockForColumns(step->getRequiredColumns());
         for (auto & col : header)
         {
             if (col.type->isByteMap())
-                throw Exception("Map column access without key is not allowed for ByteMap", ErrorCodes::NOT_IMPLEMENTED);
+                throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Map column access without key is not allowed for ByteMap");
         }
     }
     return {};

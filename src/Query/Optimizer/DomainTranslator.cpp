@@ -44,7 +44,7 @@ ASTPtr DomainTranslator<T>::toPredicate(const ASTPtr & symbol, const Domain & do
     else if (auto d = std::get_if<DiscreteValueSet>(&value_set))
         disjuncts = extractDisjuncts(domain.getType(), *d, symbol);
     else
-        throw Exception("Case should not be reachable", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Case should not be reachable");
 
     // Add nullability disjuncts
     if (domain.isNullAllowed())
@@ -158,7 +158,7 @@ ConstASTs DomainTranslator<T>::extractDisjuncts(const DataTypePtr & type, const 
 
     // If values is empty, then the equatableValues was either ALL or NONE, both of which should already have been checked for
     if (values.empty())
-        throw Exception("which have been checked before", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "which have been checked before");
 
     ASTPtr predicate;
 
@@ -194,7 +194,7 @@ ASTPtr DomainTranslator<T>::processRange(const DataTypePtr & type, const Range &
 
     // If range_conjuncts is empty, then the range was ALL, which should already have been checked for
     if (range_conjuncts.empty())
-        throw Exception("'all' range have been checked before", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "'all' range have been checked before");
 
     return PredicateUtils::combineConjuncts(range_conjuncts);
 }
@@ -256,7 +256,7 @@ DataTypePtr DomainVisitor<T>::checkedTypeLookup(const T & symbol) const
     else
         type = type_analyzer.getTypeWithoutCheck(symbol);
     if (!type)
-        throw Exception("Types is missing info for symbol", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Types is missing info for symbol");
     return type;
 }
 
@@ -654,7 +654,7 @@ std::optional<ExtractionResult<T>> DomainVisitor<T>::createComparisonExtractionR
         if (isValidOperatorForComparison(operator_name))
             return ExtractionResult<T>(TupleDomain<T>::none(), PredicateConst::TRUE_VALUE);
         else
-            throw Exception("Unhandled operator" + operator_name, DB::ErrorCodes::LOGICAL_ERROR);
+            throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Unhandled operator" + operator_name);
     }
 
     if (isTypeOrderable(type))
@@ -674,7 +674,7 @@ std::optional<ExtractionResult<T>> DomainVisitor<T>::createComparisonExtractionR
     }
 
     return visitNode(node, complement);
-    //throw Exception("Type cannot be used in a comparison expression (should have been caught in analysis)", DB::ErrorCodes::LOGICAL_ERROR);
+    //throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Type cannot be used in a comparison expression (should have been caught in analysis)");
 }
 
 template <typename T>
@@ -682,7 +682,7 @@ std::optional<Domain> DomainVisitor<T>::extractOrderableDomain(
     const String & operator_name, const DataTypePtr & type, const Field & value, const bool & complement)
 {
     if (value.isNull())
-        throw Exception("Value is not null!", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Value is not null!");
 
     // Handle orderable types which do not have NaN.
     TypeIndex type_id = type->getTypeId();
@@ -731,7 +731,7 @@ std::optional<Domain> DomainVisitor<T>::extractOrderableDomain(
                     : SortedRangeSet(type, Ranges{Range::lessThanRange(type, value), Range::greaterThanRange(type, value)}),
                 false);
         }
-        throw Exception("Unhandled operator" + operator_name, DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Unhandled operator" + operator_name);
     }
 
     // Handle comparisons against NaN
@@ -744,7 +744,7 @@ std::optional<Domain> DomainVisitor<T>::extractOrderableDomain(
         if (operator_name == "notEquals")
             return Domain(complement ? complementValueSet(createAll(type)) : createAll(type), false);
 
-        throw Exception("Unhandled operator" + operator_name, DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Unhandled operator" + operator_name);
     }
 
     /**Handle comparisons against a non-NaN value when the compared value might be NaN
@@ -773,7 +773,7 @@ std::optional<Domain> DomainVisitor<T>::extractOrderableDomain(
     else if (operator_name == "notEquals")
         return complement ? std::make_optional<Domain>(SortedRangeSet(type, Ranges{Range::equalRange(type, value)}), false) : std::nullopt;
 
-    throw Exception("Unhandled operator" + operator_name, DB::ErrorCodes::LOGICAL_ERROR);
+    throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Unhandled operator" + operator_name);
 }
 
 template <typename T>
@@ -781,7 +781,7 @@ Domain DomainVisitor<T>::extractDiscreteDomain(
     const String & operator_name, const DataTypePtr & type, const Field & value, const bool & complement)
 {
     if (value.isNull())
-        throw Exception("Value is not null!", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Value is not null!");
 
     if (operator_name == "equals")
         return Domain(complement ? complementValueSet(createValueSet(type, Array{value})) : createValueSet(type, Array{value}), false);
@@ -789,7 +789,7 @@ Domain DomainVisitor<T>::extractDiscreteDomain(
     if (operator_name == "notEquals")
         return Domain(complement ? createValueSet(type, Array{value}) : complementValueSet(createValueSet(type, Array{value})), false);
 
-    throw Exception("Unhandled operator" + operator_name, DB::ErrorCodes::LOGICAL_ERROR);
+    throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Unhandled operator" + operator_name);
 }
 
 template <typename T>
@@ -814,7 +814,7 @@ ExtractionResult<T> DomainVisitor<T>::visitInFunction(ASTPtr & node, const bool 
 
     ASTs & value_list = fun_right->arguments->children;
     if (value_list.empty())
-        throw Exception("InListExpression should never be empty", DB::ErrorCodes::LOGICAL_ERROR);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "InListExpression should never be empty");
 
     if (value_list.size() >= 100)
         return visitNode(node, complement);

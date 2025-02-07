@@ -117,7 +117,7 @@ private:
                               if constexpr (std::is_same_v<TA, TB>)
                                   return visitor(a, b);
                               else
-                                  throw Exception("Incompatible value set types", ErrorCodes::LOGICAL_ERROR);
+                                  throw Exception(ErrorCodes::LOGICAL_ERROR, "Incompatible value set types");
                           }, value_set, other_value_set);
     }
 };
