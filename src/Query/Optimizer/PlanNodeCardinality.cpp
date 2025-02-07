@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/PlanNodeCardinality.h>
 
 #include <Query/Optimizer/ExpressionDeterminism.h>

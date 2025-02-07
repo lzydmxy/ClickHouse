@@ -1,4 +1,3 @@
-
 #include <algorithm>
 #include <Query/Optimizer/SymbolUtils.h>
 

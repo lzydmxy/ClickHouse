@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/EqualityInference.h>
 #include <Query/Optimizer/ExpressionDeterminism.h>
 #include <Query/Optimizer/ExpressionRewriter.h>

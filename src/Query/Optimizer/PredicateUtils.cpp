@@ -1,4 +1,3 @@
-
 #include <Analyzers/ASTEquals.h>
 #include <Query/Optimizer/EqualityASTMap.h>
 #include <Query/Optimizer/ExpressionDeterminism.h>

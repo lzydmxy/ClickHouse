@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/DomainTranslator.h>
 #include <Query/Optimizer/EqualityASTMap.h>
 #include <Common/Exception.h>

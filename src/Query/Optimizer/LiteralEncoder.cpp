@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/LiteralEncoder.h>
 #include <Query/Optimizer/makeCastFunction.h>
 

@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/PushProjectionThroughJoin.h>
 
 #include <Query/Optimizer/ExpressionDeterminism.h>

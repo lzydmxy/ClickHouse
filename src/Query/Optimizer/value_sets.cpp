@@ -1,4 +1,3 @@
-
 #include <DataTypes/DataTypeLowCardinality.h>
 #include <Query/Optimizer/value_sets.h>
 #include <Common/FieldVisitorToString.h>

@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/ExpressionInliner.h>
 
 namespace DB

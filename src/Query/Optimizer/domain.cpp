@@ -1,4 +1,3 @@
-
 #include <optional>
 #include <Query/Optimizer/domain.h>
 

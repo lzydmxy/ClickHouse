@@ -1,4 +1,3 @@
-
 #include <utility>
 #include <Query/Optimizer/MergeSetOperation.h>
 

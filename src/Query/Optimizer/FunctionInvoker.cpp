@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/FunctionInvoker.h>
 
 #include <Functions/FunctionFactory.h>

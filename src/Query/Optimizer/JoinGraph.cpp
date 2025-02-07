@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/JoinGraph.h>
 
 #include <Query/Optimizer/ExpressionDeterminism.h>

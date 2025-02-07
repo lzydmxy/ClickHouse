@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/PlanNodeSearcher.h>
 
 #include <Query/Optimizer/Utils.h>

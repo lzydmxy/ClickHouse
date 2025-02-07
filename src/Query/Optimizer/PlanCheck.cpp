@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/PlanCheck.h>
 
 #include <Analyzers/TypeAnalyzer.h>

@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/UnwrapCastInComparison.h>
 
 #include <Analyzers/function_utils.h>

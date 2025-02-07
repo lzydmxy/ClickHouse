@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/ExpressionEquivalence.h>
 
 namespace DB

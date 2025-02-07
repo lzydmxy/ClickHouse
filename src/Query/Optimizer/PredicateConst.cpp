@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/ExpressionDeterminism.h>
 #include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/SymbolUtils.h>

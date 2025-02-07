@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/makeCastFunction.h>
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/ASTFunction.h>

@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/QueryUseOptimizerChecker.h>
 
 #include <Analyzers/QueryAnalyzer.h>

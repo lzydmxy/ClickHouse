@@ -1,5 +1,3 @@
-
-
 #include <DataTypes/getLeastSupertype.h>
 #include <Query/Optimizer/Correlation.h>
 #include <Query/Optimizer/PlanNodeCardinality.h>

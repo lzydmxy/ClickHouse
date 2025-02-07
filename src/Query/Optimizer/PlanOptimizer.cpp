@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/PlanOptimizer.h>
 
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>

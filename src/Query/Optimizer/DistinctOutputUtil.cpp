@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/DistinctOutputUtil.h>
 
 #include <QueryPlan/ExceptStep.h>

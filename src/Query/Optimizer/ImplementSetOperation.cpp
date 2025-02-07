@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/ImplementSetOperation.h>
 
 #include <AggregateFunctions/AggregateFunctionFactory.h>
