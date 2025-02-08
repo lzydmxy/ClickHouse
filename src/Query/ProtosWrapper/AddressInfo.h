@@ -2,8 +2,8 @@
 
 #include <Core/Types.h>
 #include <IO/WriteHelpers.h>
-#include <Query/Common/HostWithPorts.h>
 #include <Query/ProtosWrapper/QueryProto.h>
+#include <Query/ProtosWrapper/HostWithPorts.h>
 
 namespace DB
 {
@@ -11,6 +11,7 @@ namespace DB
 class WriteBuffer;
 class ReadBuffer;
 
+// see Cluster::Address
 class AddressInfo
 {
 public:
@@ -62,6 +63,11 @@ private:
 
 using AddressInfos = std::vector<AddressInfo>;
 using AddressInfoPtr = std::shared_ptr<AddressInfo>;
+
+
+AddressInfo getLocalAddress(const Context & query_context);
+
+AddressInfo getRemoteAddress(HostWithPorts host_with_ports, ContextPtr & query_context);
 
 inline String extractHostPort(const AddressInfo & address)
 { 

@@ -9,6 +9,7 @@
 #include <base/getFQDNOrHostName.h>
 #include <Interpreters/Context_fwd.h>
 #include <Core/Types.h>
+#include <Query/ProtosWrapper/QueryProto.h>
 
 namespace DB
 {
@@ -123,7 +124,7 @@ inline std::string addBracketsIfIpv6(const std::string & host_name)
         return host_name;
 }
 
-inline std::string createHostPortString(const std::string & host, uint16_t port)
+inline std::string createHostPortString(const std::string & host, UInt16 port)
 {
     return fmt::format("{}:{}", addBracketsIfIpv6(host), port);
 }
@@ -159,7 +160,7 @@ class HostWithPorts
 {
 public:
     HostWithPorts() = default;
-    HostWithPorts(const std::string & host_, uint16_t rpc_port_ = 0, uint16_t tcp_port_ = 0, uint16_t http_port_ = 0, [[maybe_unused]] uint16_t exchange_port_ = 0, [[maybe_unused]] uint16_t exchange_status_port_ = 0, std::string id_ = {})
+    HostWithPorts(const std::string & host_, UInt16 rpc_port_ = 0, UInt16 tcp_port_ = 0, UInt16 http_port_ = 0, [[maybe_unused]] UInt16 exchange_port_ = 0, [[maybe_unused]] UInt16 exchange_status_port_ = 0, std::string id_ = {})
         : host{removeBracketsIfIpv6(host_)},
             id{std::move(id_)},
           rpc_port{rpc_port_},
@@ -174,13 +175,15 @@ public:
 
     std::string host;
     std::string id;
-    uint16_t rpc_port{0};
-    uint16_t tcp_port{0};
-    uint16_t http_port{0};
-    uint16_t exchange_port{0};
-    uint16_t exchange_status_port{0};
+    UInt16 rpc_port{0};
+    UInt16 tcp_port{0};
+    UInt16 http_port{0};
+    UInt16 exchange_port{0};
+    UInt16 exchange_status_port{0};
     std::optional<String> real_id;
 public:
+    static HostWithPorts createHostWithPorts(const RHostWithPorts & hp);
+    static void fillHostWithPorts(const HostWithPorts & hp, RHostWithPorts & pb_hp);
 
     bool empty() const { return host.empty() || (rpc_port == 0 && tcp_port == 0); }
 
@@ -192,9 +195,9 @@ public:
 
     bool operator<(const HostWithPorts & rhs) const { return id < rhs.getId(); }
     const std::string & getHost() const { return host; }
-    uint16_t getTCPPort() const { return tcp_port; }
-    uint16_t getHTTPPort() const { return http_port; }
-    uint16_t getRPCPort() const { return rpc_port; }
+    UInt16 getTCPPort() const { return tcp_port; }
+    UInt16 getHTTPPort() const { return http_port; }
+    UInt16 getRPCPort() const { return rpc_port; }
     std::string toDebugString() const;
     void replaceId(const String & id_) { id = id_; }
     String getId() const { return id; }
@@ -234,23 +237,6 @@ public:
 
 std::ostream & operator<<(std::ostream & os, const HostWithPorts & host_ports);
 
-struct WGWorkerInfo
-{
-    WGWorkerInfo(const String & worker_id_, size_t num_workers_, size_t index_)
-        : worker_id(worker_id_), num_workers(num_workers_), index(index_) {}
-
-    bool operator==(const WGWorkerInfo & other) const
-    {
-        return (worker_id == other.worker_id) && (num_workers == other.num_workers) && (index == other.index);
-    }
-
-    String worker_id;
-    UInt64 num_workers;
-    UInt64 index;
-};
-
-using WGWorkerInfoPtr = std::shared_ptr<WGWorkerInfo>;
-
 }
 
 namespace std
@@ -261,7 +247,7 @@ struct hash<DB::HostWithPorts>
 {
     std::size_t operator()(const DB::HostWithPorts & hp) const
     {
-        return std::hash<string>()(DB::addBracketsIfIpv6(hp.getHost())) ^ std::hash<uint16_t>()(hp.rpc_port) ^ (std::hash<uint16_t>()(hp.tcp_port) << 16);
+        return std::hash<string>()(DB::addBracketsIfIpv6(hp.getHost())) ^ std::hash<UInt16>()(hp.rpc_port) ^ (std::hash<UInt16>()(hp.tcp_port) << 16);
     }
 };
 

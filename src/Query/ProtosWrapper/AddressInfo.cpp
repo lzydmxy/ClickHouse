@@ -2,9 +2,42 @@
 #include <string>
 #include <IO/ReadHelpers.h>
 #include <Query/Common/QueryCommon.h>
+#include <Query/ProtosWrapper/HostWithPorts.h>
 
 namespace DB
 {
+
+// AddressInfo getLocalAddress(const Context & query_context)
+// {
+//     const auto & host = getHostIPFromEnv();
+//     auto port = query_context.getTCPPort();
+//     const ClientInfo & info = query_context.getClientInfo();
+//     return AddressInfo(host, port, info.current_user, info.current_password, query_context.getRPCPort());
+// }
+
+// AddressInfo getRemoteAddress(HostWithPorts host_with_ports, ContextPtr & query_context)
+// {
+//     if(query_context->getSettingsRef().enable_internal_communication_user)
+//     {
+//         // Trick for avoiding RBAC performace loss
+//         static auto [user, password] = query_context->getCnchInterserverCredentials();
+//         return AddressInfo(
+//             host_with_ports.host,
+//             host_with_ports.tcp_port,
+//             user,
+//             password,
+//             host_with_ports.rpc_port);
+//     }
+
+//     const ClientInfo & info = query_context->getClientInfo();
+//     return AddressInfo(
+//         host_with_ports.host,
+//         host_with_ports.tcp_port,
+//         info.current_user,
+//         info.current_password,
+//         host_with_ports.rpc_port);
+
+// }
 
 AddressInfo::AddressInfo(const String &host_name_, UInt16 port_, const String &user_, const String &password_)
         : host_name(host_name_), port(port_), user(user_), password(password_)
@@ -100,6 +133,5 @@ String PlanSegmentPartitionSource::toString() const
         containerToString<std::vector<UInt32>>(partition_ids),
         exchange_id);
 }
+
 }
-
-

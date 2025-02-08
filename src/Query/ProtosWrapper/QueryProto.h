@@ -7,6 +7,9 @@
 namespace DB
 {
 
+using RUUID = Protos::UUID;
+using RStorageID = Protos::StorageID;
+
 using RExchangeMode  = Protos::ExchangeMode;
 using RReportProfileType = Protos::ReportProfileType;
 
@@ -20,6 +23,15 @@ using RPlanSegmentOutput = Protos::PlanSegmentOutput;
 using RPlanSegment = Protos::PlanSegment;
 
 using RSourceTaskFilter = Protos::SourceTaskFilter;
+
+using RHostWithPorts = Protos::HostWithPorts;
+using RInputProfileMetric = Protos::InputProfileMetric;
+using RProfileMetric = Protos::ProfileMetric;
+
+using RPlanSegmentProfileRequest = Protos::PlanSegmentProfileRequest;
+using RPlanSegmentBody = Protos::PlanSegmentBody;
+
+using RRuntimeFilter = Protos::RuntimeFilter;
 
 String planSegmentTypeToString(const RIPlanSegment::Enum & type);
 

@@ -183,6 +183,7 @@ message SizeLimits {
     OverflowMode.Enum overflow_mode = 3;
 }
 
+// From RuntimeFilterBuildInfos
 message RuntimeFilter {
     enum Enum {
         LOCAL = 0;

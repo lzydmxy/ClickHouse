@@ -4,7 +4,7 @@
 #include <Common/Exception.h>
 #include <Common/parseAddress.h>
 #include <Interpreters/Context.h>
-#include <Query/Common/HostWithPorts.h>
+#include <Query/ProtosWrapper/HostWithPorts.h>
 
 namespace DB
 {
@@ -103,6 +103,31 @@ std::string truncateNetworkInterfaceIfHas(const std::string & s)
         return truncated;
     }
     return s;
+}
+
+
+HostWithPorts HostWithPorts::createHostWithPorts(const RHostWithPorts & hp)
+{
+    return HostWithPorts{
+        hp.host(),
+        uint16_t(hp.rpc_port()),
+        uint16_t(hp.tcp_port()),
+        uint16_t(hp.http_port()),
+        uint16_t(hp.exchange_port()),
+        uint16_t(hp.exchange_status_port()),
+        hp.hostname()
+    };
+}
+
+void HostWithPorts::fillHostWithPorts(const HostWithPorts & hp, RHostWithPorts & pb_hp)
+{
+    pb_hp.set_hostname(hp.id);
+    pb_hp.set_host(hp.getHost());
+    pb_hp.set_rpc_port(hp.rpc_port);
+    pb_hp.set_tcp_port(hp.tcp_port);
+    pb_hp.set_http_port(hp.http_port);
+    pb_hp.set_exchange_port(hp.exchange_port);
+    pb_hp.set_exchange_status_port(hp.exchange_status_port);
 }
 
 }

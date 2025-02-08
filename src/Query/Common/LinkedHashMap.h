@@ -2,31 +2,30 @@
 
 #include <Core/Types.h>
 #include <Parsers/formatAST.h>
+#include <Parsers/IAST_fwd.h>
 #include <Common/ErrorCodes.h>
-#include <Query/Common/QueryException.h>
-
-#include <boost/hana.hpp>
-
+#include <Common/Exception.h>
+//#include <boost/hana.hpp>
 #include <functional>
 #include <initializer_list>
-#include <list>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
 
+
 namespace DB
 {
-
-using ConstASTPtr = std::shared_ptr<const IAST>;
-
 namespace ErrorCodes
 {
     extern const ErrorCode LOGICAL_ERROR;
 }
 
-/// this append only
+using ConstASTPtr = std::shared_ptr<const IAST>;
+using ConstASTs = std::vector<ConstASTPtr>;
+
+// this append only
 template <typename Key, typename Value, typename Hash = std::hash<Key>, typename Equal = std::equal_to<Key>>
 class LinkedHashMap
 {
@@ -44,7 +43,7 @@ public:
         auto index = ordered_storage.size();
         if (mapping.count(key_arg))
         {
-            throw QueryException("duplicated key is not allowed", ErrorCodes::LOGICAL_ERROR);
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "duplicated key is not allowed");
         }
         mapping[key_arg] = index;
         ordered_storage.emplace_back(std::forward<KeyArg>(key_arg), std::forward<ValueArg>(value_args));
@@ -111,10 +110,10 @@ public:
         mapping.clear();
     }
 
-    /// TODO: use user-defined key to avoid it
-    /** non-const iterate is not safe since
-     *  user may modify the value
-     */
+    // TODO: use user-defined key to avoid it
+    // non-const iterate is not safe since
+    // user may modify the value
+
     auto begin() {
         return ordered_storage.begin();
     }
@@ -146,7 +145,7 @@ public:
         auto iter = mapping.find(key);
         if (iter == mapping.end())
         {
-            throw QueryException("out of bounds", ErrorCodes::LOGICAL_ERROR);
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "Out of bounds");
         }
         auto index = iter->second;
         return ordered_storage.at(index).second;
@@ -171,8 +170,8 @@ public:
     {
         auto to_string = [](const auto & obj) -> String {
             using T = std::decay_t<decltype(obj)>;
-            constexpr auto has_std_to_string = boost::hana::is_valid([](auto && x) -> decltype(std::to_string(x)) {});
-            constexpr auto has_to_string = boost::hana::is_valid([](auto && x) -> decltype(x.toString()) {});
+            // constexpr auto has_std_to_string = boost::hana::is_valid([](auto && x) -> decltype(std::to_string(x)) {});
+            // constexpr auto has_to_string = boost::hana::is_valid([](auto && x) -> decltype(x.toString()) {});
 
             if constexpr (std::is_same_v<T, String>)
             {
@@ -182,14 +181,14 @@ public:
             {
                 return serializeAST(*obj, true);
             }
-            else if constexpr (decltype(has_std_to_string(obj))::value)
-            {
-                return std::to_string(obj);
-            }
-            else if constexpr (decltype(has_to_string(obj))::value)
-            {
-                return obj.toString();
-            }
+            // else if constexpr (decltype(has_std_to_string(obj))::value)
+            // {
+            //     return std::to_string(obj);
+            // }
+            // else if constexpr (decltype(has_to_string(obj))::value)
+            // {
+            //     return obj.toString();
+            // }
             else
             {
                 return "[unserializable object]";
