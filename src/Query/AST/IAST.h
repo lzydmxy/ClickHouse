@@ -2,19 +2,23 @@
 
 #include <Parsers/IAST_fwd.h>
 #include <Core/Settings.h>
+#include <IO/WriteBufferFromString.h>
+#include <IO/ReadBufferFromString.h>
+#include <Query/AST/IAST_fwd.h>
 
 #include <algorithm>
 #include <set>
 
 class SipHash;
 
-
 namespace JDDB
 {
 using DB::Exception;
-using DB::ASTPtr;
-using DB::ASTs;
 using DB::IdentifierQuotingStyle;
+using DB::WriteBuffer;
+using DB::ReadBuffer;
+using DB::WriteBufferFromOwnString;
+using DB::ReadBufferFromString;
 
 class IAST;
 using ConstASTPtr = std::shared_ptr<const IAST>;
@@ -28,124 +32,8 @@ namespace ErrorCodes
 
 using IdentifierNameSet = std::set<String>;
 
-class WriteBuffer;
-class ReadBuffer;
-
 #define APPLY_AST_TYPES(M) \
-    M(ASTAlterQuery) \
-    M(ASTDeleteQuery) \
-    M(ASTAlterCommand) \
-    M(ASTAssignment) \
-    M(ASTAsterisk) \
-    M(ASTAlterDiskCacheQuery) \
-    M(ASTCheckQuery) \
-    M(ASTColumnDeclaration) \
-    M(ASTColumnsMatcher) \
-    M(ASTColumnsApplyTransformer) \
-    M(ASTColumnsExceptTransformer) \
-    M(ASTColumnsReplaceTransformer) \
-    M(ASTConstraintDeclaration) \
-    M(ASTForeignKeyDeclaration) \
-    M(ASTUniqueNotEnforcedDeclaration) \
-    M(ASTDataType) \
-    M(ASTStorage) \
-    M(ASTColumns) \
-    M(ASTCreateQuery) \
-    M(ASTCreateQuotaQuery) \
-    M(ASTCreateRoleQuery) \
-    M(ASTCreateRowPolicyQuery) \
-    M(ASTCreateSettingsProfileQuery) \
-    M(ASTCreateUserQuery) \
-    M(ASTDictionaryLifetime) \
-    M(ASTDictionaryLayout) \
-    M(ASTDictionaryRange) \
-    M(ASTDictionarySettings) \
-    M(ASTDictionary) \
-    M(ASTDictionaryAttributeDeclaration) \
-    M(ASTDropAccessEntityQuery) \
-    M(ASTDropQuery) \
-    M(ASTExplainQuery) \
-    M(ASTExpressionList) \
-    M(ASTExternalDDLQuery) \
-    M(ASTFunction) \
-    M(ASTFunctionWithKeyValueArguments) \
-    M(ASTGrantQuery) \
-    M(ASTIdentifier) \
-    M(ASTIndexDeclaration) \
-    M(ASTInsertQuery) \
-    M(ASTKillQueryQuery) \
-    M(ASTLiteral) \
-    M(ASTNameTypePair) \
-    M(ASTOptimizeQuery) \
-    M(ASTOrderByElement) \
-    M(ASTPair) \
-    M(ASTPartition) \
-    M(ASTProjectionDeclaration) \
-    M(ASTProjectionSelectQuery) \
-    M(ASTQualifiedAsterisk) \
-    M(ASTQueryParameter) \
-    M(ASTQueryWithOutput) \
-    M(ASTQueryWithTableAndOutput) \
-    M(ASTRefreshQuery) \
-    M(ASTRenameQuery) \
-    M(ASTRolesOrUsersSet) \
-    M(ASTRowPolicyName) \
-    M(ASTRowPolicyNames) \
-    M(ASTSampleRatio) \
-    M(ASTSelectQuery) \
-    M(ASTSelectWithUnionQuery) \
-    M(ASTSetQuery) \
-    M(ASTSetSensitiveQuery) \
-    M(ASTSetRoleQuery) \
-    M(ASTSettingsProfileElement) \
-    M(ASTSettingsProfileElements) \
-    M(ASTShowAccessEntitiesQuery) \
-    M(ASTShowCreateAccessEntityQuery) \
-    M(ASTShowGrantsQuery) \
-    M(ASTShowTablesQuery) \
-    M(ASTSubquery) \
-    M(ASTSystemQuery) \
-    M(ASTTableIdentifier) \
-    M(ASTTableExpression) \
-    M(ASTTableJoin) \
-    M(ASTArrayJoin) \
-    M(ASTTablesInSelectQueryElement) \
-    M(ASTTablesInSelectQuery) \
-    M(ASTTTLElement) \
-    M(ASTUseQuery) \
-    M(ASTSwitchQuery) \
-    M(ASTUserNameWithHost) \
-    M(ASTUserNamesWithHost) \
-    M(ASTWatchQuery) \
-    M(ASTWindowDefinition) \
-    M(ASTWithElement) \
-    M(ASTFieldReference) \
-    M(ASTCreateStatsQuery) \
-    M(ASTDropStatsQuery) \
-    M(ASTShowStatsQuery) \
-    M(ASTAutoStatsQuery) \
-    M(ASTCreateBinding) \
-    M(ASTShowBindings) \
-    M(ASTDropBinding) \
-    M(ASTAdviseQuery) \
-    M(ASTSelectIntersectExceptQuery) \
-    M(ASTWindowListElement) \
-    M(ASTTEALimit) \
-    M(ASTDumpQuery) \
-    M(ASTReproduceQuery) \
-    M(ASTPartToolKit) \
-    M(ASTQuantifiedComparison) \
-    M(ASTTableColumnReference) \
-    M(ASTUpdateQuery) \
-    M(ASTPreparedParameter) \
-    M(ASTCreatePreparedStatementQuery) \
-    M(ASTExecutePreparedStatementQuery) \
-    M(ASTShowPreparedStatementQuery) \
-    M(ASTDropPreparedStatementQuery) \
-    M(ASTBitEngineConstraintDeclaration) \
-    M(ASTStorageAnalyticalMySQL) \
-    M(ASTCreateQueryAnalyticalMySQL) \
-    M(ASTClusterByElement)
+    M(ASTSetQuery)
 #define ENUM_TYPE(ITEM) ITEM,
 
 enum class ASTType : UInt8
@@ -180,12 +68,13 @@ public:
     /// AST type, it's used for serialize/deserialize.
     virtual ASTType getType() const { throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not support"); }
 
-    ASTPtr ptr() { return shared_from_this(); }
+    DB::ASTPtr ptr() { return shared_from_this(); }
 
     /// Get hash code, identifying this element and its subtree.
     Hash getTreeHash() const { return DB::IAST::getTreeHash(true); }
     void updateTreeHash(SipHash & hash_state) const { DB::IAST::updateTreeHash(hash_state, true); }
-    virtual void updateTreeHashImpl(SipHash & hash_state) const { DB::IAST::updateTreeHashImpl(hash_state, true); }
+
+    void updateTreeHashImpl(SipHash & hash_state, bool ignore_aliases = 0) const override { DB::IAST::updateTreeHashImpl(hash_state, true); }
 
     void dumpTree(WriteBuffer & ostr, size_t indent = 0) const;
     std::string dumpTree(size_t indent = 0) const;
@@ -224,7 +113,7 @@ public:
         }
 
         /// replace ast
-        for (ASTPtr & current_child: children)
+        for (auto & current_child: children)
         {
             if (current_child == old_ast)
             {
@@ -236,8 +125,8 @@ public:
 
         throw Exception(ErrorCodes::LOGICAL_ERROR, "AST subtree not found in children");
     }
-    ASTs & getChildren() { return children; }
-    void replaceChildren(ASTs & children_) { children = std::move(children_); }
+    DB::ASTs & getChildren() { return children; }
+    void replaceChildren(DB::ASTs & children_) { children = std::move(children_); }
 
     void cloneChildren();
 

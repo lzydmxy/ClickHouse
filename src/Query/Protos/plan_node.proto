@@ -770,6 +770,15 @@ message Graph {
     AST filter = 3;
 }
 
+message SettingChange {
+    string name = 1;
+    Field value = 2;
+}
+
+message SettingsChanges {
+    repeated SettingChange settings_changes = 1;
+}
+
 message MultiJoinStep {
     Graph graph = 1;
 }
