@@ -1,9 +1,7 @@
 #pragma once
 
 #include <Parsers/IAST_fwd.h>
-#include <Common/TypePromotion.h>
 #include <Core/Settings.h>
-#include <IO/WriteBufferFromString.h>
 
 #include <algorithm>
 #include <set>
@@ -18,6 +16,9 @@ using DB::ASTPtr;
 using DB::ASTs;
 using DB::IdentifierQuotingStyle;
 
+class IAST;
+using ConstASTPtr = std::shared_ptr<const IAST>;
+using ConstASTs = std::vector<ConstASTPtr>;
 
 namespace ErrorCodes
 {
@@ -182,10 +183,9 @@ public:
     ASTPtr ptr() { return shared_from_this(); }
 
     /// Get hash code, identifying this element and its subtree.
-    using Hash = std::pair<UInt64, UInt64>;
-    Hash getTreeHash() const;
-    void updateTreeHash(SipHash & hash_state) const;
-//    virtual void updateTreeHashImpl(SipHash & hash_state) const;
+    Hash getTreeHash() const { return DB::IAST::getTreeHash(true); }
+    void updateTreeHash(SipHash & hash_state) const { DB::IAST::updateTreeHash(hash_state, true); }
+    virtual void updateTreeHashImpl(SipHash & hash_state) const { DB::IAST::updateTreeHashImpl(hash_state, true); }
 
     void dumpTree(WriteBuffer & ostr, size_t indent = 0) const;
     std::string dumpTree(size_t indent = 0) const;
@@ -239,59 +239,12 @@ public:
     ASTs & getChildren() { return children; }
     void replaceChildren(ASTs & children_) { children = std::move(children_); }
 
-    /// Convert to a string.
-
-    /// Format settings.
-    struct FormatSettings
-    {
-        WriteBuffer & ostr;
-        bool remove_tenant_id = false;
-        bool hilite = false;
-        bool one_line;
-        bool always_quote_identifiers = false;
-        bool without_alias = false;
-        IdentifierQuotingStyle identifier_quoting_style = IdentifierQuotingStyle::Backticks;
-//        DialectType dialect_type = DialectType::CLICKHOUSE;
-        bool show_secrets = true; /// Show secret parts of the AST (e.g. passwords, encryption keys).
-
-        // Newline or whitespace.
-        char nl_or_ws;
-
-        FormatSettings(WriteBuffer & ostr_, bool one_line_, bool without_alias_ = false)
-            : ostr(ostr_), one_line(one_line_), without_alias(without_alias_)
-        {
-            nl_or_ws = one_line ? ' ' : '\n';
-        }
-
-        FormatSettings(WriteBuffer & ostr_, const FormatSettings & other)
-            : ostr(ostr_), hilite(other.hilite), one_line(other.one_line),
-            always_quote_identifiers(other.always_quote_identifiers),
-            identifier_quoting_style(other.identifier_quoting_style)
-        {
-            nl_or_ws = one_line ? ' ' : '\n';
-        }
-
-        void writeIdentifier(const String & name) const;
-    };
-
-    /// The state that is copied when each node is formatted. For example, nesting level.
-    struct FormatStateStacked
-    {
-        UInt8 indent = 0;
-        bool need_parens = false;
-        bool expression_list_always_start_on_new_line = false;  /// Line feed and indent before expression list even if it's of single element.
-        bool expression_list_prepend_whitespace = false; /// Prepend whitespace (if it is required)
-        bool surround_each_list_element_with_parens = false;
-        const IAST * current_select = nullptr;
-    };
-
     void cloneChildren();
 
     virtual void serialize(WriteBuffer &) const { throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement serialize of {}", getID()); }
     virtual void deserializeImpl(ReadBuffer &) { throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement deserializeImpl AST"); }
     static ASTPtr deserialize(ReadBuffer &) { throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement deserialize AST"); }
 
-public:
     /// For syntax highlighting.
     static const char * hilite_keyword;
     static const char * hilite_identifier;
@@ -308,6 +261,4 @@ private:
     size_t checkDepthImpl(size_t max_depth, size_t level) const;
 };
 
-using ConstASTPtr = std::shared_ptr<const IAST>;
-using ConstASTs = std::vector<ConstASTPtr>;
 }
