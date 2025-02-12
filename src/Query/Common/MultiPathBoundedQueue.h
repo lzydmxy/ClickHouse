@@ -6,14 +6,9 @@
 #include <Core/Block.h>
 #include <Processors/Chunk.h>
 #include <Query/Common/BoundedDataQueue.h>
-#include <Query/Exchange/DeserializeBufTransform.h>
-//#include <butil/iobuf.h>
+#include <Query/Exchange/DataTrans/DeserializeBufTransform.h>
 
 namespace DB {
-
-// class DeserializeBufTransform {
-//     public: struct IOBufChunkInfo;
-// };
 
 using SendDoneMark = std::string;
 

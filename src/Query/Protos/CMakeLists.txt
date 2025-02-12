@@ -1,7 +1,7 @@
 PROTOBUF_GENERATE_CPP(dbms_query_proto_srcs dbms_query_proto_headers 
     common.proto    
     plan_node.proto
-    execute_plan_service.proto
+    plan_segment_service.proto
 )
 
 # Ignore warnings while compiling protobuf-generated *.pb.h and *.pb.cpp files.
