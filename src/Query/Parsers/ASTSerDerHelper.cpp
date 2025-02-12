@@ -1,6 +1,6 @@
-#include <Query/AST/ASTSerDerHelper.h>
+#include <Query/Parsers/ASTSerDerHelper.h>
 
-#include <Query/AST/ASTSetQuery.h>
+#include <Query/Parsers/ASTSetQuery.h>
 
 #include <Query/Protos/plan_node.pb.h>
 #include <Parsers/queryToString.h>
@@ -22,24 +22,25 @@ ASTPtr createWithASTType(ASTType type, ReadBuffer & buf)
     }
 }
 
-void serializeAST(const IAST & ast, WriteBuffer & buf)
-{
-    writeBinary(true, buf);
-    writeBinary(UInt8(ast.getType()), buf);
-    ast.serialize(buf);
-}
+// TODO: cast ast to jd ast
+// void serializeAST(const IAST & ast, WriteBuffer & buf)
+// {
+//     writeBinary(true, buf);
+//     writeBinary(UInt8(dynamic_cast<IAST_EXT&>(ast).getType()), buf);
+//     ast.serialize(buf);
+// }
 
-void serializeAST(const ConstASTPtr & ast, WriteBuffer & buf)
-{
-    if (ast)
-    {
-        writeBinary(true, buf);
-        writeBinary(UInt8(ast->getType()), buf);
-        ast->serialize(buf);
-    }
-    else
-        writeBinary(false, buf);
-}
+// void serializeAST(const ConstASTPtr & ast, WriteBuffer & buf)
+// {
+//     if (ast)
+//     {
+//         writeBinary(true, buf);
+//         writeBinary(UInt8(ast->getType()), buf);
+//         ast->serialize(buf);
+//     }
+//     else
+//         writeBinary(false, buf);
+// }
 
 ASTPtr deserializeAST(ReadBuffer & buf)
 {

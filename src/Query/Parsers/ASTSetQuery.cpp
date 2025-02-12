@@ -1,4 +1,4 @@
-#include <Query/AST/ASTSetQuery.h>
+#include <Query/Parsers/ASTSetQuery.h>
 #include <Parsers/formatSettingName.h>
 #include <Common/SipHash.h>
 #include <Common/FieldVisitorHash.h>
@@ -36,21 +36,21 @@ void ASTSetQuery::formatImpl(const FormatSettings & format, FormatState &, Forma
 
 void ASTSetQuery::serialize(WriteBuffer & buf) const
 {
-    writeBinary(is_standalone, buf);
-    changes.serialize(buf);
+    // writeBinary(is_standalone, buf);
+    // changes.serialize(buf);
 }
 
 void ASTSetQuery::deserializeImpl(ReadBuffer & buf)
 {
-    readBinary(is_standalone, buf);
-    changes.deserialize(buf);
+    // readBinary(is_standalone, buf);
+    // changes.deserialize(buf);
 }
 
 ASTPtr ASTSetQuery::deserialize(ReadBuffer & buf)
 {
     auto set = std::make_shared<ASTSetQuery>();
     set->deserializeImpl(buf);
-    return set;
+    return std::static_pointer_cast<IAST>(set);
 }
 
 }

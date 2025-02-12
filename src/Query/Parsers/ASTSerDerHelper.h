@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Query/AST/IAST.h>
+#include <Query/Parsers/IAST.h>
 
 namespace DB::Protos
 {
