@@ -15,14 +15,15 @@ public:
     /** Get the text that identifies this element. */
     String getID(char) const override { return "JD_Set"; }
 
-    ASTType getType() const override { return ASTType::ASTSetQuery; }
-
     ASTPtr clone() const override { return std::make_shared<ASTSetQuery>(*this); }
 
     void formatImpl(const FormatSettings & format, FormatState &, FormatStateStacked) const override;
 
     void updateTreeHashImpl(SipHash & hash_state, bool ignore_aliases) const override;
 
+    /// The follow methods are newly added by ByConity.
+
+    ASTType getType() const override { return ASTType::ASTSetQuery; }
     void serialize(WriteBuffer & buf) const override;
     void deserializeImpl(ReadBuffer & buf) override;
     static ASTPtr deserialize(ReadBuffer & buf);
