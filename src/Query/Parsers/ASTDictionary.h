@@ -13,21 +13,17 @@ class ASTLiteral;
 class ASTDictionaryLifetime : public IAST_EXT, public DB::ASTDictionaryLifetime
 {
 public:
-    String getID(char) const override { return "Dictionary lifetime"; }
+    String getID(char) const override { return "JD Dictionary lifetime"; }
 
     ASTPtr clone() const override;
 
-    void formatImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override;
+    /// The follow methods are added by JD.
 
     ASTType getType() const override { return ASTType::ASTDictionaryLifetime; }
 
     void updateTreeHashImpl(SipHash & hash_state, bool ignore_aliases) const override { IAST::updateTreeHashImpl(hash_state, ignore_aliases); }
     Hash getTreeHash() const override { return IAST::getTreeHash(true); }
     void updateTreeHash(SipHash & hash_state) const override { IAST::updateTreeHash(hash_state, true); }
-
-    void serialize(WriteBuffer & buf) const override;
-    void deserializeImpl(ReadBuffer & buf) override;
-    static ASTPtr deserialize(ReadBuffer & buf);
 
     ASTs & getChildren() override { return children; }
     void replaceChildren(DB::ASTs & children_) override { children = std::move(children_); }
@@ -44,22 +40,18 @@ public:
 
     ASTPtr clone() const override;
 
-    void formatImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override;
-
     void forEachPointerToChild(std::function<void(void**)> f) override
     {
         f(reinterpret_cast<void **>(&parameters));
     }
+
+    /// The follow methods are added by JD.
 
     ASTType getType() const override { return ASTType::ASTDictionaryLayout; }
 
     void updateTreeHashImpl(SipHash & hash_state, bool ignore_aliases) const override { IAST::updateTreeHashImpl(hash_state, ignore_aliases); }
     Hash getTreeHash() const override { return IAST::getTreeHash(true); }
     void updateTreeHash(SipHash & hash_state) const override { IAST::updateTreeHash(hash_state, true); }
-
-    void serialize(WriteBuffer & buf) const override;
-    void deserializeImpl(ReadBuffer & buf) override;
-    static ASTPtr deserialize(ReadBuffer & buf);
 
     ASTs & getChildren() override { return children; }
     void replaceChildren(DB::ASTs & children_) override { children = std::move(children_); }
@@ -76,16 +68,13 @@ public:
 
     ASTPtr clone() const override;
 
-    void formatImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override;
+    /// The follow methods are added by JD.
+
     ASTType getType() const override { return ASTType::ASTDictionaryRange; }
 
     void updateTreeHashImpl(SipHash & hash_state, bool ignore_aliases) const override { IAST::updateTreeHashImpl(hash_state, ignore_aliases); }
     Hash getTreeHash() const override { return IAST::getTreeHash(true); }
     void updateTreeHash(SipHash & hash_state) const override { IAST::updateTreeHash(hash_state, true); }
-
-    void serialize(WriteBuffer & buf) const override;
-    void deserializeImpl(ReadBuffer & buf) override;
-    static ASTPtr deserialize(ReadBuffer & buf);
 
     ASTs & getChildren() override { return children; }
     void replaceChildren(DB::ASTs & children_) override { children = std::move(children_); }
@@ -98,17 +87,13 @@ public:
 
     ASTPtr clone() const override;
 
-    void formatImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override;
+    /// The follow methods are added by JD.
 
     ASTType getType() const override { return ASTType::ASTDictionarySettings; }
 
     void updateTreeHashImpl(SipHash & hash_state, bool ignore_aliases) const override { IAST::updateTreeHashImpl(hash_state, ignore_aliases); }
     Hash getTreeHash() const override { return IAST::getTreeHash(true); }
     void updateTreeHash(SipHash & hash_state) const override { IAST::updateTreeHash(hash_state, true); }
-
-    void serialize(WriteBuffer & buf) const override;
-    void deserializeImpl(ReadBuffer & buf) override;
-    static ASTPtr deserialize(ReadBuffer & buf);
 
     ASTs & getChildren() override { return children; }
     void replaceChildren(DB::ASTs & children_) override { children = std::move(children_); }
@@ -128,18 +113,13 @@ public:
 
     ASTPtr clone() const override;
 
-    void formatImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override;
-
+    /// The follow methods are added by JD.
 
     ASTType getType() const override { return ASTType::ASTDictionary; }
 
     void updateTreeHashImpl(SipHash & hash_state, bool ignore_aliases) const override { IAST::updateTreeHashImpl(hash_state, ignore_aliases); }
     Hash getTreeHash() const override { return IAST::getTreeHash(true); }
     void updateTreeHash(SipHash & hash_state) const override { IAST::updateTreeHash(hash_state, true); }
-
-    void serialize(WriteBuffer & buf) const override;
-    void deserializeImpl(ReadBuffer & buf) override;
-    static ASTPtr deserialize(ReadBuffer & buf);
 
     ASTs & getChildren() override { return children; }
     void replaceChildren(DB::ASTs & children_) override { children = std::move(children_); }

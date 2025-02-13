@@ -10,21 +10,16 @@ namespace JDDB
 class ASTDictionaryAttributeDeclaration : public IAST_EXT, public DB::ASTDictionaryAttributeDeclaration
 {
 public:
-    String getID(char delim) const override { return "DictionaryAttributeDeclaration" + (delim + name); }
-
-    ASTType getType() const override { return ASTType::ASTDictionaryAttributeDeclaration; }
-
+    String getID(char delim) const override { return "JD DictionaryAttributeDeclaration" + (delim + name); }
     ASTPtr clone() const override;
 
-    void formatImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override;
+    /// The follow methods are added by JD.
+
+    ASTType getType() const override { return ASTType::ASTDictionaryAttributeDeclaration; }
 
     void updateTreeHashImpl(SipHash & hash_state, bool ignore_aliases) const override { IAST::updateTreeHashImpl(hash_state, ignore_aliases); }
     Hash getTreeHash() const override { return IAST::getTreeHash(true); }
     void updateTreeHash(SipHash & hash_state) const override { IAST::updateTreeHash(hash_state, true); }
-
-    void serialize(WriteBuffer & buf) const override;
-    void deserializeImpl(ReadBuffer & buf) override;
-    static ASTPtr deserialize(ReadBuffer & buf);
 
     ASTs & getChildren() override { return children; }
     void replaceChildren(DB::ASTs & children_) override { children = std::move(children_); }

@@ -123,8 +123,8 @@ public:
     virtual  ASTs & getChildren() = 0;
     virtual void replaceChildren(DB::ASTs & children_) = 0;
 
-    virtual void serialize(WriteBuffer &) const = 0;
-    virtual void deserializeImpl(ReadBuffer &) = 0;
+    virtual void serialize(WriteBuffer &) const {}
+    virtual void deserializeImpl(ReadBuffer &) {}
     static ASTPtr deserialize(ReadBuffer &) { throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement deserialize AST"); }
 
     /// serialize|deserialize SettingChange|SettingsChanges
