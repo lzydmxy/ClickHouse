@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Query/Parsers/IAST.h>
-#include <Query/Common/SettingsChanges.h>
+// #include <Query/Common/SettingsChanges.h>
 #include <Parsers/ASTSetQuery.h>
 
 namespace JDDB
@@ -15,10 +15,9 @@ public:
     /** Get the text that identifies this element. */
     String getID(char) const override { return "JD_Set"; }
 
-    // TODO
-    // ASTType getType() const override { return ASTType::ASTSetQuery; }
+    ASTType getType() const override { return ASTType::ASTSetQuery; }
 
-    ASTPtr clone() const override { return std::static_pointer_cast<IAST>(std::make_shared<ASTSetQuery>(*this)); }
+    ASTPtr clone() const override { return std::make_shared<ASTSetQuery>(*this); }
 
     void formatImpl(const FormatSettings & format, FormatState &, FormatStateStacked) const override;
 

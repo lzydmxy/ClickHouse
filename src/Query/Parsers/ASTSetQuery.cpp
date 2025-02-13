@@ -36,14 +36,14 @@ void ASTSetQuery::formatImpl(const FormatSettings & format, FormatState &, Forma
 
 void ASTSetQuery::serialize(WriteBuffer & buf) const
 {
-    // writeBinary(is_standalone, buf);
-    // changes.serialize(buf);
+    writeBinary(is_standalone, buf);
+    IAST_EXT::serialize(changes, buf);
 }
 
 void ASTSetQuery::deserializeImpl(ReadBuffer & buf)
 {
-    // readBinary(is_standalone, buf);
-    // changes.deserialize(buf);
+    readBinary(is_standalone, buf);
+    IAST_EXT::deserialize(changes, buf);
 }
 
 ASTPtr ASTSetQuery::deserialize(ReadBuffer & buf)

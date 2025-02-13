@@ -24,6 +24,9 @@ using DB::ASTs;
 using ConstASTPtr = std::shared_ptr<const IAST>;
 using ConstASTs = std::vector<ConstASTPtr>;
 
+using DB::SettingChange;
+using DB::SettingsChanges;
+
 namespace ErrorCodes
 {
     extern const int LOGICAL_ERROR;
@@ -117,6 +120,39 @@ public:
     virtual void serialize(WriteBuffer &) const = 0;
     virtual void deserializeImpl(ReadBuffer &) = 0;
     static ASTPtr deserialize(ReadBuffer &) { throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement deserialize AST"); }
+
+    /// serialize|deserialize SettingChange|SettingsChanges
+    static void serialize(const SettingChange & change, WriteBuffer & buf)
+    {
+        writeBinary(change.name, buf);
+        auto res = change.value.dump();
+        writeStringBinary(res, buf);
+    }
+    static void deserialize(SettingChange & change, ReadBuffer & buf)
+    {
+        readBinary(change.name, buf);
+        String res;
+        readStringBinary(res, buf);
+
+        change.value = DB::Field::restoreFromDump(res);
+    }
+    static void serialize(const SettingsChanges & changes, WriteBuffer & buf)
+    {
+        writeBinary(changes.size(), buf);
+        for (const auto & change : changes)
+            serialize(change, buf);
+    }
+    static void deserialize(SettingsChanges & changes, ReadBuffer & buf)
+    {
+        size_t size;
+        readBinary(size, buf);
+        for (size_t i = 0; i < size; ++i)
+        {
+            SettingChange change;
+            deserialize(change, buf);
+            changes.push_back(change);
+        }
+    }
 };
 
 }
