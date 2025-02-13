@@ -5,7 +5,7 @@
 
 namespace JDDB
 {
-ASTPtr ASTDictionaryAttributeDeclaration::clone() const override
+ASTPtr ASTDictionaryAttributeDeclaration::clone() const
 {
     const auto res = std::make_shared<ASTDictionaryAttributeDeclaration>(*this);
     res->children.clear();

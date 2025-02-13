@@ -10,9 +10,6 @@ namespace JDDB
 class ASTDictionaryAttributeDeclaration : public IAST_EXT, public DB::ASTDictionaryAttributeDeclaration
 {
 public:
-    /// Is hierarchical attribute bidirectional
-    bool bidirectional = false;
-
     String getID(char delim) const override { return "DictionaryAttributeDeclaration" + (delim + name); }
 
     ASTType getType() const override { return ASTType::ASTDictionaryAttributeDeclaration; }
