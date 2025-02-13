@@ -22,25 +22,27 @@ ASTPtr createWithASTType(ASTType type, ReadBuffer & buf)
     }
 }
 
-// TODO: cast ast to jd ast
-// void serializeAST(const IAST & ast, WriteBuffer & buf)
-// {
-//     writeBinary(true, buf);
-//     writeBinary(UInt8(dynamic_cast<IAST_EXT&>(ast).getType()), buf);
-//     ast.serialize(buf);
-// }
+// TODO: cast ast to jd ast, throw exception when cast failed
+void serializeAST(const IAST & ast, WriteBuffer & buf)
+{
+    writeBinary(true, buf);
+    const auto & jd_ast = dynamic_cast<const IAST_EXT&>(ast);
+    writeBinary(UInt8(jd_ast.getType()), buf);
+    jd_ast.serialize(buf);
+}
 
-// void serializeAST(const ConstASTPtr & ast, WriteBuffer & buf)
-// {
-//     if (ast)
-//     {
-//         writeBinary(true, buf);
-//         writeBinary(UInt8(ast->getType()), buf);
-//         ast->serialize(buf);
-//     }
-//     else
-//         writeBinary(false, buf);
-// }
+void serializeAST(const ConstASTPtr & ast, WriteBuffer & buf)
+{
+    const auto & jd_ast = std::dynamic_pointer_cast<const IAST_EXT>(ast);
+    if (jd_ast)
+    {
+        writeBinary(true, buf);
+        writeBinary(UInt8(jd_ast->getType()), buf);
+        jd_ast->serialize(buf);
+    }
+    else
+        writeBinary(false, buf);
+}
 
 ASTPtr deserializeAST(ReadBuffer & buf)
 {
