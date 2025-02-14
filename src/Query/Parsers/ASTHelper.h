@@ -13,6 +13,7 @@ using DB::ASTPtr;
 using DB::ASTs;
 using ConstASTPtr = std::shared_ptr<const IAST>;
 using ConstASTs = std::vector<ConstASTPtr>;
+using DB::Exception;
 
 namespace ErrorCodes
 {
@@ -77,6 +78,36 @@ void astToUpperCase(ASTPtr & ast)
 
     //type not ASTColumnDeclaration, need to continue
     return;
+}
+
+void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_ast, const ASTPtr & new_ast)
+{
+    if (!new_ast)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Trying to set or replace AST subtree with nullptr");
+
+    if (old_ast == new_ast)
+        return;
+
+    /// set ast
+    if (!old_ast)
+    {
+        old_ast = new_ast;
+        cur_ast.children.push_back(old_ast);
+        return;
+    }
+
+    /// replace ast
+    for (auto & current_child: cur_ast.children)
+    {
+        if (current_child == old_ast)
+        {
+            current_child = new_ast;
+            old_ast = new_ast;
+            return;
+        }
+    }
+
+    throw Exception(ErrorCodes::LOGICAL_ERROR, "AST subtree not found in children");
 }
 
 }
