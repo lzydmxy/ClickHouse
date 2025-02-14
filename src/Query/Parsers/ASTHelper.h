@@ -48,7 +48,7 @@ inline String toString(ASTType type)
 ASTType getAstType(ASTPtr & ast)
 {
     auto astSetQuery = std::dynamic_pointer_cast<ASTSetQuery>(ast);
-    if (astSetQuery)
+    if ( astSetQuery )
     {
         return ASTType::ASTDictionary;  
     }
@@ -56,6 +56,30 @@ ASTType getAstType(ASTPtr & ast)
     //type not ASTSetQuery, need to continue
 
     return ASTType::UNDEFINED;
+}
+
+void astToLowerCase(ASTPtr & ast)
+{
+    auto astColumnDeclaration = std::dynamic_pointer_cast<ASTColumnDeclaration>(ast);
+    if ( astColumnDeclaration )
+    {
+        boost::to_lower(astColumnDeclaration.name);
+    }
+
+    //type not ASTColumnDeclaration, need to continue
+    return;
+}
+
+void astToUpperCase(ASTPtr & ast)
+{
+    auto astColumnDeclaration = std::dynamic_pointer_cast<ASTColumnDeclaration>(ast);
+    if ( astColumnDeclaration )
+    {
+        boost::to_upper(astColumnDeclaration.name);
+    }
+
+    //type not ASTColumnDeclaration, need to continue
+    return;
 }
 
 }
