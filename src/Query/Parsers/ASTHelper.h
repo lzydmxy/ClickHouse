@@ -1,9 +1,13 @@
 #pragma once
 
 #include <Parsers/IAST_fwd.h>
+#include <Parsers/ASTSetQuery.h>
+#include <Parsers/ASTColumnDeclaration.h>
 #include <Core/Settings.h>
 #include <IO/WriteBufferFromString.h>
 #include <IO/ReadBufferFromString.h>
+
+#include <boost/algorithm/string/case_conv.hpp>
 
 namespace DB
 {
@@ -62,7 +66,7 @@ void astToLowerCase(ASTPtr & ast)
 {
     if ( auto astColumnDeclaration = std::dynamic_pointer_cast<ASTColumnDeclaration>(ast) )
     {
-        boost::to_lower(astColumnDeclaration.name);
+        boost::to_lower(astColumnDeclaration->name);
     }
 
     //type not ASTColumnDeclaration, need to continue
@@ -73,7 +77,7 @@ void astToUpperCase(ASTPtr & ast)
 {
     if ( auto astColumnDeclaration = std::dynamic_pointer_cast<ASTColumnDeclaration>(ast) )
     {
-        boost::to_upper(astColumnDeclaration.name);
+        boost::to_upper(astColumnDeclaration->name);
     }
 
     //type not ASTColumnDeclaration, need to continue
@@ -92,12 +96,12 @@ void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_ast, const ASTPtr & new_ast)
     if (!old_ast)
     {
         old_ast = new_ast;
-        cur_ast.children.push_back(old_ast);
+        cur_ast->children.push_back(old_ast);
         return;
     }
 
     /// replace ast
-    for (auto & current_child: cur_ast.children)
+    for (auto & current_child: cur_ast->children)
     {
         if (current_child == old_ast)
         {
