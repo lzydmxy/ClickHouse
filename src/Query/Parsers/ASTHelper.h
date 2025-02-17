@@ -65,7 +65,7 @@ ASTType getAstType(ASTPtr & ast)
     return ASTType::UNDEFINED;
 }
 
-#undef ENUM_TYPE
+#undef CHECK_AND_RETURN_AST_TYPE
 
 void astToLowerCase(ASTPtr & ast)
 {
