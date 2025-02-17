@@ -1,8 +1,9 @@
 #pragma once
 
 #include <Parsers/IAST_fwd.h>
-#include <Parsers/ASTSetQuery.h>
-#include <Parsers/ASTColumnDeclaration.h>
+#include <Parsers/ASTDictionary.h>
+#include <Parsers/ASTAsterisk.h>
+#include <Query/Parsers/ASTColumnDeclarationExt.h>
 #include <Core/Settings.h>
 #include <IO/WriteBufferFromString.h>
 #include <IO/ReadBufferFromString.h>
@@ -26,7 +27,9 @@ namespace ErrorCodes
 }
 
 #define APPLY_AST_TYPES(M) \
-    M(ASTDictionary)
+    M(ASTDictionary) \
+    M(ASTAsterisk) \
+    M(ASTColumnDeclarationExt)
 #define ENUM_TYPE(ITEM) ITEM,
 
 enum class ASTType : UInt8
@@ -50,17 +53,19 @@ inline String toString(ASTType type)
     }
 }
 
+#define CHECK_AND_RETURN_AST_TYPE(type) \
+if (auto astPtr = std::dynamic_pointer_cast<type>(ast)) \
+{ \
+return ASTType::type; \
+}
+
 ASTType getAstType(ASTPtr & ast)
 {
-    if ( auto astSetQuery = std::dynamic_pointer_cast<ASTSetQuery>(ast) )
-    {
-        return ASTType::ASTDictionary;  
-    }
-
-    //type not ASTSetQuery, need to continue
-
+    APPLY_AST_TYPES(CHECK_AND_RETURN_AST_TYPE)
     return ASTType::UNDEFINED;
 }
+
+#undef ENUM_TYPE
 
 void astToLowerCase(ASTPtr & ast)
 {
@@ -68,7 +73,6 @@ void astToLowerCase(ASTPtr & ast)
     {
         boost::to_lower(astColumnDeclaration->name);
     }
-
     //type not ASTColumnDeclaration, need to continue
     return;
 }
