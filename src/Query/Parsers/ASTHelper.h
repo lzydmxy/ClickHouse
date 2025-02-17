@@ -2,10 +2,17 @@
 
 #include <Parsers/IAST_fwd.h>
 #include <Parsers/ASTSetQuery.h>
+#include <Parsers/ASTUseQuery.h>
+#include <Parsers/ASTWithElement.h>
+#include <Parsers/ASTTablesInSelectQuery.h>
+#include <Parsers/ASTWindowDefinition.h>
+#include <Parsers/ASTColumnsTransformers.h>
 #include <Parsers/ASTColumnDeclaration.h>
 #include <Core/Settings.h>
 #include <IO/WriteBufferFromString.h>
 #include <IO/ReadBufferFromString.h>
+
+#include <Query/Parsers/ASTFieldReferenceExt.h>
 
 #include <boost/algorithm/string/case_conv.hpp>
 
@@ -26,6 +33,20 @@ namespace ErrorCodes
 }
 
 #define APPLY_AST_TYPES(M) \
+    M(ASTSetQuery) \
+    M(ASTUseQuery) \
+    M(ASTWithElement) \
+    M(ASTArrayJoin) \
+    M(ASTTableExpression) \
+    M(ASTTableJoin) \
+    M(ASTTablesInSelectQuery) \
+    M(ASTTablesInSelectQueryElement) \
+    M(ASTWindowDefinition) \
+    M(ASTWindowListElement) \
+    M(ASTFieldReferenceExt) \
+    M(ASTColumnsApplyTransformer) \
+    M(ASTColumnsExceptTransformer) \
+    M(ASTColumnsReplaceTransformer) \
     M(ASTDictionary)
 #define ENUM_TYPE(ITEM) ITEM,
 
@@ -52,11 +73,62 @@ inline String toString(ASTType type)
 
 ASTType getAstType(ASTPtr & ast)
 {
-    if ( auto astSetQuery = std::dynamic_pointer_cast<ASTSetQuery>(ast) )
+    if (auto * ast_use_query = ast->as<const ASTUseQuery>())
     {
-        return ASTType::ASTDictionary;  
+        return ASTType::ASTUseQuery;  
     }
-
+    else if (auto * ast_set_query = ast->as<const ASTSetQuery>())
+    {
+        return ASTType::ASTSetQuery;  
+    }
+    else if (auto *  ast_with_element = ast->as<const ASTWithElement>())
+    {
+        return ASTType::ASTWithElement;
+    }
+    else if (auto * ast_array_join = ast->as<const ASTArrayJoin>())
+    {
+         return ASTType::ASTArrayJoin;
+    }
+    else if (auto * ast_table_expression = ast->as<const ASTTableExpression>())
+    {
+        return ASTType::ASTTableExpression;
+    }
+    else if (auto * ast_table_join = ast->as<const ASTTableJoin>())
+    {
+        return ASTType::ASTTableJoin;
+    }
+    else if (auto * ast_tables_in_select_query = ast->as<const ASTTablesInSelectQuery>())
+    {
+        return ASTType::ASTTablesInSelectQuery;
+    }
+    else if (auto * ast_tables_in_select_query_element = ast->as<const ASTTablesInSelectQueryElement>())
+    {
+        return ASTType::ASTTablesInSelectQueryElement;
+    }
+    else if (auto * ast_window_definition = ast->as<const ASTWindowDefinition>())
+    {
+         return ASTType::ASTWindowDefinition;
+    }
+    else if (auto * ast_window_list_element = ast->as<const ASTWindowListElement>())
+    {
+        return ASTType::ASTWindowListElement;
+    }
+    else if (auto * ast_field_ref = ast->as<const ASTFieldReferenceExt>())
+    {
+        return ASTType::ASTFieldReferenceExt;
+    }
+    else if (auto * ast_columns_apply = ast->as<const ASTColumnsApplyTransformer>())
+    {
+        return ASTType::ASTColumnsApplyTransformer;
+    }
+    else if (auto * ast_columns_except = ast->as<const ASTColumnsExceptTransformer>())
+    {
+        return ASTType::ASTColumnsExceptTransformer;
+    }
+    else if (auto * ast_columns_replace = ast->as<const ASTColumnsReplaceTransformer>())
+    {
+        return ASTType::ASTColumnsReplaceTransformer;
+    }
     //type not ASTSetQuery, need to continue
 
     return ASTType::UNDEFINED;
