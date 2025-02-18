@@ -15,6 +15,8 @@ struct StorageID;
 class ASTSelectQuery : public IAST
 {
 public:
+    friend class ASTSelectQueryExt;
+
     enum class Expression : uint8_t
     {
         WITH,
