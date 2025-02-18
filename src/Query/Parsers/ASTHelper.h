@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Core/Settings.h>
 #include <Parsers/IAST_fwd.h>
 #include <Parsers/ASTColumnsMatcher.h>
 #include <Parsers/ASTConstraintDeclaration.h>
@@ -9,7 +10,16 @@
 #include <Parsers/ASTTablesInSelectQuery.h>
 #include <Parsers/ASTWindowDefinition.h>
 #include <Parsers/ASTColumnsTransformers.h>
-#include <Core/Settings.h>
+#include <Parsers/ASTFunctionWithKeyValueArguments.h>
+#include <Parsers/ASTIndexDeclaration.h>
+#include <Functions/JSONPath/ASTs/ASTJSONPath.h>
+#include <Functions/JSONPath/ASTs/ASTJSONPathMemberAccess.h>
+#include <Functions/JSONPath/ASTs/ASTJSONPathQuery.h>
+#include <Functions/JSONPath/ASTs/ASTJSONPathRange.h>
+#include <Functions/JSONPath/ASTs/ASTJSONPathRoot.h>
+#include <Functions/JSONPath/ASTs/ASTJSONPathStar.h>
+#include <Parsers/ASTNameTypePair.h>
+#include <Parsers/ASTOrderByElement.h>
 #include <Parsers/ASTAsterisk.h>
 #include <Parsers/ASTDictionary.h>
 #include <Parsers/ASTDictionaryAttributeDeclaration.h>
