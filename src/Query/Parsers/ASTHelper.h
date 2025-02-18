@@ -6,6 +6,7 @@
 #include <Parsers/ASTDictionaryAttributeDeclaration.h>
 #include <Parsers/IAST_fwd.h>
 #include <Query/Parsers/ASTColumnDeclarationExt.h>
+#include <Query/Parsers/ASTDictionaryExt.h>
 
 #include <boost/algorithm/string/case_conv.hpp>
 
@@ -27,7 +28,7 @@ using ConstASTs = std::vector<ConstASTPtr>;
     M(ASTDictionaryLayout) \
     M(ASTDictionaryRange) \
     M(ASTDictionarySettings) \
-    M(ASTDictionary)
+    M(ASTDictionaryExt)
 
 #define ENUM_AST_TYPE(ITEM) ITEM,
 enum class ASTType : UInt8
