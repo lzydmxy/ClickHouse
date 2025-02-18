@@ -9,8 +9,9 @@ ASTPtr ASTColumnDeclarationExt::clone() const
 {
     auto res = std::make_shared<ASTColumnDeclarationExt>(*this);
 
-    auto baseClonePtr = ASTColumnDeclaration::clone();
-    *static_cast<ASTColumnDeclaration*>(res.get()) = *dynamic_cast<ASTColumnDeclaration*>(baseClonePtr.get());
+    const auto ast_column_declaration = ASTColumnDeclaration::clone()->as<ASTColumnDeclaration>();
+
+    res->children = std::move(ast_column_declaration->children);
 
     if (on_update_expression)
     {

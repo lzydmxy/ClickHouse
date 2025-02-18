@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Parsers/IAST_fwd.h>
+#include <Parsers/ASTColumnsMatcher.h>
+#include <Parsers/ASTConstraintDeclaration.h>
 #include <Parsers/ASTSetQuery.h>
 #include <Parsers/ASTUseQuery.h>
 #include <Parsers/ASTWithElement.h>
@@ -12,6 +14,7 @@
 #include <Parsers/ASTDictionary.h>
 #include <Parsers/ASTDictionaryAttributeDeclaration.h>
 #include <Query/Parsers/ASTColumnDeclarationExt.h>
+#include <Query/Parsers/ASTDataTypeExt.h>
 #include <Query/Parsers/ASTDictionaryExt.h>
 #include <Query/Parsers/ASTExpressionListExt.h>
 
@@ -45,6 +48,10 @@ using ConstASTs = std::vector<ConstASTPtr>;
     M(ASTColumnsExceptTransformer) \
     M(ASTColumnsReplaceTransformer) \
     M(ASTAsterisk) \
+    M(ASTColumnsRegexpMatcher) \
+    M(ASTColumnsListMatcher) \
+    M(ASTConstraintDeclaration) \
+    M(ASTDataTypeExt) \
     M(ASTColumnDeclarationExt) \
     M(ASTDictionaryAttributeDeclaration) \
     M(ASTDictionaryLifetime) \

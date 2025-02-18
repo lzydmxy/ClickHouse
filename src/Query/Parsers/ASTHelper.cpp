@@ -16,12 +16,21 @@ void astToLowerCase(const ASTPtr & ast)
     {
         boost::to_lower(casted_ast->name);
     }
+    if (auto * casted_ast = ast->as<ASTConstraintDeclaration>())
+    {
+        boost::to_lower(casted_ast->name);
+    }
+
     // TODO add more types
 }
 
 void astToUpperCase(const ASTPtr & ast)
 {
     if (auto * casted_ast = ast->as<ASTColumnDeclaration>())
+    {
+        boost::to_upper(casted_ast->name);
+    }
+    if (auto * casted_ast = ast->as<ASTConstraintDeclaration>())
     {
         boost::to_upper(casted_ast->name);
     }
