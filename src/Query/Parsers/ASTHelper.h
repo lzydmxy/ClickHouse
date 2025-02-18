@@ -59,7 +59,18 @@ using ConstASTs = std::vector<ConstASTPtr>;
     M(ASTDictionaryRange) \
     M(ASTDictionarySettings) \
     M(ASTDictionaryExt) \
-    M(ASTExpressionListExt)
+    M(ASTExpressionListExt) \
+    M(ASTFunctionWithKeyValueArguments) \
+    M(ASTIndexDeclaration) \
+    M(ASTJSONPath) \
+    M(ASTJSONPathMemberAccess) \
+    M(ASTJSONPathQuery) \
+    M(ASTJSONPathRange) \
+    M(ASTJSONPathRoot) \
+    M(ASTJSONPathStar) \
+    M(ASTNameTypePair) \
+    M(ASTOrderByElement)
+
 
 #define ENUM_AST_TYPE(ITEM) ITEM,
 enum class ASTType : UInt8
