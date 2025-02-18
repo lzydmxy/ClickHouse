@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Core/Settings.h>
 #include <Parsers/IAST_fwd.h>
 #include <Parsers/ASTColumnsMatcher.h>
 #include <Parsers/ASTConstraintDeclaration.h>
@@ -9,7 +10,16 @@
 #include <Parsers/ASTTablesInSelectQuery.h>
 #include <Parsers/ASTWindowDefinition.h>
 #include <Parsers/ASTColumnsTransformers.h>
-#include <Core/Settings.h>
+#include <Parsers/ASTFunctionWithKeyValueArguments.h>
+#include <Parsers/ASTIndexDeclaration.h>
+#include <Functions/JSONPath/ASTs/ASTJSONPath.h>
+#include <Functions/JSONPath/ASTs/ASTJSONPathMemberAccess.h>
+#include <Functions/JSONPath/ASTs/ASTJSONPathQuery.h>
+#include <Functions/JSONPath/ASTs/ASTJSONPathRange.h>
+#include <Functions/JSONPath/ASTs/ASTJSONPathRoot.h>
+#include <Functions/JSONPath/ASTs/ASTJSONPathStar.h>
+#include <Parsers/ASTNameTypePair.h>
+#include <Parsers/ASTOrderByElement.h>
 #include <Parsers/ASTAsterisk.h>
 #include <Parsers/ASTDictionary.h>
 #include <Parsers/ASTDictionaryAttributeDeclaration.h>
@@ -17,11 +27,7 @@
 #include <Query/Parsers/ASTDataTypeExt.h>
 #include <Query/Parsers/ASTDictionaryExt.h>
 #include <Query/Parsers/ASTExpressionListExt.h>
-
 #include <Query/Parsers/ASTFieldReferenceExt.h>
-
-#include <boost/algorithm/string/case_conv.hpp>
-#include <Parsers/ASTFunctionWithKeyValueArguments.h>
 #include <Parsers/ASTProjectionDeclaration.h>
 #include <Parsers/ASTProjectionSelectQuery.h>
 #include <Parsers/ASTQualifiedAsterisk.h>
@@ -81,7 +87,17 @@ using ConstASTs = std::vector<ConstASTPtr>;
     M(ASTSetQuery) \
     M(ASTSettingsProfileElement) \
     M(ASTSettingsProfileElements) \
-    M(ASTTTLElement)
+    M(ASTTTLElement) \
+    M(ASTFunctionWithKeyValueArguments) \
+    M(ASTIndexDeclaration) \
+    M(ASTJSONPath) \
+    M(ASTJSONPathMemberAccess) \
+    M(ASTJSONPathQuery) \
+    M(ASTJSONPathRange) \
+    M(ASTJSONPathRoot) \
+    M(ASTJSONPathStar) \
+    M(ASTNameTypePair) \
+    M(ASTOrderByElement) \
 
 #define ENUM_AST_TYPE(ITEM) ITEM,
 enum class ASTType : UInt8
