@@ -9,7 +9,7 @@ ASTPtr ASTDictionaryExt::clone() const
     auto res = std::make_shared<ASTDictionaryExt>();
 
     auto base = ASTDictionary::clone();
-    *static_cast<ASTDictionaryExt*>(res.get()) = *dynamic_cast<ASTDictionaryExt*>(base.get());
+    *static_cast<ASTDictionary*>(res.get()) = *dynamic_cast<ASTDictionary*>(base.get());
 
     res->clickhouse_db = clickhouse_db;
     res->clickhouse_tb = clickhouse_tb;

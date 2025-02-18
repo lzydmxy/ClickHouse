@@ -6,9 +6,6 @@
 namespace DB
 {
 
-class ASTLiteral;
-
-
 /// AST contains all parts of external dictionary definition except attributes
 class ASTDictionaryExt : public ASTDictionary
 {
@@ -19,7 +16,6 @@ public:
     String clickhouse_invalidate_query;
 
     ASTPtr clone() const override;
-    void formatImpl(const FormatSettings & format_settings, FormatState & state, FormatStateStacked frame) const override;
 };
 
 }
