@@ -1,8 +1,6 @@
 #pragma once
 
 #include <Core/Settings.h>
-#include <IO/ReadBufferFromString.h>
-#include <IO/WriteBufferFromString.h>
 #include <Parsers/ASTAsterisk.h>
 #include <Parsers/ASTDictionary.h>
 #include <Parsers/ASTDictionaryAttributeDeclaration.h>
@@ -19,13 +17,7 @@ using DB::ASTPtr;
 using DB::ASTs;
 using ConstASTPtr = std::shared_ptr<const IAST>;
 using ConstASTs = std::vector<ConstASTPtr>;
-using DB::Exception;
 
-namespace ErrorCodes
-{
-    extern const int LOGICAL_ERROR;
-    extern const int NOT_IMPLEMENTED;
-}
 
 #define APPLY_AST_TYPES(M) \
     M(ASTAsterisk) \
@@ -36,93 +28,45 @@ namespace ErrorCodes
     M(ASTDictionaryRange) \
     M(ASTDictionarySettings) \
     M(ASTDictionary)
-#define ENUM_TYPE(ITEM) ITEM,
 
+#define ENUM_AST_TYPE(ITEM) ITEM,
 enum class ASTType : UInt8
 {
-    APPLY_AST_TYPES(ENUM_TYPE) UNDEFINED,
+    APPLY_AST_TYPES(ENUM_AST_TYPE) UNDEFINED,
 };
-
-#undef ENUM_TYPE
+#undef ENUM_AST_TYPE
 
 inline String toString(ASTType type)
 {
     switch (type)
     {
-#define ENUM_TYPE(ITEM) \
+#define ENUM_AST_TYPE(ITEM) \
     case ASTType::ITEM: \
         return #ITEM;
-        APPLY_AST_TYPES(ENUM_TYPE)
-#undef ENUM_TYPE
+        APPLY_AST_TYPES(ENUM_AST_TYPE)
+#undef ENUM_AST_TYPE
         default:
             return "UNDEFINED";
     }
 }
 
 #define CHECK_AND_RETURN_AST_TYPE(type) \
-if (auto astPtr = std::dynamic_pointer_cast<type>(ast)) \
+if (auto * casted_ast = ast->as<type>()) \
 { \
-return ASTType::type; \
+    return ASTType::type; \
 }
 
-ASTType getAstType(ASTPtr & ast)
+inline ASTType getAstType(const ASTPtr & ast)
 {
     APPLY_AST_TYPES(CHECK_AND_RETURN_AST_TYPE)
     return ASTType::UNDEFINED;
 }
-
 #undef CHECK_AND_RETURN_AST_TYPE
 
-void astToLowerCase(ASTPtr & ast)
-{
-    if ( auto astColumnDeclaration = std::dynamic_pointer_cast<ASTColumnDeclaration>(ast) )
-    {
-        boost::to_lower(astColumnDeclaration->name);
-    }
-    //type not ASTColumnDeclaration, need to continue
-    return;
-}
+void astToLowerCase(const ASTPtr & ast);
+void astToUpperCase(const ASTPtr & ast);
 
-void astToUpperCase(ASTPtr & ast)
-{
-    if ( auto astColumnDeclaration = std::dynamic_pointer_cast<ASTColumnDeclaration>(ast) )
-    {
-        boost::to_upper(astColumnDeclaration->name);
-    }
-
-    //type not ASTColumnDeclaration, need to continue
-    return;
-}
-
-void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_ast, const ASTPtr & new_ast)
-{
-    if (!new_ast)
-        throw Exception(ErrorCodes::LOGICAL_ERROR, "Trying to set or replace AST subtree with nullptr");
-
-    if (old_ast == new_ast)
-        return;
-
-    /// set ast
-    if (!old_ast)
-    {
-        old_ast = new_ast;
-        cur_ast->children.push_back(old_ast);
-        return;
-    }
-
-    /// replace ast
-    for (auto & current_child: cur_ast->children)
-    {
-        if (current_child == old_ast)
-        {
-            current_child = new_ast;
-            old_ast = new_ast;
-            return;
-        }
-    }
-
-    throw Exception(ErrorCodes::LOGICAL_ERROR, "AST subtree not found in children");
-}
+void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_child);
 
 }
 
