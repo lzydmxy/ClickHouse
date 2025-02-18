@@ -1,11 +1,24 @@
 #pragma once
 
 #include <Parsers/IAST_fwd.h>
+#include <Parsers/ASTColumnsMatcher.h>
+#include <Parsers/ASTConstraintDeclaration.h>
 #include <Parsers/ASTSetQuery.h>
-#include <Parsers/ASTColumnDeclaration.h>
+#include <Parsers/ASTUseQuery.h>
+#include <Parsers/ASTWithElement.h>
+#include <Parsers/ASTTablesInSelectQuery.h>
+#include <Parsers/ASTWindowDefinition.h>
+#include <Parsers/ASTColumnsTransformers.h>
 #include <Core/Settings.h>
-#include <IO/WriteBufferFromString.h>
-#include <IO/ReadBufferFromString.h>
+#include <Parsers/ASTAsterisk.h>
+#include <Parsers/ASTDictionary.h>
+#include <Parsers/ASTDictionaryAttributeDeclaration.h>
+#include <Query/Parsers/ASTColumnDeclarationExt.h>
+#include <Query/Parsers/ASTDataTypeExt.h>
+#include <Query/Parsers/ASTDictionaryExt.h>
+#include <Query/Parsers/ASTExpressionListExt.h>
+
+#include <Query/Parsers/ASTFieldReferenceExt.h>
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <Parsers/ASTFunctionWithKeyValueArguments.h>
@@ -27,16 +40,35 @@ using DB::ASTPtr;
 using DB::ASTs;
 using ConstASTPtr = std::shared_ptr<const IAST>;
 using ConstASTs = std::vector<ConstASTPtr>;
-using DB::Exception;
 
-namespace ErrorCodes
-{
-    extern const int LOGICAL_ERROR;
-    extern const int NOT_IMPLEMENTED;
-}
 
 #define APPLY_AST_TYPES(M) \
-    M(ASTDictionary) \
+    M(ASTUseQuery) \
+    M(ASTWithElement) \
+    M(ASTArrayJoin) \
+    M(ASTTableExpression) \
+    M(ASTTableJoin) \
+    M(ASTTablesInSelectQuery) \
+    M(ASTTablesInSelectQueryElement) \
+    M(ASTWindowDefinition) \
+    M(ASTWindowListElement) \
+    M(ASTFieldReferenceExt) \
+    M(ASTColumnsApplyTransformer) \
+    M(ASTColumnsExceptTransformer) \
+    M(ASTColumnsReplaceTransformer) \
+    M(ASTAsterisk) \
+    M(ASTColumnsRegexpMatcher) \
+    M(ASTColumnsListMatcher) \
+    M(ASTConstraintDeclaration) \
+    M(ASTDataTypeExt) \
+    M(ASTColumnDeclarationExt) \
+    M(ASTDictionaryAttributeDeclaration) \
+    M(ASTDictionaryLifetime) \
+    M(ASTDictionaryLayout) \
+    M(ASTDictionaryRange) \
+    M(ASTDictionarySettings) \
+    M(ASTDictionaryExt) \
+    M(ASTExpressionListExt) \
     M(ASTPair) \
     M(ASTPartitionExt) \
     M(ASTProjectionDeclaration) \
@@ -50,160 +82,46 @@ namespace ErrorCodes
     M(ASTSettingsProfileElement) \
     M(ASTSettingsProfileElements) \
     M(ASTTTLElement)
-#define ENUM_TYPE(ITEM) ITEM,
 
+#define ENUM_AST_TYPE(ITEM) ITEM,
 enum class ASTType : UInt8
 {
-    APPLY_AST_TYPES(ENUM_TYPE) UNDEFINED,
+    APPLY_AST_TYPES(ENUM_AST_TYPE) UNDEFINED,
 };
-
-#undef ENUM_TYPE
+#undef ENUM_AST_TYPE
 
 inline String toString(ASTType type)
 {
     switch (type)
     {
-#define ENUM_TYPE(ITEM) \
+#define ENUM_AST_TYPE(ITEM) \
     case ASTType::ITEM: \
         return #ITEM;
-        APPLY_AST_TYPES(ENUM_TYPE)
-#undef ENUM_TYPE
+        APPLY_AST_TYPES(ENUM_AST_TYPE)
+#undef ENUM_AST_TYPE
         default:
             return "UNDEFINED";
     }
 }
 
-ASTType getAstType(ASTPtr & ast)
+
+#define CHECK_AND_RETURN_AST_TYPE(type) \
+if (auto * casted_ast = ast->as<type>()) \
+{ \
+    return ASTType::type; \
+}
+
+inline ASTType getAstType(const ASTPtr & ast)
 {
-    if ( auto astSetQuery = std::dynamic_pointer_cast<ASTSetQuery>(ast) )
-    {
-        return ASTType::ASTDictionary;  
-    }
-    else if ( auto astPair = std::dynamic_pointer_cast<ASTPair>(ast))
-    {
-        return ASTType::ASTPair;
-    }
-    else if ( auto astPartitionExt = std::dynamic_pointer_cast<ASTPartitionExt>(ast))
-    {
-        return ASTType::ASTPartitionExt;
-    }
-    else if ( auto astProjectionDeclaration = std::dynamic_pointer_cast<ASTProjectionDeclaration>(ast))
-    {
-        return ASTType::ASTProjectionDeclaration;
-    }
-    else if ( auto astProjectionSelectQuery = std::dynamic_pointer_cast<ASTProjectionSelectQuery>(ast))
-    {
-        return ASTType::ASTProjectionSelectQuery;
-    }
-    else if ( auto astQualifiedAsterisk = std::dynamic_pointer_cast<ASTQualifiedAsterisk>(ast))
-    {
-        return ASTType::ASTQualifiedAsterisk;
-    }
-    else if ( auto astRowPolicyName = std::dynamic_pointer_cast<ASTRowPolicyName>(ast))
-    {
-        return ASTType::ASTRowPolicyName;
-    }
-    else if ( auto astRowPolicyNames = std::dynamic_pointer_cast<ASTRowPolicyNames>(ast))
-    {
-        return ASTType::ASTRowPolicyNames;
-    }
-    else if ( auto astSampleRatio = std::dynamic_pointer_cast<ASTSampleRatio>(ast))
-    {
-        return ASTType::ASTSampleRatio;
-    }
-    else if ( auto astSelectQueryExt = std::dynamic_pointer_cast<ASTSelectQueryExt>(ast))
-    {
-        return ASTType::ASTSelectQueryExt;
-    }
-    else if ( auto astSetQuery = std::dynamic_pointer_cast<ASTSetQuery>(ast))
-    {
-        return ASTType::ASTSetQuery;
-    }
-    else if ( auto astSettingsProfileElement = std::dynamic_pointer_cast<ASTSettingsProfileElement>(ast))
-    {
-        return ASTType::ASTSettingsProfileElement;
-    }
-    else if ( auto astSettingsProfileElements = std::dynamic_pointer_cast<ASTSettingsProfileElements>(ast))
-    {
-        return ASTType::ASTSettingsProfileElements;
-    }
-    else if ( auto astTTLElement = std::dynamic_pointer_cast<ASTTTLElement>(ast))
-    {
-        return ASTType::ASTTTLElement;
-    }
-
-    //type not ASTSetQuery, need to continue
-
+    APPLY_AST_TYPES(CHECK_AND_RETURN_AST_TYPE)
     return ASTType::UNDEFINED;
 }
+#undef CHECK_AND_RETURN_AST_TYPE
 
-void astToLowerCase(ASTPtr & ast)
-{
-    if ( auto astColumnDeclaration = std::dynamic_pointer_cast<ASTColumnDeclaration>(ast) )
-    {
-        boost::to_lower(astColumnDeclaration->name);
-    }
-    else if ( auto astPartitionExt = std::dynamic_pointer_cast<ASTPartitionExt>(ast))
-    {
-        boost::to_lower(astPartitionExt->fields_str);
-    }
-    else if ( auto astProjectionDeclaration = std::dynamic_pointer_cast<ASTProjectionDeclaration>(ast))
-    {
-        boost::to_lower(astProjectionDeclaration->name);
-    }
+void astToLowerCase(const ASTPtr & ast);
+void astToUpperCase(const ASTPtr & ast);
 
-    //type not ASTColumnDeclaration, need to continue
-    return;
-}
-
-void astToUpperCase(ASTPtr & ast)
-{
-    if ( auto astColumnDeclaration = std::dynamic_pointer_cast<ASTColumnDeclaration>(ast) )
-    {
-        boost::to_upper(astColumnDeclaration->name);
-    }
-    else if ( auto astPartitionExt = std::dynamic_pointer_cast<ASTPartitionExt>(ast))
-    {
-        boost::to_upper(astPartitionExt->fields_str);
-    }
-    else if ( auto astProjectionDeclaration = std::dynamic_pointer_cast<ASTProjectionDeclaration>(ast))
-    {
-        boost::to_upper(astProjectionDeclaration->name);
-    }
-
-    //type not ASTColumnDeclaration, need to continue
-    return;
-}
-
-void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_ast, const ASTPtr & new_ast)
-{
-    if (!new_ast)
-        throw Exception(ErrorCodes::LOGICAL_ERROR, "Trying to set or replace AST subtree with nullptr");
-
-    if (old_ast == new_ast)
-        return;
-
-    /// set ast
-    if (!old_ast)
-    {
-        old_ast = new_ast;
-        cur_ast->children.push_back(old_ast);
-        return;
-    }
-
-    /// replace ast
-    for (auto & current_child: cur_ast->children)
-    {
-        if (current_child == old_ast)
-        {
-            current_child = new_ast;
-            old_ast = new_ast;
-            return;
-        }
-    }
-
-    throw Exception(ErrorCodes::LOGICAL_ERROR, "AST subtree not found in children");
-}
+void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_child);
 
 }
 
