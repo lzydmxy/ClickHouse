@@ -6,8 +6,9 @@ namespace DB
 ASTPtr ASTPartitionExt::clone() const
 {
     auto res = std::make_shared<ASTPartitionExt>(*this);
-    auto baseClonePtr = ASTPartition::clone();
-    *static_cast<ASTPartition *>(res.get()) = *dynamic_cast<ASTPartition *>(baseClonePtr.get());
+
+    auto base = ASTPartition::clone();
+    *static_cast<ASTPartition *>(res.get()) = *dynamic_cast<ASTPartition *>(base.get());
 
     return res;
 }
