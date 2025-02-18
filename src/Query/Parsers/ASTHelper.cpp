@@ -86,4 +86,17 @@ void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_ch
     throw Exception(ErrorCodes::LOGICAL_ERROR, "AST subtree not found in children");
 }
 
+ASTFunctionPtr makeASTFunctionWithVectorArgs(ASTFunctionPtr & ast, const String &name, ASTPtrs &&args)
+{
+    auto function = std::make_shared<ASTFunction>();
+    ast->name = name;
+    ast->arguments = std::make_shared<ASTExpressionList>();
+    ast->children.push_back(function->arguments);
+    //TODO: copy args to children
+    //ast->arguments->children = std::move(args);
+
+    return function;
 }
+
+}
+
