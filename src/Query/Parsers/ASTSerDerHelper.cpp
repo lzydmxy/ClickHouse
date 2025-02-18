@@ -1,11 +1,10 @@
 #include <Query/Parsers/ASTSerDerHelper.h>
 
+#include <Query/Parsers/ASTDictionaryExt.h>
 #include <Query/Parsers/ASTSetQuery.h>
-#include <Query/Parsers/ASTDictionary.h>
-#include <Query/Parsers/ASTDictionaryAttributeDeclaration.h>
 
-#include <Query/Protos/plan_node.pb.h>
 #include <Parsers/queryToString.h>
+#include <Query/Protos/plan_node.pb.h>
 
 namespace JDDB
 {

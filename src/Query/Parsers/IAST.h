@@ -36,13 +36,7 @@ namespace ErrorCodes
 using IdentifierNameSet = std::set<String>;
 
 #define APPLY_AST_TYPES(M) \
-    M(ASTSetQuery) \
-    M(ASTDictionaryAttributeDeclaration) \
-    M(ASTDictionaryLifetime) \
-    M(ASTDictionaryLayout) \
-    M(ASTDictionaryRange) \
-    M(ASTDictionarySettings) \
-    M(ASTDictionary)
+    M(ASTSetQuery)
 #define ENUM_TYPE(ITEM) ITEM,
 
 enum class ASTType : UInt8

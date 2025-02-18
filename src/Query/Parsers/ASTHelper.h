@@ -1,12 +1,13 @@
 #pragma once
 
-#include <Parsers/IAST_fwd.h>
-#include <Parsers/ASTDictionary.h>
-#include <Parsers/ASTAsterisk.h>
-#include <Query/Parsers/ASTColumnDeclarationExt.h>
 #include <Core/Settings.h>
-#include <IO/WriteBufferFromString.h>
 #include <IO/ReadBufferFromString.h>
+#include <IO/WriteBufferFromString.h>
+#include <Parsers/ASTAsterisk.h>
+#include <Parsers/ASTDictionary.h>
+#include <Parsers/ASTDictionaryAttributeDeclaration.h>
+#include <Parsers/IAST_fwd.h>
+#include <Query/Parsers/ASTColumnDeclarationExt.h>
 
 #include <boost/algorithm/string/case_conv.hpp>
 
@@ -27,9 +28,14 @@ namespace ErrorCodes
 }
 
 #define APPLY_AST_TYPES(M) \
-    M(ASTDictionary) \
     M(ASTAsterisk) \
-    M(ASTColumnDeclarationExt)
+    M(ASTColumnDeclarationExt) \
+    M(ASTDictionaryAttributeDeclaration) \
+    M(ASTDictionaryLifetime) \
+    M(ASTDictionaryLayout) \
+    M(ASTDictionaryRange) \
+    M(ASTDictionarySettings) \
+    M(ASTDictionary)
 #define ENUM_TYPE(ITEM) ITEM,
 
 enum class ASTType : UInt8
