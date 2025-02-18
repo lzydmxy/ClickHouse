@@ -8,6 +8,16 @@
 #include <IO/ReadBufferFromString.h>
 
 #include <boost/algorithm/string/case_conv.hpp>
+#include <Parsers/ASTFunctionWithKeyValueArguments.h>
+#include <Parsers/ASTProjectionDeclaration.h>
+#include <Parsers/ASTProjectionSelectQuery.h>
+#include <Parsers/ASTQualifiedAsterisk.h>
+#include <Parsers/ASTSampleRatio.h>
+#include <Query/Parsers/ASTSelectQueryExt.h>
+#include <Parsers/ASTTTLElement.h>
+#include <Parsers/Access/ASTRowPolicyName.h>
+#include <Parsers/Access/ASTSettingsProfileElement.h>
+#include <Query/Parsers/ASTPartitionExt.h>
 
 namespace DB
 {
@@ -26,7 +36,20 @@ namespace ErrorCodes
 }
 
 #define APPLY_AST_TYPES(M) \
-    M(ASTDictionary)
+    M(ASTDictionary) \
+    M(ASTPair) \
+    M(ASTPartitionExt) \
+    M(ASTProjectionDeclaration) \
+    M(ASTProjectionSelectQuery) \
+    M(ASTQualifiedAsterisk) \
+    M(ASTRowPolicyName) \
+    M(ASTRowPolicyNames) \
+    M(ASTSampleRatio) \
+    M(ASTSelectQueryExt) \
+    M(ASTSetQuery) \
+    M(ASTSettingsProfileElement) \
+    M(ASTSettingsProfileElements) \
+    M(ASTTTLElement)
 #define ENUM_TYPE(ITEM) ITEM,
 
 enum class ASTType : UInt8
@@ -56,6 +79,58 @@ ASTType getAstType(ASTPtr & ast)
     {
         return ASTType::ASTDictionary;  
     }
+    else if ( auto astPair = std::dynamic_pointer_cast<ASTPair>(ast))
+    {
+        return ASTType::ASTPair;
+    }
+    else if ( auto astPartitionExt = std::dynamic_pointer_cast<ASTPartitionExt>(ast))
+    {
+        return ASTType::ASTPartitionExt;
+    }
+    else if ( auto astProjectionDeclaration = std::dynamic_pointer_cast<ASTProjectionDeclaration>(ast))
+    {
+        return ASTType::ASTProjectionDeclaration;
+    }
+    else if ( auto astProjectionSelectQuery = std::dynamic_pointer_cast<ASTProjectionSelectQuery>(ast))
+    {
+        return ASTType::ASTProjectionSelectQuery;
+    }
+    else if ( auto astQualifiedAsterisk = std::dynamic_pointer_cast<ASTQualifiedAsterisk>(ast))
+    {
+        return ASTType::ASTQualifiedAsterisk;
+    }
+    else if ( auto astRowPolicyName = std::dynamic_pointer_cast<ASTRowPolicyName>(ast))
+    {
+        return ASTType::ASTRowPolicyName;
+    }
+    else if ( auto astRowPolicyNames = std::dynamic_pointer_cast<ASTRowPolicyNames>(ast))
+    {
+        return ASTType::ASTRowPolicyNames;
+    }
+    else if ( auto astSampleRatio = std::dynamic_pointer_cast<ASTSampleRatio>(ast))
+    {
+        return ASTType::ASTSampleRatio;
+    }
+    else if ( auto astSelectQueryExt = std::dynamic_pointer_cast<ASTSelectQueryExt>(ast))
+    {
+        return ASTType::ASTSelectQueryExt;
+    }
+    else if ( auto astSetQuery = std::dynamic_pointer_cast<ASTSetQuery>(ast))
+    {
+        return ASTType::ASTSetQuery;
+    }
+    else if ( auto astSettingsProfileElement = std::dynamic_pointer_cast<ASTSettingsProfileElement>(ast))
+    {
+        return ASTType::ASTSettingsProfileElement;
+    }
+    else if ( auto astSettingsProfileElements = std::dynamic_pointer_cast<ASTSettingsProfileElements>(ast))
+    {
+        return ASTType::ASTSettingsProfileElements;
+    }
+    else if ( auto astTTLElement = std::dynamic_pointer_cast<ASTTTLElement>(ast))
+    {
+        return ASTType::ASTTTLElement;
+    }
 
     //type not ASTSetQuery, need to continue
 
@@ -68,6 +143,14 @@ void astToLowerCase(ASTPtr & ast)
     {
         boost::to_lower(astColumnDeclaration->name);
     }
+    else if ( auto astPartitionExt = std::dynamic_pointer_cast<ASTPartitionExt>(ast))
+    {
+        boost::to_lower(astPartitionExt->fields_str);
+    }
+    else if ( auto astProjectionDeclaration = std::dynamic_pointer_cast<ASTProjectionDeclaration>(ast))
+    {
+        boost::to_lower(astProjectionDeclaration->name);
+    }
 
     //type not ASTColumnDeclaration, need to continue
     return;
@@ -78,6 +161,14 @@ void astToUpperCase(ASTPtr & ast)
     if ( auto astColumnDeclaration = std::dynamic_pointer_cast<ASTColumnDeclaration>(ast) )
     {
         boost::to_upper(astColumnDeclaration->name);
+    }
+    else if ( auto astPartitionExt = std::dynamic_pointer_cast<ASTPartitionExt>(ast))
+    {
+        boost::to_upper(astPartitionExt->fields_str);
+    }
+    else if ( auto astProjectionDeclaration = std::dynamic_pointer_cast<ASTProjectionDeclaration>(ast))
+    {
+        boost::to_upper(astProjectionDeclaration->name);
     }
 
     //type not ASTColumnDeclaration, need to continue
