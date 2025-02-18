@@ -27,10 +27,8 @@
 #include <Query/Parsers/ASTDataTypeExt.h>
 #include <Query/Parsers/ASTDictionaryExt.h>
 #include <Query/Parsers/ASTExpressionListExt.h>
-
 #include <Query/Parsers/ASTFieldReferenceExt.h>
 
-#include <boost/algorithm/string/case_conv.hpp>
 
 namespace DB
 {
