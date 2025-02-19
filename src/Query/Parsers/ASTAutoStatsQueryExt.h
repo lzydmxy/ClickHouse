@@ -5,8 +5,11 @@
 #include <Parsers/IAST.h>
 #include <Parsers/ASTQueryWithOnCluster.h>
 #include <Parsers/ASTQueryWithTableAndOutput.h>
-#include "Common/SettingsChanges.h"
+
+#include <Common/FieldVisitorToString.h>
+#include <Common/SettingsChanges.h>
 #include <Common/quoteString.h>
+
 
 namespace DB
 {
@@ -34,7 +37,6 @@ public:
     // bool override = false; // override db.table when specifying db.*
 
     std::optional<SettingsChanges> settings_changes_opt;
-
 
     String getID(char delim) const override
     {

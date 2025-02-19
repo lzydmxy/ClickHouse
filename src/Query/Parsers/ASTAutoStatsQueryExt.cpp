@@ -1,7 +1,5 @@
-#include <sstream>
-
 #include <Query/Parsers/ASTAutoStatsQueryExt.h>
-#include <Common/FieldVisitorToString.h>
+
 
 namespace DB
 {

@@ -17,7 +17,9 @@
 #include <Parsers/ASTDictionaryAttributeDeclaration.h>
 #include <Parsers/ASTFunction.h>
 #include <Parsers/ASTFunctionWithKeyValueArguments.h>
+#include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTIndexDeclaration.h>
+#include <Parsers/ASTLiteral.h>
 #include <Parsers/ASTNameTypePair.h>
 #include <Parsers/ASTOrderByElement.h>
 #include <Parsers/ASTProjectionDeclaration.h>
@@ -38,7 +40,6 @@
 #include <Parsers/IAST_fwd.h>
 
 #include <Query/Parsers/ASTAutoStatsQueryExt.h>
-#include <Query/Parsers/ASTColumnDeclarationExt.h>
 #include <Query/Parsers/ASTDataTypeExt.h>
 #include <Query/Parsers/ASTDictionaryExt.h>
 #include <Query/Parsers/ASTExplainQueryExt.h>
@@ -46,8 +47,6 @@
 #include <Query/Parsers/ASTFieldReferenceExt.h>
 #include <Query/Parsers/ASTPartitionExt.h>
 #include <Query/Parsers/ASTSelectQueryExt.h>
-
-#include <boost/algorithm/string/case_conv.hpp>
 
 
 namespace DB
@@ -58,16 +57,12 @@ using DB::ASTPtr;
 using DB::ASTs;
 using ConstASTPtr = std::shared_ptr<const IAST>;
 using ConstASTs = std::vector<ConstASTPtr>;
-using ASTPtrs = std::vector<ASTPtr>;
-using ASTFunctionPtr = std::shared_ptr<ASTFunction>;
-using ASTPtrs = std::vector<ASTPtr>;
 using ASTFunctionPtr = std::shared_ptr<ASTFunction>;
 
 #define APPLY_AST_TYPES(M) \
     M(ASTArrayJoin) \
     M(ASTAsterisk) \
     M(ASTAutoStatsQueryExt) \
-    M(ASTColumnDeclarationExt) \
     M(ASTColumnsApplyTransformer) \
     M(ASTColumnsExceptTransformer) \
     M(ASTColumnsListMatcher) \
@@ -82,7 +77,6 @@ using ASTFunctionPtr = std::shared_ptr<ASTFunction>;
     M(ASTDictionaryRange) \
     M(ASTDictionarySettings) \
     M(ASTExplainQueryExt) \
-    M(ASTExpressionListExt) \
     M(ASTExpressionListExt) \
     M(ASTFieldReferenceExt) \
     M(ASTFunction) \
@@ -165,7 +159,7 @@ void astToUpperCase(const ASTPtr & ast);
 
 void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_child);
 
-ASTFunctionPtr makeASTFunctionWithVectorArgs(ASTFunctionPtr & ast, const String &name, ASTPtrs &&args);
+ASTFunctionPtr makeASTFunctionWithVectorArgs(ASTFunctionPtr & ast, const String &name, ASTs &&args);
 
 }
 

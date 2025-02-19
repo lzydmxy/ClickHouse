@@ -14,10 +14,6 @@ extern const int NOT_IMPLEMENTED;
 
 void astToLowerCase(const ASTPtr & ast)
 {
-    if (auto * casted_ast = ast->as<ASTColumnDeclaration>())
-    {
-        boost::to_lower(casted_ast->name);
-    }
     if (auto * casted_ast = ast->as<ASTConstraintDeclaration>())
     {
         boost::to_lower(casted_ast->name);
@@ -36,10 +32,6 @@ void astToLowerCase(const ASTPtr & ast)
 
 void astToUpperCase(const ASTPtr & ast)
 {
-    if (auto * casted_ast = ast->as<ASTColumnDeclaration>())
-    {
-        boost::to_upper(casted_ast->name);
-    }
     if (auto * casted_ast = ast->as<ASTConstraintDeclaration>())
     {
         boost::to_upper(casted_ast->name);
@@ -86,14 +78,13 @@ void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_ch
     throw Exception(ErrorCodes::LOGICAL_ERROR, "AST subtree not found in children");
 }
 
-ASTFunctionPtr makeASTFunctionWithVectorArgs(ASTFunctionPtr & ast, const String &name, ASTPtrs &&args)
+ASTFunctionPtr makeASTFunctionWithVectorArgs(ASTFunctionPtr & ast, const String &name, ASTs &&args)
 {
     auto function = std::make_shared<ASTFunction>();
     ast->name = name;
     ast->arguments = std::make_shared<ASTExpressionList>();
     ast->children.push_back(function->arguments);
-    //TODO: copy args to children
-    //ast->arguments->children = std::move(args);
+    ast->arguments->children = std::move(args);
 
     return function;
 }

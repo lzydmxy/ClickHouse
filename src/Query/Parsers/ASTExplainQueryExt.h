@@ -46,7 +46,7 @@ public:
         auto res = std::make_shared<ASTExplainQueryExt>(*this);
 
         res->children.clear();
-        auto query = getExplainedQuery();
+        auto query = ASTExplainQuery::clone();
         if (query)
             res->setExplainedQuery(query);
         auto ast_settings = getSettings();
