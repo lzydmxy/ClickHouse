@@ -1,6 +1,4 @@
 #include "SourceTask.h"
-//#include "common/types.h"
-
 
 namespace DB
 {

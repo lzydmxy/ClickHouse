@@ -1,7 +1,5 @@
 #pragma once
 
-#include <memory>
-#include <string>
 #include <unordered_map>
 #include <vector>
 #include <base/types.h>
@@ -22,7 +20,7 @@ struct InputProfileMetric
     UInt64 input_wait_sum_elapsed_us = 0;
     UInt64 input_wait_max_elapsed_us = 0;
     UInt64 input_wait_min_elapsed_us{UINT64_MAX};
-    void fillFromProto(const RInputProfileMetric & proto);
+    void fromProto(const RInputProfileMetric & proto);
     void toProto(RInputProfileMetric & proto) const;
 };
 

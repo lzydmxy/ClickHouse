@@ -23,7 +23,7 @@ public:
     void serialize(WriteBuffer &) const;
     void deserialize(ReadBuffer &);
     void toProto(RAddressInfo & proto) const;
-    void fillFromProto(const RAddressInfo & proto);
+    void fromProto(const RAddressInfo & proto);
 
     const String & getHostName() const { return host_name; }
     UInt16 getPort() const { return port; }
@@ -85,7 +85,7 @@ struct PlanSegmentPartitionSource
     AddressInfoPtr address;
     std::vector<UInt32> partition_ids;
     void toProto(RPlanSegmentPartitionSource & proto) const;
-    void fillFromProto(const RPlanSegmentPartitionSource & proto);
+    void fromProto(const RPlanSegmentPartitionSource & proto);
     String toString() const;
 };
 

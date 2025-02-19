@@ -254,6 +254,8 @@ String toString(ClientInfo::Interface interface)
             return "LOCAL";
         case ClientInfo::Interface::TCP_INTERSERVER:
             return "TCP_INTERSERVER";
+        case ClientInfo::Interface::BRPC:
+            return "BRPC";
     }
 
     return std::format("Unknown server interface ({}).", static_cast<int>(interface));

@@ -230,6 +230,9 @@ struct IHostContext
 
 using IHostContextPtr = std::shared_ptr<IHostContext>;
 
+class OptimizerContext;
+using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;
+
 /// A small class which owns ContextShared.
 /// We don't use something like unique_ptr directly to allow ContextShared type to be incomplete.
 struct SharedContextHolder
@@ -635,6 +638,9 @@ public:
     InputBlocksReader getInputBlocksReaderCallback() const;
     void resetInputCallbacks();
 
+    /// For modify client info by JD
+    ClientInfo & getClientInfo() { return client_info; }
+
     /// Returns information about the client executing a query.
     const ClientInfo & getClientInfo() const { return client_info; }
 
@@ -977,6 +983,9 @@ public:
     void reloadQueryMaskingRulesIfChanged(const ConfigurationPtr & config) const;
 
     void setSystemZooKeeperLogAfterInitializationIfNeeded();
+
+    void initializeOptimizerContext() const;
+    OptimizerContextPtr getOptimizerContext() const;
 
     /// --- Caches ------------------------------------------------------------------------------------------
 

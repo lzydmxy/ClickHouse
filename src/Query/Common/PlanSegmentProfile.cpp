@@ -7,7 +7,7 @@
 
 namespace DB
 {
-void InputProfileMetric::fillFromProto(const Protos::InputProfileMetric & proto)
+void InputProfileMetric::fromProto(const Protos::InputProfileMetric & proto)
 {
     id = proto.id();
     input_rows = proto.input_rows();
@@ -50,7 +50,7 @@ ProfileMetricPtr ProfileMetric::fromProto(const Protos::ProfileMetric & proto)
     for (const auto & proto_input : proto.inputs())
     {
         InputProfileMetric input_profile;
-        input_profile.fillFromProto(proto_input);
+        input_profile.fromProto(proto_input);
         profile->inputs.emplace(input_profile.id, input_profile);
     }
 
@@ -58,7 +58,7 @@ ProfileMetricPtr ProfileMetric::fromProto(const Protos::ProfileMetric & proto)
     // for (const auto & [attribute_type, attribute] : proto.attributes())
     // {    
     //     AttributeInfoPtr info = std::make_shared<RuntimeAttributeDescription>();
-    //     info->fillFromProto(attribute);
+    //     info->fromProto(attribute);
     //     profile->attributes.emplace(attribute_type, info);
     // }
     return profile;

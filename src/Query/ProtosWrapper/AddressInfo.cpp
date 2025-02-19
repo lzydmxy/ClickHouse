@@ -86,7 +86,7 @@ void AddressInfo::toProto(RAddressInfo & proto) const
     proto.set_exchange_port(exchange_port);
 }
 
-void AddressInfo::fillFromProto(const RAddressInfo & proto)
+void AddressInfo::fromProto(const RAddressInfo & proto)
 {
     host_name = proto.host_name();
     port = proto.port();
@@ -113,11 +113,11 @@ void PlanSegmentPartitionSource::toProto(RPlanSegmentPartitionSource & proto) co
         proto.add_partition_ids(p_id);
 }
 
-void PlanSegmentPartitionSource::fillFromProto(const RPlanSegmentPartitionSource & proto)
+void PlanSegmentPartitionSource::fromProto(const RPlanSegmentPartitionSource & proto)
 {
     exchange_id = proto.exchange_id();
     address = std::make_shared<AddressInfo>();
-    address->fillFromProto(proto.address());
+    address->fromProto(proto.address());
     partition_ids.reserve(proto.partition_ids().size());
     for (auto p_id : proto.partition_ids())
     {
