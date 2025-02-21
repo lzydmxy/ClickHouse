@@ -27,6 +27,7 @@ private:
     bool parseImpl(Pos & pos, ASTPtr & node, Expected & expected) override
     {
         return true;
+        //TODO debug
         // ParserNestedTable nested_parser();
         // ParserDataTypeExt data_type_parser(false);
         // // Note: community of ClickHouse use ParserAllCollectionsOfLiterals
@@ -122,6 +123,7 @@ bool ParserDataTypeExt::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
         if (ParserKeyword(Keyword::PRECISION).ignore(pos))
             type_name_suffix = "PRECISION";
     }
+    //TODO debug
     // else if (type_name_upper.find(Keyword::INT) != std::string::npos)
     // {
     //     /// Support SIGNED and UNSIGNED integer type modifiers for compatibility with MySQL
@@ -164,6 +166,7 @@ bool ParserDataTypeExt::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
     std::optional<bool> null_modifier;
     if (!is_root_type)
     {
+        //TODO debug
         /// check if parent type is Nullable
         // if (parent_nullable)
         // {
