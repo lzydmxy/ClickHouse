@@ -35,18 +35,18 @@
                 kind = ASTExplainQueryExt::ExplainKind::ParsedAST;
             else if (s_syntax.ignore(pos, expected))
                 kind = ASTExplainQueryExt::ExplainKind::AnalyzedSyntax;
-            // else if (s_query_tree.ignore(pos, expected))
-            //     kind = ASTExplainQueryExt::ExplainKind::QueryTree;
+            else if (s_query_tree.ignore(pos, expected))
+                kind = ASTExplainQueryExt::ExplainKind::QueryTree;
             else if (s_pipeline.ignore(pos, expected))
                 kind = ASTExplainQueryExt::ExplainKind::QueryPipeline;
             else if (s_plan.ignore(pos, expected))
                 kind = ASTExplainQueryExt::ExplainKind::QueryPlan;
-            // else if (s_estimates.ignore(pos, expected))
-            //     kind = ASTExplainQueryExt::ExplainKind::QueryEstimates;
-            // else if (s_table_override.ignore(pos, expected))
-            //     kind = ASTExplainQueryExt::ExplainKind::TableOverride;
-            // else if (s_current_transaction.ignore(pos, expected))
-            //     kind = ASTExplainQueryExt::ExplainKind::CurrentTransaction;
+            else if (s_estimates.ignore(pos, expected))
+                kind = ASTExplainQueryExt::ExplainKind::QueryEstimates;
+            else if (s_table_override.ignore(pos, expected))
+                kind = ASTExplainQueryExt::ExplainKind::TableOverride;
+            else if (s_current_transaction.ignore(pos, expected))
+                kind = ASTExplainQueryExt::ExplainKind::CurrentTransaction;
         }
         else
             return false;
