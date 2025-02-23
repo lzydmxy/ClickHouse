@@ -1,0 +1,94 @@
+#include "ExchangeUtils.h"
+#include <Interpreters/Context.h>
+#include <Query/Common/OptimizerContext.h>
+
+namespace DB
+{
+namespace ErrorCodes
+{
+    extern const int BAD_ARGUMENTS;
+    extern const int EXCHANGE_DATA_TRANS_EXCEPTION;
+    extern const int BRPC_EXCEPTION;
+    extern const int TIMEOUT_EXCEEDED;
+}
+
+inline bool ExchangeUtils::isLocalExchange(const AddressInfo & read_address_info, const AddressInfo & write_address_info)
+{
+    return static_cast<bool>(
+        (read_address_info.getHostName() == "localhost" && read_address_info.getPort() == 0)
+        || (write_address_info.getHostName() == "localhost" && write_address_info.getPort() == 0)
+        || read_address_info == write_address_info);
+}
+
+inline ExchangeOptions ExchangeUtils::getExchangeOptions(const ContextPtr & context)
+{
+    const auto & settings = context->getOptimizerContext()->getSettingsRef();    
+    return {
+        .exchange_timeout_ts = context->getOptimizerContext()->getQueryExpirationTimeStamp(),
+        .send_threshold_in_bytes = settings.exchange_buffer_send_threshold_in_bytes,
+        .send_threshold_in_row_num = settings.exchange_buffer_send_threshold_in_row,
+        .force_remote_mode = settings.exchange_enable_force_remote_mode,
+        .force_use_buffer = settings.exchange_force_use_buffer};
+}
+
+inline BroadcastStatus ExchangeUtils::sendAndCheckReturnStatus(IBroadcastSender & sender, Chunk chunk)
+{
+    BroadcastStatus status = sender.send(std::move(chunk));
+    if (status.is_modified_by_operator && status.code > 0)
+    {
+        if(status.code == BroadcastStatusCode::SEND_TIMEOUT)
+        {
+            throw Exception(
+                ErrorCodes::TIMEOUT_EXCEEDED,
+                "Query {} send data timeout, maybe you can increase settings max_execution_time. Debug info: sender {}, msg : {}",
+                CurrentThread::getQueryId(),
+                sender.getName(),
+                status.message);
+
+        }
+        else 
+        {
+            throw Exception(
+                ErrorCodes::BRPC_EXCEPTION,
+                "Query {} cancel sending data: sender {}, code: {}, msg : {}",
+                CurrentThread::getQueryId(),
+                sender.getName(),
+                status.code,
+                status.message);
+        }
+    }
+    return status;
+}
+
+inline void ExchangeUtils::mergeSenders(BroadcastSenderPtrs & senders)
+{
+    BroadcastSenderPtrs senders_to_merge;
+    for (auto it = senders.begin(); it != senders.end();)
+    {
+        if ((*it)->getType() == BroadcastSenderType::Brpc)
+        {
+            senders_to_merge.emplace_back(std::move(*it));
+            it = senders.erase(it);
+        }
+        else
+            it++;
+    }
+    if (senders_to_merge.empty())
+        return;
+    auto & merged_sender = senders_to_merge[0];
+    for (size_t i = 1; i < senders_to_merge.size(); ++i)
+    {
+        merged_sender->merge(std::move(*senders_to_merge[i]));
+    }
+    senders.emplace_back(std::move(merged_sender));
+}
+
+inline void ExchangeUtils::transferGlobalMemoryToThread(Int64 /*bytes*/)
+{
+    //TODO:: free should not be used directly
+    // if (DB::MainThreadStatus::get())
+    //     total_memory_tracker.free(bytes);
+    // CurrentMemoryTracker::alloc(bytes);
+}
+
+}
