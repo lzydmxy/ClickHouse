@@ -1,24 +1,23 @@
 #pragma once
-#include <cstddef>
 #include <limits>
-#include <memory>
 #include <optional>
-#include <set>
-#include <Query/Executor/AddressInfo.h>
-#include <Query/Executor/SourceTask.h>
-#include <common/types.h>
+#include <base/types.h>
+#include <Query/ProtosHelper/AddressInfo.h>
+#include <Query/ProtosHelper/SourceTask.h>
 
-namespace DB {
+namespace DB 
+{
 
-struct PlanSegmentInstanceId
+struct PlanSegmentInstanceID
 {
     UInt32 segment_id = std::numeric_limits<UInt32>::max();
+    //parallel index is shard index in CK
     UInt32 parallel_index = std::numeric_limits<UInt32>::max();
-    bool operator==(const PlanSegmentInstanceId & other) const
+    bool operator==(const PlanSegmentInstanceID & other) const
     {
         return segment_id == other.segment_id && parallel_index == other.parallel_index;
     }
-    bool operator<(const PlanSegmentInstanceId & other) const
+    bool operator<(const PlanSegmentInstanceID & other) const
     {
         if (segment_id < other.segment_id)
             return true;
@@ -63,12 +62,24 @@ class PlanSegment;
 struct PlanSegmentExecutionInfo
 {
     UInt32 parallel_id = std::numeric_limits<UInt32>::max();
-    AddressInfo execution_address;
+    AddressInfoPtr execution_address;
     SourceTaskFilter source_task_filter;
     UInt32 attempt_id = std::numeric_limits<UInt32>::max();
-    std::unordered_map<UInt64, std::vector<PlanSegmentMultiPartitionSource>> sources;
+    std::unordered_map<UInt64, std::vector<PlanSegmentPartitionSource>> sources;
     UInt32 worker_epoch{0};
 };
+
+struct PlanSegmentsStatus
+{
+    //TODO dongyifeng add when PlanSegmentInfo is merged
+    std::atomic<bool> is_final_stage_start{false};
+    std::atomic<bool> is_cancel{false};
+    Int32 error_code;
+    String exception;
+    PlanSegmentExecutionInfo final_execution_info;
+};
+
+using PlanSegmentsStatusPtr = std::shared_ptr<PlanSegmentsStatus>;
 
 struct PlanSegmentInstance
 {
@@ -80,9 +91,9 @@ using PlanSegmentInstancePtr = std::unique_ptr<PlanSegmentInstance>;
 }
 
 template <>
-struct std::hash<DB::PlanSegmentInstanceId>
+struct std::hash<DB::PlanSegmentInstanceID>
 {
-    std::size_t operator()(const DB::PlanSegmentInstanceId & id) const
+    std::size_t operator()(const DB::PlanSegmentInstanceID & id) const
     {
         return (static_cast<size_t>(id.segment_id) << 32ULL) ^ id.parallel_index;
     }

@@ -1,32 +1,30 @@
 #pragma once
-
-#include <Common/Logger.h>
-#include <memory>
-#include <unordered_map>
-#include <utility>
 #include <vector>
+#include <unordered_map>
+#include <base/types.h>
+#include <Common/logger_useful.h>
 #include <IO/Progress.h>
 #include <Interpreters/Context_fwd.h>
 #include <Interpreters/QueryLog.h>
-#include <Query/Executor/AddressInfo.h>
+#include <QueryPipeline/QueryPipeline.h>
+#include <Processors/Executors/PipelineExecutor.h>
+#include <Query/Common/PlanSegmentProfile.h>
+#include <Query/ProtosHelper/QueryProto.h>
+#include <Query/ProtosHelper/AddressInfo.h>
 #include <Query/Executor/PlanSegment.h>
 #include <Query/Executor/PlanSegmentInstance.h>
 #include <Query/Executor/RuntimeSegmentsStatus.h>
-#include <Processors/Executors/PipelineExecutor.h>
-#include <Query/Protos/plan_segment_manager.pb.h>
-
-#include <Interpreters/DistributedStages/PlanSegmentProcessList.h>
-#include <Interpreters/profile/PlanSegmentProfile.h>
-#include <Processors/Exchange/DataTrans/DataTrans_fwd.h>
-#include <Processors/Exchange/ExchangeOptions.h>
-#include <Processors/QueryPipeline.h>
-#include <Poco/Logger.h>
-#include <common/types.h>
+#include <Query/Executor/PlanSegmentProcessList.h>
+#include <Query/Exchange/DataTrans/DataTrans_fwd.h>
+#include <Query/Exchange/ExchangeUtils.h>
 
 namespace DB
 {
 class ThreadGroupStatus;
 struct BlockIO;
+
+class QueryPipeline;
+using QueryPipelinePtr = std::unique_ptr<QueryPipeline>;
 
 struct SenderMetrics
 {
@@ -50,9 +48,9 @@ public:
 
     struct ExecutionResult
     {
-        AddressInfo coordinator_address;
+        AddressInfoPtr coordinator_address;
         RuntimeSegmentStatus runtime_segment_status;
-        Protos::SenderMetrics sender_metrics;
+        RSenderMetrics sender_metrics;
         PlanSegmentProfilePtr segment_profile;
     };
     std::optional<ExecutionResult> execute();
@@ -69,6 +67,7 @@ private:
     PlanSegmentProcessList::EntryPtr process_plan_segment_entry;
 
     ContextMutablePtr context;
+    OptimizerContextPtr optimizer_context;
     PlanSegmentInstancePtr plan_segment_instance;
     PlanSegment * plan_segment;
     PlanSegmentOutputs plan_segment_outputs;

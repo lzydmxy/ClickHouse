@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Protos/plan_segment_manager.pb.h>
-#include <common/types.h>
+#include <Query/ProtosHelper/QueryProto.h>
+#include <base/types.h>
 
 namespace DB
 {
@@ -13,13 +13,13 @@ namespace Protos
 struct RuntimeSegmentsMetrics
 {
     UInt64 cpu_micros;
-    Protos::Progress final_progress;
+    RProgress final_progress;
 
     RuntimeSegmentsMetrics() : cpu_micros(0)
     {
     }
 
-    explicit RuntimeSegmentsMetrics(const Protos::RuntimeSegmentsMetrics & metrics_)
+    explicit RuntimeSegmentsMetrics(const RRuntimeSegmentsMetrics & metrics_)
     {
         cpu_micros = metrics_.cpu_micros();
         if (metrics_.has_progress())
@@ -28,7 +28,7 @@ struct RuntimeSegmentsMetrics
         }
     }
 
-    void setProtos(Protos::RuntimeSegmentsMetrics & metrics_) const
+    void setProtos(RRuntimeSegmentsMetrics & metrics_) const
     {
         metrics_.set_cpu_micros(cpu_micros);
         *metrics_.mutable_progress() = final_progress;
@@ -47,4 +47,5 @@ struct RuntimeSegmentStatus
     String message;
     int32_t code{0};
 };
+
 }

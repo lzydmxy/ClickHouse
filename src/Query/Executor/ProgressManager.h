@@ -1,16 +1,15 @@
 #pragma once
-
-#include <Common/Logger.h>
 #include <condition_variable>
-#include <memory>
-#include <IO/Progress.h>
-#include <Query/Executor/PlanSegmentInstance.h>
-#include <bthread/mutex.h>
+#include <mutex>
 #include <Poco/Logger.h>
 #include <Common/ThreadPool.h>
+#include <IO/Progress.h>
+#include <Query/Executor/PlanSegmentInstance.h>
 
 namespace DB
 {
+
+
 
 // send progress repeatedly
 class TCPProgressSender
@@ -32,7 +31,8 @@ private:
 class ProgressManager
 {
 public:
-    explicit ProgressManager(const String & query_id_) : log(getLogger("ProgressManager")), query_id(query_id_)
+    explicit ProgressManager(const String & query_id_) 
+        : log(getLogger("ProgressManager")), query_id(query_id_)
     {
     }
     /// normal progress received from sendProgress rpc
@@ -57,10 +57,10 @@ private:
         Progress final_progress;
         bool is_final = false;
     };
-    std::unordered_map<PlanSegmentInstanceId, SegmentProgress> segment_progress;
-    mutable bthread::Mutex segment_progress_mutex;
+    std::unordered_map<PlanSegmentInstanceID, SegmentProgress> segment_progress;
+    mutable std::mutex segment_progress_mutex;
     ProgressCallback progress_callback = nullptr;
 
-    Progress getFinalProgressDiff(PlanSegmentInstanceId instance_id) const;
+    Progress getFinalProgressDiff(PlanSegmentInstanceID instance_id) const;
 };
 }

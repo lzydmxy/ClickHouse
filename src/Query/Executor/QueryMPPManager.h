@@ -1,22 +1,14 @@
 #pragma once
 
-#include <Common/Logger.h>
-#include <memory>
 #include <mutex>
-#include <optional>
 #include <unordered_map>
-#include <vector>
+#include <Common/logger_useful.h>
+#include <base/types.h>
 #include <Interpreters/Context_fwd.h>
-#include <Poco/Logger.h>
-#include <common/types.h>
-#include <bthread/mutex.h>
+#include <Query/Executor/QueryMPPCoordinator.h>
 
 namespace DB
 {
-
-class QueryMPPCoordinator;
-using CoordinatorWeakPtr = std::weak_ptr<QueryMPPCoordinator>;
-using CoordinatorMap = std::unordered_map<String, CoorinatorWeakPtr>;
 
 class QueryMPPManager
 {

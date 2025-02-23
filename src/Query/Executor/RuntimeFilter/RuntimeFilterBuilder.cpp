@@ -1,28 +1,27 @@
-#include <AggregateFunctions/AggregateFunctionFactory.h>
-#include <DataStreams/IBlockInputStream.h>
-#include <DataTypes/DataTypeNullable.h>
-#include <Interpreters/RuntimeFilter/RuntimeFilterBuilder.h>
-#include <Parsers/ASTIdentifier.h>
-#include <Protos/plan_node_utils.pb.h>
-#include <QueryPlan/Assignment.h>
-#include <QueryPlan/IQueryPlanStep.h>
-#include <QueryPlan/PlanSerDerHelper.h>
-#include <Common/assert_cast.h>
+#include "RuntimeFilterBuilder.h"
+
+// #include <AggregateFunctions/AggregateFunctionFactory.h>
+// #include <DataStreams/IBlockInputStream.h>
+// #include <DataTypes/DataTypeNullable.h>
+// #include <Interpreters/RuntimeFilter/RuntimeFilterBuilder.h>
+// #include <Parsers/ASTIdentifier.h>
+// #include <Query/Protos/plan_node.pb.h>
+// #include <QueryPlan/Assignment.h>
+// #include <QueryPlan/IQueryPlanStep.h>
+// #include <QueryPlan/PlanSerDerHelper.h>
+// #include <Common/assert_cast.h>
 
 namespace DB
 {
 
-String distributionToString(RuntimeFilterDistribution distribution)
+String distributionToString(RRuntimeFilter::Enum distribution)
 {
-    switch (distribution)
-    {
-        case RuntimeFilterDistribution::LOCAL:
-            return "Local";
-        case RuntimeFilterDistribution::DISTRIBUTED:
-            return "Distributed";
-        default:
-            return "UNKNOWN";
-    }
+    if (distribution == RRuntimeFilter::LOCAL)
+        return "Local";
+    else if (distribution == RuntimeFilter::DISTRIBUTED)
+        return "Distributed";
+    else
+        return "UNKNOWN";
 }
 
 String bypassTypeToString(BypassType type)
@@ -41,7 +40,7 @@ String bypassTypeToString(BypassType type)
 }
 
 
-RuntimeFilterBuilder::RuntimeFilterBuilder(const Settings & settings, const LinkedHashMap<String, RuntimeFilterBuildInfos> & runtime_filters_)
+RuntimeFilterBuilder::RuntimeFilterBuilder(const Settings & settings, const LinkedHashMap<String, RuntimeFilter> & runtime_filters_)
     : runtime_filters(runtime_filters_)
     , enable_range_cover(settings.enable_range_cover)
 {
@@ -173,7 +172,7 @@ std::unordered_map<RuntimeFilterId, InternalDynamicData> RuntimeFilterBuilder::e
     {
         for (const auto & rf : runtime_filters)
         {
-            if (rf.second.distribution != RuntimeFilterDistribution::DISTRIBUTED)
+            if (rf.second.distribution != RRuntimeFilter::DISTRIBUTED)
                 continue;
             InternalDynamicData d;
             d.bypass = BypassType::BYPASS_LARGE_HT;
@@ -187,7 +186,7 @@ std::unordered_map<RuntimeFilterId, InternalDynamicData> RuntimeFilterBuilder::e
     {
         for (const auto & rf : runtime_filters)
         {
-            if (rf.second.distribution != RuntimeFilterDistribution::DISTRIBUTED)
+            if (rf.second.distribution != RRuntimeFilter::DISTRIBUTED)
                 continue;
             InternalDynamicData d;
             d.bypass = BypassType::BYPASS_EMPTY_HT;
@@ -201,7 +200,7 @@ std::unordered_map<RuntimeFilterId, InternalDynamicData> RuntimeFilterBuilder::e
 
     for (const auto & runtime_filter : runtime_filters)
     {
-        if (runtime_filter.second.distribution != RuntimeFilterDistribution::DISTRIBUTED)
+        if (runtime_filter.second.distribution != RRuntimeFilter::DISTRIBUTED)
             continue;
 
         auto id = runtime_filter.second.id;
@@ -349,16 +348,17 @@ String RuntimeFilterData::dump() const
     return "total rfs:" +  std::to_string(runtime_filters.size());
 }
 
-void RuntimeFilterBuildInfos::toProto(Protos::RuntimeFilterBuildInfos & proto) const
+void RuntimeFilter::toProto(RRuntimeFilter & proto) const
 {
     proto.set_id(id);
-    proto.set_distribution(RuntimeFilterDistributionConverter::toProto(distribution));
+    proto.set_distribution(distribution);
 }
 
-RuntimeFilterBuildInfos RuntimeFilterBuildInfos::fromProto(const Protos::RuntimeFilterBuildInfos & proto)
+RuntimeFilter RuntimeFilter::fromProto(const RRuntimeFilter & proto)
 {
     auto id = proto.id();
-    auto distribution = RuntimeFilterDistributionConverter::fromProto(proto.distribution());
-    return RuntimeFilterBuildInfos(id, distribution);
+    auto distribution = proto.distribution();
+    return RuntimeFilter(id, distribution);
 }
+
 }

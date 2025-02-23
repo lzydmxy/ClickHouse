@@ -6,15 +6,13 @@
 #include <IO/WriteHelpers.h>
 #include <Interpreters/Aggregator.h>
 #include <Interpreters/Context.h>
-#include <Interpreters/DistributedStages/AddressInfo.h>
+#include <Query/ProtosHelper/QueryProto.h>
+#include <Query/ProtosHelper/AddressInfo.h>
 #include <Interpreters/ExpressionActions.h>
-#include <Interpreters/RuntimeFilter/RuntimeFilterTypes.h>
+#include <Query/Executor/RuntimeFilter/RuntimeFilterTypes.h>
 #include <Parsers/IAST.h>
-#include <Protos/enum.pb.h>
-#include <Common/LinkedHashMap.h>
-#include <common/logger_useful.h>
-#include "Protos/EnumMacros.h"
-#include <bthread/shared_mutex.h>
+#include <Query/Common/LinkedHashMap.h>
+#include <Common/logger_useful.h>
 
 namespace DB
 {
@@ -22,17 +20,7 @@ using RuntimeFilterId = UInt32;
 using BloomFilterWithRangePtr = std::shared_ptr<BloomFilterWithRange>;
 using ValueSetWithRangePtr = std::shared_ptr<ValueSetWithRange>;
 
-namespace Protos
-{
-    class RuntimeFilterBuildInfos;
-}
-
-ENUM_WITH_PROTO_CONVERTER(
-    RuntimeFilterDistribution, // enum name
-    Protos::RuntimeFilterDistribution, // proto enum message
-    (LOCAL),
-    (DISTRIBUTED),
-    (UNKNOWN));
+String distributionToString(RRuntimeFilter::Enum distribution);
 
 enum class BypassType : UInt8
 {
@@ -40,8 +28,6 @@ enum class BypassType : UInt8
     BYPASS_EMPTY_HT, /// Empty right table, which can short circuit the left table scan
     BYPASS_LARGE_HT, /// Too large to build runtime filter, same as the runtime filter abort
 };
-
-String distributionToString(RuntimeFilterDistribution distribution);
 String bypassTypeToString(BypassType type);
 
 struct InternalDynamicData
@@ -57,14 +43,13 @@ struct InternalDynamicData
     }
 };
 
-struct RuntimeFilterBuildInfos
+struct RuntimeFilter
 {
     RuntimeFilterId id;
-    RuntimeFilterDistribution distribution;
-
-    void toProto(Protos::RuntimeFilterBuildInfos & proto) const;
-    static RuntimeFilterBuildInfos fromProto(const Protos::RuntimeFilterBuildInfos & proto);
-    RuntimeFilterBuildInfos(RuntimeFilterId id_, RuntimeFilterDistribution distribution_) : id(id_), distribution(distribution_) { }
+    RRuntimeFilter::Enum distribution;
+    void toProto(RRuntimeFilter & proto) const;
+    static RuntimeFilter fromProto(const RRuntimeFilter & proto);
+    RuntimeFilter(RuntimeFilterId id_, RRuntimeFilter::Enum distribution_) : id(id_), distribution(distribution_) { }
 };
 
 struct RuntimeFilterVal
@@ -93,12 +78,12 @@ struct RuntimeFilterData
 
 struct DynamicData
 {
-    DynamicData() :bf_mutex(std::make_shared<bthread::SharedMutex>()) {
+    DynamicData() :bf_mutex(std::make_shared<std::shared_mutex>()) {
     }
     BypassType bypass = BypassType::NO_BYPASS;
     bool is_local = false;
     std::variant<RuntimeFilterVal, InternalDynamicData> data;
-    std::shared_ptr<bthread::SharedMutex> bf_mutex;
+    std::shared_ptr<std::shared_mutex> bf_mutex;
     BloomFilterWithRangePtr bf;
     String dump()
     {
@@ -131,13 +116,13 @@ using RuntimeFilterBuilderPtr = std::shared_ptr<RuntimeFilterBuilder>;
 class RuntimeFilterBuilder
 {
 public:
-    explicit RuntimeFilterBuilder(const Settings & settings, const LinkedHashMap<String, RuntimeFilterBuildInfos> & runtime_filters_);
+    explicit RuntimeFilterBuilder(const Settings & settings, const LinkedHashMap<String, RuntimeFilter> & runtime_filters_);
 
     UInt32 getId() const { return builder_id; }
 
-    const LinkedHashMap<String, RuntimeFilterBuildInfos> & getRuntimeFilters() const { return runtime_filters; }
+    const LinkedHashMap<String, RuntimeFilter> & getRuntimeFilters() const { return runtime_filters; }
     bool isLocal(const String & name) {
-        return runtime_filters.at(name).distribution == RuntimeFilterDistribution::LOCAL;
+        return runtime_filters.at(name).distribution == RRuntimeFilter::LOCAL;
     }
 
     RuntimeFilterData merge(std::map<UInt32, RuntimeFilterData> && data_sets) const;
@@ -147,7 +132,7 @@ private:
     /**
      * Meta
      */
-    LinkedHashMap<String, RuntimeFilterBuildInfos> runtime_filters;
+    LinkedHashMap<String, RuntimeFilter> runtime_filters;
     UInt32 builder_id;
     bool enable_range_cover = false;
 };

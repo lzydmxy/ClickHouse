@@ -5,7 +5,7 @@
 #include <Protos/runtime_filter.pb.h>
 #include <brpc/server.h>
 #include <brpc/stream.h>
-#include <Common/Brpc/BrpcServiceDefines.h>
+#include <Query/Exchange/bRPC/BrpcServiceDefines.h>
 
 namespace DB
 {

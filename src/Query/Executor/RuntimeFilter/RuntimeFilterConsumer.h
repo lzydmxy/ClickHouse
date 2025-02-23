@@ -1,8 +1,7 @@
 #pragma once
-#include <Common/Logger.h>
-#include <Common/LinkedHashMap.h>
+#include <Common/logger_useful.h>
+#include <Query/Common/LinkedHashMap.h>
 #include <Processors/ISimpleTransform.h>
-#include <common/logger_useful.h>
 #include <Interpreters/RuntimeFilter/RuntimeFilterBuilder.h>
 
 namespace DB
@@ -19,7 +18,7 @@ public:
         AddressInfo coordinator_address_,
         UInt32 parallel_id_);
 
-    const LinkedHashMap<String, RuntimeFilterBuildInfos> & getRuntimeFilters() const { return builder->getRuntimeFilters(); }
+    const LinkedHashMap<String, RuntimeFilter> & getRuntimeFilters() const { return builder->getRuntimeFilters(); }
     void addFinishRF(BloomFilterWithRangePtr && bf_ptr, RuntimeFilterId  id, bool is_local);
     void addFinishRF(ValueSetWithRangePtr && vs_ptr, RuntimeFilterId id, bool is_local);
     void bypass(BypassType type);
@@ -69,7 +68,7 @@ private:
     const AddressInfo coordinator_address;
     const UInt32 parallel_id;
 
-    bthread::Mutex mutex;
+    std::mutex mutex;
     RuntimeFilterData global_rf_data;
     std::vector<const BlocksList *> build_params_blocks;
     std::atomic_size_t ht_sizes = 0;

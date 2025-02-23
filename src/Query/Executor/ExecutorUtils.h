@@ -3,6 +3,7 @@
 #include <memory>
 #include <fmt/core.h>
 #include <fmt/format.h>
+#include <Query/Common/OptimizerContext.h>
 
 namespace DB
 {
@@ -13,7 +14,7 @@ namespace ErrorCodes
     extern const int EXCHANGE_DATA_TRANS_EXCEPTION;
 }
 
-enum class MPPQueryStatusCode
+enum class QueryMPPStatusCode
 {
     INIT = 0,
     // REGISTER,
@@ -27,16 +28,12 @@ enum class MPPQueryStatusCode
 
 struct QueryError
 {
-    Int32 code;
+    Int32 code{0};
     String message;
-    String host_name;
-    UInt16 tcp_port;
-    UInt16 exchange_status_port;
-    Int32 segment_id;
-    // TODO
-
-    // UInt32 instance_id;
-    // UInt32 attempt_id;
+    String host_name{""};
+    UInt16 tcp_port{0};
+    UInt16 exchange_status_port{0};
+    Int32 segment_id{0};
 };
 
 constexpr bool isAmbiguosError(int error_code)
@@ -44,12 +41,12 @@ constexpr bool isAmbiguosError(int error_code)
     return error_code == ErrorCodes::QUERY_WAS_CANCELLED_INTERNAL || error_code == ErrorCodes::EXCHANGE_DATA_TRANS_EXCEPTION;
 }
 
-struct MPPQueryStatus
+struct QueryMPPStatus
 {
-    std::atomic<MPPQueryStatusCode> status_code {MPPQueryStatusCode::INIT};
+    std::atomic<QueryMPPStatusCode> status_code {QueryMPPStatusCode::INIT};
     bool success {false};
     bool cancelled {false};
-    QueryError root_cause_error{.code = 0};
+    QueryError root_cause_error;
     std::list<QueryError> additional_errors;
 };
 
@@ -58,7 +55,7 @@ struct SummarizedQueryStatus
     bool success {false};
     bool cancelled {false};
     Int32 error_code {0};
-    String summarized_error_msg;
+    String summarized_error_msg{""};
 };
 
 }

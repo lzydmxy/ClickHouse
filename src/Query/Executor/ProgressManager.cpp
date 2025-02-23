@@ -1,11 +1,10 @@
+#include "ProgressManager.h"
+
 #include <chrono>
-#include <memory>
-#include <mutex>
-#include <Query/Executor/ProgressManager.h>
-#include <Poco/Logger.h>
 #include <Common/ThreadPool.h>
-#include <common/logger_useful.h>
-#include <common/sleep.h>
+#include <Common/logger_useful.h>
+#include <base/sleep.h>
+#include <Query/ProtosHelper/ProgressHelper.h>
 
 namespace DB
 {
@@ -43,7 +42,7 @@ TCPProgressSender::~TCPProgressSender()
 void ProgressManager::onProgress(UInt32 segment_id, UInt32 parallel_index, const Progress & progress_)
 {
     std::unique_lock lock(segment_progress_mutex);
-    auto instance_id = PlanSegmentInstanceId{segment_id, parallel_index};
+    auto instance_id = PlanSegmentInstanceID{segment_id, parallel_index};
     auto & p = segment_progress[instance_id];
     if (!p.is_final) /// if final progress has been accepted, ignore normal progress
     {
@@ -56,7 +55,7 @@ void ProgressManager::onProgress(UInt32 segment_id, UInt32 parallel_index, const
 
 void ProgressManager::onFinalProgress(UInt32 segment_id, UInt32 parallel_index, const Progress & progress_)
 {
-    auto instance_id = PlanSegmentInstanceId{segment_id, parallel_index};
+    auto instance_id = PlanSegmentInstanceID{segment_id, parallel_index};
     {
         std::unique_lock lock(segment_progress_mutex);
         auto & p = segment_progress[instance_id];
@@ -72,10 +71,12 @@ void ProgressManager::onFinalProgress(UInt32 segment_id, UInt32 parallel_index, 
         query_id,
         instance_id.segment_id,
         instance_id.parallel_index,
-        progress_.getValues().toString());
+        // TODO: Add ProgressValues toString
+        //progress_.getValues().toString());
+        "");
 }
 
-Progress ProgressManager::getFinalProgressDiff(PlanSegmentInstanceId instance_id) const
+Progress ProgressManager::getFinalProgressDiff(PlanSegmentInstanceID instance_id) const
 {
     ProgressValues diff;
     {
@@ -88,18 +89,18 @@ Progress ProgressManager::getFinalProgressDiff(PlanSegmentInstanceId instance_id
             past_progress.incrementPiecewiseAtomically(iter->second.progress);
             auto final_v = final_progress.getValues();
             auto past_v = past_progress.getValues();
-            diff = final_v - past_v;
-            if (past_v + diff != final_v)
+            diff = ProgressHelper::reduce(final_v, past_v);
+            if (!ProgressHelper::equals(ProgressHelper::add(past_v, diff), final_v))
                 LOG_WARNING(
                     log,
                     "final progress seems wrong for query_id:{} final_progress:{} is expected to >= past_progress:{} the diff is:{}",
                     query_id,
-                    final_v.toString(),
-                    past_v.toString(),
-                    diff.toString());
+                    ProgressHelper::toString(final_v),
+                    ProgressHelper::toString(past_v),
+                    ProgressHelper::toString(diff));
         }
     }
-    Progress final_progress_diff(diff);
+    Progress final_progress_diff(diff.read_rows, diff.read_bytes, diff.total_rows_to_read, diff.total_bytes_to_read);
     return final_progress_diff;
 }
 

@@ -1,71 +1,33 @@
-#include <cstddef>
-#include <exception>
-#include <memory>
-#include <vector>
+#include "PlanSegmentExecutor.h"
+#include <base/types.h>
+#include <base/time.h>
+#include <Common/MemoryTracker.h>
+#include <Common/logger_useful.h>
 #include <QueryPipeline/BlockIO.h>
 #include <Interpreters/Context.h>
-#include <Interpreters/Context_fwd.h>
-#include <Query/Executor/ExchangeMode.h>
-#include <Query/Executor/PlanSegment.h>
-#include <Query/Executor/PlanSegmentExecutor.h>
-#include <Query/Executor/PlanSegmentInstance.h>
-
-#include <Interpreters/DistributedStages/PlanSegmentProcessList.h>
-#include <Interpreters/DistributedStages/PlanSegmentReport.h>
 #include <Interpreters/ProcessList.h>
-#include <Interpreters/ProcessorProfile.h>
 #include <Interpreters/ProcessorsProfileLog.h>
-#include <Interpreters/RuntimeFilter/RuntimeFilterManager.h>
-#include <Interpreters/executeQueryHelper.h>
-#include <Interpreters/sendPlanSegment.h>
-#include <Optimizer/Signature/PlanSegmentNormalizer.h>
-#include <Optimizer/Signature/PlanSignature.h>
-#include <Processors/Exchange/BroadcastExchangeSink.h>
-#include <Processors/Exchange/DataTrans/Batch/Writer/DiskPartitionWriter.h>
-#include <Processors/Exchange/DataTrans/BroadcastSenderProxy.h>
-#include <Processors/Exchange/DataTrans/BroadcastSenderProxyRegistry.h>
-#include <Processors/Exchange/DataTrans/Brpc/AsyncRegisterResult.h>
-#include <Processors/Exchange/DataTrans/Brpc/BrpcRemoteBroadcastReceiver.h>
-#include <Processors/Exchange/DataTrans/DataTrans_fwd.h>
-#include <Processors/Exchange/DataTrans/Local/LocalBroadcastChannel.h>
-#include <Processors/Exchange/DataTrans/Local/LocalChannelOptions.h>
-#include <Processors/Exchange/DataTrans/MultiPathReceiver.h>
-#include <Processors/Exchange/DataTrans/RpcChannelPool.h>
-#include <Processors/Exchange/DataTrans/RpcClient.h>
-#include <Processors/Exchange/ExchangeDataKey.h>
-#include <Processors/Exchange/ExchangeOptions.h>
-#include <Processors/Exchange/ExchangeSource.h>
-#include <Processors/Exchange/ExchangeUtils.h>
-#include <Processors/Exchange/LoadBalancedExchangeSink.h>
-#include <Processors/Exchange/MultiPartitionExchangeSink.h>
-#include <Processors/Exchange/RepartitionTransform.h>
-#include <Processors/Exchange/SinglePartitionExchangeSink.h>
-#include <Processors/Executors/ExecutingGraph.h>
+#include <QueryPipeline/QueryPipelineBuilder.h>
+#include <Processors/ResizeProcessor.h>
+#include <Processors/QueryPlan/BuildQueryPipelineSettings.h>
+#include <Processors/Transforms/CopyTransform.h>
 #include <Processors/Executors/PipelineExecutor.h>
 #include <Processors/Executors/PullingAsyncPipelineExecutor.h>
-#include <Processors/ResizeProcessor.h>
-#include <Processors/Transforms/BufferedCopyTransform.h>
-#include <Processors/Transforms/CopyTransform.h>
-#include <Protos/plan_segment_manager.pb.h>
-#include <Protos/registry.pb.h>
-#include <QueryPlan/BuildQueryPipelineSettings.h>
-#include <QueryPlan/GraphvizPrinter.h>
-#include <QueryPlan/Optimizations/QueryPlanOptimizationSettings.h>
-#include <QueryPlan/PlanPrinter.h>
-#include <QueryPlan/QueryPlan.h>
-#include <brpc/callback.h>
-#include <fmt/core.h>
-#include <incubator-brpc/src/brpc/controller.h>
-#include <Poco/Logger.h>
-#include <Common/Brpc/BrpcChannelPoolOptions.h>
-#include <Common/CurrentThread.h>
-#include <Common/Exception.h>
-#include <Common/ThreadStatus.h>
-#include <Common/time.h>
-#include <common/defines.h>
-#include <common/logger_useful.h>
-#include <common/scope_guard_safe.h>
-#include <common/types.h>
+#include <Processors/QueryPlan/Optimizations/QueryPlanOptimizationSettings.h>
+#include <Query/Common/OptimizerContext.h>
+#include <Query/Transforms/BufferedCopyTransform.h>
+#include <Query/Exchange/DataTrans/IBroadcastSender.h>
+#include <Query/Exchange/RpcChannelPool.h>
+#include <Query/Exchange/ExchangeUtils.h>
+#include <Query/Exchange/DataTrans/BroadcastSenderProxy.h>
+#include <Query/Exchange/DataTrans/BroadcastSenderProxyRegistry.h>
+#include <Query/Exchange/RepartitionTransform.h>
+#include <Query/Exchange/SinglePartitionExchangeSink.h>
+#include <Query/Exchange/MultiPartitionExchangeSink.h>
+#include <Query/Exchange/BroadcastExchangeSink.h>
+#include <Query/Exchange/LoadBalancedExchangeSink.h>
+#include <Query/Executor/PlanSegmentReport.h>
+#include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
 
 namespace ProfileEvents
 {
@@ -87,24 +49,42 @@ namespace ErrorCodes
     extern const int BSP_WRITE_DATA_FAILED;
 }
 
+/// Call this inside catch block.
+void setExceptionStackTrace(QueryLogElement & elem)
+{
+    LockMemoryExceptionInThread lock(VariableContext::Global);
+    try
+    {
+        throw;
+    }
+    catch (const std::exception & e)
+    {
+        elem.stack_trace = getExceptionStackTraceString(e);
+    }
+    catch (...)
+    {
+    }
+}
+
 void PlanSegmentExecutor::prepareSegmentInfo() const
 {
     query_log_element->client_info = context->getClientInfo();
-    query_log_element->segment_id = plan_segment->getPlanSegmentId();
-    query_log_element->segment_parallel = plan_segment->getParallelSize();
-    query_log_element->segment_parallel_index = plan_segment_instance->info.parallel_id;
+    // query_log_element->segment_id = plan_segment->getPlanSegmentId();
+    // query_log_element->segment_parallel = plan_segment->getParallelSize();
+    // query_log_element->segment_parallel_index = plan_segment_instance->info.parallel_id;
     query_log_element->type = QueryLogElementType::QUERY_START;
-    const auto current_time = std::chrono::system_clock::now();
-    query_log_element->event_time = time_in_seconds(current_time);
-    query_log_element->event_time_microseconds = time_in_microseconds(current_time);
-    query_log_element->query_start_time = time_in_seconds(current_time);
-    query_log_element->query_start_time_microseconds = time_in_microseconds(current_time);
+    const auto time_now = std::chrono::system_clock::now();
+    query_log_element->event_time = timeInSeconds(time_now);
+    query_log_element->event_time_microseconds = timeInMicroseconds(time_now);
+    query_log_element->query_start_time = query_log_element->event_time;
+    query_log_element->query_start_time_microseconds = query_log_element->event_time_microseconds;
 }
 
 PlanSegmentExecutor::PlanSegmentExecutor(
     PlanSegmentInstancePtr plan_segment_instance_, ContextMutablePtr context_, PlanSegmentProcessList::EntryPtr process_plan_segment_entry_)
     : process_plan_segment_entry(std::move(process_plan_segment_entry_))
     , context(std::move(context_))
+    , optimizer_context(context->getOptimizerContext())
     , plan_segment_instance(std::move(plan_segment_instance_))
     , plan_segment(plan_segment_instance->plan_segment.get())
     , plan_segment_outputs(plan_segment_instance->plan_segment->getPlanSegmentOutputs())
@@ -147,12 +127,8 @@ PlanSegmentExecutor::~PlanSegmentExecutor() noexcept
     }
     catch (...)
     {
-        LOG_ERROR(
-            logger,
-            "QueryLogElement:[query_id-{}, segment_id-{}, segment_parallel_index-{}] save to table fail with exception:{}",
+        LOG_ERROR(logger, "QueryLogElement:[query_id-{}] save to table fail with exception:{}",
             query_log_element->client_info.initial_query_id,
-            query_log_element->segment_id,
-            query_log_element->segment_parallel_index,
             getCurrentExceptionCode());
     }
 
@@ -162,23 +138,23 @@ PlanSegmentExecutor::~PlanSegmentExecutor() noexcept
 
 std::optional<PlanSegmentExecutor::ExecutionResult> PlanSegmentExecutor::execute()
 {
-    LOG_DEBUG(logger, "execute PlanSegment:\n" + plan_segment->toString());
+    LOG_DEBUG(logger, "execute PlanSegment: {}", plan_segment->toString());
     try
     {
-        if (context->getSettingsRef().log_normalized_query_plan_hash)
-        {
-            auto logical_plan = generatePlanSegmentPlanHash(plan_segment, context);
-            LOG_TRACE(logger, "Logical plan is {}", logical_plan);
-            query_log_element->normalized_query_plan_hash = std::hash<std::string>()(logical_plan);
-        }
+        // if (context->getSettingsRef().log_normalized_query_plan_hash)
+        // {
+        //     auto logical_plan = generatePlanSegmentPlanHash(plan_segment, context);
+        //     LOG_TRACE(logger, "Logical plan is {}", logical_plan);
+        //     query_log_element->normalized_query_plan_hash = std::hash<std::string>()(logical_plan);
+        // }
 
-        context->initPlanSegmentExHandler();
+        context->getOptimizerContext()->initExceptionHandler();
         doExecute();
 
         query_log_element->type = QueryLogElementType::QUERY_FINISH;
         const auto finish_time = std::chrono::system_clock::now();
-        query_log_element->event_time = time_in_seconds(finish_time);
-        query_log_element->event_time_microseconds = time_in_microseconds(finish_time);
+        query_log_element->event_time = timeInSeconds(finish_time);
+        query_log_element->event_time_microseconds = timeInMicroseconds(finish_time);;
 
         return convertSuccessPlanSegmentStatusToResult(
             context, plan_segment_instance->info, final_progress, sender_metrics, plan_segment_outputs, segment_profile);
@@ -194,8 +170,8 @@ std::optional<PlanSegmentExecutor::ExecutionResult> PlanSegmentExecutor::execute
         if (context->getSettingsRef().calculate_text_stack_trace && exception_code != ErrorCodes::MEMORY_LIMIT_EXCEEDED)
             setExceptionStackTrace(*query_log_element);
         const auto time_now = std::chrono::system_clock::now();
-        query_log_element->event_time = time_in_seconds(time_now);
-        query_log_element->event_time_microseconds = time_in_microseconds(time_now);
+        query_log_element->event_time = timeInSeconds(time_now);
+        query_log_element->event_time_microseconds = timeInMicroseconds(time_now);
 
         if (exception_code == ErrorCodes::MEMORY_LIMIT_EXCEEDED)
         {
@@ -219,7 +195,7 @@ std::optional<PlanSegmentExecutor::ExecutionResult> PlanSegmentExecutor::execute
                     exception_code));
         }
         /// exception_handler will report failure plan segment status before release
-        auto exception_handler = context->getPlanSegmentExHandler();
+        auto exception_handler = context->getOptimizerContext()->getExceptionHandler();
         if (exception_handler && exception_handler->setException(std::current_exception()))
             return convertFailurePlanSegmentStatusToResult(
                 context,
@@ -239,13 +215,17 @@ BlockIO PlanSegmentExecutor::lazyExecute(bool /*add_output_processors*/)
     BlockIO res;
     // Will run as master query and already initialized
     if (!CurrentThread::get().getQueryContext() || CurrentThread::get().getQueryContext().get() != context.get())
-        throw Exception("context not match", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Context not match");
 
-    res.plan_segment_process_entry = context->getPlanSegmentProcessList().insertGroup(context, plan_segment->getPlanSegmentId());
-    context->getPlanSegmentProcessList().insertProcessList(res.plan_segment_process_entry, plan_segment->getPlanSegmentId(), context);
-
+    //TODO: Need to redesign which class plan_segment_process_entry should be in
+    //res.plan_segment_process_entry = context->getOptimizerContext()->getPlanSegmentProcessList().insertGroup(context, plan_segment->getPlanSegmentId());
+    //context->getOptimizerContext()->getPlanSegmentProcessList().insertProcessList(res.plan_segment_process_entry, plan_segment->getPlanSegmentId(), context);
     // set entry before buildPipeline to control memory usage of exchange queue
-    context->setPlanSegmentProcessListEntry(res.plan_segment_process_entry);
+    //context->getOptimizerContext()->setPlanSegmentProcessListEntry(res.plan_segment_process_entry);
+
+    auto plan_segment_process_entry = context->getOptimizerContext()->getPlanSegmentProcessList()->insertGroup(context, plan_segment->getPlanSegmentId());
+    context->getOptimizerContext()->getPlanSegmentProcessList()->insertProcessList(plan_segment_process_entry, plan_segment->getPlanSegmentId(), context);
+    context->getOptimizerContext()->setPlanSegmentProcessListEntry(plan_segment_process_entry);
     res.pipeline = std::move(*buildPipeline());
     return res;
 }
@@ -257,16 +237,17 @@ void PlanSegmentExecutor::collectSegmentQueryRuntimeMetric(const QueryStatus * q
 
     query_log_element->read_bytes = query_status_info.read_bytes;
     query_log_element->read_rows = query_status_info.read_rows;
-    query_log_element->disk_cache_read_bytes = query_status_info.disk_cache_read_bytes;
+    //query_log_element->disk_cache_read_bytes = query_status_info.disk_cache_read_bytes;
     query_log_element->written_bytes = query_status_info.written_bytes;
     query_log_element->written_rows = query_status_info.written_rows;
     query_log_element->memory_usage = query_status_info.peak_memory_usage > 0 ? query_status_info.peak_memory_usage : 0;
-    query_log_element->query_duration_ms = query_status_info.elapsed_seconds * 1000;
-    query_log_element->max_io_time_thread_ms = query_status_info.max_io_time_thread_ms;
-    query_log_element->max_io_time_thread_name = query_status_info.max_io_time_thread_name;
+    query_log_element->query_duration_ms = query_status_info.elapsed_microseconds;
+    //query_log_element->max_io_time_thread_ms = query_status_info.max_io_time_thread_ms;
+    //query_log_element->max_io_time_thread_name = query_status_info.max_io_time_thread_name;
+    //query_log_element->max_thread_io_profile_counters = query_status_info.max_io_thread_profile_counters;
     query_log_element->thread_ids = std::move(query_status_info.thread_ids);
     query_log_element->profile_counters = query_status_info.profile_counters;
-    query_log_element->max_thread_io_profile_counters = query_status_info.max_io_thread_profile_counters;
+    
 
     query_log_element->query_tables = query_access_info.tables;
 }
@@ -286,51 +267,52 @@ StepProfiles collectStepRuntimeProfiles(const QueryPipelinePtr & pipeline)
 void fillPlanSegmentProfile(
     PlanSegmentProfilePtr & segment_profile,
     const QueryPipelinePtr & pipeline,
-    ReportProfileType type,
+    RReportProfileType::Enum type,
     const QueryStatus * query_status,
     ContextPtr context,
     PlanSegment * plan_segment)
 {
-    AddressInfo current_address = getLocalAddress(*context);
-    segment_profile->worker_address = extractExchangeHostPort(current_address);
+    auto current_address = getLocalAddress(*context);
+    segment_profile->worker_address = extractExchangeHostPort(*current_address);
     if (query_status)
     {
         auto query_status_info = query_status->getInfo(true, context->getSettingsRef().log_profile_events);
         segment_profile->read_bytes = query_status_info.read_bytes;
         segment_profile->read_rows = query_status_info.read_rows;
-        segment_profile->query_duration_ms = query_status_info.elapsed_seconds * 1000;
-        segment_profile->io_wait_ms = query_status_info.max_io_time_thread_ms;
+        segment_profile->query_duration_ms = query_status_info.elapsed_microseconds;
+        //segment_profile->io_wait_ms = query_status_info.max_io_time_thread_ms;
     }
 
-    if (type == ReportProfileType::Unspecified)
+    if (type == RReportProfileType::Unspecified)
         return;
     ProcessorProfiles profiles;
     for (const auto & processor : pipeline->getProcessors())
         profiles.push_back(std::make_shared<ProcessorProfile>(processor.get()));
     GroupedProcessorProfilePtr grouped_profiles = GroupedProcessorProfile::getGroupedProfiles(profiles);
-    if (type == ReportProfileType::QueryPipeline)
+    if (type == RReportProfileType::QueryPipeline)
     {
         auto output_root = GroupedProcessorProfile::getOutputRoot(grouped_profiles);
         segment_profile->profile_root_id = output_root->id;
         segment_profile->profiles = GroupedProcessorProfile::getProfileMetricsFromOutputRoot(output_root);
     }
-    else if (type == ReportProfileType::QueryPlan)
+    else if (type == RReportProfileType::QueryPlan)
     {
         auto step_profile = GroupedProcessorProfile::aggregateOperatorProfileToStepLevel(grouped_profiles);
         for (auto & [step_id, profile] : step_profile)
             segment_profile->profiles.emplace(step_id, profile);
-        auto & plan = plan_segment->getQueryPlan();
-        for (auto & node : plan.getNodes())
-        {
-            if (!node.step->getAttributeDescriptions().empty() && segment_profile->profiles.contains(node.id))
-            {
-                for (auto & att : node.step->getAttributeDescriptions())
-                {
-                    auto attribute_ptr = std::make_shared<RuntimeAttributeDescription>(att.second);
-                    segment_profile->profiles.at(node.id)->attributes.emplace(att.first, attribute_ptr);
-                }
-            }
-        }
+        //TODO: Wait new query plan
+        // auto & plan = plan_segment->getQueryPlan();
+        // for (auto & node : plan.getNodes())
+        // {
+        //     if (!node.step->getAttributeDescriptions().empty() && segment_profile->profiles.contains(node.id))
+        //     {
+        //         for (auto & att : node.step->getAttributeDescriptions())
+        //         {
+        //             auto attribute_ptr = std::make_shared<RuntimeAttributeDescription>(att.second);
+        //             segment_profile->profiles.at(node.id)->attributes.emplace(att.first, attribute_ptr);
+        //         }
+        //     }
+        // }
     }
 }
 
@@ -341,35 +323,18 @@ void PlanSegmentExecutor::doExecute()
             collectSegmentQueryRuntimeMetric(process_plan_segment_entry->getQueryStatus().get());
     });
 
-    context->getPlanSegmentProcessList().insertProcessList(process_plan_segment_entry, plan_segment->getPlanSegmentId(), context);
-    context->setPlanSegmentProcessListEntry(process_plan_segment_entry);
+    context->getOptimizerContext()->getPlanSegmentProcessList()->insertProcessList(process_plan_segment_entry, plan_segment->getPlanSegmentId(), context);
+    context->getOptimizerContext()->setPlanSegmentProcessListEntry(process_plan_segment_entry);
 
-    if (context->getSettingsRef().bsp_mode)
-    {
-        auto query_unique_id = context->getCurrentTransactionID().toUInt64();
-        auto instance_id = context->getPlanSegmentInstanceId();
-        if (!context->getDiskExchangeDataManager()->cleanupPreviousSegmentInstance(query_unique_id, instance_id))
-        {
-            throw Exception(
-                ErrorCodes::BSP_CLEANUP_PREVIOUS_SEGMENT_INSTANCE_FAILED,
-                fmt::format(
-                    "cleanup previous segment instance for query_unique_id:{} segment_id:{} parallel_id:{} failed",
-                    query_unique_id,
-                    plan_segment->getPlanSegmentId(),
-                    plan_segment_instance->info.parallel_id));
-        }
-        CurrentThread::getProfileEvents().increment(ProfileEvents::PlanSegmentInstanceRetry, plan_segment_instance->info.attempt_id);
-    }
-
-    // set process list before building pipeline, or else TableWriteTransform's output stream can't set its process list properly
-    QueryStatus * query_status = process_plan_segment_entry->getQueryStatus().get();
-    context->setProcessListElement(query_status);
+    auto query_status = process_plan_segment_entry->getQueryStatus();
+    context->getOptimizerContext()->setProcessListElement(query_status);
 
     QueryPipelinePtr pipeline;
     BroadcastSenderPtrs senders;
     SCOPE_EXIT({
-        if (pipeline)
-            pipeline->clearUncompletedCache(context);
+        //TODO: Wait pipe line
+        // if (pipeline)
+        //     pipeline->clearUncompletedCache(context);
     });
     buildPipeline(pipeline, senders);
 
@@ -383,7 +348,7 @@ void PlanSegmentExecutor::doExecute()
 
     size_t max_threads = context->getSettingsRef().max_threads;
     if (max_threads)
-        pipeline->setMaxThreads(max_threads);
+        pipeline->setNumThreads(max_threads);
     size_t num_threads = pipeline->getNumThreads();
     LOG_DEBUG(
         logger,
@@ -392,81 +357,49 @@ void PlanSegmentExecutor::doExecute()
         plan_segment->getPlanSegmentId(),
         num_threads);
 
-    PipelineExecutorPtr pipeline_executor;
-    if (!context->getSettingsRef().interactive_delay_optimizer_mode)
+    PullingAsyncPipelineExecutor async_pipeline_executor(*pipeline);
+    Stopwatch after_send_progress;
+    Block block;
+    while (async_pipeline_executor.pull(block, context->getSettingsRef().interactive_delay / 1000))
     {
-        pipeline_executor = pipeline->execute();
-        pipeline_executor->execute(num_threads);
-    }
-    else
-    {
-        PullingAsyncPipelineExecutor async_pipeline_executor(*pipeline);
-        Stopwatch after_send_progress;
-        Block block;
-        while (async_pipeline_executor.pull(block, context->getSettingsRef().interactive_delay_optimizer_mode / 1000))
+        if (after_send_progress.elapsed() / 1000 >= context->getSettingsRef().interactive_delay)
         {
-            if (after_send_progress.elapsed() / 1000 >= context->getSettingsRef().interactive_delay)
-            {
-                /// Some time passed and there is a progress.
-                after_send_progress.restart();
-                sendProgress();
-            }
+            /// Some time passed and there is a progress.
+            after_send_progress.restart();
+            sendProgress();
         }
-        pipeline_executor = async_pipeline_executor.getPipelineExecutor();
     }
-
-    pipeline->setWriteCacheComplete(context);
 
     if (CurrentThread::getGroup())
     {
         metrics.cpu_micros = CurrentThread::getGroup()->performance_counters[ProfileEvents::SystemTimeMicroseconds]
                 + CurrentThread::getGroup()->performance_counters[ProfileEvents::UserTimeMicroseconds];
     }
-    GraphvizPrinter::printPipeline(pipeline_executor->getProcessors(), pipeline_executor->getExecutingGraph(), context, plan_segment->getPlanSegmentId(), extractExchangeHostPort(plan_segment_instance->info.execution_address));
+    //pipeline_executor = async_pipeline_executor.getPipelineExecutor();
+    // GraphvizPrinter::printPipeline(pipeline_executor->getProcessors(), pipeline_executor->getExecutingGraph(), 
+    //     context, plan_segment->getPlanSegmentId(), extractExchangeHostPort(plan_segment_instance->info.execution_address));
     for (const auto & sender : senders)
     {
         auto status = sender->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "Upstream pipeline finished");
         /// bsp mode will fsync data in finish, so we need to check if exception is thrown here.
-        if (context->getSettingsRef().bsp_mode && status.code != BroadcastStatusCode::ALL_SENDERS_DONE)
-            throw Exception(
-                ErrorCodes::BSP_WRITE_DATA_FAILED,
+        if (status.code != BroadcastStatusCode::ALL_SENDERS_DONE)
+            throw Exception(ErrorCodes::BSP_WRITE_DATA_FAILED,
                 "Write data into disk failed in bsp mode, code {}, error message: {}",
-                status.code,
-                status.message);
+                status.code, status.message);
     }
 
-
-    if (context->getSettingsRef().bsp_mode)
+    if (optimizer_context->getSettings()->log_segment_profiles)
     {
-        for (const auto & sender : senders)
-        {
-            // TODO(WangTao): considering merge codition
-            if (const auto sender_proxy = dynamic_pointer_cast<BroadcastSenderProxy>(sender))
-            {
-                const auto & key = sender_proxy->getDataKey();
-                sender_metrics.bytes_sent[key->exchange_id].emplace_back(
-                    key->partition_id, sender_proxy->getSenderMetrics().send_bytes.get_value());
-            }
-            else if (const auto writer = dynamic_pointer_cast<DiskPartitionWriter>(sender))
-            {
-                const auto & key = writer->getKey();
-                sender_metrics.bytes_sent[key->exchange_id].emplace_back(
-                    key->partition_id, writer->getSenderMetrics().send_bytes.get_value());
-            }
-        }
+        //TODO: Need add segment_profiles in QueryLogElement
+        // query_log_element->segment_profiles = std::make_shared<std::vector<String>>();
+        // query_log_element->segment_profiles->emplace_back(
+        //     PlanSegmentDescription::getPlanSegmentDescription(plan_segment_instance->plan_segment, true)
+        //         ->jsonPlanSegmentDescriptionAsString(collectStepRuntimeProfiles(pipeline)));
     }
-
-    if (context->getSettingsRef().log_segment_profiles)
-    {
-        query_log_element->segment_profiles = std::make_shared<std::vector<String>>();
-        query_log_element->segment_profiles->emplace_back(
-            PlanSegmentDescription::getPlanSegmentDescription(plan_segment_instance->plan_segment, true)
-                ->jsonPlanSegmentDescriptionAsString(collectStepRuntimeProfiles(pipeline)));
-    }
-    if (context->getSettingsRef().report_segment_profiles && plan_segment)
+    if (optimizer_context->getSettings()->report_segment_profiles && plan_segment)
     {
         segment_profile = std::make_shared<PlanSegmentProfile>(query_log_element->client_info.initial_query_id, plan_segment->getPlanSegmentId());
-        fillPlanSegmentProfile(segment_profile, pipeline, plan_segment->getProfileType(), query_status, context, plan_segment);
+        fillPlanSegmentProfile(segment_profile, pipeline, plan_segment->getProfileType(), query_status.get(), context, plan_segment);
     }
 
     if (context->getSettingsRef().log_processors_profiles)
@@ -475,62 +408,59 @@ void PlanSegmentExecutor::doExecute()
 
         if (!processors_profile_log)
             return;
-
-        processors_profile_log->addLogs(pipeline.get(),
-                                        context->getClientInfo().initial_query_id,
-                                        std::chrono::system_clock::now(),
-                                        plan_segment->getPlanSegmentId());
+        // processors_profile_log->addLogs(pipeline.get(),
+        //                                 context->getClientInfo().initial_query_id,
+        //                                 std::chrono::system_clock::now(),
+        //                                 plan_segment->getPlanSegmentId());
     }
 }
 
 static QueryPlanOptimizationSettings buildOptimizationSettingsWithCheck(LoggerPtr log, ContextMutablePtr& context)
 {
     QueryPlanOptimizationSettings settings = QueryPlanOptimizationSettings::fromContext(context);
-    if(!settings.enable_optimizer)
-    {
-        LOG_WARNING(log, "enable_optimizer should be true");
-        settings.enable_optimizer = true;
-    }
+    // if(!settings.enable_optimizer)
+    // {
+    //     LOG_WARNING(log, "enable_optimizer should be true");
+    //     settings.enable_optimizer = true;
+    // }
     return settings;
 }
 
 QueryPipelinePtr PlanSegmentExecutor::buildPipeline()
 {
-    QueryPipelinePtr pipeline = plan_segment->getQueryPlan().buildQueryPipeline(
+    // auto builder = plan_segment->getQueryPlan().buildQueryPipeline(
+    //     buildOptimizationSettingsWithCheck(logger, context),
+    //     BuildQueryPipelineSettings::fromPlanSegment(plan_segment, plan_segment_instance->info, context));
+
+    BuildQueryPipelineSettings builder_settings;
+    auto builder = plan_segment->getQueryPlan().buildQueryPipeline(
         buildOptimizationSettingsWithCheck(logger, context),
-        BuildQueryPipelineSettings::fromPlanSegment(plan_segment, plan_segment_instance->info, context));
-    registerAllExchangeReceivers(logger, *pipeline, context->getSettingsRef().exchange_wait_accept_max_timeout_ms);
-    return pipeline;
+        builder_settings);
+    auto pipeline = QueryPipelineBuilder::getPipeline(std::move(*builder));
+    registerAllExchangeReceivers(logger, pipeline, optimizer_context->getSettings()->exchange_wait_accept_max_timeout_ms);
+    return std::unique_ptr<QueryPipeline>(&pipeline);
 }
 
 void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSenderPtrs & senders)
 {
-    UInt64 current_tx_id = context->getCurrentTransactionID().toUInt64();
+    //UInt64 current_tx_id = context->getOptimizerContext()->getCurrentTransactionID().toUInt64();
     std::vector<BroadcastSenderPtrs> senders_list;
-    const auto & settings = context->getSettingsRef();
-    auto disk_exchange_mgr = settings.bsp_mode ? context->getDiskExchangeDataManager() : nullptr; // get around with unittest
+    const auto opt_settings = context->getOptimizerContext()->getSettings();
     auto sender_options
-        = SenderProxyOptions{.wait_timeout_ms = settings.exchange_wait_accept_max_timeout_ms + settings.wait_runtime_filter_timeout};
+        = SenderProxyOptions{.wait_timeout_ms = opt_settings->exchange_wait_accept_max_timeout_ms + opt_settings->wait_runtime_filter_timeout};
     auto & sender_registry = BroadcastSenderProxyRegistry::instance();
     auto thread_group = CurrentThread::getGroup();
-
-    /// need to create directory in bsp_mode before submitting write task
-    if (settings.bsp_mode)
-    {
-        auto coordinator_address = extractExchangeHostPort(plan_segment->getCoordinatorAddress());
-        disk_exchange_mgr->createWriteTaskDirectory(current_tx_id, plan_segment->getQueryId(), coordinator_address);
-    }
 
     for (const auto &cur_plan_segment_output : plan_segment_outputs)
     {
         size_t exchange_parallel_size = cur_plan_segment_output->getExchangeParallelSize();
         size_t parallel_size = cur_plan_segment_output->getParallelSize();
-        ExchangeMode exchange_mode = cur_plan_segment_output->getExchangeMode();
+        auto exchange_mode = cur_plan_segment_output->getExchangeMode();
         size_t exchange_id = cur_plan_segment_output->getExchangeId();
         const Block & header = cur_plan_segment_output->getHeader();
         BroadcastSenderPtrs current_exchange_senders;
 
-        if (exchange_mode == ExchangeMode::BROADCAST)
+        if (exchange_mode == RExchangeMode::BROADCAST)
             exchange_parallel_size = 1;
 
         /// output partitions num = num of plan_segment * exchange size
@@ -544,92 +474,93 @@ void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSe
         size_t total_partition_num = exchange_parallel_size == 0 ? parallel_size : parallel_size * exchange_parallel_size;
 
         if (total_partition_num == 0)
-            throw Exception("Total partition number should not be zero", ErrorCodes::LOGICAL_ERROR);
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "Total partition number should not be zero");
 
+        UInt64 qid = 0;
         for (size_t i = 0; i < total_partition_num; i++)
         {
             size_t partition_id = i;
-            auto data_key = std::make_shared<ExchangeDataKey>(current_tx_id, exchange_id, partition_id);
+            //TODO: create query_unique_id 
+            auto data_key = std::make_shared<ExchangeDataKey>(qid, exchange_id, partition_id);
             BroadcastSenderPtr sender;
-            if (settings.bsp_mode)
-            {
-                data_key->parallel_index = plan_segment_instance->info.parallel_id;
-                auto writer = std::make_shared<DiskPartitionWriter>(context, disk_exchange_mgr, header, data_key);
-                auto instance_id = context->getPlanSegmentInstanceId();
-                disk_exchange_mgr->submitWriteTask(current_tx_id, instance_id, writer, thread_group);
-                sender = writer;
-            }
-            else
-            {
-                auto proxy = sender_registry.getOrCreate(data_key, sender_options);
-                proxy->accept(context, header);
-                sender = proxy;
-            }
+            auto proxy = sender_registry.getOrCreate(data_key, sender_options);
+            proxy->accept(context, header);
+            sender = proxy;
             current_exchange_senders.emplace_back(std::move(sender));
         }
 
         senders_list.emplace_back(std::move(current_exchange_senders));
     }
 
-    pipeline = plan_segment->getQueryPlan().buildQueryPipeline(
+    
+    // pipeline = plan_segment->getQueryPlan().buildQueryPipeline(
+    //     buildOptimizationSettingsWithCheck(logger, context),
+    //     BuildQueryPipelineSettings::fromPlanSegment(plan_segment, plan_segment_instance->info, context)
+    // );
+    //TODO:
+    BuildQueryPipelineSettings build_settings;
+    auto builder = plan_segment->getQueryPlan().buildQueryPipeline(
         buildOptimizationSettingsWithCheck(logger, context),
-        BuildQueryPipelineSettings::fromPlanSegment(plan_segment, plan_segment_instance->info, context)
+        build_settings
     );
+    auto pipeline_ = QueryPipelineBuilder::getPipeline(std::move(*builder));
+    pipeline = std::unique_ptr<QueryPipeline>(&pipeline_);
 
-    pipeline->setTotalsPortToMainPortTransform();
-    pipeline->setExtremesPortToMainPortTransform();
+    // TODO:
+    // pipeline->setTotalsPortToMainPortTransform();
+    // pipeline->setExtremesPortToMainPortTransform();
 
-    registerAllExchangeReceivers(logger, *pipeline, context->getSettingsRef().exchange_wait_accept_max_timeout_ms);
+    registerAllExchangeReceivers(logger, *pipeline, optimizer_context->getSettingsRef().exchange_wait_accept_max_timeout_ms);
 
-    pipeline->setMaxThreads(pipeline->getNumThreads());
+    //pipeline->setNumThreads(pipeline->getNumThreads());
 
     if (plan_segment->getPlanSegmentOutputs().empty())
-        throw Exception("PlanSegment has no output", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "PlanSegment has no output");
 
     size_t sink_num = 0;
     auto max_output_size = std::max(context->getSettingsRef().max_threads.value / plan_segment_outputs.size(), 1UL);
-    auto output_size = context->getSettingsRef().exchange_unordered_output_parallel_size.value;
+    auto output_size = optimizer_context->getSettingsRef().exchange_unordered_output_parallel_size.value;
     if (output_size > max_output_size)
     {
         LOG_DEBUG(logger, "Decrease plan_segment {} exchange output parallel size to {}", plan_segment->getPlanSegmentId(), max_output_size);
         output_size = max_output_size;
     }
-    pipeline->limitMinThreads(output_size * plan_segment_outputs.size());
+    //TODO:
+    //pipeline->limitMinThreads(output_size * plan_segment_outputs.size());
+
     for (size_t i = 0; i < plan_segment_outputs.size(); ++i)
     {
         const auto &cur_plan_segment_output = plan_segment_outputs[i];
         const auto &current_exchange_senders = senders_list[i];
-        ExchangeMode exchange_mode = cur_plan_segment_output->getExchangeMode();
-        bool keep_order = cur_plan_segment_output->needKeepOrder() || context->getSettingsRef().exchange_enable_force_keep_order;
+        auto exchange_mode = cur_plan_segment_output->getExchangeMode();
+        bool keep_order = cur_plan_segment_output->needKeepOrder() || optimizer_context->getSettingsRef().exchange_enable_force_keep_order;
 
         switch (exchange_mode)
         {
-            case ExchangeMode::REPARTITION:
-            case ExchangeMode::LOCAL_MAY_NEED_REPARTITION:
-            case ExchangeMode::GATHER:
+            case RExchangeMode::REPARTITION:
+            case RExchangeMode::LOCAL_MAY_NEED_REPARTITION:
+            case RExchangeMode::GATHER:
             {
-                size_t output_num = pipeline->getNumStreams();
+                size_t output_num = builder->getNumStreams();
                 size_t partition_num = current_exchange_senders.size();
                 bool need_resize =
                     keep_order
-                    && context->getSettingsRef().exchange_enable_keep_order_parallel_shuffle
+                    && optimizer_context->getSettingsRef().exchange_enable_keep_order_parallel_shuffle
                     && partition_num > 1;
                 sink_num += (need_resize) ? output_num*partition_num : output_size;
                 break;
             }
-            case ExchangeMode::LOCAL_NO_NEED_REPARTITION:
-            case ExchangeMode::BROADCAST:
+            case RExchangeMode::LOCAL_NO_NEED_REPARTITION:
+            case RExchangeMode::BROADCAST:
                 sink_num += output_size;
                 break;
             default:
-                throw Exception(
-                    "Cannot find expected ExchangeMode " + std::to_string(static_cast<UInt8>(exchange_mode)),
-                    ErrorCodes::LOGICAL_ERROR
-                );
+                throw Exception(ErrorCodes::LOGICAL_ERROR,
+                    "Cannot find expected ExchangeMode {}", exchange_mode);
         }
     }
 
-    pipeline->transform(
+    builder->transform(
         [&](OutputPortRawPtrs ports) -> Processors {
             Processors new_processors;
             std::vector<OutputPortRawPtrs> segs_output_ports(plan_segment_outputs.size(), OutputPortRawPtrs());
@@ -690,8 +621,8 @@ void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSe
             {
                 auto &cur_plan_segment_output = plan_segment_outputs[i];
                 auto &current_exchange_senders = senders_list[i];
-                ExchangeMode exchange_mode = cur_plan_segment_output->getExchangeMode();
-                bool keep_order = cur_plan_segment_output->needKeepOrder() || context->getSettingsRef().exchange_enable_force_keep_order;
+                auto exchange_mode = cur_plan_segment_output->getExchangeMode();
+                bool keep_order = cur_plan_segment_output->needKeepOrder() || optimizer_context->getSettingsRef().exchange_enable_force_keep_order;
                 const auto & header = segs_output_ports[i][0]->getHeader();
 
                 if (!keep_order && output_size)
@@ -739,25 +670,22 @@ void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSe
 
                 switch (exchange_mode)
                 {
-                    case ExchangeMode::REPARTITION:
-                    case ExchangeMode::LOCAL_MAY_NEED_REPARTITION:
-                    case ExchangeMode::GATHER:
+                    case RExchangeMode::REPARTITION:
+                    case RExchangeMode::LOCAL_MAY_NEED_REPARTITION:
+                    case RExchangeMode::GATHER:
                         current_new_processors = buildRepartitionExchangeSink(
                             current_exchange_senders, keep_order, i, header, segs_output_ports[i]);
                         break;
-                    case ExchangeMode::LOCAL_NO_NEED_REPARTITION:
+                    case RExchangeMode::LOCAL_NO_NEED_REPARTITION:
                         current_new_processors = buildLoadBalancedExchangeSink(
                             current_exchange_senders, i, header, segs_output_ports[i]);
                         break;
-                    case ExchangeMode::BROADCAST:
+                    case RExchangeMode::BROADCAST:
                         current_new_processors = buildBroadcastExchangeSink(
                             current_exchange_senders, i, header, segs_output_ports[i]);
                         break;
                     default:
-                        throw Exception(
-                            "Cannot find expected ExchangeMode " + std::to_string(static_cast<UInt8>(exchange_mode)),
-                            ErrorCodes::LOGICAL_ERROR
-                        );
+                        throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot find expected ExchangeMode {}", exchange_mode);
                 }
 
                 new_processors.insert(new_processors.end(), current_new_processors.begin(), current_new_processors.end());
@@ -778,78 +706,84 @@ void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSe
     }
 
     if (senders.empty())
-        throw Exception("Plan segment has no exchange sender!", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Plan segment has no exchange sender!");
 }
 
-void PlanSegmentExecutor::registerAllExchangeReceivers(LoggerPtr log, const QueryPipeline & pipeline, UInt32 register_timeout_ms)
+void PlanSegmentExecutor::registerAllExchangeReceivers(LoggerPtr /*log*/, const QueryPipeline & /*pipeline*/, UInt32 /*register_timeout_ms*/)
 {
-    const Processors & procesors = pipeline.getProcessors();
-    std::vector<AsyncRegisterResult> async_results;
-    std::vector<LocalBroadcastChannel *> local_receivers;
-    std::vector<MultiPathReceiver *> multi_receivers;
-    std::exception_ptr exception;
+    // TODO: Not supported async remote broadcast now
 
-    try
-    {
-        for (const auto & processor : procesors)
-        {
-            auto exchange_source_ptr = std::dynamic_pointer_cast<ExchangeSource>(processor);
-            if (!exchange_source_ptr)
-                continue;
-            auto * receiver_ptr = exchange_source_ptr->getReceiver().get();
-            if (auto * brpc_receiver = dynamic_cast<BrpcRemoteBroadcastReceiver *>(receiver_ptr))
-                async_results.emplace_back(brpc_receiver->registerToSendersAsync(register_timeout_ms));
-            else if (auto * local_receiver = dynamic_cast<LocalBroadcastChannel *>(receiver_ptr))
-                local_receivers.push_back(local_receiver);
-            else if (auto * multi_receiver = dynamic_cast<MultiPathReceiver *>(receiver_ptr))
-            {
-                multi_receiver->registerToSendersAsync(register_timeout_ms);
-                multi_receivers.push_back(multi_receiver);
-            }
-            else
-                throw Exception("Unexpected SubReceiver Type: " + std::string(typeid(receiver_ptr).name()), ErrorCodes::LOGICAL_ERROR);
-        }
+    // const Processors & procesors = pipeline.getProcessors();
+    // std::vector<AsyncRegisterResult> async_results;
+    // std::vector<LocalBroadcastChannel *> local_receivers;
+    // std::vector<MultiPathReceiver *> multi_receivers;
+    // std::exception_ptr exception;
 
-        for (auto * receiver_ptr : local_receivers)
-            receiver_ptr->registerToSenders(register_timeout_ms);
-        for (auto * receiver_ptr : multi_receivers)
-            receiver_ptr->registerToLocalSenders(register_timeout_ms);
+    // try
+    // {
+    //     for (const auto & processor : procesors)
+    //     {
+    //         auto exchange_source_ptr = std::dynamic_pointer_cast<ExchangeSource>(processor);
+    //         if (!exchange_source_ptr)
+    //             continue;
+    //         auto * receiver_ptr = exchange_source_ptr->getReceiver().get();
 
-        for (auto * receiver_ptr : multi_receivers)
-            receiver_ptr->registerToSendersJoin();
-    }
-    catch (...)
-    {
-        exception = std::current_exception();
-    }
+    //         if (auto * brpc_receiver = dynamic_cast<BrpcRemoteBroadcastReceiver *>(receiver_ptr))
+    //             async_results.emplace_back(brpc_receiver->registerToSendersAsync(register_timeout_ms));
+    //         else if (auto * local_receiver = dynamic_cast<LocalBroadcastChannel *>(receiver_ptr))
+    //             local_receivers.push_back(local_receiver);
+    //         else if (auto * multi_receiver = dynamic_cast<MultiPathReceiver *>(receiver_ptr))
+    //         {
+    //             multi_receiver->registerToSendersAsync(register_timeout_ms);
+    //             multi_receivers.push_back(multi_receiver);
+    //         }
+
+    //         auto * receiver_ptr = exchange_source_ptr->getReceiver().get();
+    //         if (auto * local_receiver = dynamic_cast<LocalBroadcastChannel *>(receiver_ptr))
+    //             local_receivers.push_back(local_receiver);
+    //         else
+    //             throw Exception(ErrorCodes::LOGICAL_ERROR, "Unexpected SubReceiver Type: {}", typeid(receiver_ptr).name());
+    //     }
+
+    //     for (auto * receiver_ptr : local_receivers)
+    //         receiver_ptr->registerToSenders(register_timeout_ms);
+    //     for (auto * receiver_ptr : multi_receivers)
+    //         receiver_ptr->registerToLocalSenders(register_timeout_ms);
+    //     for (auto * receiver_ptr : multi_receivers)
+    //         receiver_ptr->registerToSendersJoin();
+    // }
+    // catch (...)
+    // {
+    //     exception = std::current_exception();
+    // }
 
     /// Wait all brpc register rpc done
-    for (auto & res : async_results)
-        brpc::Join(res.cntl->call_id());
+    // for (auto & res : async_results)
+    //     brpc::Join(res.cntl->call_id());
 
-    if (exception)
-        std::rethrow_exception(std::move(exception));
+    // if (exception)
+    //     std::rethrow_exception(std::move(exception));
 
     /// get result
-    for (auto & res : async_results)
-    {
-        // if exchange_enable_force_remote_mode = 1, sender and receiver in same process and sender stream may close before rpc end
-        if (res.cntl->ErrorCode() == brpc::EREQUEST && boost::algorithm::ends_with(res.cntl->ErrorText(), "was closed before responded"))
-        {
-            LOG_INFO(
-                log,
-                "Receiver register sender successfully but sender already finished, host: {}, request: {}",
-                butil::endpoint2str(res.cntl->remote_side()).c_str(),
-                *res.request);
-            continue;
-        }
-        res.channel->assertController(*res.cntl, ErrorCodes::EXCHANGE_DATA_TRANS_EXCEPTION);
-        LOG_TRACE(
-            log,
-            "Receiver register sender successfully, host: {}, request: {}",
-            butil::endpoint2str(res.cntl->remote_side()).c_str(),
-            *res.request);
-    }
+    // for (auto & res : async_results)
+    // {
+    //     // if exchange_enable_force_remote_mode = 1, sender and receiver in same process and sender stream may close before rpc end
+    //     if (res.cntl->ErrorCode() == brpc::EREQUEST && boost::algorithm::ends_with(res.cntl->ErrorText(), "was closed before responded"))
+    //     {
+    //         LOG_INFO(
+    //             log,
+    //             "Receiver register sender successfully but sender already finished, host: {}, request: {}",
+    //             butil::endpoint2str(res.cntl->remote_side()).c_str(),
+    //             *res.request);
+    //         continue;
+    //     }
+    //     res.channel->assertController(*res.cntl, ErrorCodes::EXCHANGE_DATA_TRANS_EXCEPTION);
+    //     LOG_TRACE(
+    //         log,
+    //         "Receiver register sender successfully, host: {}, request: {}",
+    //         butil::endpoint2str(res.cntl->remote_side()).c_str(),
+    //         *res.request);
+    // }
 }
 
 Processors PlanSegmentExecutor::buildRepartitionExchangeSink(
@@ -871,7 +805,7 @@ Processors PlanSegmentExecutor::buildRepartitionExchangeSink(
         plan_segment_outputs[output_index]->getShuffleFunctionParams());
     size_t partition_num = senders.size();
 
-    if (keep_order && context->getSettingsRef().exchange_enable_keep_order_parallel_shuffle && partition_num > 1)
+    if (keep_order && optimizer_context->getSettingsRef().exchange_enable_keep_order_parallel_shuffle && partition_num > 1)
     {
         size_t output_num = ports.size();
         size_t sink_num = output_num * partition_num;
@@ -966,38 +900,39 @@ Processors PlanSegmentExecutor::buildLoadBalancedExchangeSink(BroadcastSenderPtr
 
 void PlanSegmentExecutor::sendProgress()
 {
-    if (!progress.empty())
+    //Send profile
+    /*
+    try
     {
-        try
-        {
-            auto address = extractExchangeHostPort(plan_segment->getCoordinatorAddress());
-            std::shared_ptr<RpcClient> rpc_client
-                = RpcChannelPool::getInstance().getClient(address, BrpcChannelPoolOptions::DEFAULT_CONFIG_KEY);
-            Protos::PlanSegmentManagerService_Stub manager(&rpc_client->getChannel());
-            brpc::Controller * cntl = new brpc::Controller;
-            Protos::SendProgressRequest * request = new Protos::SendProgressRequest;
-            Protos::SendProgressResponse * response = new Protos::SendProgressResponse;
-            request->set_query_id(plan_segment->getQueryId());
-            request->set_segment_id(plan_segment->getPlanSegmentId());
-            request->set_parallel_id(plan_segment_instance->info.parallel_id);
-            *request->mutable_progress() = progress.fetchAndResetPiecewiseAtomically().toProto();
-            cntl->set_timeout_ms(20000);
+        auto address = extractExchangeHostPort(plan_segment->getCoordinatorAddress());
+        std::shared_ptr<RpcClient> rpc_client
+            = RpcChannelPool::getInstance().getClient(address, BrpcChannelPoolOptions::DEFAULT_CONFIG_KEY);
+        Protos::PlanSegmentService_Stub manager(&rpc_client->getChannel());
+        brpc::Controller * cntl = new brpc::Controller;
+        Protos::SendProgressRequest * request = new Protos::SendProgressRequest;
+        Protos::SendProgressResponse * response = new Protos::SendProgressResponse;
+        request->set_query_id(plan_segment->getQueryId());
+        request->set_segment_id(plan_segment->getPlanSegmentId());
+        request->set_parallel_id(plan_segment_instance->info.parallel_id);
+        *request->mutable_progress() = progress.fetchAndResetPiecewiseAtomically().toProto();
+        cntl->set_timeout_ms(20000);
 
-            std::function<String()> construct_err_msg = [request = request]() -> String {
-                return fmt::format(
-                    "PlanSegment-{} send profile to coordinator failed, query id-{}", request->segment_id(), request->query_id());
-            };
+        std::function<String()> construct_err_msg = [request = request]() -> String {
+            return fmt::format(
+                "PlanSegment-{} send profile to coordinator failed, query id-{}", request->segment_id(), request->query_id());
+        };
 
-            manager.sendProgress(
-                cntl,
-                request,
-                response,
-                brpc::NewCallback(RPCHelpers::onAsyncCallDoneAssertController, request, response, cntl, logger, construct_err_msg));
-        }
-        catch (...)
-        {
-            tryLogCurrentException(__PRETTY_FUNCTION__);
-        }
+        manager.sendProgress(
+            cntl,
+            request,
+            response,
+            brpc::NewCallback(RPCHelpers::onAsyncCallDoneAssertController, request, response, cntl, logger, construct_err_msg));
     }
+    catch (...)
+    {
+        tryLogCurrentException(__PRETTY_FUNCTION__);
+    }
+    */
 }
+
 }

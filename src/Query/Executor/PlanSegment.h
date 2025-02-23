@@ -5,44 +5,24 @@
 #include <optional>
 #include <Core/Block.h>
 #include <Core/Types.h>
+#include <Core/Field.h>
 #include <Interpreters/Context_fwd.h>
-#include <Query/Executor/AddressInfo.h>
-#include <Interpreters/DistributedStages/ExchangeMode.h>
-#include <Interpreters/DistributedStages/PlanSegmentInstance.h>
 #include <Interpreters/StorageID.h>
-#include <Protos/EnumMacros.h>
-#include <Protos/enum.pb.h>
-#include <Protos/plan_node_utils.pb.h>
-#include <Protos/plan_segment_manager.pb.h>
-#include <QueryPlan/QueryPlan.h>
-#include <Storages/MergeTree/IMergeTreeDataPart_fwd.h>
+#include <Processors/QueryPlan/QueryPlan.h>
+#include <Query/ProtosHelper/QueryProto.h>
+#include <Query/ProtosHelper/AddressInfo.h>
+#include <Query/ProtosHelper/ExchangeMode.h>
+#include <Query/Executor/PlanSegmentInstance.h>
 
 namespace DB
 {
 using RuntimeFilterId = UInt32;
-
-ENUM_WITH_PROTO_CONVERTER(ReportProfileType, Protos::ReportProfileType, (Unspecified, 0), (QueryPlan, 1), (QueryPipeline, 2));
-
-/**
- * SOURCE means the plan is the leaf of a plan segment tree, i.g. TableScan Node.
- * EXCHANGE always marking the plan that need to repartiton the data.
- * OUTPUT is only used in PlanSegmentOutput and its output is client, which means we should output the results.
- */
-ENUM_WITH_PROTO_CONVERTER(
-    PlanSegmentType, // enum name
-    Protos::PlanSegmentType, // proto enum message
-    (UNKNOWN, 0),
-    (SOURCE),
-    (EXCHANGE),
-    (OUTPUT));
 
 namespace Protos
 {
     class IPlanSegment;
     class PlanSegmentInput;
 }
-
-String planSegmentTypeToString(const PlanSegmentType & type);
 
 /***
  * Base class for input && output of PlanSegment.
@@ -56,10 +36,10 @@ class IPlanSegment
 public:
     IPlanSegment() = default;
 
-    IPlanSegment(const PlanSegmentType & type_)
+    IPlanSegment(const RIPlanSegment::Enum & type_)
     : type(type_) {}
 
-    IPlanSegment(const Block & header_, const PlanSegmentType & type_)
+    IPlanSegment(const Block & header_, const RIPlanSegment::Enum & type_)
     : header(header_), type(type_) {}
 
     IPlanSegment(const IPlanSegment &) = default;
@@ -69,13 +49,13 @@ public:
 
     void setHeader(const Block & header_) { header = header_; }
 
-    PlanSegmentType getPlanSegmentType() const { return type; }
+    RIPlanSegment::Enum getPlanSegmentType() const { return type; }
 
-    void setPlanSegmentType(const PlanSegmentType & type_) { type = type_; }
+    void setPlanSegmentType(const RIPlanSegment::Enum & type_) { type = type_; }
 
-    ExchangeMode getExchangeMode() const { return exchange_mode; }
+    RExchangeMode::Enum getExchangeMode() const { return exchange_mode; }
 
-    void setExchangeMode(const ExchangeMode & mode_) { exchange_mode = mode_; }
+    void setExchangeMode(const RExchangeMode::Enum & mode_) { exchange_mode = mode_; }
 
     size_t getExchangeId() const {return exchange_id; }
 
@@ -103,13 +83,13 @@ public:
 
     virtual String toString(size_t indent = 0) const;
 
-    void toProtoBase(Protos::IPlanSegment & proto) const;
-    void fromProtoBase(const Protos::IPlanSegment & proto);
+    void toProtoBase(RIPlanSegment & proto) const;
+    void fromProtoBase(const RIPlanSegment & proto);
 
 protected:
     Block header;
-    PlanSegmentType type = PlanSegmentType::UNKNOWN;
-    ExchangeMode exchange_mode = ExchangeMode::UNKNOWN;
+    RIPlanSegment::Enum type  = RIPlanSegment::UNKNOWN;
+    RExchangeMode::Enum exchange_mode = RExchangeMode::UNKNOWN;
     size_t exchange_id = 0;
     size_t exchange_parallel_size = 0;
     String name;
@@ -117,15 +97,17 @@ protected:
     Names shuffle_keys;
 };
 
-using PlanSegmentSet = std::unordered_set<PlanSegmentInstanceId>;
+using PlanSegmentSet = std::unordered_set<PlanSegmentInstanceID>;
 
 class PlanSegmentInput : public IPlanSegment
 {
 public:
-    PlanSegmentInput(const Block & header_, const PlanSegmentType & type_)
-    : IPlanSegment(header_, type_) {}
+    PlanSegmentInput(const Block & header_, const RIPlanSegment::Enum & type_)
+        : IPlanSegment(header_, type_) 
+    {
+    }
 
-    explicit PlanSegmentInput(const PlanSegmentType & type_) : IPlanSegment(type_)
+    explicit PlanSegmentInput(const RIPlanSegment::Enum & type_) : IPlanSegment(type_)
     {
     }
 
@@ -148,8 +130,8 @@ public:
 
     void deserialize(ReadBuffer & buf, ContextPtr context) override;
 
-    void toProto(Protos::PlanSegmentInput & proto) const;
-    void fillFromProto(const Protos::PlanSegmentInput & proto, ContextPtr context);
+    void toProto(RPlanSegmentInput & proto) const;
+    void fromProto(const RPlanSegmentInput & proto, ContextPtr context);
 
     String toString(size_t indent = 0) const override;
 
@@ -175,7 +157,7 @@ private:
     AddressInfos source_addresses;
     std::optional<StorageID> storage_id;
     bool stable = false;
-    Int64 bucket_number = kInvalidBucketNumber;
+    Int64 bucket_number = -1;
 };
 
 using PlanSegmentInputPtr = std::shared_ptr<PlanSegmentInput>;
@@ -184,10 +166,10 @@ using PlanSegmentInputs = std::vector<PlanSegmentInputPtr>;
 class PlanSegmentOutput : public IPlanSegment
 {
 public:
-    PlanSegmentOutput(const Block & header_, const PlanSegmentType & type_)
+    PlanSegmentOutput(const Block & header_, const RIPlanSegment::Enum & type_)
     : IPlanSegment(header_, type_) {}
 
-    PlanSegmentOutput(const PlanSegmentType & type_)
+    PlanSegmentOutput(const RIPlanSegment::Enum & type_)
     : IPlanSegment(type_) {}
 
     PlanSegmentOutput() = default;
@@ -204,17 +186,30 @@ public:
 
     void deserialize(ReadBuffer & buf, ContextPtr) override;
 
-    void toProto(Protos::PlanSegmentOutput & proto);
-    void fillFromProto(const Protos::PlanSegmentOutput & proto);
+    void toProto(RPlanSegmentOutput & proto);
+    void fromProto(const RPlanSegmentOutput & proto);
 
     String toString(size_t indent = 0) const override;
 
-    void setShuffleFunctionName(const String & shuffle_function_name_) { shuffle_function_name = shuffle_function_name_; }
+    void setShuffleFunctionName(const String & shuffle_function_name_) 
+    { 
+        shuffle_function_name = shuffle_function_name_; 
+    }
 
-    const String & getShuffleFunctionName() { return shuffle_function_name; }
+    const String & getShuffleFunctionName() 
+    { 
+        return shuffle_function_name; 
+    }
 
-    void setShuffleFunctionParams(const Array & shuffle_func_params_) { shuffle_func_params = shuffle_func_params_; }
-    const Array & getShuffleFunctionParams() { return shuffle_func_params; }
+    void setShuffleFunctionParams(const Array & shuffle_func_params_) 
+    { 
+        shuffle_func_params = shuffle_func_params_; 
+    }
+
+    const Array & getShuffleFunctionParams() 
+    { 
+        return shuffle_func_params;
+    }
 
 private:
     String shuffle_function_name = "cityHash64";
@@ -261,9 +256,9 @@ public:
 
     void deserialize(ReadBuffer & buf, ContextMutablePtr context);
 
-    void toProto(Protos::PlanSegment & proto);
+    void toProto(RPlanSegment & proto);
 
-    void fillFromProto(const Protos::PlanSegment & proto, ContextMutablePtr context);
+    void fromProto(const RPlanSegment & proto, ContextMutablePtr context);
 
     static PlanSegmentPtr deserializePlanSegment(ReadBuffer & buf, ContextMutablePtr context);
 
@@ -298,7 +293,7 @@ public:
 
     PlanSegmentPtr clone();
 
-    String toString() const;
+    String toString();
 
     String getClusterName() const { return cluster_name; }
 
@@ -318,9 +313,9 @@ public:
 
     static void getRemoteSegmentId(const QueryPlan::Node * node, std::unordered_map<PlanNodeId, size_t> & exchange_to_segment);
 
-    void setProfileType(const ReportProfileType & type) { profile_type = type; }
+    void setProfileType(const RReportProfileType::Enum & type) { profile_type = type; }
 
-    ReportProfileType getProfileType() const { return profile_type; }
+    RReportProfileType::Enum getProfileType() const { return profile_type; }
 
     void setHasLocalInput(bool has_local_input_)
     {
@@ -355,7 +350,7 @@ private:
 
     std::unordered_set<RuntimeFilterId> runtime_filters;
 
-    ReportProfileType profile_type = ReportProfileType::Unspecified;
+    RReportProfileType::Enum profile_type = RReportProfileType::Unspecified;
 
     bool has_local_input = false;
     bool has_local_output = false;

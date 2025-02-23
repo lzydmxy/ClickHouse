@@ -1,17 +1,16 @@
 #pragma once
-#include <Common/Logger.h>
-#include <memory>
 #include <mutex>
 #include <string_view>
+#include <condition_variable>
+#include <Poco/Logger.h>
+#include <base/types.h>
 #include <Interpreters/Context_fwd.h>
 #include <QueryPipeline/BlockIO.h>
+#include <Query/Common/OptimizerContext.h>
 #include <Query/Executor/ExecutorUtils.h>
 #include <Query/Executor/PlanSegment.h>
-#include <Query/Interpreters/RuntimeSegmentsStatus.h>
-#include <bthread/condition_variable.h>
-#include <bthread/mutex.h>
-#include <Poco/Logger.h>
-#include <common/types.h>
+#include <Query/Executor/ProgressManager.h>
+#include <Query/Executor/RuntimeSegmentsStatus.h>
 
 namespace DB
 {
@@ -34,7 +33,7 @@ class QueryMPPCoordinator final: public std::enable_shared_from_this<QueryMPPCoo
 {
 public:
     QueryMPPCoordinator(PlanSegmentTreeUniqPtr plan_segment_tree_, ContextMutablePtr query_context_, QueryMPPOptions options_);
-
+    /// Invoke this in InterpreterSelectQueryUseOptimizer's execute method
     BlockIO execute();
 
     SummarizedQueryStatus waitUntilFinish(int error_code, const String & error_msg);
@@ -66,19 +65,23 @@ public:
     }
 
 private:
+    // template <class Event>
+    // boost::msm::back::HandledEnum triggerEvent(Event const & evt); // It use state_machine_mutex;
+
     ContextMutablePtr query_context;
+    OptimizerContextPtr optimizer_context;
     QueryMPPOptions options;
     PlanSegmentTreePtr plan_segment_tree;
     const String & query_id;
     ProgressManager progress_manager;
     LoggerPtr log;
 
-    mutable bthread::Mutex status_mutex;
-    bthread::ConditionVariable status_cv;
-    MPPQueryStatus query_status;
+    mutable std::mutex status_mutex;
+    std::condition_variable status_cv;
+    QueryMPPStatus query_status;
 
-    mutable bthread::Mutex post_processing_rpc_waiting_mutex;
-    bthread::ConditionVariable post_processing_rpc_waiting_cv;
+    mutable std::mutex post_processing_rpc_waiting_mutex;
+    std::condition_variable post_processing_rpc_waiting_cv;
     std::unordered_map<PostProcessingRPCID, PlanSegmentSet> post_processing_rpc_waiting = {};
     bool post_processing_rpc_waiting_initialized = false;
 
@@ -86,5 +89,7 @@ private:
 };
 
 using QueryMPPCoordinatorPtr = std::shared_ptr<QueryMPPCoordinator>;
+using CoordinatorWeakPtr = std::weak_ptr<QueryMPPCoordinator>;
+using CoordinatorMap = std::unordered_map<String, CoordinatorWeakPtr>;
 
 }
