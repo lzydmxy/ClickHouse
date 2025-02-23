@@ -1,12 +1,13 @@
 #pragma once
 #include <Poco/Util/AbstractConfiguration.h>
 #include <Query/Common/ExceptionHandler.h>
+#include <Query/Common/OptimizerSettings.h>
 
 namespace DB
 {
 
-struct QuerySettings;
-using QuerySettingsPtr = std::shared_ptr<QuerySettings>;
+class ExceptionHandler;
+using ExceptionHandlerPtr = std::shared_ptr<ExceptionHandler>;
 class PlanSegmentProcessList;
 using PlanSegmentProcessListPtr = std::shared_ptr<PlanSegmentProcessList>;
 class PlanSegmentProcessListEntry;
@@ -23,6 +24,9 @@ using AddressInfoPtr = std::shared_ptr<AddressInfo>;
 
 struct PlanSegmentInstanceID;
 
+class ProcessListEntry;
+using ProcessListEntryPtr = std::shared_ptr<ProcessListEntry>;
+
 enum ServiceType
 {
     standalone,
@@ -34,12 +38,13 @@ enum ServiceType
 class OptimizerContext
 {
 public:
-    OptimizerContext(QuerySettingsPtr query_settings_);
+    OptimizerContext(OptimizerSettingsPtr query_settings_);
 
-    const QuerySettingsPtr & getQuerySettings() const;
+    const OptimizerSettingsPtr & getSettings() const;
+    const OptimizerSettings & getSettingsRef() const { return settings; }
 
-    void initPlanSegmentExHandler();
-    ExceptionHandlerPtr getPlanSegmentExHandler() const;
+    void initExceptionHandler();
+    ExceptionHandlerPtr getExceptionHandler() const;
 
     void setPlanSegmentProcessListEntry(PlanSegmentProcessListEntryPtr segment_process_list_entry_);
     PlanSegmentProcessListPtr getPlanSegmentProcessList();
@@ -59,11 +64,22 @@ public:
     PlanSegmentInstanceID getPlanSegmentInstanceID() const;
 
     UInt32 getQueryMaxExecutionTime() const;
-    timespec getQueryExpirationTimeStamp() const;
+    Poco::Timespan getQueryExpirationTimeStamp() const;
     void initQueryExpirationTimeStamp();
+
+    void setProcessListEntry(ProcessListEntryPtr process_list_entry_);
+    ProcessListEntryPtr getProcessListEntry() const;
+
+    void setSendTCPProgress(std::function<void()> callback);
+    std::function<void()> getSendTCPProgress() const;
 private:
-    QuerySettingsPtr query_settings;
+    OptimizerSettingsPtr query_settings;
+    OptimizerSettings settings;
+    AddressInfoPtr coordinator_address;
+    ExceptionHandlerPtr exception_handler;
     PlanSegmentProcessListPtr plan_segment_process_list;
+    ProcessListEntryPtr process_list_entry;
+    std::function<void()> send_tcp_progress{nullptr};
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;

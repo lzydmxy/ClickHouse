@@ -22,17 +22,17 @@ message PlanSegment {
 
 message Progress {
     // below should sync with Progress.h
-    uint64 read_rows = 1;          /// Rows (source) processed.
-    uint64 read_bytes = 2;         /// Bytes (uncompressed, source) processed.
-    uint64 read_raw_bytes = 3;     /// Raw bytes processed.
-    uint64 total_rows_to_read = 4;
-    uint64 total_raw_bytes_to_read = 5;
-    uint64 written_rows = 6;
-    uint64 written_bytes = 7;
-    uint64 written_elapsed_milliseconds = 8;
-    uint64 disk_cache_read_bytes = 9;
+    uint64 read_rows = 1;           /// Rows (source) processed.
+    uint64 read_bytes = 2;          /// Bytes (uncompressed, source) processed.
+    uint64 total_rows_to_read = 3;
+    uint64 total_bytes_to_read = 4;
+    uint64 written_rows = 5;
+    uint64 written_bytes = 6;
+    uint64 result_rows = 7;
+    uint64 result_bytes = 8;
+    uint64 elapsed_ns = 9;
 }
- 
+
 message RuntimeSegmentsMetrics {
     int64 cpu_micros = 1;
     Progress progress = 2;
@@ -64,42 +64,44 @@ message QueryCommon {
     bool is_internal_query = 14;
 }
 
+message PlanSegmentRequest {
+    uint32 brpc_major_revision = 1;
+    uint32 query_common_buf_size = 2;
+    uint32 query_settings_buf_size = 3;
+    uint32 plan_segment_buf_size = 4;
+    uint32 plan_segment_id = 5;
+    uint32 parallel_id = 6;
+    AddressInfo execution_address = 7;
+    uint32 source_task_index = 8; // obosolete
+    uint32 source_task_count = 9; // obosolete
+    uint32 attempt_id = 10;
+    SourceTaskFilter source_task_filter = 11;
+    repeated PlanSegmentPartitionSource sources = 12;
+    uint32 worker_epoch = 13;
+}
+
 message PlanSegmentHeader {
+    uint32 plan_segment_id = 1;
+    uint32 parallel_id = 2;
+    uint32 plan_segment_buf_size = 3;
+    uint32 attempt_id = 4;
+    SourceTaskFilter source_task_filter = 5;
+}
+
+message PlanSegmentsRequest {
     uint32 brpc_major_revision = 1;
     AddressInfo execution_address = 2;
     uint32 query_common_buf_size = 3;
     uint32 query_settings_buf_size = 4;
-}
-
-message PlanSegmentBody {
-    uint32 parallel_id = 1;
-    uint32 plan_segment_id = 2;
-    uint32 plan_segment_buf_size = 3;
-    uint32 attempt_id = 4;
-    SourceTaskFilter source_task_filter = 5;
-    repeated PlanSegmentPartitionSource sources = 6;
-    uint32 worker_epoch = 7;
-}
-
-message PlanSegmentRequest {
-    PlanSegmentHeader header = 1;
-    PlanSegmentBody body = 2;
-}
-
-message PlanSegmentsRequest {
-    PlanSegmentHeader header = 1;
-    repeated PlanSegmentBody bodies = 2;
+    repeated PlanSegmentHeader headers = 5;
 }
 
 message PlanSegmentResponse {
-    uint32 plan_segment_id = 1;
-    int32 status_code = 2;
-    string message = 3;
-    string address = 4;
-}
-
-message PlanSegmentsResponse {
-    repeated PlanSegmentResponse responses = 1;
+    int32 status_code = 1;
+    string message = 2;
+    string address = 3;
+    HostWithPorts host_ports = 4;
+    string exception = 5;
 }
 
 //Cancel Query
@@ -216,7 +218,7 @@ message PlanSegmentProfileResponse {
 */
 service PlanSegmentService {
     rpc executePlanSegment(PlanSegmentRequest) returns (PlanSegmentResponse);
-    rpc executePlanSegments(PlanSegmentsRequest) returns (PlanSegmentsResponse);
+    rpc executePlanSegments(PlanSegmentsRequest) returns (PlanSegmentResponse);
     rpc cancelQuery(CancelQueryRequest) returns (CancelQueryResponse);
     rpc reportPlanSegmentStatus(PlanSegmentStatusRequest) returns (PlanSegmentStatusResponse);
     rpc reportPlanSegmentProfile(PlanSegmentProfileRequest) returns (PlanSegmentProfileResponse);

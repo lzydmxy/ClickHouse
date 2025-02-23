@@ -9,7 +9,7 @@
 #include <base/getFQDNOrHostName.h>
 #include <Interpreters/Context_fwd.h>
 #include <Core/Types.h>
-#include <Query/ProtosWrapper/QueryProto.h>
+#include <Query/ProtosHelper/QueryProto.h>
 
 namespace DB
 {

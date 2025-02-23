@@ -4,6 +4,11 @@
 namespace DB
 {
 
+RExchangeMode::Enum toExchangeMode(int mode)
+{
+    return static_cast<RExchangeMode::Enum>(mode);
+}
+
 String exchangeModeToString(const RExchangeMode::Enum & exchange_mode)
 {
     if (exchange_mode == RExchangeMode::UNKNOWN)

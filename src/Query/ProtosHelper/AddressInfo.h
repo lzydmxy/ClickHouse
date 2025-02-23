@@ -2,8 +2,8 @@
 
 #include <Core/Types.h>
 #include <IO/WriteHelpers.h>
-#include <Query/ProtosWrapper/QueryProto.h>
-#include <Query/ProtosWrapper/HostWithPorts.h>
+#include <Query/ProtosHelper/QueryProto.h>
+#include <Query/ProtosHelper/HostWithPorts.h>
 
 namespace DB
 {
@@ -65,9 +65,9 @@ using AddressInfos = std::vector<AddressInfo>;
 using AddressInfoPtr = std::shared_ptr<AddressInfo>;
 
 
-AddressInfo getLocalAddress(const Context & query_context);
+AddressInfoPtr getLocalAddress(const Context & query_context);
 
-AddressInfo getRemoteAddress(HostWithPorts host_with_ports, ContextPtr & query_context);
+AddressInfoPtr getRemoteAddress(HostWithPorts host_with_ports, ContextPtr & query_context);
 
 inline String extractHostPort(const AddressInfo & address)
 { 

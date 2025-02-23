@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <vector>
 #include <base/types.h>
-#include <Query/ProtosWrapper/QueryProto.h>
+#include <Query/ProtosHelper/QueryProto.h>
 #include <Query/Common/ProcessorProfile.h>
 #include <Interpreters/Context_fwd.h>
 

@@ -2,7 +2,7 @@
 #include <string>
 #include <IO/ReadHelpers.h>
 #include <Query/Common/QueryCommon.h>
-#include <Query/ProtosWrapper/HostWithPorts.h>
+#include <Query/ProtosHelper/HostWithPorts.h>
 
 namespace DB
 {

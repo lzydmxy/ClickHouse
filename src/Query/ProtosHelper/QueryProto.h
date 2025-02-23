@@ -27,22 +27,36 @@ using RSourceTaskFilter = Protos::SourceTaskFilter;
 using RHostWithPorts = Protos::HostWithPorts;
 using RInputProfileMetric = Protos::InputProfileMetric;
 using RProfileMetric = Protos::ProfileMetric;
-
-using RPlanSegmentBody = Protos::PlanSegmentBody;
 using RRuntimeFilter = Protos::RuntimeFilter;
+
+using RSendBytesByParallelIndex = Protos::SendBytesByParallelIndex;
+using RRuntimeSegmentsMetrics = Protos::RuntimeSegmentsMetrics;
+using RSenderMetrics = Protos::SenderMetrics;
 
 using RQueryCommon = Protos::QueryCommon;
 using RQueryCommonPtr = std::shared_ptr<RQueryCommon>;
 using RPlanSegmentRequest = Protos::PlanSegmentRequest;
-using RPlanSegmentResponse = Protos::PlanSegmentResponse;
+using RPlanSegmentHeader = Protos::PlanSegmentHeader;
 using RPlanSegmentsRequest = Protos::PlanSegmentsRequest;
-using RPlanSegmentsResponse = Protos::PlanSegmentsResponse;
+using RPlanSegmentResponse = Protos::PlanSegmentResponse;
+
 using RCancelQueryRequest = Protos::CancelQueryRequest;
 using RCancelQueryResponse = Protos::CancelQueryResponse;
 using RPlanSegmentStatusRequest = Protos::PlanSegmentStatusRequest;
 using RPlanSegmentStatusResponse = Protos::PlanSegmentStatusResponse;
 using RPlanSegmentProfileRequest = Protos::PlanSegmentProfileRequest;
 using RPlanSegmentProfileResponse = Protos::PlanSegmentProfileResponse;
+
+using RAST = Protos::AST;
+using RDataType = Protos::DataType;
+using RBlock = Protos::Block;
+using RAggregateFunction = Protos::AggregateFunction;
+using RQueryPlanStep = Protos::QueryPlanStep;
+using RFieldVector = Protos::FieldVector;
+
+using RProgress = Protos::Progress;
+
+using RQueryPlan = Protos::QueryPlan;
 
 //For bRPC server
 using RPlanSegmentService = Protos::PlanSegmentService;

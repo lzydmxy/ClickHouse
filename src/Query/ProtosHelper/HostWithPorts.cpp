@@ -4,7 +4,7 @@
 #include <Common/Exception.h>
 #include <Common/parseAddress.h>
 #include <Interpreters/Context.h>
-#include <Query/ProtosWrapper/HostWithPorts.h>
+#include <Query/ProtosHelper/HostWithPorts.h>
 
 namespace DB
 {

@@ -1,13 +1,13 @@
 #include <memory>
 #include "PlanSegmentProfile.h"
+#include <Interpreters/Context.h>
+#include <Query/Common/OptimizerSettings.h>
 //#include <QueryPlan/IQueryPlanStep.h>
 //#include <QueryPlan/PlanSerDerHelper.h>
-//#include <Core/SettingsEnums.h>
-#include <Interpreters/Context.h>
 
 namespace DB
 {
-void InputProfileMetric::fromProto(const Protos::InputProfileMetric & proto)
+void InputProfileMetric::fromProto(const RInputProfileMetric & proto)
 {
     id = proto.id();
     input_rows = proto.input_rows();
@@ -16,7 +16,7 @@ void InputProfileMetric::fromProto(const Protos::InputProfileMetric & proto)
     input_wait_max_elapsed_us = proto.input_wait_max_elapsed_us();
     input_wait_min_elapsed_us = proto.input_wait_min_elapsed_us();
 }
-void InputProfileMetric::toProto(Protos::InputProfileMetric & proto) const
+void InputProfileMetric::toProto(RInputProfileMetric & proto) const
 {
     proto.set_id(id);
     proto.set_input_rows(input_rows);
@@ -26,7 +26,7 @@ void InputProfileMetric::toProto(Protos::InputProfileMetric & proto) const
     proto.set_input_wait_min_elapsed_us(input_wait_min_elapsed_us);
 }
 
-ProfileMetricPtr ProfileMetric::fromProto(const Protos::ProfileMetric & proto)
+ProfileMetricPtr ProfileMetric::fromProto(const RProfileMetric & proto)
 {
     ProfileMetricPtr profile = std::make_shared<ProfileMetric>();
     profile->id = proto.id();
@@ -64,7 +64,7 @@ ProfileMetricPtr ProfileMetric::fromProto(const Protos::ProfileMetric & proto)
     return profile;
 }
 
-void ProfileMetric::toProto(Protos::ProfileMetric & proto)
+void ProfileMetric::toProto(RProfileMetric & proto)
 {
     proto.set_id(id);
     proto.set_name(name);
@@ -139,7 +139,7 @@ StepProfiles ProfileMetric::aggregateStepProfileBetweenWorkers(AddressToStepProf
     return res;
 }
 
-PlanSegmentProfilePtr PlanSegmentProfile::fromProto(const Protos::PlanSegmentProfileRequest & proto)
+PlanSegmentProfilePtr PlanSegmentProfile::fromProto(const RPlanSegmentProfileRequest & proto)
 {
     PlanSegmentProfilePtr segment_profile = std::make_shared<PlanSegmentProfile>();
     segment_profile->query_id = proto.query_id();
@@ -163,7 +163,7 @@ PlanSegmentProfilePtr PlanSegmentProfile::fromProto(const Protos::PlanSegmentPro
     return segment_profile;
 }
 
-void PlanSegmentProfile::toProto(Protos::PlanSegmentProfileRequest & proto)
+void PlanSegmentProfile::toProto(RPlanSegmentProfileRequest & proto)
 {
     proto.set_query_id(query_id);
     proto.set_segment_id(segment_id);

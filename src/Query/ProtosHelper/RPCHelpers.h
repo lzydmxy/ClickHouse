@@ -7,8 +7,8 @@
 #include <Interpreters/StorageID.h>
 #include <Interpreters/Context_fwd.h>
 #include <Query/Common/ExceptionHandler.h>
-#include <Query/ProtosWrapper/HostWithPorts.h>
-#include <Query/ProtosWrapper/QueryProto.h>
+#include <Query/ProtosHelper/HostWithPorts.h>
+#include <Query/ProtosHelper/QueryProto.h>
 
 namespace google::protobuf
 {

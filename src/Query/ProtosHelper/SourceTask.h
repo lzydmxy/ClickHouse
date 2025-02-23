@@ -6,7 +6,7 @@
 #include <fmt/core.h>
 #include <base/types.h>
 #include <Query/Common/QueryCommon.h>
-#include <Query/ProtosWrapper/QueryProto.h>
+#include <Query/ProtosHelper/QueryProto.h>
 
 namespace DB
 {
