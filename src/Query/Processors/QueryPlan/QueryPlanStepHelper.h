@@ -8,7 +8,7 @@
 
 namespace DB
 {
-using QueryPlanStep = std::shared_ptr<IQueryPlanStep>;
+using QueryPlanStepShardPtr = std::shared_ptr<IQueryPlanStep>;
 
 
 #define APPLY_QUERY_PLAN_STEP_TYPES(M) \
@@ -42,7 +42,7 @@ if (auto casted_query_plan_step = std::dynamic_pointer_cast<type>(query_plan_ste
     return QueryPlanStepType::type; \
 }
 
-inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStep & query_plan_step)
+inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStepShardPtr & query_plan_step)
 {
     APPLY_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE)
     return QueryPlanStepType::UNDEFINED;
@@ -50,7 +50,7 @@ inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStep & query_plan_s
 #undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE
 
 
-inline bool isPhysicalQueryPlanStep(const QueryPlanStep & query_plan_step)
+inline bool isPhysicalQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step)
 {
     /* 
      /// TODO: need to  attribute distribution_type to JoinStep
@@ -68,9 +68,25 @@ inline bool isPhysicalQueryPlanStep(const QueryPlanStep & query_plan_step)
     return true;
 }
 
-inline bool isLogicalQueryPlanStep(const QueryPlanStep & query_plan_step)
+inline bool isLogicalQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step)
 {
     return !isPhysicalQueryPlanStep(query_plan_step);
+}
+
+QueryPlanStepShardPtr copyQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step)
+{
+    QueryPlanStepShardPtr copied_query_plan_step;
+    switch (getQueryPlanStepType(query_plan_step))
+    {
+    case QueryPlanStepType::ExtremesStep:
+        // If the query plan step needs to be deep copied, it needs to be processed separately.   
+        // copied_query_plan_step = query_plan_step.copy();
+    default:
+        // In other cases, shallow copy is used uniformly.
+        copied_query_plan_step = query_plan_step;
+    }
+
+    return copied_query_plan_step;
 }
 
 }
