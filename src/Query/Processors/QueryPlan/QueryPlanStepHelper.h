@@ -50,7 +50,7 @@ inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStep & query_plan_s
 #undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE
 
 
-inline bool isPhysicalQueryPlan(const QueryPlanStep & query_plan_step)
+inline bool isPhysicalQueryPlanStep(const QueryPlanStep & query_plan_step)
 {
     /* 
      /// TODO: need to  attribute distribution_type to JoinStep
@@ -68,9 +68,9 @@ inline bool isPhysicalQueryPlan(const QueryPlanStep & query_plan_step)
     return true;
 }
 
-inline bool isLogicalQueryPlan(const QueryPlanStep & query_plan_step)
+inline bool isLogicalQueryPlanStep(const QueryPlanStep & query_plan_step)
 {
-    return !isPhysicalQueryPlan(query_plan_step);
+    return !isPhysicalQueryPlanStep(query_plan_step);
 }
 
 }
