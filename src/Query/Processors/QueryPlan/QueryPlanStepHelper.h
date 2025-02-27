@@ -3,6 +3,8 @@
 #include <Processors/QueryPlan/ExtremesStep.h>
 #include <Processors/QueryPlan/LimitStep.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
+//#include <Processors/QueryPlan/JoinStep.h>
+//#include <Processors/QueryPlan/MultiJoinStep.h>
 
 namespace DB
 {
@@ -46,5 +48,29 @@ inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStep & query_plan_s
     return QueryPlanStepType::UNDEFINED;
 }
 #undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE
+
+
+inline bool isPhysicalQueryPlan(const QueryPlanStep & query_plan_step)
+{
+    /* 
+     /// TODO: need to  attribute distribution_type to JoinStep
+    if (auto casted_query_plan_step = std::dynamic_pointer_cast<JoinStep>(query_plan_step))
+    {
+        return casted_query_plan_step->distribution_type != DistributionType::UNKNOWN;
+    }
+     /// TODO: need to add MultiJoinStep.h
+    else if (auto casted_query_plan_step = std::dynamic_pointer_cast<MultiJoinStep>(query_plan_step))
+    {
+        return false;
+    }
+    */
+
+    return true;
+}
+
+inline bool isLogicalQueryPlan(const QueryPlanStep & query_plan_step)
+{
+    return !isPhysicalQueryPlan(query_plan_step);
+}
 
 }
