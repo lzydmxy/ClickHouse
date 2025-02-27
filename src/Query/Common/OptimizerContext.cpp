@@ -10,7 +10,7 @@
 #include <IO/S3/Credentials.h>
 #include <Interpreters/Context.h>
 #include <Poco/Util/AbstractConfiguration.h>
-#include <Query/Executor/PlanSegmentInstance.h>
+// #include <Query/Executor/PlanSegmentInstance.h>
 
 namespace DB
 {
