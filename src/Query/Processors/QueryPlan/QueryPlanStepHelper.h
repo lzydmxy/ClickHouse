@@ -9,6 +9,11 @@
 
 //#include <Processors/QueryPlan/JoinStep.h>
 //#include <Processors/QueryPlan/MultiJoinStep.h>
+#include <Query/Processors/QueryPlan/AssignUniqueIdStepExt.h>
+#include <Query/Processors/QueryPlan/ExpandStepExt.h>
+#include <Query/Processors/QueryPlan/MarkDistinctStepExt.h>
+#include <Query/Processors/QueryPlan/SettingQuotaAndLimitsStepExt.h>
+#include <Query/Processors/QueryPlan/TopNFilteringStepExt.h>
 
 namespace DB
 {
@@ -19,7 +24,13 @@ using QueryPlanStepShardPtr = std::shared_ptr<IQueryPlanStep>;
     M(CubeStep) \
     M(ExtremesStep) \
     M(RollupStep) \
-    M(OffsetStep)
+    M(OffsetStep) \
+    M(LimitStep) \
+    M(AssignUniqueIdStepExt) \
+    M(ExpandStepExt) \
+    M(MarkDistinctStepExt) \
+    M(SettingQuotaAndLimitsStepExt) \
+    M(TopNFilteringStepExt)
 
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) ITEM,
 enum class QueryPlanStepType : UInt8
@@ -50,7 +61,8 @@ if (auto casted_query_plan_step = std::dynamic_pointer_cast<type>(query_plan_ste
 
 inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStepShardPtr & query_plan_step)
 {
-    APPLY_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE)
+    // TODO: FIXME type
+    // APPLY_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE)
     return QueryPlanStepType::UNDEFINED;
 }
 #undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE

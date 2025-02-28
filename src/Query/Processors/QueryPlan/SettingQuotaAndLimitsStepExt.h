@@ -1,0 +1,54 @@
+#pragma once
+
+#include <Interpreters/Context_fwd.h>
+#include <Processors/QueryPlan/ITransformingStep.h>
+#include <Storages/TableLockHolder.h>
+#include <QueryPipeline/StreamLocalLimits.h>
+#include <Query/Processors/QueryPlan/TopNFilteringStepExt.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+
+
+namespace DB
+{
+
+class IStorage;
+using StoragePtr = std::shared_ptr<IStorage>;
+
+struct StorageInMemoryMetadata;
+using StorageMetadataPtr = std::shared_ptr<const StorageInMemoryMetadata>;
+
+class EnabledQuota;
+
+/// Add limits, quota, table_lock and other stuff to pipeline.
+/// Doesn't change DataStream.
+class SettingQuotaAndLimitsStepExt : public ITransformingStep
+{
+public:
+    SettingQuotaAndLimitsStepExt(
+        const DataStream & input_stream_,
+        StoragePtr storage_,
+        TableLockHolder table_lock_,
+        StreamLocalLimits & limits_,
+        SizeLimits & leaf_limits_,
+        std::shared_ptr<const EnabledQuota> quota_,
+        ContextPtr context_);
+
+    String getName() const override { return "SettingQuotaAndLimitsStepExt"; }
+
+    // QueryPlanStepType getType() const { return QueryPlanStepType::SettingQuotaAndLimitsStepExt; }
+
+    void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
+
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
+    void updateInputStreams(const DataStreams & input_streams_);
+
+private:
+    ContextPtr context;
+    StoragePtr storage;
+    TableLockHolder table_lock;
+    StreamLocalLimits limits;
+    SizeLimits leaf_limits;
+    std::shared_ptr<const EnabledQuota> quota;
+};
+
+}
