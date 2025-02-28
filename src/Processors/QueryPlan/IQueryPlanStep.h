@@ -66,6 +66,7 @@ using DataStreams = std::vector<DataStream>;
 
 class QueryPlan;
 using QueryPlanRawPtrs = std::list<QueryPlan *>;
+class QueryPlanStepHelper;
 
 /// Single step of query plan.
 class IQueryPlanStep

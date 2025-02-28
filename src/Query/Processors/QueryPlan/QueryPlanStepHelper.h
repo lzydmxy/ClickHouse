@@ -1,8 +1,12 @@
 #pragma once
 
+#include <Processors/QueryPlan/CubeStep.h>
 #include <Processors/QueryPlan/ExtremesStep.h>
-#include <Processors/QueryPlan/LimitStep.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
+#include <Processors/QueryPlan/JoinStep.h>
+#include <Processors/QueryPlan/OffsetStep.h>
+#include <Processors/QueryPlan/RollupStep.h>
+
 //#include <Processors/QueryPlan/JoinStep.h>
 //#include <Processors/QueryPlan/MultiJoinStep.h>
 
@@ -12,8 +16,10 @@ using QueryPlanStepShardPtr = std::shared_ptr<IQueryPlanStep>;
 
 
 #define APPLY_QUERY_PLAN_STEP_TYPES(M) \
+    M(CubeStep) \
     M(ExtremesStep) \
-    M(LimitStep)
+    M(RollupStep) \
+    M(OffsetStep)
 
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) ITEM,
 enum class QueryPlanStepType : UInt8
@@ -50,43 +56,49 @@ inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStepShardPtr & quer
 #undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE
 
 
-inline bool isPhysicalQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step)
+class QueryPlanStepHelper
 {
-    /* 
-     /// TODO: need to  attribute distribution_type to JoinStep
-    if (auto casted_query_plan_step = std::dynamic_pointer_cast<JoinStep>(query_plan_step))
-    {
-        return casted_query_plan_step->distribution_type != DistributionType::UNKNOWN;
-    }
-     /// TODO: need to add MultiJoinStep.h
-    else if (auto casted_query_plan_step = std::dynamic_pointer_cast<MultiJoinStep>(query_plan_step))
-    {
-        return false;
-    }
-    */
+public:
+    QueryPlanStepHelper() = default;
+    ~QueryPlanStepHelper() = default;
 
-    return true;
-}
-
-inline bool isLogicalQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step)
-{
-    return !isPhysicalQueryPlanStep(query_plan_step);
-}
-
-QueryPlanStepShardPtr copyQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step)
-{
-    QueryPlanStepShardPtr copied_query_plan_step;
-    switch (getQueryPlanStepType(query_plan_step))
+    static bool isLogicalQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step)
     {
-    case QueryPlanStepType::ExtremesStep:
-        // If the query plan step needs to be deep copied, it needs to be processed separately.   
-        // copied_query_plan_step = query_plan_step.copy();
-    default:
-        // In other cases, shallow copy is used uniformly.
-        copied_query_plan_step = query_plan_step;
+        return !isPhysicalQueryPlanStep(query_plan_step);
     }
 
-    return copied_query_plan_step;
-}
+    static bool isPhysicalQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step)
+    {
+        /* 
+        /// TODO: need to  attribute distribution_type to JoinStep
+        if (auto casted_query_plan_step = std::dynamic_pointer_cast<JoinStep>(query_plan_step))
+        {
+            return casted_query_plan_step->distribution_type != DistributionType::UNKNOWN;
+        }
+        /// TODO: need to add MultiJoinStep.h
+        else if (auto casted_query_plan_step = std::dynamic_pointer_cast<MultiJoinStep>(query_plan_step))
+        {
+            return false;
+        }
+        */
+
+        return true;
+    }
+
+    static QueryPlanStepShardPtr copyQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step)
+    {
+        if (auto step_ptr = std::dynamic_pointer_cast<OffsetStep>(query_plan_step))
+        {
+            return std::make_shared<OffsetStep>(step_ptr->input_streams[0], step_ptr->offset);
+        }
+        else if (auto join_step_ptr = std::dynamic_pointer_cast<JoinStep>(query_plan_step))
+        {
+            //TODO: need to add JoinStep copy logic
+            return nullptr;
+        }
+
+        return nullptr;
+    }
+};
 
 }
