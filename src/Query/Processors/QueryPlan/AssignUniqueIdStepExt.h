@@ -16,10 +16,7 @@ public:
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 
     String getUniqueId() const { return unique_id; }
-    std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
-    // void toProto(Protos::AssignUniqueIdStepExt & proto, bool for_hash_equals = false) const;
-    // static std::shared_ptr<AssignUniqueIdStepExt> fromProto(const Protos::AssignUniqueIdStepExt & proto, ContextPtr);
-
+    friend class QueryPlanStepHelper;
 private:
     String unique_id;
 };

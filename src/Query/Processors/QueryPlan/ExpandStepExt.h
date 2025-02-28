@@ -62,22 +62,19 @@ public:
     // QueryPlanStepType getType() const { return QueryPlanStepType::ExpandStepExt; }
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings) override;
-    // void toProto(Protos::ExpandStepExt & proto, bool for_hash_equals = false) const;
-    // static std::shared_ptr<ExpandStepExt> fromProto(const Protos::ExpandStepExt & proto, ContextPtr context);
-
+    
     const Assignments & getAssignments() const { return assignments; }
     const NameToType & getNameToType() const { return name_to_type; }
     const String & getGroupIdSymbol() const { return group_id_symbol; }
     const std::set<Int32> & getGroupIdValue() const { return group_id_value; }
     const std::map<Int32, Names> & getGroupIdNonNullSymbol() const { return group_id_non_null_symbol; }
-    std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
     void updateInputStreams(const DataStreams & input_streams_);
 
     std::vector<Assignments> generateAssignmentsGroups() const;
     NamesAndTypesList generateNameTypePreGroup() const;
 
     // void prepare(const PreparedStatementContext & prepared_context);
-
+    friend class QueryPlanStepHelper;
 private:
     Assignments assignments;
     NameToType name_to_type;

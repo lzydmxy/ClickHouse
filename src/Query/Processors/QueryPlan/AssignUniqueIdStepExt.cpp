@@ -26,24 +26,4 @@ void AssignUniqueIdStepExt::transformPipeline(QueryPipelineBuilder & pipeline, c
     // pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<AssignUniqueIdTransformExt>(header, unique_id); });
 }
 
-// std::shared_ptr<AssignUniqueIdStepExt> AssignUniqueIdStepExt::fromProto(const Protos::AssignUniqueIdStepExt & proto, ContextPtr)
-// {
-//     auto [step_description, base_input_stream] = ITransformingStep::deserializeFromProtoBase(proto.query_plan_base());
-//     auto unique_id = proto.unique_id();
-//     auto step = std::make_shared<AssignUniqueIdStepExt>(base_input_stream, unique_id);
-//     step->setStepDescription(step_description);
-//     return step;
-// }
-
-// void AssignUniqueIdStepExt::toProto(Protos::AssignUniqueIdStepExt & proto, bool) const
-// {
-//     ITransformingStep::serializeToProtoBase(*proto.mutable_query_plan_base());
-//     proto.set_unique_id(unique_id);
-// }
-
-std::shared_ptr<IQueryPlanStep> AssignUniqueIdStepExt::copy(ContextPtr) const
-{
-    return std::make_unique<AssignUniqueIdStepExt>(input_streams[0], unique_id);
-}
-
 }

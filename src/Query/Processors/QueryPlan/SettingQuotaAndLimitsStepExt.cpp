@@ -78,9 +78,4 @@ void SettingQuotaAndLimitsStepExt::transformPipeline(QueryPipelineBuilder & pipe
     //     pipeline.addTableLock(std::move(table_lock));
 }
 
-std::shared_ptr<IQueryPlanStep> SettingQuotaAndLimitsStepExt::copy(ContextPtr) const
-{
-    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "SettingQuotaAndLimitsStepExt can not copy");
-}
-
 }

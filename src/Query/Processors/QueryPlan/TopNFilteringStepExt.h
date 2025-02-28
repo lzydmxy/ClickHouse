@@ -44,9 +44,6 @@ public:
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
     void describeActions(JSONBuilder::JSONMap & map) const override;
     void describeActions(FormatSettings & settings) const override;
-    // void toProto(Protos::TopNFilteringStepExt & proto, bool for_hash_equals = false) const;
-    // static std::shared_ptr<TopNFilteringStepExt> fromProto(const Protos::TopNFilteringStepExt & proto, ContextPtr context);
-    std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
 
     const SortDescription & getSortDescription() const { return sort_description; }
     UInt64 getSize() const { return size; }
@@ -59,7 +56,7 @@ public:
     {
         return algorithm;
     }
-
+    friend class QueryPlanStepHelper;
 private:
     SortDescription sort_description;
     UInt64 size;

@@ -34,14 +34,12 @@ public:
         ContextPtr context_);
 
     String getName() const override { return "SettingQuotaAndLimitsStepExt"; }
-
     // QueryPlanStepType getType() const { return QueryPlanStepType::SettingQuotaAndLimitsStepExt; }
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 
-    std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
     void updateInputStreams(const DataStreams & input_streams_);
-
+    friend class QueryPlanStepHelper;
 private:
     ContextPtr context;
     StoragePtr storage;

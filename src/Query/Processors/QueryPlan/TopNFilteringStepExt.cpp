@@ -80,38 +80,4 @@ void TopNFilteringStepExt::describeActions(FormatSettings &) const
 void TopNFilteringStepExt::describeActions(JSONBuilder::JSONMap &) const
 {
 }
-
-// std::shared_ptr<TopNFilteringStepExt> TopNFilteringStepExt::fromProto(const Protos::TopNFilteringStepExt & proto, ContextPtr)
-// {
-//     auto [step_description, base_input_stream] = ITransformingStep::deserializeFromProtoBase(proto.query_plan_base());
-//     SortDescription sort_description;
-//     for (const auto & proto_element : proto.sort_description())
-//     {
-//         SortColumnDescription element;
-//         element.fillFromProto(proto_element);
-//         sort_description.emplace_back(std::move(element));
-//     }
-//     auto size = proto.size();
-//     auto model = TopNModelConverter::fromProto(proto.model());
-//     auto algorithm = TopNFilteringAlgorithmConverter::fromProto(proto.algorithm());
-//     auto step = std::make_shared<TopNFilteringStepExt>(base_input_stream, sort_description, size, model, algorithm);
-//     step->setStepDescription(step_description);
-//     return step;
-// }
-
-// void TopNFilteringStepExt::toProto(Protos::TopNFilteringStepExt & proto, bool) const
-// {
-//     ITransformingStep::serializeToProtoBase(*proto.mutable_query_plan_base());
-//     for (const auto & element : sort_description)
-//         element.toProto(*proto.add_sort_description());
-//     proto.set_size(size);
-//     proto.set_model(TopNModelConverter::toProto(model));
-//     proto.set_algorithm(TopNFilteringAlgorithmConverter::toProto(algorithm));
-// }
-
-std::shared_ptr<IQueryPlanStep> TopNFilteringStepExt::copy(ContextPtr) const
-{
-    return std::make_shared<TopNFilteringStepExt>(input_streams[0], sort_description, size, model, algorithm);
-}
-
 }

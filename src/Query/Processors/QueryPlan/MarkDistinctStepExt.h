@@ -23,15 +23,11 @@ public:
     // QueryPlanStepType getType() const { return QueryPlanStepType::MarkDistinctStepExt; }
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
-    // void toProto(Protos::MarkDistinctStepExt & proto, bool for_hash_equals = false) const;
-    // static std::shared_ptr<MarkDistinctStepExt> fromProto(const Protos::MarkDistinctStepExt & proto, ContextPtr);
-
-    std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
     void updateInputStreams(const DataStreams & input_streams_);
 
     String getMarkerSymbol() const { return marker_symbol;}
     const std::vector<String> & getDistinctSymbols() const {return distinct_symbols;}
-
+    friend class QueryPlanStepHelper;
 private:
     String marker_symbol;
     std::vector<String> distinct_symbols;

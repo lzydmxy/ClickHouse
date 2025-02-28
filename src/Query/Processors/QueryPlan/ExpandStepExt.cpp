@@ -80,39 +80,6 @@ void ExpandStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const Bui
     //     [&](const Block & header) { return std::make_shared<ExpandTransformExt>(header, output_stream->header, expressions); });
 }
 
-// void ExpandStepExt::toProto(Protos::ExpandStepExt & proto, bool) const
-// {
-//     ITransformingStep::serializeToProtoBase(*proto.mutable_query_plan_base());
-//     serializeAssignmentsToProto(assignments, *proto.mutable_assignments());
-//     serializeOrderedMapToProto(name_to_type, *proto.mutable_name_to_type());
-//     proto.set_group_id_symbol(group_id_symbol);
-//     for (const auto & group : group_id_value)
-//         proto.add_group_id_value(group);
-//     serializeOrderedMapToProto(group_id_non_null_symbol, *proto.mutable_group_id_non_null_symbol());
-// }
-
-// std::shared_ptr<ExpandStepExt> ExpandStepExt::fromProto(const Protos::ExpandStepExt & proto, ContextPtr)
-// {
-//     auto [step_description, base_input_stream] = ITransformingStep::deserializeFromProtoBase(proto.query_plan_base());
-//     auto assignments = deserializeAssignmentsFromProto(proto.assignments());
-//     auto name_to_type = deserializeOrderedMapFromProto<String, DataTypePtr>(proto.name_to_type());
-//     String group_id_symbol = proto.group_id_symbol();
-//     std::set<Int32> group_id_value;
-//     for (const auto & group : proto.group_id_value())
-//         group_id_value.insert(group);
-//     auto group_id_non_null_symbol = deserializeOrderedMapFromProto<Int32, Names>(proto.group_id_non_null_symbol());
-//     auto step
-//         = std::make_shared<ExpandStepExt>(base_input_stream, assignments, name_to_type, group_id_symbol, group_id_value, group_id_non_null_symbol);
-//     step->setStepDescription(step_description);
-//     return step;
-// }
-
-std::shared_ptr<IQueryPlanStep> ExpandStepExt::copy(ContextPtr) const
-{
-    return std::make_shared<ExpandStepExt>(
-        input_streams[0], assignments.copy(), name_to_type, group_id_symbol, group_id_value, group_id_non_null_symbol);
-}
-
 // void ExpandStepExt::prepare(const PreparedStatementContext & prepared_context)
 // {
 //     for (auto & assign : assignments)
