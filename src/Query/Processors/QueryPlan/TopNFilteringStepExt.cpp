@@ -32,6 +32,7 @@ void TopNFilteringStepExt::updateInputStreams(const DataStreams & input_streams_
 
 void TopNFilteringStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
+    //TODO FIXME
     // if (algorithm == TopNFilteringAlgorithm::Unspecified)
     // {
     //     // String default_algorithm = settings.context->getSettingsRef().topn_filtering_algorithm_for_unsorted_stream;
@@ -73,11 +74,8 @@ void TopNFilteringStepExt::transformPipeline(QueryPipelineBuilder & pipeline, co
     // }
 }
 
-void TopNFilteringStepExt::describeActions(FormatSettings &) const
+std::shared_ptr<IQueryPlanStep> TopNFilteringStepExt::copy(ContextPtr) const
 {
-}
-
-void TopNFilteringStepExt::describeActions(JSONBuilder::JSONMap &) const
-{
+    return std::make_shared<TopNFilteringStepExt>(input_streams[0], sort_description, size, model, algorithm);
 }
 }

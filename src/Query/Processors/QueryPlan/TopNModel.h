@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Query/Protos/EnumMacros.h>
 #include <Query/Protos/common.pb.h>
 

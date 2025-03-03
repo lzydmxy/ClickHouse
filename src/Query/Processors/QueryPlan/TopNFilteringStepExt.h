@@ -1,8 +1,8 @@
 #pragma once
+
 #include <Core/SortDescription.h>
 #include <Processors/QueryPlan/ITransformingStep.h>
 #include <Query/Processors/QueryPlan/TopNModel.h>
-#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Protos/EnumMacros.h>
 
 namespace DB
@@ -38,12 +38,12 @@ public:
         TopNFilteringAlgorithm algorithm = TopNFilteringAlgorithm::Unspecified);
 
     String getName() const override { return "TopNFilteringStepExt"; }
-    // QueryPlanStepType getType() const { return QueryPlanStepType::TopNFilteringStepExt; }
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
     void updateInputStreams(const DataStreams & input_streams_);
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
-    void describeActions(JSONBuilder::JSONMap & map) const override;
-    void describeActions(FormatSettings & settings) const override;
+    void describeActions(JSONBuilder::JSONMap & map) const override {};
+    void describeActions(FormatSettings & settings) const override {};
 
     const SortDescription & getSortDescription() const { return sort_description; }
     UInt64 getSize() const { return size; }

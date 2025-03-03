@@ -1,5 +1,4 @@
 #pragma once
-#pragma clang diagnostic ignored "-Wcovered-switch-default"
 
 #include <string>
 #include <boost/preprocessor.hpp>
@@ -36,9 +35,6 @@ namespace DB
             switch (_value) \
             { \
                 BOOST_PP_SEQ_FOR_EACH(PP_ENUM_WITH_PROTO_IMPL_CASE, (_enumType, PROTO_SCOPE), SEQS) \
-                default: { \
-                    throwBetterEnumException("cpp enum", BOOST_PP_STRINGIZE(ENUM_NAME), static_cast<int>(_value)); \
-                } \
             } \
         } \
         [[maybe_unused]] static _enumType fromProto(const PROTO_SCOPE::Enum & proto) \

@@ -30,4 +30,8 @@ void MarkDistinctStepExt::transformPipeline(QueryPipelineBuilder & pipeline, con
     // pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<MarkDistinctTransformExt>(header, marker_symbol, distinct_symbols); });
 }
 
+std::shared_ptr<IQueryPlanStep> MarkDistinctStepExt::copy(ContextPtr) const
+{
+    return std::make_shared<MarkDistinctStepExt>(input_streams[0], marker_symbol, distinct_symbols);
+}
 }

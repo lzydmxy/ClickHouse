@@ -12,8 +12,6 @@ static ITransformingStep::Traits getTraits()
     return ITransformingStep::Traits
     {
         {
-            //TODO FIXME：miss preserves_distinct_columns
-            // .preserves_distinct_columns = true,
             .returns_single_stream = false,
             .preserves_number_of_streams = true,
             .preserves_sorting = true,
@@ -76,6 +74,12 @@ void SettingQuotaAndLimitsStepExt::transformPipeline(QueryPipelineBuilder & pipe
 
     // if (table_lock)
     //     pipeline.addTableLock(std::move(table_lock));
+}
+
+
+std::shared_ptr<IQueryPlanStep> SettingQuotaAndLimitsStepExt::copy(ContextPtr) const
+{
+    throw Exception(ErrorCodes::NOT_IMPLEMENTED ,"SettingQuotaAndLimitsStep can not copy");
 }
 
 }

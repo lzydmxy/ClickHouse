@@ -1,12 +1,9 @@
 #pragma once
 
 #include <vector>
-#include <Query/Core/NameToType.h>
 #include <Query/Processors/QueryPlan/Assignment.h>
 #include <Processors/QueryPlan/ITransformingStep.h>
 #include <base/types.h>
-
-#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 
 namespace DB
 {
@@ -44,6 +41,9 @@ namespace DB
  *  null    B        null   2       null    B        null   2
  *  null    A        null   2       null    B        null   2
 */
+
+using NameToType = std::map<String, DataTypePtr>;
+
 class ExpandStepExt : public ITransformingStep
 {
 public:
@@ -59,7 +59,7 @@ public:
         std::map<Int32, Names> group_id_non_null_symbol_);
 
     String getName() const override { return "ExpandStepExt"; }
-    // QueryPlanStepType getType() const { return QueryPlanStepType::ExpandStepExt; }
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings) override;
     

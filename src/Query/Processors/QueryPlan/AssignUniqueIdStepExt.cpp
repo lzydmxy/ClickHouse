@@ -23,7 +23,13 @@ void AssignUniqueIdStepExt::updateInputStreams(const DataStreams & input_streams
 
 void AssignUniqueIdStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &)
 {
+    //TODO FIXME
     // pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<AssignUniqueIdTransformExt>(header, unique_id); });
+}
+
+std::shared_ptr<IQueryPlanStep> AssignUniqueIdStepExt::copy(ContextPtr) const
+{
+    return std::make_unique<AssignUniqueIdStepExt>(input_streams[0], unique_id);
 }
 
 }

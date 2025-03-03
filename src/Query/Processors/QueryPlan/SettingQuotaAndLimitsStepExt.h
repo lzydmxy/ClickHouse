@@ -5,7 +5,6 @@
 #include <Storages/TableLockHolder.h>
 #include <QueryPipeline/StreamLocalLimits.h>
 #include <Query/Processors/QueryPlan/TopNFilteringStepExt.h>
-#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 
 
 namespace DB
@@ -34,7 +33,7 @@ public:
         ContextPtr context_);
 
     String getName() const override { return "SettingQuotaAndLimitsStepExt"; }
-    // QueryPlanStepType getType() const { return QueryPlanStepType::SettingQuotaAndLimitsStepExt; }
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 

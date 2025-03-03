@@ -7,13 +7,13 @@
 #include <Processors/QueryPlan/OffsetStep.h>
 #include <Processors/QueryPlan/RollupStep.h>
 
-//#include <Processors/QueryPlan/JoinStep.h>
-//#include <Processors/QueryPlan/MultiJoinStep.h>
 #include <Query/Processors/QueryPlan/AssignUniqueIdStepExt.h>
 #include <Query/Processors/QueryPlan/ExpandStepExt.h>
 #include <Query/Processors/QueryPlan/MarkDistinctStepExt.h>
 #include <Query/Processors/QueryPlan/SettingQuotaAndLimitsStepExt.h>
 #include <Query/Processors/QueryPlan/TopNFilteringStepExt.h>
+//#include <Processors/QueryPlan/JoinStep.h>
+//#include <Processors/QueryPlan/MultiJoinStep.h>
 
 namespace DB
 {
@@ -25,7 +25,6 @@ using QueryPlanStepShardPtr = std::shared_ptr<IQueryPlanStep>;
     M(ExtremesStep) \
     M(RollupStep) \
     M(OffsetStep) \
-    M(LimitStep) \
     M(AssignUniqueIdStepExt) \
     M(ExpandStepExt) \
     M(MarkDistinctStepExt) \
@@ -61,8 +60,7 @@ if (auto casted_query_plan_step = std::dynamic_pointer_cast<type>(query_plan_ste
 
 inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStepShardPtr & query_plan_step)
 {
-    // TODO: FIXME type
-    // APPLY_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE)
+    APPLY_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE)
     return QueryPlanStepType::UNDEFINED;
 }
 #undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE
@@ -100,14 +98,22 @@ public:
     static QueryPlanStepShardPtr copyQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step)
     {
         if (auto step_ptr = std::dynamic_pointer_cast<OffsetStep>(query_plan_step))
-        {
             return std::make_shared<OffsetStep>(step_ptr->input_streams[0], step_ptr->offset);
-        }
-        else if (auto join_step_ptr = std::dynamic_pointer_cast<JoinStep>(query_plan_step))
-        {
-            //TODO: need to add JoinStep copy logic
-            return nullptr;
-        }
+        // else if (auto join_step_ptr = std::dynamic_pointer_cast<JoinStep>(query_plan_step))
+        // {
+        //     //TODO: need to add JoinStep copy logic
+        //     return nullptr;
+        // }
+        else if (auto assign_uniqueid_step_ptr = std::dynamic_pointer_cast<AssignUniqueIdStepExt>(query_plan_step))
+            return assign_uniqueid_step_ptr->copy(nullptr);
+        else if (auto expand_step_ptr = std::dynamic_pointer_cast<ExpandStepExt>(query_plan_step))
+            return expand_step_ptr->copy(nullptr);
+        else if (auto mark_distinct_step_ptr = std::dynamic_pointer_cast<MarkDistinctStepExt>(query_plan_step))
+            return mark_distinct_step_ptr->copy(nullptr);
+        else if (auto setting_quota_and_limits_step_ptr = std::dynamic_pointer_cast<SettingQuotaAndLimitsStepExt>(query_plan_step))
+            return setting_quota_and_limits_step_ptr->copy(nullptr);
+        else if (auto topn_filtering_step_ptr = std::dynamic_pointer_cast<TopNFilteringStepExt>(query_plan_step))
+            return topn_filtering_step_ptr->copy(nullptr);
 
         return nullptr;
     }

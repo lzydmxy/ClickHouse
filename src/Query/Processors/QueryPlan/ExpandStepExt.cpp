@@ -143,4 +143,9 @@ NamesAndTypesList ExpandStepExt::generateNameTypePreGroup() const
 //     return createExpressionActions(context, source, output, expr_list);
 // }
 
+std::shared_ptr<IQueryPlanStep> ExpandStepExt::copy(ContextPtr) const
+{
+    return std::make_shared<ExpandStepExt>(
+        input_streams[0], assignments.copy(), name_to_type, group_id_symbol, group_id_value, group_id_non_null_symbol);
+}
 }

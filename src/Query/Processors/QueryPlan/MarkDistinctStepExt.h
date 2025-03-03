@@ -1,10 +1,8 @@
 #pragma once
 
-#include <Query/Core/NameToType.h>
 // #include <Optimizer/RuntimeFilterUtils.h>
 #include <Query/Processors/QueryPlan/Assignment.h>
 #include <Processors/QueryPlan/ITransformingStep.h>
-#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 
 namespace DB
 {
@@ -20,7 +18,7 @@ public:
         std::vector<String> distinct_symbols_);
 
     String getName() const override { return "MarkDistinctStepExt"; }
-    // QueryPlanStepType getType() const { return QueryPlanStepType::MarkDistinctStepExt; }
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
     void updateInputStreams(const DataStreams & input_streams_);

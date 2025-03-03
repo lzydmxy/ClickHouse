@@ -1,5 +1,4 @@
 #include <Query/Protos/EnumMacros.h>
-#include <boost/preprocessor.hpp>
 #include <Common/Exception.h>
 
 namespace DB
