@@ -35,7 +35,6 @@ using QueryPlanStepShardPtr = std::shared_ptr<IQueryPlanStep>;
     M(ExtremesStep) \
     M(RollupStep) \
     M(OffsetStep) \
-<<<<<<< HEAD
     M(JoinStepExt) \
     M(FilledJoinStep) \
     M(MultiJoinStepExt) \
@@ -50,12 +49,10 @@ using QueryPlanStepShardPtr = std::shared_ptr<IQueryPlanStep>;
     M(ExpandStepExt) \
     M(MarkDistinctStepExt) \
     M(SettingQuotaAndLimitsStepExt) \
-    M(TopNFilteringStepExt)
-=======
+    M(TopNFilteringStepExt) \
     M(ExchangeStepExt) \
     M(LocalExchangeStepExt) \
     M(RemoteExchangeSourceStepExt)
->>>>>>> feat: add plan step about exchange to macro
 
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) ITEM,
 enum class QueryPlanStepType : UInt8
