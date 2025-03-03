@@ -20,6 +20,7 @@ public:
 
     const ArrayJoinActionPtr & arrayJoin() const { return array_join; }
 
+    friend class QueryPlanStepHelper;
 private:
     void updateOutputStream() override;
 

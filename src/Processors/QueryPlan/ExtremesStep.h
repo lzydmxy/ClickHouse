@@ -13,6 +13,7 @@ public:
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 
+    friend class QueryPlanStepHelper;
 private:
     void updateOutputStream() override
     {

@@ -26,6 +26,7 @@ public:
 
     void describeActions(JSONBuilder::JSONMap & map) const override;
 
+    friend class QueryPlanStepHelper;
 private:
     void updateOutputStream() override;
 
