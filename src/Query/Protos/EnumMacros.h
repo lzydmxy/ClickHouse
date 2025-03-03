@@ -1,5 +1,5 @@
 #pragma once
-#include <string>
+
 #include <boost/preprocessor.hpp>
 
 /// see documents and sample code in Protos/test/gtest_enum_macros.cpp

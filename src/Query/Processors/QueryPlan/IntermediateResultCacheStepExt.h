@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Interpreters/Aggregator.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
 #include <Common/Logger.h>

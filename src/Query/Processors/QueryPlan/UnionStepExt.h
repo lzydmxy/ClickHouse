@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Processors/QueryPlan/UnionStep.h>
 
 namespace DB

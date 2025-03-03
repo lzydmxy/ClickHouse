@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Core/Names.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
 #include <Query/Protos/EnumMacros.h>
