@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Core/Types.h>
 #include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
 #include <Query/Optimizer/Cascades/GroupExpression.h>
 #include <Query/Optimizer/Property/Constants.h>

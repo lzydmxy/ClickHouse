@@ -538,7 +538,7 @@ message JoinStep {
     bool has_using = 11;
     bool flag_require_right_keys = 12;
     repeated bool require_right_keys = 13;
-    ASOF.Inequality asof_inequality = 14;
+    ASOF.Inequality.Enum asof_inequality = 14;
     DistributionType.Enum distribution_type = 15;
     JoinAlgorithm.Enum join_algorithm = 16;
     bool is_magic = 17;

@@ -47,12 +47,14 @@ message TopNFilteringAlgorithm {
 }
 
 message ASOF {
-    enum Inequality {
-        None = 0;
-        Less = 1;
-        Greater = 2;
-        LessOrEquals = 3;
-        GreaterOrEquals = 4;
+    message Inequality {
+        enum Enum {
+            None = 0;
+            Less = 1;
+            Greater = 2;
+            LessOrEquals = 3;
+            GreaterOrEquals = 4;
+        }
     }
 }
 

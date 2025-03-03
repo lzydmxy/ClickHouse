@@ -494,7 +494,7 @@
 [submodule "contrib/incubator-brpc"]
 	path = contrib/incubator-brpc
 #   url = https://github.com/ByConity/incubator-brpc.git
-    url = git@github.com/ByConity/incubator-brpc.git
+    url = git@github.com:ByConity/incubator-brpc.git
 [submodule "contrib/gflags"]
 	path = contrib/gflags
 #	url = https://github.com/gflags/gflags.git
@@ -502,7 +502,7 @@
 [submodule "contrib/protobuf"]
 	path = contrib/protobuf
 #	url = https://github.com/ClickHouse-Extras/protobuf.git
-    url = git@github.com:ClickHouse/google-protobuf.git
+    url = git@github.com:ClickHouse-Extras/protobuf.git
 [submodule "contrib/brpc"]
 	path = contrib/brpc
 #	url = https://github.com/apache/brpc.git

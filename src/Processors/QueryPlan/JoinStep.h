@@ -36,6 +36,7 @@ public:
     bool canUpdateInputStream() const override { return true; }
 
 private:
+    friend class JoinStepExt;
     void updateOutputStream() override;
 
     JoinPtr join;
@@ -60,6 +61,7 @@ public:
     const JoinPtr & getJoin() const { return join; }
 
 private:
+    friend class QueryPlanStepHelper;
     void updateOutputStream() override;
 
     JoinPtr join;

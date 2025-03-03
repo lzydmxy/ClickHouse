@@ -27,6 +27,7 @@ public:
     void describeActions(FormatSettings & settings) const override;
 
 private:
+    friend class QueryPlanStepHelper;
     void updateOutputStream() override;
 
     SetAndKeyPtr set_and_key;

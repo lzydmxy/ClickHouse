@@ -179,7 +179,9 @@ public:
             }
             else if constexpr (std::is_same_v<T, ASTPtr> || std::is_same_v<T, ConstASTPtr>)
             {
-                return serializeAST(*obj, true);
+                // return serializeAST(*obj, true);
+                // TODO FIXME
+                return serializeAST(*obj);
             }
             // else if constexpr (decltype(has_std_to_string(obj))::value)
             // {
