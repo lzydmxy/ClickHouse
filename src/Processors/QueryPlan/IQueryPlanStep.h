@@ -140,6 +140,7 @@ public:
 
     virtual bool canUpdateInputStream() const { return false; }
 
+    friend class QueryPlanStepHelper;
 protected:
     virtual void updateOutputStream() { throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implemented"); }
 

@@ -2,7 +2,6 @@
 
 #include <Interpreters/ActionsDAG.h>
 #include <Processors/QueryPlan/ITransformingStep.h>
-#include <Query/Common/NameToType.h>
 #include <Query/Processors/QueryPlan/Assignment.h>
 
 namespace DB
@@ -12,6 +11,7 @@ using ExpressionActionsPtr = std::shared_ptr<ExpressionActions>;
 
 class RuntimeFilterBuilder;
 using RuntimeFilterBuilderPtr = std::shared_ptr<RuntimeFilterBuilder>;
+using NameToType = std::map<String, DataTypePtr>;
 
 class ProjectionStepExt : public ITransformingStep
 {

@@ -19,7 +19,7 @@ ProjectionStepExt::ProjectionStepExt(
     for (const auto & item : assignments)
     {
         if (unlikely(!name_to_type[item.first]))
-            throw Exception(ErrorCodes::LOGICAL_ERROR, "ProjectionStep miss type info for column " + item.first);
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "ProjectionStep miss type info for column {}", item.first);
         output_stream->header.insert(ColumnWithTypeAndName{name_to_type[item.first], item.first});
     }
 }

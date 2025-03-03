@@ -29,6 +29,7 @@ public:
 
     UInt64 getLimitHint() const { return limit_hint; }
 
+    friend class QueryPlanStepHelper;
 private:
     void updateOutputStream() override;
 

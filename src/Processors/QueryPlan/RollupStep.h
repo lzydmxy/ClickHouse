@@ -21,6 +21,7 @@ public:
 
     const Aggregator::Params & getParams() const { return params; }
 
+    friend class QueryPlanStepHelper;
 private:
     void updateOutputStream() override;
 
