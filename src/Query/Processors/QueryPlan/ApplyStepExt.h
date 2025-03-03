@@ -2,22 +2,14 @@
 
 #include <Core/Names.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
+#include <Query/Processors/QueryPlan/Assignment.h>
 #include <Query/Protos/EnumMacros.h>
 #include <Query/Protos/plan_node.pb.h>
 #include <Query/Parsers/ASTHelper.h>
-#include <Query/Common/LinkedHashMap.h>
+
 
 namespace DB
 {
-
-using Assignment = std::pair<String, ConstASTPtr>;
-class Assignments : public LinkedHashMap<String, ConstASTPtr>
-
-{
-public:
-    using LinkedHashMap::LinkedHashMap;
-    Assignments copy() const;
-};
 
 class ApplyStepExt : public IQueryPlanStep
 {

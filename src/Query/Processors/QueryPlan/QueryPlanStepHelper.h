@@ -16,6 +16,11 @@
 #include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
 #include <Query/Processors/QueryPlan/UnionStepExt.h>
 
+#include <Query/Processors/QueryPlan/AssignUniqueIdStepExt.h>
+#include <Query/Processors/QueryPlan/ExpandStepExt.h>
+#include <Query/Processors/QueryPlan/MarkDistinctStepExt.h>
+#include <Query/Processors/QueryPlan/SettingQuotaAndLimitsStepExt.h>
+#include <Query/Processors/QueryPlan/TopNFilteringStepExt.h>
 
 namespace DB
 {
@@ -36,7 +41,12 @@ using QueryPlanStepShardPtr = std::shared_ptr<IQueryPlanStep>;
     M(CreatingSetsStep) \
     M(IntersectOrExceptStep) \
     M(ApplyStepExt) \
-    M(AnyStepExt)
+    M(AnyStepExt) \
+    M(AssignUniqueIdStepExt) \
+    M(ExpandStepExt) \
+    M(MarkDistinctStepExt) \
+    M(SettingQuotaAndLimitsStepExt) \
+    M(TopNFilteringStepExt)
 
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) ITEM,
 enum class QueryPlanStepType : UInt8
@@ -60,10 +70,10 @@ inline String toString(QueryPlanStepType type)
 }
 
 #define CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE(type) \
-    if (auto casted_query_plan_step = std::dynamic_pointer_cast<type>(query_plan_step)) \
-    { \
-        return QueryPlanStepType::type; \
-    }
+if (auto casted_query_plan_step = std::dynamic_pointer_cast<type>(query_plan_step)) \
+{ \
+    return QueryPlanStepType::type; \
+}
 
 inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStepShardPtr & query_plan_step)
 {
@@ -134,7 +144,16 @@ public:
         }
         if (auto creating_sets_step = std::dynamic_pointer_cast<CreatingSetsStep>(query_plan_step))
             return std::make_shared<CreatingSetsStep>(creating_sets_step->getInputStreams());
-
+        if (auto assign_uniqueid_step_ptr = std::dynamic_pointer_cast<AssignUniqueIdStepExt>(query_plan_step))
+            return assign_uniqueid_step_ptr->copy(nullptr);
+        if (auto expand_step_ptr = std::dynamic_pointer_cast<ExpandStepExt>(query_plan_step))
+            return expand_step_ptr->copy(nullptr);
+        if (auto mark_distinct_step_ptr = std::dynamic_pointer_cast<MarkDistinctStepExt>(query_plan_step))
+            return mark_distinct_step_ptr->copy(nullptr);
+        if (auto setting_quota_and_limits_step_ptr = std::dynamic_pointer_cast<SettingQuotaAndLimitsStepExt>(query_plan_step))
+            return setting_quota_and_limits_step_ptr->copy(nullptr);
+        if (auto topn_filtering_step_ptr = std::dynamic_pointer_cast<TopNFilteringStepExt>(query_plan_step))
+            return topn_filtering_step_ptr->copy(nullptr);
 
         return nullptr;
     }
