@@ -165,26 +165,15 @@ public:
             return topn_filtering_step_ptr->copy(nullptr);
         if (auto exchange_step_ptr = std::dynamic_pointer_cast<ExchangeStepExt>(query_plan_step))
         {
-            // TODO: need Partitioning
-            return std::make_shared<ExchangeStepExt>(
-                exchange_step_ptr->getInputStreams(),
-                exchange_step_ptr->getExchangeMode(),
-                exchange_step_ptr->needKeepOrder());
+            return exchange_step_ptr->copy(context);
         }
         if (auto local_exchange_step_ptr = std::dynamic_pointer_cast<LocalExchangeStepExt>(query_plan_step))
         {
-            // TODO: need Partitioning
-            return std::make_shared<LocalExchangeStepExt>(
-                local_exchange_step_ptr->getInputStreams()[0],
-                local_exchange_step_ptr->getExchangeMode());
+            return local_exchange_step_ptr->copy(context);
         }
         if (auto remote_exchange_source_step_ptr = std::dynamic_pointer_cast<RemoteExchangeSourceStepExt>(query_plan_step))
         {
-            return std::make_shared<RemoteExchangeSourceStepExt>(
-                remote_exchange_source_step_ptr->getInput(),
-                remote_exchange_source_step_ptr->getInputStreams()[0],
-                remote_exchange_source_step_ptr->isAddTotals(),
-                remote_exchange_source_step_ptr->isAddExtremes());
+            return remote_exchange_source_step_ptr->copy(context);
         }
         return nullptr;
     }

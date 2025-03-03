@@ -16,7 +16,7 @@ namespace DB
 
         String getName() const override
         {
-            return "LocalExchange";
+            return "LocalExchangeStepExt";
         }
 
         void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
@@ -31,6 +31,7 @@ namespace DB
             return getOutputStream().header;
         }
 
+        std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
         void updateOutputStream() override;
 
     private:

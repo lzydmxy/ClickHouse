@@ -30,4 +30,11 @@ QueryPipelineBuilderPtr ExchangeStepExt::updatePipeline(QueryPipelineBuilders pi
     return std::move(pipelines[0]);
 }
 
+std::shared_ptr<IQueryPlanStep> ExchangeStepExt::copy(ContextPtr) const
+{
+    // TODO: need Partitioning
+    return std::make_shared<ExchangeStepExt>(input_streams, exchange_type, keep_order);
+}
+
+
 }

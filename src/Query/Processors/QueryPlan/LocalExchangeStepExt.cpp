@@ -64,4 +64,10 @@ void LocalExchangeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, co
 
 }
 
+std::shared_ptr<IQueryPlanStep> LocalExchangeStepExt::copy(ContextPtr) const
+{
+    // TODO: need Partitioning
+    return std::make_shared<LocalExchangeStepExt>(input_streams[0], exchange_type);
+}
+
 }
