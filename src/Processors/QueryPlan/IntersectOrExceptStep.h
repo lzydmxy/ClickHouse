@@ -21,6 +21,7 @@ public:
     void describePipeline(FormatSettings & settings) const override;
 
 private:
+    friend class QueryPlanStepHelper;
     Block header;
     Operator current_operator;
     size_t max_threads;
