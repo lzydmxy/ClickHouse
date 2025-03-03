@@ -24,4 +24,9 @@ void BufferStepExt::updateOutputStream()
     output_stream->header = input_streams[0].header;
 }
 
+std::shared_ptr<IQueryPlanStep> BufferStepExt::copy(ContextPtr) const
+{
+    return std::make_shared<BufferStepExt>(input_streams[0]);
+}
+
 }

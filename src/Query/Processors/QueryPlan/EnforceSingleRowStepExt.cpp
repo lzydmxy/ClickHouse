@@ -1,4 +1,4 @@
-#include <Query/Common/join_common.h>
+#include <Interpreters/JoinUtils.h>
 #include <Query/Processors/QueryPlan/EnforceSingleRowStepExt.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 
@@ -20,6 +20,11 @@ void EnforceSingleRowStepExt::transformPipeline(QueryPipelineBuilder & pipeline,
 void EnforceSingleRowStepExt::updateOutputStream()
 {
     makeOutputNullable();
+}
+
+std::shared_ptr<IQueryPlanStep> EnforceSingleRowStepExt::copy(ContextPtr) const
+{
+    return std::make_unique<EnforceSingleRowStepExt>(input_streams[0]);
 }
 
 void EnforceSingleRowStepExt::makeOutputNullable()

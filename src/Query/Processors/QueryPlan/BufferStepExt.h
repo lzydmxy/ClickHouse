@@ -8,12 +8,12 @@ namespace DB
 class BufferStepExt : public ITransformingStep
 {
 public:
-    friend class QueryPlanStepHelper;
-
     explicit BufferStepExt(const DataStream & input_stream_);
 
-    String getName() const override { return "Buffer"; }
+    String getName() const override { return "BufferExt"; }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
+
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
 private:
     void updateOutputStream() override;

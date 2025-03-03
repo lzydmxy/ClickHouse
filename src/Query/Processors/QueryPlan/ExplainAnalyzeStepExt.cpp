@@ -34,8 +34,9 @@ void ExplainAnalyzeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, c
     //     });
 }
 
-void ExplainAnalyzeStepExt::updateOutputStream()
+std::shared_ptr<IQueryPlanStep> ExplainAnalyzeStepExt::copy(ContextPtr) const
 {
+    return std::make_shared<ExplainAnalyzeStepExt>(input_streams[0], getOutputName(), kind, context, query_plan_ptr, settings);
 }
 
 }

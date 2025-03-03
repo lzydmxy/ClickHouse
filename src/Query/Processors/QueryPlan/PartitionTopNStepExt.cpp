@@ -30,17 +30,14 @@ void PartitionTopNStepExt::transformPipeline(QueryPipelineBuilder & pipeline, co
     //     { return std::make_shared<PartitionTopNTransform>(header, limit, partition_by_columns, order_by_columns, model, true); });
 }
 
-void PartitionTopNStepExt::describeActions(FormatSettings &) const
-{
-}
-
-void PartitionTopNStepExt::describeActions(JSONBuilder::JSONMap &) const
-{
-}
-
 void PartitionTopNStepExt::updateOutputStream()
 {
     output_stream->header = input_streams[0].header;
+}
+
+std::shared_ptr<IQueryPlanStep> PartitionTopNStepExt::copy(ContextPtr) const
+{
+    return std::make_shared<PartitionTopNStepExt>(input_streams[0], partition, order_by, limit, model);
 }
 
 }

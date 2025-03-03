@@ -37,8 +37,6 @@ struct QueryPlanSettings
 class ExplainAnalyzeStepExt : public ITransformingStep
 {
 public:
-    friend class QueryPlanStepHelper;
-
     ExplainAnalyzeStepExt(
         const DataStream & input_stream_,
         const String & output_name_,
@@ -47,7 +45,7 @@ public:
         std::shared_ptr<QueryPlan> query_plan_ptr_,
         QueryPlanSettings settings);
 
-    String getName() const override { return "ExplainAnalyze"; }
+    String getName() const override { return "ExplainAnalyzeExt"; }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 
     bool hasPlan() const { return query_plan_ptr != nullptr; }
@@ -57,6 +55,7 @@ public:
     String getOutputName() const { return output_stream->header.getByPosition(0).name; }
     ASTExplainQueryExt::ExplainKindExt getKind() const { return kind; }
 
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
     void setPlanSegmentDescriptions(PlanSegmentDescriptions & descriptions) { segment_descriptions = descriptions; }
 
 private:
@@ -66,7 +65,7 @@ private:
     PlanSegmentDescriptions segment_descriptions;
     QueryPlanSettings settings;
 
-    void updateOutputStream() override;
+    void updateOutputStream() override {};
 };
 using ExplainAnalyzeStepExtPtr = std::shared_ptr<ExplainAnalyzeStepExt>;
 

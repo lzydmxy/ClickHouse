@@ -16,8 +16,6 @@ using RuntimeFilterBuilderPtr = std::shared_ptr<RuntimeFilterBuilder>;
 class ProjectionStepExt : public ITransformingStep
 {
 public:
-    friend class QueryPlanStepHelper;
-
     explicit ProjectionStepExt(
         const DataStream & input_stream_,
         Assignments assignments_,
@@ -25,7 +23,7 @@ public:
         bool final_project_ = false,
         bool index_project_ = false);
 
-    String getName() const override { return "Projection"; }
+    String getName() const override { return "ProjectionExt"; }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
     // TODO: implement
     // void prepare(const PreparedStatementContext & prepared_context) override;
@@ -35,6 +33,7 @@ public:
     bool isFinalProject() const { return final_project; }
     bool isIndexProject() const { return index_project; }
 
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
     ActionsDAGPtr createActions(ContextPtr context) const;
 
     static ActionsDAGPtr createActions(const Assignments & assignments, const NamesAndTypesList & source, ContextPtr context);
@@ -46,7 +45,7 @@ private:
     bool final_project;
     bool index_project;
 
-    void updateOutputStream() override;
+    void updateOutputStream() override {};
 };
 
 }

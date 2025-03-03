@@ -34,6 +34,11 @@ void ProjectionStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const
     // projection(pipeline, output_stream->header, settings);
 }
 
+std::shared_ptr<IQueryPlanStep> ProjectionStepExt::copy(ContextPtr) const
+{
+    return std::make_shared<ProjectionStepExt>(input_streams[0], assignments.copy(), name_to_type, final_project, index_project);
+}
+
 ActionsDAGPtr ProjectionStepExt::createActions(ContextPtr context) const
 {
     ASTPtr expr_list = std::make_shared<ASTExpressionList>();
@@ -70,9 +75,5 @@ ActionsDAGPtr ProjectionStepExt::createActions(const Assignments & assignments, 
 //     for (auto & assign : assignments)
 //         prepared_context.prepare(assign.second);
 // }
-
-void ProjectionStepExt::updateOutputStream()
-{
-}
 
 }

@@ -7,13 +7,12 @@ namespace DB
 class EnforceSingleRowStepExt : public ITransformingStep
 {
 public:
-    friend class QueryPlanStepHelper;
-
     explicit EnforceSingleRowStepExt(const DataStream & input_stream_);
 
-    String getName() const override { return "EnforceSingleRow"; }
+    String getName() const override { return "EnforceSingleRowExt"; }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings) override;
 
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
     /// make output columns nullable, we should generate a null output value when subquery return empty results
     void makeOutputNullable();
 
