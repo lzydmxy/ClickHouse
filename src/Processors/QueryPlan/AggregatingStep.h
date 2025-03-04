@@ -77,6 +77,7 @@ public:
     std::unique_ptr<AggregatingProjectionStep> convertToAggregatingProjection(const DataStream & input_stream) const;
 
 private:
+    friend class QueryPlanStepHelper;
     void updateOutputStream() override;
 
     Aggregator::Params params;

@@ -39,6 +39,7 @@ public:
     bool memoryBoundMergingWillBeUsed() const;
 
 private:
+    friend class QueryPlanStepHelper;
     void updateOutputStream() override;
 
 
