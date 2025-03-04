@@ -264,7 +264,7 @@ void ReadFromMergeTreeExt::initializePipeline(QueryPipelineBuilder & pipeline, c
 
 std::shared_ptr<IQueryPlanStep> ReadFromMergeTreeExt::copy() const
 {
-    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "ReadFromReadFromMergeTreeExtMergeTree can not copy");
+    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "ReadFromMergeTreeExt can not copy");
 }
 
 }
