@@ -10,7 +10,7 @@ class BufferStepExt : public ITransformingStep
 public:
     explicit BufferStepExt(const DataStream & input_stream_);
 
-    String getName() const override { return "BufferExt"; }
+    String getName() const override { return "BufferStepExt"; }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;

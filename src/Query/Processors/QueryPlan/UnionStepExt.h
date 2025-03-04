@@ -21,7 +21,7 @@ public:
     const OutputToInputs & getOutToInputs() const;
     NameToNameMap getOutToInput(size_t source_idx) const;
 
-    String getName() const override { return "UnionExt"; }
+    String getName() const override { return "UnionStepExt"; }
 
     QueryPipelineBuilderPtr updatePipeline(QueryPipelineBuilders pipelines, const BuildQueryPipelineSettings &) override;
 

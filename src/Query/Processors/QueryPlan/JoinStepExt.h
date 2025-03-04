@@ -60,7 +60,7 @@ public:
         /*LinkedHashMap<String, RuntimeFilterBuildInfos> runtime_filter_builders = {}*/);
 
 
-    String getName() const override { return "JoinExt"; }
+    String getName() const override { return "JoinStepExt"; }
 
     QueryPipelineBuilderPtr updatePipeline(QueryPipelineBuilders pipelines, const BuildQueryPipelineSettings &) override;
 

@@ -8,7 +8,7 @@
 namespace DB
 {
 
-PlanSegmentSourceStep::PlanSegmentSourceStep(Block header_,
+    PlanSegmentSourceStepExt::PlanSegmentSourceStepExt(Block header_,
                                        StorageID storage_id_,
                                        const SelectQueryInfo & query_info_,
                                        const Names & column_names_,
@@ -29,14 +29,14 @@ PlanSegmentSourceStep::PlanSegmentSourceStep(Block header_,
     storage_id.uuid = storage->getStorageID().uuid;
 }
 
-void PlanSegmentSourceStep::initializePipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
+void PlanSegmentSourceStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
     auto step = generateStep();
     if (auto * source = dynamic_cast<ISourceStep *>(step.get()))
         source->initializePipeline(pipeline, settings);
 }
 
-QueryPlanStepPtr PlanSegmentSourceStep::generateStep()
+QueryPlanStepPtr PlanSegmentSourceStepExt::generateStep()
 {
     StoragePtr storage = DatabaseCatalog::instance().getTable({storage_id.database_name, storage_id.table_name}, context);
     auto storage_snapshot = storage->getStorageSnapshot(storage->getInMemoryMetadataPtr(), context);
@@ -54,6 +54,11 @@ QueryPlanStepPtr PlanSegmentSourceStep::generateStep()
     }
     else
         return std::make_unique<ReadFromStorageStep>(std::move(pipe), step_description, context, query_info);
+}
+
+std::shared_ptr<IQueryPlanStep> PlanSegmentSourceStepExt::copy(ContextPtr) const
+{
+    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "PlanSegmentSourceStep can not copy");
 }
 
 }

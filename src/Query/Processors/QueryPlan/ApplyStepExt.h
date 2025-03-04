@@ -39,7 +39,7 @@ public:
         NameSet outer_columns_,
         bool support_semi_anti_);
 
-    String getName() const override { return "ApplyExt"; }
+    String getName() const override { return "ApplyStepExt"; }
 
     QueryPipelineBuilderPtr updatePipeline(QueryPipelineBuilders, const BuildQueryPipelineSettings &) override;
 

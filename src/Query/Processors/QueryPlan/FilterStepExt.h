@@ -13,7 +13,7 @@ public:
 
     const ConstASTPtr & getFilter() const { return filter; }
     void setFilter(ConstASTPtr new_filter) { filter = std::move(new_filter); }
-
+    String getName() const override { return "FilterStepExt"; }
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr context) const;
 
     static ConstASTPtr

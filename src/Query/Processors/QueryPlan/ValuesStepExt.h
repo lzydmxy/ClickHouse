@@ -32,12 +32,13 @@ class ValuesStepExt : public ISourceStep
 public:
     ValuesStepExt(Block header, Fields fields_, size_t rows_ = 1);
 
-    String getName() const override { return "ValuesExt"; }
+    String getName() const override { return "ValuesStepExt"; }
     const Fields & getFields() const { return fields; }
     size_t getRows() const { return rows; }
 
     void initializePipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & build_context) override;
     void setUniqueId(Int32 unique_id_) { unique_id = unique_id_; }
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
 
 public:
     Fields fields;

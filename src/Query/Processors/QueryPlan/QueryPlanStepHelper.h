@@ -4,7 +4,6 @@
 #include <Processors/QueryPlan/ArrayJoinStep.h>
 #include <Processors/QueryPlan/CreatingSetsStep.h>
 #include <Processors/QueryPlan/CubeStep.h>
-#include <Processors/QueryPlan/DistinctStep.h>
 #include <Processors/QueryPlan/ExpressionStep.h>
 #include <Processors/QueryPlan/ExtremesStep.h>
 #include <Processors/QueryPlan/FillingStep.h>
@@ -14,7 +13,6 @@
 #include <Processors/QueryPlan/LimitByStep.h>
 #include <Processors/QueryPlan/LimitStep.h>
 #include <Processors/QueryPlan/MergingAggregatedStep.h>
-#include <Processors/QueryPlan/MultiJoinStep.h>
 #include <Processors/QueryPlan/OffsetStep.h>
 #include <Processors/QueryPlan/ReadFromPreparedSource.h>
 #include <Processors/QueryPlan/RollupStep.h>
@@ -36,6 +34,7 @@
 #include <Query/Processors/QueryPlan/MarkDistinctStepExt.h>
 #include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
 #include <Query/Processors/QueryPlan/PartitionTopNStepExt.h>
+#include <Query/Processors/QueryPlan/PlanSegmentSourceStepExt.h>
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
 #include <Query/Processors/QueryPlan/RemoteExchangeSourceStepExt.h>
 #include <Query/Processors/QueryPlan/SettingQuotaAndLimitsStepExt.h>
@@ -59,7 +58,6 @@ using QueryPlanStepShardPtr = std::shared_ptr<IQueryPlanStep>;
     M(CreatingSetStep) \
     M(CreatingSetsStep) \
     M(CubeStep) \
-    M(DistinctStep) \
     M(EnforceSingleRowStepExt) \
     M(ExchangeStepExt) \
     M(ExpandStepExt) \
@@ -80,6 +78,7 @@ using QueryPlanStepShardPtr = std::shared_ptr<IQueryPlanStep>;
     M(MultiJoinStepExt) \
     M(OffsetStep) \
     M(PartitionTopNStepExt) \
+    M(PlanSegmentSourceStepExt) \
     M(ProjectionStepExt) \
     M(ReadFromPreparedSource) \
     M(ReadFromStorageStep) \
@@ -153,108 +152,106 @@ public:
             return std::make_shared<ArrayJoinStep>(step_ptr->input_streams[0], step_ptr->array_join);
         else if (auto step_ptr = std::dynamic_pointer_cast<CubeStep>(query_plan_step))
             return std::make_shared<CubeStep>(step_ptr->input_streams[0], step_ptr->params, step_ptr->final, step_ptr->use_nulls);
-        else if (auto step_ptr = std::dynamic_pointer_cast<DistinctStep>(query_plan_step))
-            //return std::make_shared<DistinctStep>(step_ptr->input_streams[0], step_ptr->set_size_limits, step_ptr->limit_hint, step_ptr->columns, step_ptr->pre_distinct, step_ptr->can_to_agg);
-            return nullptr;
         else if (auto step_ptr = std::dynamic_pointer_cast<ExpressionStep>(query_plan_step))
             return std::make_shared<ExpressionStep>(step_ptr->input_streams[0], step_ptr->actions_dag);
         else if (auto step_ptr = std::dynamic_pointer_cast<ExtremesStep>(query_plan_step))
             return std::make_shared<ExtremesStep>(step_ptr->input_streams[0]);
         else if (auto step_ptr = std::dynamic_pointer_cast<LimitByStep>(query_plan_step))
             return std::make_shared<LimitByStep>(step_ptr->input_streams[0], step_ptr->group_length, step_ptr->group_offset, step_ptr->columns);
-        else if (auto join_step_ptr = std::dynamic_pointer_cast<JoinStepExt>(query_plan_step))
-            return join_step_ptr->copy(context);
-        else if (auto union_step_ptr = std::dynamic_pointer_cast<UnionStepExt>(query_plan_step))
-            return union_step_ptr->copy(context);
-        else if (auto any_step = std::dynamic_pointer_cast<AnyStepExt>(query_plan_step))
-            return any_step->copy(context);
-        else if (auto multi_join_step_ptr = std::dynamic_pointer_cast<MultiJoinStepExt>(query_plan_step))
-            return multi_join_step_ptr->copy(context);
-        else if (auto intermediate_result_cache_step_ptr = std::dynamic_pointer_cast<IntermediateResultCacheStepExt>(query_plan_step))
-            return intermediate_result_cache_step_ptr->copy(context);
-        else if (auto apply_step_ptr = std::dynamic_pointer_cast<ApplyStepExt>(query_plan_step))
-            return apply_step_ptr->copy(context);
-        else if (auto fill_join_step_ptr = std::dynamic_pointer_cast<FilledJoinStep>(query_plan_step))
-            return std::make_shared<FilledJoinStep>(fill_join_step_ptr->input_streams[0], fill_join_step_ptr->join, fill_join_step_ptr->max_block_size);
+        else if (auto step_ptr = std::dynamic_pointer_cast<FilledJoinStep>(query_plan_step))
+            return std::make_shared<FilledJoinStep>(step_ptr->input_streams[0], step_ptr->join, step_ptr->max_block_size);
         else if (auto step_ptr = std::dynamic_pointer_cast<ReadFromPreparedSource>(query_plan_step))
             throw Exception(ErrorCodes::NOT_IMPLEMENTED, "ReadFromPreparedSource can not copy");
         else if (auto step_ptr = std::dynamic_pointer_cast<ReadFromStorageStep>(query_plan_step))
             throw Exception(ErrorCodes::NOT_IMPLEMENTED, "ReadFromStorageStep can not copy");
         else if (auto step_ptr = std::dynamic_pointer_cast<RollupStep>(query_plan_step))
             return std::make_shared<RollupStep>(step_ptr->input_streams[0], step_ptr->params, step_ptr->final, step_ptr->use_nulls);
-        else if (auto step_ptr = std::dynamic_pointer_cast<ValuesStepExt>(query_plan_step))
-            return std::make_shared<ValuesStepExt>(step_ptr->output_stream->header, step_ptr->fields);
-        else if (auto join_step_ptr = std::dynamic_pointer_cast<JoinStep>(query_plan_step))
-            return nullptr;
-        else if (auto intersect_or_except_step_ptr = std::dynamic_pointer_cast<IntersectOrExceptStep>(query_plan_step))
-            return std::make_shared<IntersectOrExceptStep>(intersect_or_except_step_ptr->input_streams, intersect_or_except_step_ptr->current_operator, intersect_or_except_step_ptr->max_threads);
-        else if (auto creating_set_step = std::dynamic_pointer_cast<CreatingSetStep>(query_plan_step))
+        else if (auto step_ptr = std::dynamic_pointer_cast<IntersectOrExceptStep>(query_plan_step))
+            return std::make_shared<IntersectOrExceptStep>(step_ptr->input_streams, step_ptr->current_operator, step_ptr->max_threads);
+        else if (auto step_ptr = std::dynamic_pointer_cast<CreatingSetStep>(query_plan_step))
         {
             auto set_and_key = std::make_shared<SetAndKey>();
-            set_and_key->key = creating_set_step->set_and_key->key;
-            set_and_key->set = creating_set_step->set_and_key->set;
+            set_and_key->key = step_ptr->set_and_key->key;
+            set_and_key->set = step_ptr->set_and_key->set;
 
             return std::make_shared<CreatingSetStep>(
-                creating_set_step->input_streams[0],
+                step_ptr->input_streams[0],
                 set_and_key,
-                creating_set_step->external_table,
-                creating_set_step->network_transfer_limits,
-                creating_set_step->context);
+                step_ptr->external_table,
+                step_ptr->network_transfer_limits,
+                step_ptr->context);
         }
-        else if (auto creating_sets_step = std::dynamic_pointer_cast<CreatingSetsStep>(query_plan_step))
-            return std::make_shared<CreatingSetsStep>(creating_sets_step->getInputStreams());
-        else if (auto assign_uniqueid_step_ptr = std::dynamic_pointer_cast<AssignUniqueIdStepExt>(query_plan_step))
-            return assign_uniqueid_step_ptr->copy(nullptr);
-        else if (auto expand_step_ptr = std::dynamic_pointer_cast<ExpandStepExt>(query_plan_step))
-            return expand_step_ptr->copy(nullptr);
-        else if (auto mark_distinct_step_ptr = std::dynamic_pointer_cast<MarkDistinctStepExt>(query_plan_step))
-            return mark_distinct_step_ptr->copy(nullptr);
-        else if (auto setting_quota_and_limits_step_ptr = std::dynamic_pointer_cast<SettingQuotaAndLimitsStepExt>(query_plan_step))
-            return setting_quota_and_limits_step_ptr->copy(nullptr);
-        else if (auto topn_filtering_step_ptr = std::dynamic_pointer_cast<TopNFilteringStepExt>(query_plan_step))
-            return topn_filtering_step_ptr->copy(nullptr);
-        else if (auto exchange_step_ptr = std::dynamic_pointer_cast<ExchangeStepExt>(query_plan_step))
-            return exchange_step_ptr->copy(context);
-        else if (auto local_exchange_step_ptr = std::dynamic_pointer_cast<LocalExchangeStepExt>(query_plan_step))
-            return local_exchange_step_ptr->copy(context);
-        else if (auto remote_exchange_source_step_ptr = std::dynamic_pointer_cast<RemoteExchangeSourceStepExt>(query_plan_step))
-            return remote_exchange_source_step_ptr->copy(context);
-        else if (auto filter_step = std::dynamic_pointer_cast<FilterStepExt>(query_plan_step))
-            return filter_step->copy(context);
-        else if (auto aggregating_step = std::dynamic_pointer_cast<AggregatingStep>(query_plan_step))
+        else if (auto step_ptr = std::dynamic_pointer_cast<AggregatingStep>(query_plan_step))
         {
                 return std::make_shared<AggregatingStep>(
-                    aggregating_step->input_streams[0],
-                    aggregating_step->params,
-                    aggregating_step->grouping_sets_params,
-                    aggregating_step->final,
-                    aggregating_step->max_block_size,
-                    aggregating_step->aggregation_in_order_max_block_bytes,
-                    aggregating_step->merge_threads,
-                    aggregating_step->temporary_data_merge_threads,
-                    aggregating_step->storage_has_evenly_distributed_read,
-                    aggregating_step->group_by_use_nulls,
-                    aggregating_step->sort_description_for_merging,
-                    aggregating_step->group_by_sort_description,
-                    aggregating_step->should_produce_results_in_order_of_bucket_number,
-                    aggregating_step->memory_bound_merging_of_aggregation_results_enabled,
-                    aggregating_step->explicit_sorting_required_for_aggregation_in_order);
+                    step_ptr->input_streams[0],
+                    step_ptr->params,
+                    step_ptr->grouping_sets_params,
+                    step_ptr->final,
+                    step_ptr->max_block_size,
+                    step_ptr->aggregation_in_order_max_block_bytes,
+                    step_ptr->merge_threads,
+                    step_ptr->temporary_data_merge_threads,
+                    step_ptr->storage_has_evenly_distributed_read,
+                    step_ptr->group_by_use_nulls,
+                    step_ptr->sort_description_for_merging,
+                    step_ptr->group_by_sort_description,
+                    step_ptr->should_produce_results_in_order_of_bucket_number,
+                    step_ptr->memory_bound_merging_of_aggregation_results_enabled,
+                    step_ptr->explicit_sorting_required_for_aggregation_in_order);
         }
-        else if (auto merging_aggregated_step = std::dynamic_pointer_cast<MergingAggregatedStep>(query_plan_step))
+        else if (auto step_ptr = std::dynamic_pointer_cast<MergingAggregatedStep>(query_plan_step))
         {
                 return std::make_shared<MergingAggregatedStep>(
-                    merging_aggregated_step->input_streams[0],
-                    merging_aggregated_step->params,
-                    merging_aggregated_step->final,
-                    merging_aggregated_step->memory_efficient_aggregation,
-                    merging_aggregated_step->max_threads,
-                    merging_aggregated_step->memory_efficient_merge_threads,
-                    merging_aggregated_step->should_produce_results_in_order_of_bucket_number,
-                    merging_aggregated_step->max_block_size,
-                    merging_aggregated_step->memory_bound_merging_max_block_bytes,
-                    merging_aggregated_step->group_by_sort_description,
-                    merging_aggregated_step->memory_bound_merging_of_aggregation_results_enabled);
+                    step_ptr->input_streams[0],
+                    step_ptr->params,
+                    step_ptr->final,
+                    step_ptr->memory_efficient_aggregation,
+                    step_ptr->max_threads,
+                    step_ptr->memory_efficient_merge_threads,
+                    step_ptr->should_produce_results_in_order_of_bucket_number,
+                    step_ptr->max_block_size,
+                    step_ptr->memory_bound_merging_max_block_bytes,
+                    step_ptr->group_by_sort_description,
+                    step_ptr->memory_bound_merging_of_aggregation_results_enabled);
         }
+        else if (auto step_ptr = std::dynamic_pointer_cast<CreatingSetsStep>(query_plan_step))
+            return std::make_shared<CreatingSetsStep>(step_ptr->getInputStreams());
+
+        // steps end by Ext use macroc to copy
+        #define CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT(type) \
+        if (auto step_ptr = std::dynamic_pointer_cast<type>(query_plan_step)) \
+        { \
+            return step_ptr->copy(context); \
+        }
+
+        #define APPLY_QUERY_PLAN_STEP_TYPES_EXT(M) \
+        M(AnyStepExt) \
+        M(ApplyStepExt) \
+        M(AssignUniqueIdStepExt) \
+        M(BufferStepExt) \
+        M(EnforceSingleRowStepExt) \
+        M(ExchangeStepExt) \
+        M(ExpandStepExt) \
+        M(ExplainAnalyzeStepExt) \
+        M(FilterStepExt) \
+        M(IntermediateResultCacheStepExt) \
+        M(JoinStepExt) \
+        M(LocalExchangeStepExt) \
+        M(MarkDistinctStepExt) \
+        M(MultiJoinStepExt) \
+        M(PartitionTopNStepExt) \
+        M(PlanSegmentSourceStepExt) \
+        M(ProjectionStepExt) \
+        M(RemoteExchangeSourceStepExt) \
+        M(SettingQuotaAndLimitsStepExt) \
+        M(TopNFilteringStepExt) \
+        M(UnionStepExt) \
+        M(ValuesStepExt)
+
+        APPLY_QUERY_PLAN_STEP_TYPES_EXT(CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT)
+        #undef CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT
+        #undef APPLY_QUERY_PLAN_STEP_TYPES_EXT
 
         return nullptr;
     }

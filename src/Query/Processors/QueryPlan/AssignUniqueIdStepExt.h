@@ -9,7 +9,7 @@ class AssignUniqueIdStepExt : public ITransformingStep
 public:
     explicit AssignUniqueIdStepExt(const DataStream & input_stream_, String unique_id_);
 
-    String getName() const override { return "AssignUniqueId"; }
+    String getName() const override { return "AssignUniqueIdStepExt"; }
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
 

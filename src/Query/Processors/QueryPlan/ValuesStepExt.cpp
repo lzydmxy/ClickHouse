@@ -34,4 +34,9 @@ void ValuesStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const Bu
     //    processors.emplace_back(processor);
 }
 
+std::shared_ptr<IQueryPlanStep> ValuesStepExt::copy(ContextPtr) const
+{
+    return std::make_shared<ValuesStepExt>(output_stream->header, fields);
+}
+
 }

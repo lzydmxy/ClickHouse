@@ -9,10 +9,10 @@
 namespace DB
 {
 
-class PlanSegmentSourceStep : public ISourceStep
+class PlanSegmentSourceStepExt : public ISourceStep
 {
 public:
-    explicit PlanSegmentSourceStep(Block header_,
+    explicit PlanSegmentSourceStepExt(Block header_,
                                 StorageID storage_id_,
                                 const SelectQueryInfo & query_info_,
                                 const Names & column_names_,
@@ -21,12 +21,12 @@ public:
                                 unsigned num_streams_,
                                 ContextPtr context_ = nullptr);
 
-    String getName() const override { return "PlanSegmentSourceStep"; }
+    String getName() const override { return "PlanSegmentSourceStepExt"; }
     void initializePipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings) override;
     QueryPlanStepPtr generateStep();
     StorageID getStorageID() const { return storage_id; }
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
 
-    friend class QueryPlanStepHelper;
 private:
     StorageID storage_id;
     SelectQueryInfo query_info;

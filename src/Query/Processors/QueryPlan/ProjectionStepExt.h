@@ -23,7 +23,7 @@ public:
         bool final_project_ = false,
         bool index_project_ = false);
 
-    String getName() const override { return "ProjectionExt"; }
+    String getName() const override { return "ProjectionStepExt"; }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
     // TODO: implement
     // void prepare(const PreparedStatementContext & prepared_context) override;

@@ -9,7 +9,7 @@ class EnforceSingleRowStepExt : public ITransformingStep
 public:
     explicit EnforceSingleRowStepExt(const DataStream & input_stream_);
 
-    String getName() const override { return "EnforceSingleRowExt"; }
+    String getName() const override { return "EnforceSingleRowStepExt"; }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings) override;
 
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
