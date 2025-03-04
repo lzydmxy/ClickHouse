@@ -63,7 +63,7 @@ struct PlanSegmentHeader
     size_t plan_segment_buf_size = 0;
     IOBufPtr plan_segment_buf_ptr;
     UInt32 attempt_id = std::numeric_limits<UInt32>::max();
-    SourceTaskFilter source_task_filter;
+    SourceTaskFilter source_task_filter{};
     void toProto(RPlanSegmentHeader & proto) const
     {
         proto.set_plan_segment_id(instance_id.segment_id);
@@ -75,19 +75,19 @@ struct PlanSegmentHeader
     }
 };
 
-// Currently host_id is included in address_info, but will need to be separated in the future
-struct AddressWithHostID
+// Currently worker_id is included in address_info, but will need to be separated in the future
+struct AddressWithWorkerID
 {
     AddressInfo address_info;
-    HostID host_id;
-    inline bool operator==(AddressWithHostID const & rhs) const
+    WorkerID worker_id;
+    inline bool operator==(AddressWithWorkerID const & rhs) const
     {
-        return (this->address_info == rhs.address_info && this->host_id == rhs.host_id);
+        return (this->address_info == rhs.address_info && this->worker_id == rhs.worker_id);
     }
     class Hash
     {
     public:
-        size_t operator()(const AddressWithHostID & key) const
+        size_t operator()(const AddressWithWorkerID & key) const
         {
             return AddressInfo::Hash()(key.address_info);
         }
@@ -95,7 +95,7 @@ struct AddressWithHostID
 };
 
 using PlanSegmentHeaders = std::vector<PlanSegmentHeader>;
-using BatchPlanSegmentMap = std::unordered_map<AddressWithHostID, PlanSegmentHeaders, AddressWithHostID::Hash>;
+using BatchPlanSegmentHeaders = std::unordered_map<AddressWithWorkerID, PlanSegmentHeaders, AddressWithWorkerID::Hash>;
 
 BlockIO lazyExecutePlanSegmentLocally(PlanSegmentInstancePtr plan_segment_instance, ContextMutablePtr context);
 
@@ -115,7 +115,7 @@ void executePlanSegmentRemotelyWithPreparedBuf(
     const butil::IOBuf & plan_segment_buf,
     AsyncContextPtr & async_context,
     const Context & context,
-    const HostID & host_id = HostID{});
+    const WorkerID & worker_id = WorkerID{});
 
 void executePlanSegmentsRemotely(
     const AddressInfo & address_info,
@@ -124,5 +124,5 @@ void executePlanSegmentsRemotely(
     const butil::IOBuf & query_settings_buf,
     AsyncContextPtr & async_context,
     const Context & context,
-    const HostID & host_id = HostID{});
+    const WorkerID & worker_id = WorkerID{});
 }

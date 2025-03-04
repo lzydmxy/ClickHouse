@@ -8,6 +8,7 @@
 #include <fmt/core.h>
 #include <base/getFQDNOrHostName.h>
 #include <Interpreters/Context_fwd.h>
+#include <Interpreters/Cluster.h>
 #include <Core/Types.h>
 #include <Query/ProtosHelper/QueryProto.h>
 
@@ -156,22 +157,14 @@ inline bool isSameHost(const std::string & lhs, const std::string & rhs)
     return removeBracketsIfIpv6(lhs) == removeBracketsIfIpv6(rhs);
 }
 
+/// The host and port to be managed and controlled
 class HostWithPorts
 {
 public:
     HostWithPorts() = default;
-    HostWithPorts(const std::string & host_, UInt16 rpc_port_ = 0, UInt16 tcp_port_ = 0, UInt16 http_port_ = 0, [[maybe_unused]] UInt16 exchange_port_ = 0, [[maybe_unused]] UInt16 exchange_status_port_ = 0, std::string id_ = {})
-        : host{removeBracketsIfIpv6(host_)},
-            id{std::move(id_)},
-          rpc_port{rpc_port_},
-          tcp_port{tcp_port_},
-          http_port{http_port_},
-          exchange_port{rpc_port_},
-          exchange_status_port{rpc_port_}
-    {
-        (void)exchange_port_;
-        (void)exchange_status_port_;
-    }
+    HostWithPorts(const Cluster::Address & address, UInt16 rpc_port_, UInt16 http_port_);
+    HostWithPorts(const std::string & host_, UInt16 rpc_port_ = 0, UInt16 tcp_port_ = 0, UInt16 http_port_ = 0, std::string id_ = {}
+        , [[maybe_unused]] UInt16 exchange_port_ = 0, [[maybe_unused]] UInt16 exchange_status_port_ = 0);
 
     std::string host;
     std::string id;

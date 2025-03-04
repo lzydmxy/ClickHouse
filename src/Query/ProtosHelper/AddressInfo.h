@@ -10,15 +10,25 @@ namespace DB
 
 class WriteBuffer;
 class ReadBuffer;
+class AddressInfo;
+using AddressInfos = std::vector<AddressInfo>;
+using AddressInfoPtr = std::shared_ptr<AddressInfo>;
 
-// see Cluster::Address
+/// Address information of distributed tables, exchanges and other RPC services
+/// see Cluster::Address
 class AddressInfo
 {
 public:
     AddressInfo() = default;
+    AddressInfo(const Cluster::Address & address_);
     AddressInfo(const String & host_name_, UInt16 port_, const String & user_, const String & password_);
     AddressInfo(const String & host_name_, UInt16 port_, const String & user_, const String & password_, UInt16 exchange_port_);
     AddressInfo(const RAddressInfo & proto_);
+
+    AddressInfoPtr getAddressInfoPtr() const
+    {
+        return std::make_shared<AddressInfo>(this->getHostName(), this->getPort(), this->getUser(), this->getPassword());
+    }
 
     void serialize(WriteBuffer &) const;
     void deserialize(ReadBuffer &);
@@ -58,14 +68,13 @@ private:
     UInt16 port;
     String user;
     String password;
+    // Same as rpc port
     UInt16 exchange_port;
 };
 
-using AddressInfos = std::vector<AddressInfo>;
-using AddressInfoPtr = std::shared_ptr<AddressInfo>;
 
-
-AddressInfoPtr getLocalAddress(const Context & query_context);
+AddressInfo getLocalAddress(const Context & query_context);
+AddressInfoPtr getLocalAddressPtr(const Context & query_context);
 
 AddressInfoPtr getRemoteAddress(HostWithPorts host_with_ports, ContextPtr & query_context);
 

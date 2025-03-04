@@ -72,6 +72,9 @@ public:
 
     void setSendTCPProgress(std::function<void()> callback);
     std::function<void()> getSendTCPProgress() const;
+
+    void setIsExplainQuery(const bool & is_explain_query_);
+    bool isExplainQuery() const;
 private:
     OptimizerSettingsPtr query_settings;
     OptimizerSettings settings;
@@ -80,6 +83,7 @@ private:
     PlanSegmentProcessListPtr plan_segment_process_list;
     ProcessListEntryPtr process_list_entry;
     std::function<void()> send_tcp_progress{nullptr};
+    bool is_explain_query{false};
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;

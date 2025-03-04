@@ -122,7 +122,7 @@ static void OnSendPlanSegmentCallback(
     brpc::Controller * cntl,
     std::shared_ptr<RpcClient> rpc_channel,
     AsyncContextPtr async_context,
-    HostID host_id)
+    WorkerID worker_id)
 {
     std::unique_ptr<brpc::Controller> cntl_guard(cntl);
     std::unique_ptr<RPlanSegmentResponse> response_guard(response);
@@ -191,7 +191,7 @@ void executePlanSegmentRemotelyWithPreparedBuf(
     const butil::IOBuf & plan_segment_buf,
     AsyncContextPtr & async_context,
     const Context & context,
-    const HostID & host_id)
+    const WorkerID & worker_id)
 {
     const auto opt_context = context.getOptimizerContext();
     const auto & opt_settings = opt_context->getSettingsRef();
@@ -239,7 +239,7 @@ void executePlanSegmentRemotelyWithPreparedBuf(
     cntl->request_attachment().append(attachment.movable());
     cntl->set_timeout_ms(opt_settings.send_plan_segment_timeout_ms.totalMilliseconds());
     google::protobuf::Closure * done = brpc::NewCallback(
-        &OnSendPlanSegmentCallback, response, cntl, std::move(rpc_channel), async_context, host_id);
+        &OnSendPlanSegmentCallback, response, cntl, std::move(rpc_channel), async_context, worker_id);
     async_context->addCallId(call_id);
     manager_stub.executePlanSegment(cntl, &request, response, done);
 }
@@ -251,7 +251,7 @@ void executePlanSegmentsRemotely(
     const butil::IOBuf & query_settings_buf,
     AsyncContextPtr & async_context,
     const Context & context,
-    const HostID & host_id)
+    const WorkerID & worker_id)
 {
     const auto opt_context = context.getOptimizerContext();
     const auto & opt_settings = opt_context->getSettingsRef();
@@ -286,7 +286,7 @@ void executePlanSegmentsRemotely(
     auto call_id = cntl->call_id();
     cntl->request_attachment().append(attachment.movable());
     google::protobuf::Closure * done = brpc::NewCallback(
-        &OnSendPlanSegmentCallback, response, cntl, std::move(rpc_channel), async_context, host_id);
+        &OnSendPlanSegmentCallback, response, cntl, std::move(rpc_channel), async_context, worker_id);
     async_context->addCallId(call_id);
     manager_stub.executePlanSegments(cntl, &request, response, done);
 }

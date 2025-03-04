@@ -20,10 +20,24 @@ enum class QueryDryRunMode
 
 DECLARE_SETTING_ENUM(QueryDryRunMode);
 
+/// Scheduler sort shards randomly, in order, and rank on resource utilization
+enum class SchedulerMode
+{
+    RANDOM = 0,
+    FIRST_ORDER,
+    RANDOM_ORDER,
+    CPU_RANK,
+    MEMORY_RANK,
+};
+DECLARE_SETTING_ENUM(SchedulerMode);
+
+
 /** These settings represent fine tunes for internal details of query optimizer 
  * and should not be changed by the user without a reason.
   */
 #define LIST_OF_COORDINATION_SETTINGS(M, ALIAS) \
+    /** Coordinator settings*/ \
+    M(SchedulerMode, scheduler_mode, SchedulerMode::RANDOM, "scheduler shard mode: random/first_order/random_order/cpu_rank/memory_rank", 0) \
     /** Query optimizer relative settings */ \
     M(Bool, enable_optimizer, true, "Whether enable query optimizer", 0) \
     M(Bool, enable_legacy_optimizer, false, "Whether enable query optimizer", 0) \
@@ -35,6 +49,7 @@ DECLARE_SETTING_ENUM(QueryDryRunMode);
     /** Exchange settings */ \
     M(UInt64, exchange_queue_bytes, 209715200, "Queue size(bytes) for exchange queue, 0 means disable", 0) \
     M(Bool, exchange_use_query_memory_tracker, true, "Use query-level memory tracker", 0) \
+    M(UInt64, exchange_parallel_size, 1, "Exchange parallel size", 0) \
     M(UInt64, distributed_query_wait_exception_ms, 2000,"Wait final planSegment exception from segmentScheduler.", 0) \
     M(Bool, enable_wait_for_post_processing, false, "Whether a query needs to wait for post processing rpcs done before end", 0) \
     M(UInt64, wait_for_post_processing_timeout_ms, 1000, "Timeout for waiting post processing rpc from workers.", 0) \
@@ -43,6 +58,9 @@ DECLARE_SETTING_ENUM(QueryDryRunMode);
         "The num of exchange sink for unorder exchange, ingoned if exchange need keep data order ", 0) \
     M(Bool, exchange_enable_force_keep_order, false, "Force exchange keep data order", 0) \
     M(Bool, exchange_enable_keep_order_parallel_shuffle, false, "Whether enable parallel shuffle when exchange need keep order", 0) \
+    M(UInt64, disk_shuffle_advisory_partition_size, 104857600, "Disk shuffle files's advisory partition size(including all files in a partition), used by partition coalescing", 0) \
+    M(Bool, enable_disk_shuffle_partition_coalescing, true, "If enabled, sheduler will try to coalesce overly-small partitions, thus avoid small plan segments and I/O waste", 0) \
+    M(Bool, enable_batch_send_plan_segment, true, "Whether enable combined sending plan segments to reduce rpc calls", 0) \
     /** Runtime Filter settings */ \
     M(UInt64, wait_runtime_filter_timeout, 1000, "Execute filter wait for runtime filter timeout ms", 0) \
     /** Debug settings */ \
@@ -52,6 +70,15 @@ DECLARE_SETTING_ENUM(QueryDryRunMode);
     M(QueryDryRunMode, query_dry_run_mode, QueryDryRunMode::NONE, "Whether to choose a query debug mode, in order to skip some workloads", 0) \
     /** Complex query settings **/\
     M(Milliseconds, send_plan_segment_timeout_ms, 10000, "Default timeout for send plan segment by rpc", 0) \
+    M(Bool, enable_distributed_stages, false, "Enable complex query mode to split plan to distributed stages", 0)\
+    M(Bool, fallback_to_simple_query, false, "Enable fallback if there is any syntax error", 0)\
+    M(Bool, send_plan_segment_by_brpc_join_per_stage, false, "Whether to send plan segment by BRPC and join async rpc request per stage", 0)\
+    M(Bool, send_plan_segment_by_brpc_join_at_last, true, "Whether to send plan segment by BRPC and join async rpc request at last", 0)\
+    /** Just for compatible, maybe removed or implemented later */ \
+    M(UInt64, max_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a query segment can consume.", 0) \
+    M(UInt64, max_distributed_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a distribute query can consume.", 0) \
+    M(Float, streaming_agg_local_ratio, 0.25, "The ratio of local streaming agg, 0-all streaming, 1-all local merged", 0) \
+    M(OverflowMode, timeout_overflow_mode, OverflowMode::THROW, "What to do when the limit is exceeded.", 0) \
 
 DECLARE_SETTINGS_TRAITS(OptimizerSettingsTraits, LIST_OF_COORDINATION_SETTINGS)
 

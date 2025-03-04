@@ -17,14 +17,13 @@
 #include <Query/Executor/PlanSegmentExecutor.h>
 #include <Query/Executor/PlanSegmentInstance.h>
 #include <Query/Executor/executePlanSegment.h>
-//#include <Query/Executor/SegmentScheduler.h>
+#include <Query/Executor/SegmentScheduler.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
+#include <Query/Executor/sendPlanSegment.h>
 //#include <Query/Executor/ProgressManager.h>
-//#include <Interpreters/sendPlanSegment.h>
 //#include <Optimizer/Signature/PlanSegmentNormalizer.h>
 //#include <Optimizer/Signature/PlanSignature.h>
 //#include <QueryPlan/PlanPrinter.h>
-
 
 namespace DB
 {
@@ -41,8 +40,9 @@ struct QueryDoneEvent
 };
 
 QueryMPPCoordinator::QueryMPPCoordinator(
-    PlanSegmentTreeUniqPtr plan_segment_tree_, ContextMutablePtr query_context_, QueryMPPOptions options_)
-    : query_context(std::move(query_context_))
+    const std::string cluster_name_, PlanSegmentTreeUniqPtr plan_segment_tree_, ContextMutablePtr query_context_, QueryMPPOptions options_)
+    : cluster_name(cluster_name_)
+    , query_context(std::move(query_context_))
     , optimizer_context(query_context->getOptimizerContext())
     , options(std::move(options_))
     , plan_segment_tree(std::move(plan_segment_tree_))
@@ -66,8 +66,7 @@ BlockIO QueryMPPCoordinator::execute()
     }
 
     auto optimizer_context = query_context->getOptimizerContext();
-
-    optimizer_context->setCoordinatorAddress(getLocalAddress(*query_context));
+    optimizer_context->setCoordinatorAddress(getLocalAddressPtr(*query_context));
     optimizer_context->setPlanSegmentInstanceID(PlanSegmentInstanceID{0, 0});
 
     /// set progress_callback before send plan segment
@@ -118,7 +117,7 @@ BlockIO QueryMPPCoordinator::execute()
 
     auto final_segment_instance = std::make_unique<PlanSegmentInstance>();
     final_segment_instance->info = scheduler_status->final_execution_info;
-    final_segment_instance->info.execution_address = getLocalAddress(*query_context);
+    final_segment_instance->info.execution_address = getLocalAddressPtr(*query_context);
     final_segment_instance->plan_segment = std::make_unique<PlanSegment>(std::move(*final_segment));
 
     try

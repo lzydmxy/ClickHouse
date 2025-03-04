@@ -273,7 +273,7 @@ void fillPlanSegmentProfile(
     PlanSegment * plan_segment)
 {
     auto current_address = getLocalAddress(*context);
-    segment_profile->worker_address = extractExchangeHostPort(*current_address);
+    segment_profile->worker_address = extractExchangeHostPort(current_address);
     if (query_status)
     {
         auto query_status_info = query_status->getInfo(true, context->getSettingsRef().log_profile_events);

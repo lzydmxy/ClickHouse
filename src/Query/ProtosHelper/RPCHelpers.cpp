@@ -144,7 +144,7 @@ namespace RPCHelpers
     }
 
     template <typename Resp>
-    void onAsyncCallDoneWithFailedInfo(Resp * response, brpc::Controller * cntl, ExceptionHandlerWithFailedInfoPtr handler, const HostID host_id)
+    void onAsyncCallDoneWithFailedInfo(Resp * response, brpc::Controller * cntl, ExceptionHandlerWithFailedInfoPtr handler, const WorkerID worker_id)
     {
         int32_t error_code = 0;
         try
@@ -154,11 +154,11 @@ namespace RPCHelpers
             error_code = cntl->ErrorCode();
             RPCHelpers::assertController(*cntl);
             RPCHelpers::checkResponse(*response);
-            handler->addHost(host_id);
+            handler->addHost(worker_id);
         }
         catch (...)
         {
-            handler->addFailedRpc(host_id, error_code);
+            handler->addFailedRpc(worker_id, error_code);
             handler->setException(std::current_exception());
         }
     }

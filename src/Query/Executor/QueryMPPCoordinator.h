@@ -32,7 +32,7 @@ struct QueryMPPOptions
 class QueryMPPCoordinator final: public std::enable_shared_from_this<QueryMPPCoordinator>
 {
 public:
-    QueryMPPCoordinator(PlanSegmentTreeUniqPtr plan_segment_tree_, ContextMutablePtr query_context_, QueryMPPOptions options_);
+    QueryMPPCoordinator(const std::string cluster_name_, PlanSegmentTreeUniqPtr plan_segment_tree_, ContextMutablePtr query_context_, QueryMPPOptions options_);
     /// Invoke this in InterpreterSelectQueryUseOptimizer's execute method
     BlockIO execute();
 
@@ -65,9 +65,7 @@ public:
     }
 
 private:
-    // template <class Event>
-    // boost::msm::back::HandledEnum triggerEvent(Event const & evt); // It use state_machine_mutex;
-
+    std::string cluster_name;
     ContextMutablePtr query_context;
     OptimizerContextPtr optimizer_context;
     QueryMPPOptions options;

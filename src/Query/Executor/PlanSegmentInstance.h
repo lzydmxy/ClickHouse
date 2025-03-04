@@ -62,10 +62,10 @@ class PlanSegment;
 struct PlanSegmentExecutionInfo
 {
     UInt32 parallel_id = std::numeric_limits<UInt32>::max();
-    AddressInfoPtr execution_address;
-    SourceTaskFilter source_task_filter;
+    AddressInfoPtr execution_address = nullptr;
+    SourceTaskFilter source_task_filter{};
     UInt32 attempt_id = std::numeric_limits<UInt32>::max();
-    std::unordered_map<UInt64, std::vector<PlanSegmentPartitionSource>> sources;
+    std::unordered_map<UInt64, std::vector<PlanSegmentPartitionSource>> sources{};
     UInt32 worker_epoch{0};
 };
 

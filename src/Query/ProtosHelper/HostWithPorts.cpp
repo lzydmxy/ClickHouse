@@ -13,6 +13,23 @@ namespace ErrorCodes
     extern const int BAD_ARGUMENTS;
 }
 
+HostWithPorts::HostWithPorts(const Cluster::Address & address, UInt16 rpc_port_, UInt16 http_port_)
+    : HostWithPorts(address.host_name, rpc_port_, address.port, http_port_)
+{
+}
+
+HostWithPorts::HostWithPorts(const std::string & host_, UInt16 rpc_port_, UInt16 tcp_port_, UInt16 http_port_, std::string id_
+    , UInt16 exchange_port_, UInt16 exchange_status_port_)
+    : host{removeBracketsIfIpv6(host_)},
+        id{std::move(id_)},
+        rpc_port{rpc_port_},
+        tcp_port{tcp_port_},
+        http_port{http_port_},
+        exchange_port{rpc_port_},
+        exchange_status_port{rpc_port_}
+{
+}
+
 std::string HostWithPorts::toDebugString() const
 {
     WriteBufferFromOwnString wb;
@@ -113,9 +130,9 @@ HostWithPorts HostWithPorts::createHostWithPorts(const RHostWithPorts & hp)
         uint16_t(hp.rpc_port()),
         uint16_t(hp.tcp_port()),
         uint16_t(hp.http_port()),
+        hp.hostname(),
         uint16_t(hp.exchange_port()),
-        uint16_t(hp.exchange_status_port()),
-        hp.hostname()
+        uint16_t(hp.exchange_status_port())
     };
 }
 

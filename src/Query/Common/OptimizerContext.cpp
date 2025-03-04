@@ -82,4 +82,14 @@ std::function<void()> OptimizerContext::getSendTCPProgress() const
 
 // }
 
+void OptimizerContext::setIsExplainQuery(const bool & is_explain_query_)
+{
+    is_explain_query = is_explain_query_;
+}
+
+bool OptimizerContext::isExplainQuery() const
+{
+    return is_explain_query;
+}
+
 }

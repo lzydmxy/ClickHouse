@@ -69,7 +69,7 @@ namespace RPCHelpers
         std::function<String()> construct_err_msg);
 
     template <typename Resp>
-    void onAsyncCallDoneWithFailedInfo(Resp * response, brpc::Controller * cntl, ExceptionHandlerWithFailedInfoPtr handler, const HostID host_id);
+    void onAsyncCallDoneWithFailedInfo(Resp * response, brpc::Controller * cntl, ExceptionHandlerWithFailedInfoPtr handler, const WorkerID worker_id);
 
     template <typename Resp, typename Func>
     void serviceHandler(google::protobuf::Closure * done, Resp * resp, Func && f);

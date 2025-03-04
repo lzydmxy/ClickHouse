@@ -12,7 +12,8 @@ namespace DB
 //     const auto & host = getHostIPFromEnv();
 //     auto port = query_context.getTCPPort();
 //     const ClientInfo & info = query_context.getClientInfo();
-//     return AddressInfo(host, port, info.current_user, info.current_password, query_context.getRPCPort());
+//     auto address = AddressInfo(host, port, info.current_user, info.current_password, query_context.getRPCPort());
+//     return std::move(address);
 // }
 
 // AddressInfo getRemoteAddress(HostWithPorts host_with_ports, ContextPtr & query_context)
@@ -39,8 +40,14 @@ namespace DB
 
 // }
 
+AddressInfo::AddressInfo(const Cluster::Address & address_)
+    : host_name(address_.host_name), port(address_.port), user(address_.user), password(address_.password)
+{
+
+}
+
 AddressInfo::AddressInfo(const String &host_name_, UInt16 port_, const String &user_, const String &password_)
-        : host_name(host_name_), port(port_), user(user_), password(password_)
+    : host_name(host_name_), port(port_), user(user_), password(password_)
 {
 }
 
