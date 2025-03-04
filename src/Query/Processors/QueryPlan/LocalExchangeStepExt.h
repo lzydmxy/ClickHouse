@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Processors/QueryPlan/ITransformingStep.h>
-#include <Query/ProtosWrapper/ExchangeMode.h>
+#include <Query/ProtosHelper/ExchangeMode.h>
 
 
 namespace DB

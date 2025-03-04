@@ -2,9 +2,9 @@
 
 #include <Common/Logger.h>
 #include <Interpreters/Context_fwd.h>
-#include <Query/Exchange/ExchangeOptions.h>
+#include <Query/Exchange/ExchangeUtils.h>
 #include <Processors/QueryPlan/ISourceStep.h>
-#include <Query/ProtosWrapper/AddressInfo.h>
+#include <Query/ProtosHelper/AddressInfo.h>
 
 #include <memory>
 

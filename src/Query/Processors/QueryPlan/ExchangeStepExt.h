@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Query/ProtosWrapper/ExchangeMode.h>
+#include <Query/ProtosHelper/ExchangeMode.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
 
 namespace DB
