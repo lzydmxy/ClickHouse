@@ -190,7 +190,8 @@ public:
         if (auto filter_step = std::dynamic_pointer_cast<FilterStepExt>(query_plan_step))
         {
             return filter_step->copy(context);
-            if (auto aggregating_step = std::dynamic_pointer_cast<AggregatingStep>(query_plan_step))
+        }
+        if (auto aggregating_step = std::dynamic_pointer_cast<AggregatingStep>(query_plan_step))
             {
                 return std::make_shared<AggregatingStep>(
                     aggregating_step->input_streams[0],
@@ -224,7 +225,7 @@ public:
                     merging_aggregated_step->group_by_sort_description,
                     merging_aggregated_step->memory_bound_merging_of_aggregation_results_enabled);
             }
-        return nullptr;
+            return nullptr;
     }
 };
 

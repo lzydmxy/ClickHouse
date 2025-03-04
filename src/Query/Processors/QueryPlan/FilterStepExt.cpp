@@ -6,12 +6,12 @@ namespace DB
 {
 
 FilterStepExt::FilterStepExt(const DataStream & input_stream_, const ConstASTPtr & filter_, bool remove_filter_column_)
-    : FilterStep(input_stream_, nullptr, filter->getColumnName(), remove_filter_column_)
+    : FilterStep(input_stream_, nullptr, filter_->getColumnName(), remove_filter_column_)
     , filter(filter_)
 {
 }
 
-std::shared_ptr<IQueryPlanStep> FilterStepExt::copy(ContextPtr context) const
+std::shared_ptr<IQueryPlanStep> FilterStepExt::copy(ContextPtr) const
 {
     return std::make_shared<FilterStepExt>(input_streams[0], filter->clone(), remove_filter_column);
 }
