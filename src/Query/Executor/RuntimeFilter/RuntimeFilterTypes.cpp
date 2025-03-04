@@ -128,7 +128,7 @@ void BloomFilterWithRange::addFieldKey(const DB::Field & f)
         }
         default:
         {
-            throw Exception("addFieldKey unexpected type: " + f.dump() + " info:" + debugString(), ErrorCodes::LOGICAL_ERROR);
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "addFieldKey unexpected type: " + f.dump() + " info:" + debugString());
         }
     }
 }

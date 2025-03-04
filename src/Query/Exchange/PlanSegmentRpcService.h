@@ -6,7 +6,7 @@
 #include <Interpreters/Context.h>
 #include <Interpreters/ProcessList.h>
 #include <Interpreters/ProcessorsProfileLog.h>
-#include <Query/ProtosWrapper/QueryProto.h>
+#include <Query/ProtosHelper/QueryProto.h>
 #include <Query/Common/ResourceMonitor.h>
 #include <Query/Executor/QueryMPPCoordinator.h>
 #include <Query/Executor/QueryMPPManager.h>
@@ -16,7 +16,7 @@
 
 namespace DB
 {
-class SegmentScheduler;
+//class SegmentScheduler;
 class Context;
 
 using SettingsChangesPtr = std::shared_ptr<SettingsChanges>;
@@ -98,7 +98,7 @@ public:
     void executePlanSegments(
         ::google::protobuf::RpcController * controller,
         const RPlanSegmentsRequest * request,
-        RPlanSegmentsResponse * response,
+        RPlanSegmentResponse * response,
         ::google::protobuf::Closure * done) override;
 
     /// receive exception report send terminate query (coordinate host ---> segment executor host)

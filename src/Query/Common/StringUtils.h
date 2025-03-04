@@ -1,10 +1,12 @@
 #pragma once
-
 #include <string>
 #include <cstring>
 #include <cstddef>
 #include <cstdint>
+#include <set>
 #include <type_traits>
+#include <boost/algorithm/string/join.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 
 namespace detail
 {
@@ -40,4 +42,13 @@ namespace v2
     size_t hash(const std::string & s);   
 }
 
+}
+
+namespace DB
+{
+    template <typename T>
+    std::string setToString(const std::set<T> & vals)
+    {
+        return boost::join(vals | boost::adaptors::transformed([](T v) { return std::to_string(v); }), ",");
+    }
 }

@@ -1,7 +1,7 @@
 #include <Interpreters/RuntimeFilter/RuntimeFilterConsumer.h>
 #include <Interpreters/RuntimeFilter/RuntimeFilterManager.h>
-#include <Processors/Exchange/DataTrans/RpcChannelPool.h>
-#include <Processors/Exchange/DataTrans/RpcClient.h>
+#include <Query/Exchange/RpcChannelPool.h>
+#include <Query/Exchange/RpcClient.h>
 #include <Protos/runtime_filter.pb.h>
 #include <brpc/server.h>
 #include <Common/Brpc/BrpcChannelPoolOptions.h>
@@ -92,7 +92,7 @@ void RuntimeFilterConsumer::bypass(BypassType type)
     {
         for (const auto & rf : runtime_filters)
         {
-            if (rf.second.distribution == RuntimeFilterDistribution::LOCAL)
+            if (rf.second.distribution == RRuntimeFilter::LOCAL)
             {
                 DynamicData data;
                 data.is_local = true;

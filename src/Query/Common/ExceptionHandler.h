@@ -1,6 +1,6 @@
 #pragma once
 #include <Common/Exception.h>
-#include <Query/Common/HostID.h>
+#include <Query/Common/WorkerID.h>
 
 namespace DB
 {
@@ -21,20 +21,20 @@ protected:
 class ExceptionHandlerWithFailedInfo : public ExceptionHandler
 {
     using ErrorCode = int32_t;
-    using HostErrorCodeMap = std::unordered_map<HostID, ErrorCode, HostIDHash>;
+    using HostErrorCodeMap = std::unordered_map<WorkerID, ErrorCode, WorkerIDHash>;
 public:
-    void addFailedRpc(const HostID & host_id, int32_t error_code)
+    void addFailedRpc(const WorkerID & worker_id, int32_t error_code)
     {
         std::unique_lock lock(mutex);
-        failed_rpc_info.emplace(host_id, error_code);
+        failed_rpc_info.emplace(worker_id, error_code);
     }
     void setNeedRecord() { record_all_workers = true; }
-    void addHost(const HostID & host_id)
+    void addHost(const WorkerID & worker_id)
     {
         if (record_all_workers)
         {
             std::unique_lock lock(mutex);
-            hosts.emplace(host_id);
+            hosts.emplace(worker_id);
         }
     }
     const HostErrorCodeMap & getFailedRpcInfo() { return failed_rpc_info; }

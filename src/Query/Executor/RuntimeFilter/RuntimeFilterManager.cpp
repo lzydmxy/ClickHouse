@@ -1,13 +1,12 @@
-#include <Interpreters/RuntimeFilter/RuntimeFilterManager.h>
-
+#include "RuntimeFilterManager.h"
+#include <Common/logger_useful.h>
 #include <Optimizer/Property/Equivalences.h>
 #include <Optimizer/RuntimeFilterUtils.h>
 #include <QueryPlan/FilterStep.h>
 #include <QueryPlan/IQueryPlanStep.h>
 #include <QueryPlan/JoinStep.h>
-#include <QueryPlan/QueryPlan.h>
+#include <Processors/QueryPlan/QueryPlan.h>
 #include <QueryPlan/TableScanStep.h>
-#include "common/logger_useful.h"
 
 namespace DB
 {
@@ -39,7 +38,7 @@ namespace
                     for (const auto & runtime_filter : join_step.getRuntimeFilterBuilders())
                     {
                         runtime_filter_builds.emplace(runtime_filter.second.id, std::make_pair(plan_segment, &node));
-                        if (runtime_filter.second.distribution == RuntimeFilterDistribution::DISTRIBUTED)
+                        if (runtime_filter.second.distribution == RRuntimeFilter::DISTRIBUTED)
                             remote_runtime_filter_builds.emplace(runtime_filter.second.id);
                         else
                             local_runtime_filter_builds.emplace(runtime_filter.second.id);

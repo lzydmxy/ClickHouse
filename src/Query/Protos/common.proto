@@ -4,9 +4,9 @@ package DB.Protos;
 message ExchangeMode {
     enum Enum {
         UNKNOWN = 0;
-        LOCAL_NO_NEED_REPARTITION = 1;
-        LOCAL_MAY_NEED_REPARTITION = 2;
-        REPARTITION = 3;
+        LOCAL_NO_NEED_REPARTITION = 1;  // Local table join local table
+        LOCAL_MAY_NEED_REPARTITION = 2; // Local table join remote table
+        REPARTITION = 3;                // Remote table join remote table
         BROADCAST = 4;
         GATHER = 5;
         BUCKET_REPARTITION = 6;

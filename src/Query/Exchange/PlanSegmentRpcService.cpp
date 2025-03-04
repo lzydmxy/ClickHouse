@@ -9,8 +9,8 @@
 #include <Access/User.h>
 #include <Query/Common/QueryCommon.h>
 #include <Query/Common/OptimizerContext.h>
-#include <Query/ProtosWrapper/AddressInfo.h>
-#include <Query/Executor/SegmentScheduler.h>
+#include <Query/ProtosHelper/AddressInfo.h>
+//#include <Query/Executor/SegmentScheduler.h>
 #include <Query/Executor/PlanSegmentInstance.h>
 #include <Query/Executor/PlanSegmentReport.h>
 #include <Query/Executor/executePlanSegment.h>
@@ -90,24 +90,24 @@ void PlanSegmentRpcService::reportPlanSegmentStatus(
             RuntimeSegmentsMetrics(request->metrics()),
             request->message(),
             request->status_code()};
-        SegmentSchedulerPtr scheduler = context->getOptimizerContext()->getSegmentScheduler();
-        scheduler->updateSegmentStatus(status);
-        scheduler->updateQueryStatus(status);
-        scheduler->updateReceivedSegmentStatusCounter(request->query_id(), request->segment_id(), request->parallel_index());
-
-        if (!status.is_cancelled && status.code == 0)
-        {
-            try
-            {
-                scheduler->checkQueryCpuTime(status.query_id);
-            }
-            catch (const Exception & e)
-            {
-                status.message = e.message();
-                status.code = e.code();
-                status.is_succeed = false;
-            }
-        }
+        //TODO: 
+        // SegmentSchedulerPtr scheduler = context->getOptimizerContext()->getSegmentScheduler();
+        // scheduler->updateSegmentStatus(status);
+        // scheduler->updateQueryStatus(status);
+        // scheduler->updateReceivedSegmentStatusCounter(request->query_id(), request->segment_id(), request->parallel_index());
+        // if (!status.is_cancelled && status.code == 0)
+        // {
+        //     try
+        //     {
+        //         scheduler->checkQueryCpuTime(status.query_id);
+        //     }
+        //     catch (const Exception & e)
+        //     {
+        //         status.message = e.message();
+        //         status.code = e.code();
+        //         status.is_succeed = false;
+        //     }
+        // }
 
         // this means exception happened during execution.
         auto coordinator = QueryMPPManager::instance().getCoordinator(request->query_id());
@@ -131,7 +131,8 @@ void PlanSegmentRpcService::reportPlanSegmentStatus(
                     request->segment_id(),
                     request->parallel_index());
             }
-            scheduler->onSegmentFinished(status);
+            // TODO:
+            // scheduler->onSegmentFinished(status);
         }
         // todo  scheduler.cancelSchedule
     }
@@ -151,8 +152,9 @@ void PlanSegmentRpcService::reportPlanSegmentProfile(
 {
     brpc::ClosureGuard done_guard(done);
     PlanSegmentProfilePtr profile = PlanSegmentProfile::fromProto(*request);
-    const SegmentSchedulerPtr & scheduler = context->getOptimizerContext()->getSegmentScheduler();
-    scheduler->updateSegmentProfile(profile);
+    //TODO:
+    //const SegmentSchedulerPtr & scheduler = context->getOptimizerContext()->getSegmentScheduler();
+    //scheduler->updateSegmentProfile(profile);
 }
 
 void PlanSegmentRpcService::prepareCommonParams(
@@ -338,7 +340,7 @@ void PlanSegmentRpcService::innerExecutePlanSegment(
             if (!query_context)
                 query_context = createQueryContext(global_context, query_common, remote_side_port, {segment_id, execution_info.parallel_id});
 
-            initQueryContext(query_context, query_common, settings_changes, execution_info.execution_address);
+            initQueryContext(query_context, query_common, settings_changes, *execution_info.execution_address);
 
             auto optimizer_context = query_context->getOptimizerContext();
 
@@ -349,7 +351,7 @@ void PlanSegmentRpcService::innerExecutePlanSegment(
 
             /// Plan segment Deserialization can't run in bthread since checkStackSize method is not compatible with all user-space lightweight threads that manually allocated stacks.
             butil::IOBufAsZeroCopyInputStream plansegment_buf_wrapper(*plan_segment_buf);
-            Protos::PlanSegment plan_segment_proto;
+            RPlanSegment plan_segment_proto;
             plan_segment_proto.ParseFromZeroCopyStream(&plansegment_buf_wrapper);
             // copy some commnon field from query_common;
             plan_segment_proto.set_query_id(query_common->query_id());
@@ -392,28 +394,26 @@ void PlanSegmentRpcService::executePlanSegment(
     brpc::Controller * cntl = static_cast<brpc::Controller *>(controller);
     try
     {
-        const auto & header = request->header();
-        const auto & body = request->body();
-        auto query_common = std::make_shared<Protos::QueryCommon>();
+        auto query_common = std::make_shared<RQueryCommon>();
         SettingsChangesPtr settings_changes;
         prepareCommonParams(
-            header.brpc_major_revision(),
-            header.query_common_buf_size(),
-            header.query_settings_buf_size(),
+            request->brpc_major_revision(),
+            request->query_common_buf_size(),
+            request->query_settings_buf_size(),
             cntl,
             query_common,
             settings_changes);
 
         PlanSegmentExecutionInfo execution_info;
 
-        execution_info.execution_address = AddressInfo(header.execution_address());
-        execution_info.parallel_id = body.parallel_id();
-        execution_info.source_task_filter.fromProto(body.source_task_filter());
-        execution_info.attempt_id = body.attempt_id();
+        execution_info.execution_address = std::make_shared<AddressInfo>(request->execution_address());
+        execution_info.parallel_id = request->parallel_id();
+        execution_info.source_task_filter.fromProto(request->source_task_filter());
+        execution_info.attempt_id = request->attempt_id();
 
-        if (body.sources_size() != 0)
+        if (request->sources_size() != 0)
         {
-            for (const auto & s : body.sources())
+            for (const auto & s : request->sources())
             {
                 PlanSegmentPartitionSource source;
                 source.fromProto(s);
@@ -422,18 +422,18 @@ void PlanSegmentRpcService::executePlanSegment(
         }
 
         butil::IOBuf plan_segment_buf;
-        auto plan_segment_buf_size = cntl->request_attachment().cutn(&plan_segment_buf, body.plan_segment_buf_size());
-        if (plan_segment_buf_size != body.plan_segment_buf_size())
+        auto plan_segment_buf_size = cntl->request_attachment().cutn(&plan_segment_buf, request->plan_segment_buf_size());
+        if (plan_segment_buf_size != request->plan_segment_buf_size())
         {
             throw Exception(ErrorCodes::LOGICAL_ERROR, "Impossible plan_segment_buf_size: {} expected: {}",
-                plan_segment_buf_size, body.plan_segment_buf_size());
+                plan_segment_buf_size, request->plan_segment_buf_size());
         }
 
         innerExecutePlanSegment(
             std::move(query_common),
             std::move(settings_changes),
             cntl->remote_side().port,
-            body.plan_segment_id(),
+            request->plan_segment_id(),
             execution_info,
             std::make_shared<butil::IOBuf>(plan_segment_buf.movable()));
         //report_metrics_timer->getResourceData().fillProto(*response->mutable_worker_resource_data());
@@ -450,21 +450,20 @@ void PlanSegmentRpcService::executePlanSegment(
 void PlanSegmentRpcService::executePlanSegments(
     ::google::protobuf::RpcController * controller,
     const RPlanSegmentsRequest * request,
-    RPlanSegmentsResponse * response,
+    RPlanSegmentResponse * response,
     ::google::protobuf::Closure * done)
 {
     brpc::ClosureGuard done_guard(done);
     brpc::Controller * cntl = static_cast<brpc::Controller *>(controller);
     try
     {
-        const auto & header = request->header();
-        const auto & bodies = request->bodies();
-        auto query_common = std::make_shared<Protos::QueryCommon>();
+        const auto & headers = request->headers();
+        auto query_common = std::make_shared<RQueryCommon>();
         SettingsChangesPtr settings_changes;
         prepareCommonParams(
-            header.brpc_major_revision(),
-            header.query_common_buf_size(),
-            header.query_settings_buf_size(),
+            request->brpc_major_revision(),
+            request->query_common_buf_size(),
+            request->query_settings_buf_size(),
             cntl,
             query_common,
             settings_changes);
@@ -472,40 +471,40 @@ void PlanSegmentRpcService::executePlanSegments(
         // prepare segmentGroup
         std::vector<size_t> segment_ids;
         std::optional<PlanSegmentInstanceID> first_instance_id;
-        for (const auto & body : bodies)
+        for (const auto & header : headers)
         {
-            segment_ids.emplace_back(body.plan_segment_id());
+            segment_ids.emplace_back(header.plan_segment_id());
             if (!first_instance_id)
-                first_instance_id = {body.plan_segment_id(), body.parallel_id()};
+                first_instance_id = {header.plan_segment_id(), header.parallel_id()};
         }
 
-        const auto execution_address = AddressInfo(header.execution_address());
+        auto execution_address = std::make_shared<AddressInfo>(request->execution_address());
         auto first_query_context
             = createQueryContext(context, query_common, cntl->remote_side().port, *first_instance_id);
         auto optimizer_context = first_query_context->getOptimizerContext();
         auto process_plan_segment_entries = optimizer_context->getPlanSegmentProcessList()->insertGroup(first_query_context, segment_ids);
 
-        for (int i = 0; i < bodies.size(); i++)
+        for (int i = 0; i < headers.size(); i++)
         {
-            const auto & body = bodies[i];
+            const auto & header = headers[i];
             PlanSegmentExecutionInfo execution_info;
-            execution_info.parallel_id = body.parallel_id();
+            execution_info.parallel_id = header.parallel_id();
             execution_info.execution_address = execution_address;
-            execution_info.attempt_id = body.attempt_id();
-            execution_info.source_task_filter.fromProto(body.source_task_filter());
+            execution_info.attempt_id = header.attempt_id();
+            execution_info.source_task_filter.fromProto(header.source_task_filter());
             butil::IOBuf plan_segment_buf;
-            auto plan_segment_buf_size = cntl->request_attachment().cutn(&plan_segment_buf, body.plan_segment_buf_size());
-            if (plan_segment_buf_size != body.plan_segment_buf_size())
+            auto plan_segment_buf_size = cntl->request_attachment().cutn(&plan_segment_buf, header.plan_segment_buf_size());
+            if (plan_segment_buf_size != header.plan_segment_buf_size())
             {
                 throw Exception(ErrorCodes::LOGICAL_ERROR, "Impossible plan_segment_buf_size: {} expected: {}", 
-                    plan_segment_buf_size, body.plan_segment_buf_size());
+                    plan_segment_buf_size, header.plan_segment_buf_size());
             }
 
             innerExecutePlanSegment(
                 query_common,
                 settings_changes,
                 cntl->remote_side().port,
-                body.plan_segment_id(),
+                header.plan_segment_id(),
                 execution_info,
                 std::make_shared<butil::IOBuf>(plan_segment_buf.movable()),
                 std::move(process_plan_segment_entries[i]),

@@ -1,22 +1,14 @@
 #pragma once
-
-#include <Common/Logger.h>
+#include <condition_variable>
+#include <base/types.h>
 #include <Core/Types.h>
-#include <bthread/mutex.h>
-#include <Poco/Logger.h>
-#include <common/types.h>
-#include <cstdint>
-#include <limits>
-#include <memory>
-#include <unordered_map>
-#include <utility>
-#include <bthread/condition_variable.h>
-
+#include <Common/logger_useful.h>
+#include <Common/MemoryTracker.h>
 #include <Interpreters/CancellationCode.h>
-#include <Query/Executor/AddressInfo.h>
+#include <Query/Common/MultiPathBoundedQueue.h>
+#include <Query/ProtosHelper/AddressInfo.h>
 #include <Query/Executor/PlanSegment.h>
 #include <Query/Executor/PlanSegmentInstance.h>
-#include <Processors/Exchange/DataTrans/MultiPathBoundedQueue.h>
 
 namespace DB
 {
@@ -101,7 +93,7 @@ public:
     void addChildQuery(const String & child_initial_query_id);
     std::set<String> getChildrenQuery();
 
-    mutable bthread::Mutex mutex;
+    mutable std::mutex mutex;
     String initial_query_id;
     String coordinator_address;
     Decimal64 initial_query_start_time_ms{0};
@@ -120,6 +112,7 @@ public:
 
 using PlanSegmentGroupPtr = std::shared_ptr<PlanSegmentGroup>;
 class PlanSegmentProcessList;
+
 class PlanSegmentProcessListEntry
 {
 private:
@@ -155,6 +148,7 @@ class PlanSegmentProcessList
 public:
     /// distributed query_id -> GroupIdToElement(s). There can be multiple queries with the same query_id as long as all queries except one are cancelled.
     using EntryPtr = std::shared_ptr<PlanSegmentProcessListEntry>;
+    using Container = std::unordered_map<std::string, PlanSegmentGroupPtr>;
 
     friend class PlanSegmentProcessListEntry;
 
@@ -172,20 +166,10 @@ public:
 
 private:
     PlanSegmentGroupPtr getGroup(const String & initial_query_id) const;
-
     bool tryCascadeCancel(PlanSegmentGroupPtr segment_group, bool internal);
-
-    using Container = phmap::parallel_flat_hash_map<
-        std::string,
-        PlanSegmentGroupPtr,
-        phmap::priv::hash_default_hash<std::string>,
-        phmap::priv::hash_default_eq<std::string>,
-        std::allocator<std::pair<std::string, PlanSegmentGroupPtr>>,
-        4,
-        bthread::Mutex>;
     Container initail_query_to_groups;
-    mutable bthread::Mutex mutex;
-    mutable bthread::ConditionVariable remove_group;
+    mutable std::mutex mutex;
+    mutable std::condition_variable remove_group;
     LoggerPtr logger = getLogger("PlanSegmentProcessList");
 };
 

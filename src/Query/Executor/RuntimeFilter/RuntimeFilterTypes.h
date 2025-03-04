@@ -5,8 +5,8 @@
 #include <Core/Field.h>
 #include <Core/NamesAndTypes.h>
 #include <Core/Types.h>
-#include <Interpreters/BlockBloomFilter.h>
-#include <parallel_hashmap/phmap_utils.h>
+#include <Query/Common/BlockBloomFilter.h>
+//#include <parallel_hashmap/phmap_utils.h>
 #include <Common/FieldVisitorHash.h>
 #include <Common/HashTable/Hash.h>
 #include <Common/HashTable/HashSet.h>
@@ -80,15 +80,8 @@ class ValueSetWithRange
 public:
     ValueSetWithRange() = default;
 
-    explicit ValueSetWithRange(const DataTypePtr & dataType)
+    explicit ValueSetWithRange(const DataTypePtr &)
     {
-        auto && min_max = dataType->getRange();
-        if (min_max)
-        {
-            has_min_max = true;
-            min = min_max->max;
-            max = min_max->min;
-        }
     }
 
     void insert(const Field & field)
@@ -222,12 +215,6 @@ public:
         }
 #endif
         bf.init(ht_size);
-        auto && op_min_max = dataType->getRange();
-        if (op_min_max)
-        {
-            has_min_max = true;
-            initMinMax(op_min_max->max, op_min_max->min);
-        }
     }
 
     void initMinMax(const Field & min, const Field & max)
@@ -309,14 +296,7 @@ public:
                 k->addKey(static_cast<UInt64>(key));
             }
         }
-        size_t h;
-        if constexpr(std::is_arithmetic_v<KeyType>  && (sizeof(KeyType) <= 8)) {
-            h = phmap::phmap_mix<sizeof(size_t)>()(std::hash<KeyType>()(key));
-            // bf.addKeyUnhash(h);
-        } else {
-            h = DefaultHash<KeyType>()(key);
-            
-        }
+        size_t h = DefaultHash<KeyType>()(key);
         bf.addKeyUnhash(h);
     }
 
@@ -380,14 +360,8 @@ public:
                     return false;
             }
         }
-       
-        size_t h;
-        if constexpr(std::is_arithmetic_v<KeyType> && (sizeof(KeyType) <= 8)) {
-            h = phmap::phmap_mix<sizeof(size_t)>()(std::hash<KeyType>()(key));
-            // bf.addKeyUnhash(h);
-        } else {
-            h = DefaultHash<KeyType>()(key);
-        }
+        size_t h = DefaultHash<KeyType>()(key);
+
         // size_t 
 #if defined(__aarch64__) && defined(__ARM_NEON)
         if constexpr (has_worker)
@@ -411,7 +385,7 @@ public:
             else
                 return bf.probeKeyUnhashScalar(h);
         } else {
-            throw Exception("Unknown ArchCheckType", ErrorCodes::LOGICAL_ERROR);
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "Unknown ArchCheckType");
         }
 #endif
         

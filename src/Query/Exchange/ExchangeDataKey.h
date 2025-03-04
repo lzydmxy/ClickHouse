@@ -24,7 +24,12 @@ struct ExchangeDataKey
 
     String toString() const
     {
-        return fmt::format("{}", *this);
+        WriteBufferFromOwnString out;
+        out << "query id = " << query_unique_id;
+        out << ", exchange id = " << exchange_id;
+        out << ", partition id = " << partition_id;
+        out << ", parallel index = " << parallel_index;
+        return out.str();
     }
 
     bool operator==(const ExchangeDataKey & other) const

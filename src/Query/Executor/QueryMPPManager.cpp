@@ -1,14 +1,6 @@
-#include <memory>
-#include <mutex>
-#include <unordered_map>
-#include <vector>
-#include <boost/noncopyable.hpp>
-
+#include "QueryMPPManager.h"
+#include <Common/Exception.h>
 #include <Interpreters/Context_fwd.h>
-#include <Query/Executor/QueryMPPCoordinator.h>
-#include <Query/Executor/QueryMPPManager.h>
-#include <Poco/Logger.h>
-#include <common/logger_useful.h>
 
 namespace DB
 {
@@ -17,14 +9,13 @@ namespace ErrorCodes
     extern const int QUERY_WITH_SAME_ID_IS_ALREADY_RUNNING;
 }
 
-void QueryMPPManager::registerQuery(const String & query_id, std::weak_ptr<MPPQueryCoordinator> coordinator)
+void QueryMPPManager::registerQuery(const String & query_id, CoordinatorWeakPtr coordinator)
 {
     auto res = coordinator_map.try_emplace(query_id, std::move(coordinator));
     if (!res.second)
     {
-        throw Exception(
-            "Mpp query with id = " + query_id + " is already running and can't be stopped",
-            ErrorCodes::QUERY_WITH_SAME_ID_IS_ALREADY_RUNNING);
+        throw Exception(ErrorCodes::QUERY_WITH_SAME_ID_IS_ALREADY_RUNNING,
+            "Mpp query with id = {} is already running and can't be stopped", query_id);
     }
 }
 
@@ -36,8 +27,10 @@ void QueryMPPManager::clearQuery(const String & query_id)
 
 QueryMPPCoordinatorPtr QueryMPPManager::getCoordinator(const String & query_id)
 {
-    QueryMPPCoordinatorPtr res;
-    coordinator_map.if_contains(query_id, [&res](auto & pair) { res = pair.second.lock(); });
+    QueryMPPCoordinatorPtr res = nullptr;
+    auto it = coordinator_map.find(query_id);
+    if (it != coordinator_map.end())
+        res = it->second.lock();
     return res;
 }
 

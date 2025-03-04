@@ -1,41 +1,24 @@
-/*
- * Copyright (2022) Bytedance Ltd. and/or its affiliates
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+#include "PlanSegment.h"
 
+#include <sstream>
 #include <Core/ColumnNumbers.h>
 #include <Core/ColumnWithTypeAndName.h>
-#include <DataStreams/NativeBlockInputStream.h>
-#include <DataStreams/NativeBlockOutputStream.h>
+//#include <DataStreams/NativeBlockInputStream.h>
+//#include <DataStreams/NativeBlockOutputStream.h>
+//#include <Query/QueryPlan/RemoteExchangeSourceStep.h>
 #include <DataTypes/DataTypesNumber.h>
 #include <Functions/FunctionFactory.h>
 #include <IO/ReadHelpers.h>
 #include <IO/WriteBufferFromString.h>
 #include <IO/WriteHelpers.h>
 #include <Interpreters/Context.h>
-#include <Interpreters/DistributedStages/AddressInfo.h>
-#include <Interpreters/DistributedStages/ExchangeMode.h>
-#include <Interpreters/DistributedStages/PlanSegment.h>
 #include <Parsers/IAST.h>
 #include <Parsers/queryToString.h>
-#include <Protos/RPCHelpers.h>
-#include <Protos/plan_node_utils.pb.h>
-#include <QueryPlan/PlanSerDerHelper.h>
-#include <QueryPlan/QueryPlan.h>
-#include <QueryPlan/RemoteExchangeSourceStep.h>
-#include <boost/algorithm/string/join.hpp>
-
-#include <sstream>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
+#include <Processors/QueryPlan/QueryPlan.h>
+#include <Query/ProtosHelper/QueryProto.h>
+#include <Query/ProtosHelper/ExchangeMode.h>
+#include <Query/ProtosHelper/RPCHelpers.h>
 
 namespace DB
 {
@@ -45,32 +28,10 @@ namespace ErrorCodes
     extern const int LOGICAL_ERROR;
 }
 
-String planSegmentTypeToString(const PlanSegmentType & type)
-{
-    std::ostringstream ostr;
-
-    switch(type)
-    {
-        case PlanSegmentType::UNKNOWN:
-            ostr << "UNKNOWN";
-            break;
-        case PlanSegmentType::SOURCE:
-            ostr << "SOURCE";
-            break;
-        case PlanSegmentType::EXCHANGE:
-            ostr << "EXCHANGE";
-            break;
-        case PlanSegmentType::OUTPUT:
-            ostr << "OUTPUT";
-            break;
-    }
-
-    return ostr.str();
-}
-
 void IPlanSegment::serialize(WriteBuffer & buf) const
 {
-    serializeBlock(header, buf);
+    //TODO: serialize block stream 
+    //serializeBlock(header, buf);
     writeBinary(UInt8(type), buf);
     writeBinary(UInt8(exchange_mode), buf);
     writeBinary(exchange_id, buf);
@@ -85,15 +46,16 @@ void IPlanSegment::serialize(WriteBuffer & buf) const
 
 void IPlanSegment::deserialize(ReadBuffer & buf, ContextPtr)
 {
-    header = deserializeBlock(buf);
+    //TODO: deserialize block stream
+    //header = deserializeBlock(buf);
 
     UInt8 read_type;
     readBinary(read_type, buf);
-    type = PlanSegmentType(read_type);
+    type = RIPlanSegment::Enum(read_type);
 
     UInt8 read_mode;
     readBinary(read_mode, buf);
-    exchange_mode = ExchangeMode(read_mode);
+    exchange_mode = static_cast<RExchangeMode::Enum>(read_mode);
 
     readBinary(exchange_id, buf);
     readBinary(exchange_parallel_size, buf);
@@ -107,11 +69,13 @@ void IPlanSegment::deserialize(ReadBuffer & buf, ContextPtr)
         readBinary(shuffle_keys[i], buf);
 }
 
-void IPlanSegment::toProtoBase(Protos::IPlanSegment & proto) const
+void IPlanSegment::toProtoBase(RIPlanSegment & proto) const
 {
-    serializeHeaderToProto(header, *proto.mutable_header());
-    proto.set_type(PlanSegmentTypeConverter::toProto(type));
-    proto.set_exchange_mode(ExchangeModeConverter::toProto(exchange_mode));
+    //TODO: wait query plan code
+    //serializeHeaderToProto(header, *proto.mutable_header());
+
+    proto.set_type(type);
+    proto.set_exchange_mode(exchange_mode);
     proto.set_exchange_id(exchange_id);
     proto.set_exchange_parallel_size(exchange_parallel_size);
     proto.set_name(name);
@@ -120,11 +84,13 @@ void IPlanSegment::toProtoBase(Protos::IPlanSegment & proto) const
         proto.add_shuffle_keys(element);
 }
 
-void IPlanSegment::fromProtoBase(const Protos::IPlanSegment & proto)
+void IPlanSegment::fromProtoBase(const RIPlanSegment & proto)
 {
-    header = deserializeHeaderFromProto(proto.header());
-    type = PlanSegmentTypeConverter::fromProto(proto.type());
-    exchange_mode = ExchangeModeConverter::fromProto(proto.exchange_mode());
+    //TODO:
+    //header = deserializeHeaderFromProto(proto.header());
+
+    type = proto.type();
+    exchange_mode = proto.exchange_mode();
     exchange_id = proto.exchange_id();
     exchange_parallel_size = proto.exchange_parallel_size();
     name = proto.name();
@@ -156,7 +122,7 @@ String IPlanSegment::toString(size_t indent) const
 void PlanSegmentInput::serialize(WriteBuffer & buf) const
 {
     // TODO replace plansegment* serde to protobuf
-    Protos::PlanSegmentInput proto;
+    RPlanSegmentInput proto;
     this->toProto(proto);
     auto str = proto.SerializeAsString();
     writeBinary(str, buf);
@@ -167,25 +133,27 @@ void PlanSegmentInput::deserialize(ReadBuffer & buf, ContextPtr context)
     // TODO replace plansegment* serde to protobuf
     String str;
     readBinary(str, buf);
-    Protos::PlanSegmentInput proto;
+    RPlanSegmentInput proto;
     proto.ParseFromString(str);
-    this->fillFromProto(proto, context);
+    this->fromProto(proto, context);
 }
 
-void PlanSegmentInput::toProto(Protos::PlanSegmentInput & proto) const
+void PlanSegmentInput::toProto(RPlanSegmentInput & proto) const
 {
     IPlanSegment::toProtoBase(*proto.mutable_base_plan_segment());
     proto.set_parallel_index(parallel_index);
     proto.set_keep_order(keep_order);
     for (const auto & element : source_addresses)
         element.toProto(*proto.add_source_addresses());
-    if (type == PlanSegmentType::SOURCE && storage_id.has_value())
-    {
-        storage_id.value().toProto(*proto.mutable_storage_id());
-    }
+
+    //TODO: Need toProto/fromProto in StorageIDHelper class
+    // if (type == RIPlanSegment::SOURCE && storage_id.has_value())
+    // {
+    //     storage_id.value().toProto(*proto.mutable_storage_id());
+    // }
 }
 
-void PlanSegmentInput::fillFromProto(const Protos::PlanSegmentInput & proto, ContextPtr context)
+void PlanSegmentInput::fromProto(const RPlanSegmentInput & proto, ContextPtr context)
 {
     IPlanSegment::fromProtoBase(proto.base_plan_segment());
     parallel_index = proto.parallel_index();
@@ -193,14 +161,15 @@ void PlanSegmentInput::fillFromProto(const Protos::PlanSegmentInput & proto, Con
     for (const auto & proto_element : proto.source_addresses())
     {
         AddressInfo element;
-        element.fillFromProto(proto_element);
+        element.fromProto(proto_element);
         source_addresses.emplace_back(std::move(element));
     }
 
-    if (type == PlanSegmentType::SOURCE && proto.has_storage_id())
-    {
-        storage_id = StorageID::fromProto(proto.storage_id(), context);
-    }
+    //TODO: Need toProto/fromProto in StorageIDHelper class
+    // if (type == RIPlanSegment::SOURCE && proto.has_storage_id())
+    // {
+    //     storage_id = StorageID::fromProto(proto.storage_id(), context);
+    // }
 }
 
 String PlanSegmentInput::toString(size_t indent) const
@@ -211,7 +180,7 @@ String PlanSegmentInput::toString(size_t indent) const
     ostr << IPlanSegment::toString(indent) << "\n";
     ostr << indent_str << "parallel_index: " << parallel_index << "\n";
     ostr << indent_str << "keep_order: " << keep_order << "\n";
-    ostr << indent_str << "storage_id: " << (type == PlanSegmentType::SOURCE && storage_id.has_value() ? storage_id->getNameForLogs() : "") << "\n";
+    ostr << indent_str << "storage_id: " << (type == RIPlanSegment::SOURCE && storage_id.has_value() ? storage_id->getNameForLogs() : "") << "\n";
     ostr << indent_str << "source_addresses: " << "\n";
     ostr << indent_str << "isStable: " << isStable() << "\n";
     for (auto & address : source_addresses)
@@ -236,24 +205,28 @@ void PlanSegmentOutput::deserialize(ReadBuffer & buf, ContextPtr context)
     readBinary(keep_order, buf);
 }
 
-void PlanSegmentOutput::toProto(Protos::PlanSegmentOutput & proto)
+void PlanSegmentOutput::toProto(RPlanSegmentOutput & proto)
 {
     IPlanSegment::toProtoBase(*proto.mutable_base_plan_segment());
     proto.set_shuffle_hash_function(shuffle_function_name);
     proto.set_parallel_size(parallel_size);
     proto.set_keep_order(keep_order);
     if(!shuffle_func_params.empty())
+    {
         serializeFieldVectorToProto(shuffle_func_params, *proto.mutable_shuffle_function_parameters());
+    }
 }
 
-void PlanSegmentOutput::fillFromProto(const Protos::PlanSegmentOutput & proto)
+void PlanSegmentOutput::fromProto(const RPlanSegmentOutput & proto)
 {
     IPlanSegment::fromProtoBase(proto.base_plan_segment());
     shuffle_function_name = proto.shuffle_hash_function();
     parallel_size = proto.parallel_size();
     keep_order = proto.keep_order();
     if (proto.has_shuffle_function_parameters())
+    {
         shuffle_func_params = deserializeFieldVectorFromProto<Array>(proto.shuffle_function_parameters());
+    }
 }
 
 String PlanSegmentOutput::toString(size_t indent) const
@@ -268,7 +241,7 @@ String PlanSegmentOutput::toString(size_t indent) const
         ostr << indent_str << "shuffle_parameters: ";
         for (auto & field : shuffle_func_params)
         {
-            ostr << field.toString() << " ";
+            ostr << DB::toString(field) << " ";
         }
         ostr << "\n";
     }
@@ -279,20 +252,20 @@ String PlanSegmentOutput::toString(size_t indent) const
 }
 
 
-void PlanSegment::setPlanSegmentToQueryPlan(QueryPlan::Node * node, ContextPtr & context)
+void PlanSegment::setPlanSegmentToQueryPlan(QueryPlan::Node * node, ContextPtr & /*context*/)
 {
     if (!node)
         return;
-
-    if (auto * remote_step = dynamic_cast<RemoteExchangeSourceStep *>(node->step.get()))
-        remote_step->setPlanSegment(this, context);
-    else
-    {
-        for (auto & child : node->children)
-        {
-            setPlanSegmentToQueryPlan(child, context);
-        }
-    }
+    // TODO: Need RemoteExchangeSourceStep
+    // if (auto * remote_step = dynamic_cast<RemoteExchangeSourceStep *>(node->step.get()))
+    //     remote_step->setPlanSegment(this, context);
+    // else
+    // {
+    //     for (auto & child : node->children)
+    //     {
+    //         setPlanSegmentToQueryPlan(child, context);
+    //     }
+    // }
 }
 
 void PlanSegment::serialize(WriteBuffer & buf) const
@@ -300,7 +273,7 @@ void PlanSegment::serialize(WriteBuffer & buf) const
     writeBinary(segment_id, buf);
     writeBinary(query_id, buf);
 
-    query_plan.serialize(buf);
+    // query_plan.serialize(buf);
     // TODO: change to the following when implement plan segment rpc
     // TODO: here don't change for compatibility
     // Protos::QueryPlan proto;
@@ -313,7 +286,7 @@ void PlanSegment::serialize(WriteBuffer & buf) const
         input->serialize(buf);
 
     if (outputs.empty())
-        throw Exception("Cannot find output when serialize PlanSegment", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot find output when serialize PlanSegment");
     writeBinary(outputs.size(), buf);
     for (const auto & output : outputs)
         output->serialize(buf);
@@ -337,7 +310,7 @@ void PlanSegment::deserialize(ReadBuffer & buf, ContextMutablePtr context)
 
     query_plan.addInterpreterContext(context);
 
-    query_plan.deserialize(buf);
+    // query_plan.deserialize(buf);
     // TODO: change to the following when implement plan segment rpc
     // TODO: here don't change for compatibility
     // std::string blob;
@@ -382,33 +355,36 @@ void PlanSegment::deserialize(ReadBuffer & buf, ContextMutablePtr context)
     readBinary(parallel_index, buf);
 }
 
-void PlanSegment::toProto(Protos::PlanSegment & plan_segment_proto)
+void PlanSegment::toProto(RPlanSegment & plan_segment_proto)
 {
-    auto plan_ptr = std::make_unique<Protos::QueryPlan>();
+    auto plan_ptr = std::make_unique<RQueryPlan>();
     
-    query_plan.toProto(*plan_ptr);
+    // TODO:
+    // query_plan.toProto(*plan_ptr);
     plan_segment_proto.set_allocated_query_plan(plan_ptr.release());
     plan_segment_proto.set_cluster_name(cluster_name);
     plan_segment_proto.set_parallel(parallel);
     plan_segment_proto.set_exchange_parallel_size(exchange_parallel_size);
     if (outputs.empty())
-        throw Exception("Cannot find output when serialize PlanSegment", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot find output when serialize PlanSegment");
     for (auto & output : outputs)
     {
-        Protos::PlanSegmentOutput output_proto;
+        RPlanSegmentOutput output_proto;
         output->toProto(output_proto);
         *plan_segment_proto.add_outputs() = std::move(output_proto);
     }
 
     for (const auto & id : runtime_filters)
         plan_segment_proto.add_runtime_filter_id(id);
-    plan_segment_proto.set_profile_type(ReportProfileTypeConverter::toProto(profile_type));
+    //TODO:
+    //plan_segment_proto.set_profile_type(ReportProfileTypeConverter::toProto(profile_type));
 }
 
-void PlanSegment::fillFromProto(const Protos::PlanSegment & proto, ContextMutablePtr context_)
+void PlanSegment::fromProto(const RPlanSegment & proto, ContextMutablePtr context_)
 {
     query_plan.addInterpreterContext(context_);
-    query_plan.fromProto(proto.query_plan());
+    //TODO:
+    //query_plan.fromProto(proto.query_plan());
     cluster_name = proto.cluster_name();
     parallel = proto.parallel();
     exchange_parallel_size = proto.exchange_parallel_size();
@@ -419,7 +395,7 @@ void PlanSegment::fillFromProto(const Protos::PlanSegment & proto, ContextMutabl
     for(const auto & output_proto: proto.outputs())
     {
         auto cur_output = std::make_shared<PlanSegmentOutput>();
-        cur_output->fillFromProto(output_proto);
+        cur_output->fromProto(output_proto);
         outputs.emplace_back(std::move(cur_output));
     }
 
@@ -427,9 +403,8 @@ void PlanSegment::fillFromProto(const Protos::PlanSegment & proto, ContextMutabl
     {   
         runtime_filters.emplace(runtime_filter_id);
     }
-
-    if (proto.has_profile_type())
-        profile_type = ReportProfileTypeConverter::fromProto(proto.profile_type());
+    //TODO:
+    //profile_type = ReportProfileTypeConverter::fromProto(proto.profile_type());
 }
 
 /**
@@ -439,7 +414,7 @@ void PlanSegment::fillFromProto(const Protos::PlanSegment & proto, ContextMutabl
  */
 void PlanSegment::update(ContextPtr context)
 {
-    setPlanSegmentToQueryPlan(query_plan.getRoot(), context);
+    setPlanSegmentToQueryPlan(query_plan.getRootNode(), context);
     has_local_input
         = std::find_if(inputs.begin(), inputs.end(), [](const auto & input) { return isLocalExchange(input->getExchangeMode()); })
         != inputs.end();
@@ -456,7 +431,7 @@ PlanSegmentPtr PlanSegment::deserializePlanSegment(ReadBuffer & buf, ContextMuta
     return plan_segment;
 }
 
-String PlanSegment::toString() const
+String PlanSegment::toString()
 {
     std::ostringstream ostr;
 
@@ -465,7 +440,7 @@ String PlanSegment::toString() const
     ostr << "parallel_index: " << parallel_index << "\n";
 
     WriteBufferFromOwnString plan_str;
-    query_plan.explainPlan(plan_str, {});
+    query_plan.explainPlan(plan_str, QueryPlan::ExplainPlanOptions{true, true, true, true});
     ostr << plan_str.str() << "\n";
 
     ostr << "inputs: " << "\n";
@@ -484,9 +459,10 @@ String PlanSegment::toString() const
 
 void PlanSegment::getRemoteSegmentId(const QueryPlan::Node * node, std::unordered_map<PlanNodeId, size_t> & exchange_to_segment)
 {
-    auto * step = dynamic_cast<RemoteExchangeSourceStep *>(node->step.get());
-    if (step)
-        exchange_to_segment[node->id] = step->getInput()[0]->getPlanSegmentId();
+    // TODO:Need Step
+    // auto * step = dynamic_cast<RemoteExchangeSourceStep *>(node->step.get());
+    // if (step)
+    //     exchange_to_segment[node->id] = step->getInput()[0]->getPlanSegmentId();
 
     for (const auto & child : node->children)
         getRemoteSegmentId(child, exchange_to_segment);

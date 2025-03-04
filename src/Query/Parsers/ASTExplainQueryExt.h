@@ -36,7 +36,7 @@ public:
         MetaData, // 'EXPLAIN METADATA...'
     };
 
-    ASTExplainQueryExt(ExplainKind kind_) : ASTExplainQuery(kind_) {}
+    ASTExplainQueryExt(ExplainKind kind_) : ASTExplainQuery(kind_) { }
     explicit ASTExplainQueryExt(ExplainKindExt kind_, ExplainKind base_kind_) : ASTExplainQuery(base_kind_), kind(kind_) {}
 
     String getID(char delim) const override { return "ExplainExt" + (delim + toString(kind)); }

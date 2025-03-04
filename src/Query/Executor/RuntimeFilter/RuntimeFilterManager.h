@@ -1,13 +1,11 @@
 #pragma once
-
-#include <Common/Logger.h>
 #include <Interpreters/Context.h>
-#include <Interpreters/DistributedStages/PlanSegment.h>
-#include <Interpreters/RuntimeFilter/ConcurrentHashMap.h>
-#include <Interpreters/RuntimeFilter/RuntimeFilterBuilder.h>
+#include <Query/Common/ConcurrentHashMap.h>
+#include <Query/Executor/PlanSegment.h>
+#include <Query/Executor/RuntimeFilter/RuntimeFilterBuilder.h>
 #include <bthread/condition_variable.h>
 #include <Common/Exception.h>
-#include <common/logger_useful.h>
+#include <Common/logger_useful.h>
 
 namespace DB
 {
@@ -37,7 +35,7 @@ public:
     std::unordered_map<RuntimeFilterId, InternalDynamicData> finalize();
 
 private:
-    bthread::Mutex mutex;
+    std::mutex mutex;
     std::map<UInt32, RuntimeFilterData> rf_data;
 
     RuntimeFilterBuilderPtr builder;

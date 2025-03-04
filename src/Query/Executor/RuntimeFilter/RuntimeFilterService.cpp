@@ -1,9 +1,9 @@
-#include <Interpreters/RuntimeFilter/RuntimeFilterService.h>
+#include "RuntimeFilterService.h>"
 
-#include <Interpreters/RuntimeFilter/RuntimeFilterManager.h>
-#include <Interpreters/SegmentScheduler.h>
-#include <Processors/Exchange/DataTrans/RpcChannelPool.h>
-#include <QueryPlan/PlanSerDerHelper.h>
+#include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
+#include <Query/Exchange/RpcChannelPool.h>
+// #include <Query/Executor/SegmentScheduler.h>
+// #include <QueryPlan/PlanSerDerHelper.h>
 
 namespace DB
 {
@@ -38,7 +38,7 @@ void RuntimeFilterService::transferRuntimeFilter(
     brpc::ClosureGuard done_guard(done);
     try
     {
-        auto segment_scheduler = context->getSegmentScheduler();
+        auto segment_scheduler = context->getOptimizerContext()->getSegmentScheduler();
         if (!segment_scheduler)
             return;
 
