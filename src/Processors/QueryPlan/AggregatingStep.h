@@ -126,6 +126,7 @@ public:
     QueryPipelineBuilderPtr updatePipeline(QueryPipelineBuilders pipelines, const BuildQueryPipelineSettings &) override;
 
 private:
+    friend class QueryPlanStepHelper;
     Aggregator::Params params;
     bool final;
     size_t merge_threads;

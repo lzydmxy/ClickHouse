@@ -92,6 +92,7 @@ public:
         bool skip_partial_sort = false);
 
 private:
+    friend class QueryPlanStepHelper;
     void scatterByPartitionIfNeeded(QueryPipelineBuilder& pipeline);
     void updateOutputStream() override;
 

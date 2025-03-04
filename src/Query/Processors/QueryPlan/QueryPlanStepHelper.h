@@ -192,40 +192,105 @@ public:
             return filter_step->copy(context);
         }
         if (auto aggregating_step = std::dynamic_pointer_cast<AggregatingStep>(query_plan_step))
+        {
+            return std::make_shared<AggregatingStep>(
+                aggregating_step->input_streams[0],
+                aggregating_step->params,
+                aggregating_step->grouping_sets_params,
+                aggregating_step->final,
+                aggregating_step->max_block_size,
+                aggregating_step->aggregation_in_order_max_block_bytes,
+                aggregating_step->merge_threads,
+                aggregating_step->temporary_data_merge_threads,
+                aggregating_step->storage_has_evenly_distributed_read,
+                aggregating_step->group_by_use_nulls,
+                aggregating_step->sort_description_for_merging,
+                aggregating_step->group_by_sort_description,
+                aggregating_step->should_produce_results_in_order_of_bucket_number,
+                aggregating_step->memory_bound_merging_of_aggregation_results_enabled,
+                aggregating_step->explicit_sorting_required_for_aggregation_in_order);
+        }
+        if (auto merging_aggregated_step = std::dynamic_pointer_cast<MergingAggregatedStep>(query_plan_step))
+        {
+            return std::make_shared<MergingAggregatedStep>(
+                merging_aggregated_step->input_streams[0],
+                merging_aggregated_step->params,
+                merging_aggregated_step->final,
+                merging_aggregated_step->memory_efficient_aggregation,
+                merging_aggregated_step->max_threads,
+                merging_aggregated_step->memory_efficient_merge_threads,
+                merging_aggregated_step->should_produce_results_in_order_of_bucket_number,
+                merging_aggregated_step->max_block_size,
+                merging_aggregated_step->memory_bound_merging_max_block_bytes,
+                merging_aggregated_step->group_by_sort_description,
+                merging_aggregated_step->memory_bound_merging_of_aggregation_results_enabled);
+        }
+        if (auto window_step = std::dynamic_pointer_cast<WindowStep>(query_plan_step))
+        {
+            return std::make_shared<WindowStep>(
+                window_step->input_streams[0],
+                window_step->window_description, /// TODO deep copy
+                window_step->window_functions, /// TODO deep copy
+                window_step->streams_fan_out);
+        }
+        if (auto sorting_step = std::dynamic_pointer_cast<SortingStep>(query_plan_step))
+        {
+            switch (sorting_step->getType())
             {
-                return std::make_shared<AggregatingStep>(
-                    aggregating_step->input_streams[0],
-                    aggregating_step->params,
-                    aggregating_step->grouping_sets_params,
-                    aggregating_step->final,
-                    aggregating_step->max_block_size,
-                    aggregating_step->aggregation_in_order_max_block_bytes,
-                    aggregating_step->merge_threads,
-                    aggregating_step->temporary_data_merge_threads,
-                    aggregating_step->storage_has_evenly_distributed_read,
-                    aggregating_step->group_by_use_nulls,
-                    aggregating_step->sort_description_for_merging,
-                    aggregating_step->group_by_sort_description,
-                    aggregating_step->should_produce_results_in_order_of_bucket_number,
-                    aggregating_step->memory_bound_merging_of_aggregation_results_enabled,
-                    aggregating_step->explicit_sorting_required_for_aggregation_in_order);
+                case SortingStep::Type::FinishSorting:
+                    return std::make_shared<SortingStep>(
+                        sorting_step->input_streams[0],
+                        sorting_step->prefix_description,
+                        sorting_step->result_description,
+                        sorting_step->sort_settings.max_block_size,
+                        sorting_step->limit);
+                case SortingStep::Type::Full:
+                    if (!sorting_step->partition_by_description.empty())
+                    {
+                        return std::make_shared<SortingStep>(
+                            sorting_step->input_streams[0],
+                            sorting_step->result_description,
+                            sorting_step->partition_by_description,
+                            sorting_step->limit,
+                            sorting_step->sort_settings,
+                            sorting_step->optimize_sorting_by_input_stream_properties);
+                    }
+                    else
+                    {
+                        return std::make_shared<SortingStep>(
+                            sorting_step->input_streams[0],
+                            sorting_step->result_description,
+                            sorting_step->limit,
+                            sorting_step->sort_settings,
+                            sorting_step->optimize_sorting_by_input_stream_properties);
+                    }
+                case SortingStep::Type::MergingSorted:
+                    return std::make_shared<SortingStep>(
+                            sorting_step->input_streams[0],
+                            sorting_step->result_description,
+                            sorting_step->sort_settings.max_block_size,
+                            sorting_step->always_read_till_end);
             }
-            if (auto merging_aggregated_step = std::dynamic_pointer_cast<MergingAggregatedStep>(query_plan_step))
-            {
-                return std::make_shared<MergingAggregatedStep>(
-                    merging_aggregated_step->input_streams[0],
-                    merging_aggregated_step->params,
-                    merging_aggregated_step->final,
-                    merging_aggregated_step->memory_efficient_aggregation,
-                    merging_aggregated_step->max_threads,
-                    merging_aggregated_step->memory_efficient_merge_threads,
-                    merging_aggregated_step->should_produce_results_in_order_of_bucket_number,
-                    merging_aggregated_step->max_block_size,
-                    merging_aggregated_step->memory_bound_merging_max_block_bytes,
-                    merging_aggregated_step->group_by_sort_description,
-                    merging_aggregated_step->memory_bound_merging_of_aggregation_results_enabled);
-            }
-            return nullptr;
+        }
+        if (auto filling_step = std::dynamic_pointer_cast<FillingStep>(query_plan_step))
+        {
+            return std::make_shared<FillingStep>(
+                filling_step->input_streams[0],
+                filling_step->sort_description,
+                filling_step->fill_description,
+                filling_step->interpolate_description, /// TODO deep copy
+                filling_step->use_with_fill_by_sorting_prefix);
+        }
+        if (auto aggregating_projection_step = std::dynamic_pointer_cast<AggregatingProjectionStep>(query_plan_step))
+        {
+            return std::make_shared<AggregatingProjectionStep>(
+                aggregating_projection_step->input_streams,
+                aggregating_projection_step->params,
+                aggregating_projection_step->final,
+                aggregating_projection_step->merge_threads,
+                aggregating_projection_step->temporary_data_merge_threads);
+        }
+        return nullptr;
     }
 };
 

@@ -29,6 +29,7 @@ public:
     const WindowDescription & getWindowDescription() const;
 
 private:
+    friend class QueryPlanStepHelper;
     void updateOutputStream() override;
 
     WindowDescription window_description;

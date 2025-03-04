@@ -27,6 +27,7 @@ public:
     const SortDescription & getSortDescription() const { return sort_description; }
 
 private:
+    friend class QueryPlanStepHelper;
     void updateOutputStream() override;
 
     SortDescription sort_description;
