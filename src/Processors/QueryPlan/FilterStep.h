@@ -28,6 +28,7 @@ public:
     bool removesFilterColumn() const { return remove_filter_column; }
 
 private:
+    friend class FilterStepExt;
     void updateOutputStream() override;
 
     ActionsDAGPtr actions_dag;

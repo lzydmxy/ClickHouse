@@ -5,6 +5,17 @@
 namespace DB
 {
 
+FilterStepExt::FilterStepExt(const DataStream & input_stream_, const ConstASTPtr & filter_, bool remove_filter_column_)
+    : FilterStep(input_stream_, nullptr, filter->getColumnName(), remove_filter_column_)
+    , filter(filter_)
+{
+}
+
+std::shared_ptr<IQueryPlanStep> FilterStepExt::copy(ContextPtr context) const
+{
+    return std::make_shared<FilterStepExt>(input_streams[0], filter->clone(), remove_filter_column);
+}
+
 // ConstASTPtr FilterStepExt::rewriteRuntimeFilter(const ConstASTPtr & filter, QueryPipelineBuilder &, const BuildQueryPipelineSettings & build_context)
 // {
 //     auto filters = RuntimeFilterUtils::extractRuntimeFilters(filter);

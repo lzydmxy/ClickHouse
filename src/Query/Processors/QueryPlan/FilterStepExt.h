@@ -9,16 +9,21 @@ namespace DB
 class FilterStepExt : public FilterStep
 {
 public:
-  const ConstASTPtr & getFilter() const { return filter; }
-  void setFilter(ConstASTPtr new_filter) { filter = std::move(new_filter);}
+    FilterStepExt(const DataStream & input_stream_, const ConstASTPtr & filter_, bool remove_filter_column_ = true);
 
-  static ConstASTPtr rewriteRuntimeFilter(const ConstASTPtr & filter, QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & build_context);
+    const ConstASTPtr & getFilter() const { return filter; }
+    void setFilter(ConstASTPtr new_filter) { filter = std::move(new_filter); }
 
-  static std::pair<ConstASTPtr, ConstASTPtr> splitLargeInValueList(const ConstASTPtr & filter, UInt64 limit);
-  static std::vector<ConstASTPtr> removeLargeInValueList(const std::vector<ConstASTPtr> & filters, UInt64 limit);
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr context) const;
+
+    static ConstASTPtr
+    rewriteRuntimeFilter(const ConstASTPtr & filter, QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & build_context);
+
+    static std::pair<ConstASTPtr, ConstASTPtr> splitLargeInValueList(const ConstASTPtr & filter, UInt64 limit);
+    static std::vector<ConstASTPtr> removeLargeInValueList(const std::vector<ConstASTPtr> & filters, UInt64 limit);
 
 private:
-  ConstASTPtr filter;
+    ConstASTPtr filter;
 };
 
 }
