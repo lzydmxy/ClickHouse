@@ -33,6 +33,7 @@ public:
 
     bool withTies() const { return with_ties; }
 
+    friend class LimitStepExt;
 private:
     void updateOutputStream() override
     {

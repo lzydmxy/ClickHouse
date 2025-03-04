@@ -57,7 +57,7 @@ struct UsefulSkipIndexes
 
 /// This step is created to read from MergeTree* table.
 /// For now, it takes a list of parts and creates source from it.
-class ReadFromMergeTree final : public SourceStepWithFilter
+class ReadFromMergeTree : public SourceStepWithFilter
 {
 public:
 
@@ -194,6 +194,7 @@ public:
 
     void applyFilters(ActionDAGNodes added_filter_nodes) override;
 
+    friend class ReadFromMergeTreeExt;
 private:
     static AnalysisResultPtr selectRangesToReadImpl(
         MergeTreeData::DataPartsVector parts,

@@ -34,6 +34,7 @@ public:
 
     const ActionsDAGPtr & getActions() const { return actions_dag; }
 
+    friend class TotalsHavingStepExt;
 private:
     void updateOutputStream() override;
 
