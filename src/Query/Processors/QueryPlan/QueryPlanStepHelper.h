@@ -14,6 +14,7 @@
 #include <Processors/QueryPlan/LimitByStep.h>
 #include <Processors/QueryPlan/LimitStep.h>
 #include <Processors/QueryPlan/MergingAggregatedStep.h>
+#include <Processors/QueryPlan/MultiJoinStep.h>
 #include <Processors/QueryPlan/OffsetStep.h>
 #include <Processors/QueryPlan/ReadFromPreparedSource.h>
 #include <Processors/QueryPlan/RollupStep.h>
@@ -25,17 +26,16 @@
 #include <Query/Processors/QueryPlan/AssignUniqueIdStepExt.h>
 #include <Query/Processors/QueryPlan/BufferStepExt.h>
 #include <Query/Processors/QueryPlan/EnforceSingleRowStepExt.h>
-#include <Query/Processors/QueryPlan/ExplainAnalyzeStepExt.h>
-#include <Query/Processors/QueryPlan/ProjectionStepExt.h>
-#include <Query/Processors/QueryPlan/PartitionTopNStepExt.h>
 #include <Query/Processors/QueryPlan/ExchangeStepExt.h>
 #include <Query/Processors/QueryPlan/ExpandStepExt.h>
+#include <Query/Processors/QueryPlan/ExplainAnalyzeStepExt.h>
 #include <Query/Processors/QueryPlan/FilterStepExt.h>
 #include <Query/Processors/QueryPlan/IntermediateResultCacheStepExt.h>
 #include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <Query/Processors/QueryPlan/LocalExchangeStepExt.h>
 #include <Query/Processors/QueryPlan/MarkDistinctStepExt.h>
 #include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
+#include <Query/Processors/QueryPlan/PartitionTopNStepExt.h>
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
 #include <Query/Processors/QueryPlan/RemoteExchangeSourceStepExt.h>
 #include <Query/Processors/QueryPlan/SettingQuotaAndLimitsStepExt.h>
