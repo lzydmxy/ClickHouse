@@ -68,7 +68,7 @@ JoinStepExt::JoinStepExt(
     , simple_reordered(simple_reordered_)
     /*, runtime_filter_builders(std::move(runtime_filter_builders_))*/
 {
-    assert(!isComma(kind));
+    assert(kind != JoinKind::Comma);
     assert(left_keys.size() == right_keys.size());
     // fixme@kaixi
     // assert(!isCross(kind) || isUnspecified(strictness)); // CROSS JOIN must use Unspecified strictness
