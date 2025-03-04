@@ -3,6 +3,12 @@
 #include <Processors/QueryPlan/CreatingSetsStep.h>
 #include <Processors/QueryPlan/CubeStep.h>
 #include <Processors/QueryPlan/ExtremesStep.h>
+#include <Processors/QueryPlan/LimitStep.h>
+#include <Processors/QueryPlan/AggregatingStep.h>
+#include <Processors/QueryPlan/MergingAggregatedStep.h>
+#include <Processors/QueryPlan/WindowStep.h>
+#include <Processors/QueryPlan/SortingStep.h>
+#include <Processors/QueryPlan/FillingStep.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
 #include <Processors/QueryPlan/IntersectOrExceptStep.h>
 #include <Processors/QueryPlan/JoinStep.h>
@@ -16,6 +22,7 @@
 #include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
 #include <Query/Processors/QueryPlan/UnionStepExt.h>
 
+#include <Query/Processors/QueryPlan/FilterStepExt.h>
 #include <Query/Processors/QueryPlan/AssignUniqueIdStepExt.h>
 #include <Query/Processors/QueryPlan/ExpandStepExt.h>
 #include <Query/Processors/QueryPlan/MarkDistinctStepExt.h>
@@ -34,7 +41,6 @@ using QueryPlanStepShardPtr = std::shared_ptr<IQueryPlanStep>;
     M(CubeStep) \
     M(ExtremesStep) \
     M(RollupStep) \
-    M(OffsetStep) \
     M(JoinStepExt) \
     M(FilledJoinStep) \
     M(MultiJoinStepExt) \
@@ -52,7 +58,16 @@ using QueryPlanStepShardPtr = std::shared_ptr<IQueryPlanStep>;
     M(TopNFilteringStepExt) \
     M(ExchangeStepExt) \
     M(LocalExchangeStepExt) \
-    M(RemoteExchangeSourceStepExt)
+    M(RemoteExchangeSourceStepExt) \
+    M(OffsetStep) \
+    M(AggregatingProjectionStep) \
+    M(FilterStepExt) \
+    M(AggregatingStep) \
+    M(MergingAggregatedStep) \
+    M(WindowStep) \
+    M(SortingStep) \
+    M(FillingStep) \
+    M(LimitStep)
 
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) ITEM,
 enum class QueryPlanStepType : UInt8
