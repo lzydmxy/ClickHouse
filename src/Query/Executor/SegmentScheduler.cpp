@@ -92,7 +92,7 @@ SegmentScheduler::insertPlanSegments(const String & query_id, PlanSegmentTree * 
         }
         res += "\n";
     }
-    LOG_DEBUG(log, res);
+    LOG_DEBUG(log, "{}", res);
 
 #endif
     return dag_ptr->plan_segment_status_ptr;
