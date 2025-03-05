@@ -1,7 +1,6 @@
 #pragma once
 #include <mutex>
 #include <unordered_map>
-#include <vector>
 #include <boost/noncopyable.hpp>
 #include <base/types.h>
 #include <Common/logger_useful.h>
@@ -37,7 +36,7 @@ public:
 
 private:
     BroadcastSenderProxyRegistry();
-    mutable bthread::Mutex mutex;
+    mutable std::mutex mutex;
     using BroadcastSenderProxyEntry = std::weak_ptr<BroadcastSenderProxy>;
     std::unordered_map<ExchangeDataKey, BroadcastSenderProxyEntry, ExchangeDataKeyHashFunc> proxies;
     LoggerPtr logger;

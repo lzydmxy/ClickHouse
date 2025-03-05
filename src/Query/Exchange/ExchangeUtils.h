@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Interpreters/Context.h>
 #include <Query/ProtosHelper/AddressInfo.h>
 #include <Query/Exchange/DataTrans/IBroadcastSender.h>
@@ -7,6 +6,13 @@
 
 namespace DB
 {
+
+enum ChunkInfoType
+{
+    AGGREGATED = 1,
+    TOTALS = 2,
+    EXTREMES = 3,
+};
 
 struct ExchangeOptions
 {

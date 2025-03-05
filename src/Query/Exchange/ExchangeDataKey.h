@@ -1,9 +1,11 @@
 #pragma once
-
 #include <string>
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <base/types.h>
+#include <IO/WriteHelpers.h>
+#include <IO/WriteBufferFromString.h>
+#include <IO/Operators.h>
 
 namespace DB
 {

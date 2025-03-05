@@ -1,5 +1,4 @@
 #include "BroadcastSenderProxyRegistry.h"
-#include <mutex>
 #include <Query/Exchange/DataTrans/BroadcastSenderProxy.h>
 
 namespace DB

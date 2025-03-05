@@ -1,11 +1,11 @@
-#include <Interpreters/RuntimeFilter/RuntimeFilterConsumer.h>
+#include "RuntimeFilterConsumer.h"
+#include <brpc/server.h>
+#include <Common/LinkedHashMap.h>
 #include <Interpreters/RuntimeFilter/RuntimeFilterManager.h>
 #include <Query/Exchange/RpcChannelPool.h>
 #include <Query/Exchange/RpcClient.h>
 #include <Protos/runtime_filter.pb.h>
-#include <brpc/server.h>
-#include <Common/Brpc/BrpcChannelPoolOptions.h>
-#include <Common/LinkedHashMap.h>
+#include <Query/Exchange/bRPC/BrpcChannelPoolOptions.h>
 
 namespace DB
 {

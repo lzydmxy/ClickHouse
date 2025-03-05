@@ -1,7 +1,6 @@
 #pragma once
-#include <atomic>
 #include <boost/core/noncopyable.hpp>
-#include <Common/Logger.h>
+#include <Common/logger_useful.h>
 #include <Core/Block.h>
 #include <DataTypes/IDataType.h>
 #include <Interpreters/Context_fwd.h>
@@ -47,7 +46,7 @@ private:
     friend class BroadcastSenderProxyRegistry;
     explicit BroadcastSenderProxy(ExchangeDataKeyPtr data_key_, SenderProxyOptions options);
 
-    mutable bthread::Mutex mutex;
+    mutable std::mutex mutex;
     std::condition_variable wait_become_real;
     std::condition_variable wait_accept;
     std::atomic_bool has_real_sender {false};

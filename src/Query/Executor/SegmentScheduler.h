@@ -91,12 +91,12 @@ public:
 
 private:
     // Protect `query_map`.
-    mutable bthread::Mutex mutex;
+    mutable std::mutex mutex;
     std::unordered_map<String, std::shared_ptr<DAGGraph>> query_map;
 
     // Protect maps below.
-    mutable bthread::Mutex segment_status_mutex;
-    mutable bthread::Mutex segment_profile_mutex;
+    mutable std::mutex segment_status_mutex;
+    mutable std::mutex segment_profile_mutex;
     mutable SegmentStatusMap segment_status_map;
     mutable SegmentProfilesMap segment_profile_map;
     mutable std::unordered_map<String, RuntimeSegmentsStatusPtr> query_status_map;

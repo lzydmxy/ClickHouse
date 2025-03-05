@@ -4,9 +4,7 @@
 #include <boost/noncopyable.hpp>
 #include <Common/logger_useful.h>
 #include <Common/Exception.h>
-//#include <butil/logging.h>
-//#include <Poco/AutoPtr.h>
-//#include <Poco/Util/AbstractConfiguration.h>
+#include <butil/logging.h>
 #include <Query/Exchange/bRPC/BaseConfigHolder.h>
 
 

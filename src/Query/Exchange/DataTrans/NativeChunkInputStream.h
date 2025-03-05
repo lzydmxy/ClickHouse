@@ -1,5 +1,4 @@
 #pragma once
-
 #include <memory>
 #include <IO/ReadBuffer.h>
 #include <Core/Block.h>

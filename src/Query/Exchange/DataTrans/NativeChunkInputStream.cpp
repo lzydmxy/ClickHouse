@@ -1,9 +1,11 @@
 #include "NativeChunkInputStream.h"
-
+#include <memory>
 #include <DataTypes/DataTypeFactory.h>
 #include <IO/ReadHelpers.h>
 #include <Common/typeid_cast.h>
 #include <Processors/Transforms/AggregatingTransform.h>
+#include <Query/Exchange/ExchangeUtils.h>
+#include <Query/Exchange/ChunkInfo.h>
 
 namespace DB
 {
@@ -12,6 +14,7 @@ namespace ErrorCodes
     extern const int INCORRECT_INDEX;
     extern const int LOGICAL_ERROR;
     extern const int CANNOT_READ_ALL_DATA;
+    extern const int UNSUPPORTED_PARAMETER;
 }
 
 NativeChunkInputStream::NativeChunkInputStream(ReadBuffer & istr_, const Block & header_) : istr(istr_), header(header_)
@@ -34,10 +37,8 @@ void NativeChunkInputStream::readData(
     serialization->deserializeBinaryBulkWithMultipleStreams(column, rows, settings, state, nullptr);
 
     if (column->size() != rows)
-        throw Exception(
-            "Cannot read all data in NativeChunkInputStream. Rows read: " + toString(column->size()) + ". Rows expected: " + toString(rows)
-                + ".",
-            ErrorCodes::CANNOT_READ_ALL_DATA);
+        throw Exception(ErrorCodes::CANNOT_READ_ALL_DATA,
+            "Cannot read all data in NativeChunkInputStream. Rows read:{}. Rows expected:{}.", column->size(), rows);
 }
 
 Chunk NativeChunkInputStream::readImpl()
@@ -56,24 +57,14 @@ Chunk NativeChunkInputStream::readImpl()
         UInt8 chunk_info_type;
         readVarUInt(chunk_info_type, istr);
         // todo:: current we only support AggregatedChunkInfo
-        if (chunk_info_type == static_cast<UInt8>(ChunkInfo::Type::AggregatedChunkInfo))
+        if (chunk_info_type == static_cast<UInt8>(ChunkInfoType::AGGREGATED))
         {
             auto chunk_info = std::make_shared<AggregatedChunkInfo>();
-            chunk_info->read(istr);
+            readAggregatedChunkInfo(istr, chunk_info);
             res.setChunkInfo(chunk_info);
         }
-        else if (chunk_info_type == static_cast<UInt8>(ChunkInfo::Type::Totals))
-        {
-            auto chunk_info = std::make_shared<ChunkInfoTotals>();
-            chunk_info->read(istr);
-            res.setChunkInfo(chunk_info);
-        }
-        else if (chunk_info_type == static_cast<UInt8>(ChunkInfo::Type::Extremes))
-        {
-            auto chunk_info = std::make_shared<ChunkInfoExtremes>();
-            chunk_info->read(istr);
-            res.setChunkInfo(chunk_info);
-        }
+        else
+            throw Exception(ErrorCodes::UNSUPPORTED_PARAMETER, "Unsupported chunk info type {}", static_cast<UInt16>(chunk_info_type));
     }
     /// Dimensions
     size_t col_num = 0;

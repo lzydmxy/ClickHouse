@@ -2,9 +2,9 @@
 #include <fmt/core.h>
 #include <Poco/DateTime.h>
 #include <Poco/DateTimeFormatter.h>
-#include <Common/Brpc/BrpcChannelPoolConfigHolder.h>
-#include <Common/Brpc/BrpcGflagsConfigHolder.h>
-#include <Common/Brpc/BrpcPocoLogSink.h>
+#include <Query/Exchange/bRPC/BrpcChannelPoolConfigHolder.h>
+#include <Query/Exchange/bRPC/BrpcGflagsConfigHolder.h>
+#include <Query/Exchange/bRPC/BrpcPocoLogSink.h>
 
 namespace DB
 {
@@ -86,6 +86,5 @@ void BrpcApplication::initBuildinConfigHolders()
     registerNamedConfigHolder(std::make_shared<BrpcGflagsConfigHolder>());
     registerNamedConfigHolder(std::make_shared<BrpcChannelPoolConfigHolder>());
 }
-
 
 }

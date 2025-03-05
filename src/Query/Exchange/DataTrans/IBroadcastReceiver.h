@@ -2,7 +2,8 @@
 #include <variant>
 #include <butil/iobuf.h>
 #include <bvar/reducer.h>
-#include <Common/time.h>
+#include <sys/time.h>
+#include <Common/DateLUT.h>
 #include <Processors/Chunk.h>
 #include <Query/Exchange/QueryExchangeLog.h>
 #include <Query/Exchange/DataTrans/DataTrans_fwd.h>
@@ -30,13 +31,13 @@ public:
         bvar::Adder<size_t> recv_counts;
         bvar::Adder<size_t> dser_time_ms;
         std::atomic<Int32> finish_code{0};
-        std::atomic<Int8> is_modifier{-1};
+        std::atomic<Int16> is_modifier{-1};
         String message;
     };
     virtual void registerToSenders(UInt32 timeout_ms) = 0;
     virtual RecvDataPacket recv(UInt32 timeout_ms)
     {
-        UInt64 timeout_ms_ts = time_in_milliseconds(std::chrono::system_clock::now()) + timeout_ms;
+        UInt64 timeout_ms_ts = timeInMilliseconds(std::chrono::system_clock::now()) + timeout_ms;
         timespec timeout_ts {.tv_sec = long(timeout_ms_ts/1000), .tv_nsec = long(timeout_ms_ts % 1000) * 1000000};
         return recv(timeout_ts);
     }

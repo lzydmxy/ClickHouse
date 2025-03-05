@@ -87,7 +87,7 @@ struct DAGGraph
     /// final worker address where task is successfully executed
     mutable std::mutex finished_address_mutex;
     std::unordered_map<size_t, std::map<size_t, AddressInfo>> finished_address;
-    mutable bthread::Mutex status_mutex;
+    mutable std::mutex status_mutex;
     std::set<AddressInfo> plan_send_addresses;
     PlanSegmentsStatusPtr plan_segment_status_ptr;
 #if defined(TASK_ASSIGN_DEBUG)

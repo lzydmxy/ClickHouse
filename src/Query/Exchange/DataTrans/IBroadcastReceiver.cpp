@@ -1,6 +1,5 @@
 #include "IBroadcastReceiver.h"
-#include <Processors/Exchange/DataTrans/DeserializeBufTransform.h>
-#include <butil/iobuf.h>
+#include <Query/Exchange/DataTrans/DeserializeBufTransform.h>
 
 namespace DB
 {

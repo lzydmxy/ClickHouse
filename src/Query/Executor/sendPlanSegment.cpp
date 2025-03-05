@@ -25,7 +25,7 @@ void sendPlanSegmentToAddress(
     execution_info.execution_address = address_info.getAddressInfoPtr();
 
     {
-        std::unique_lock<bthread::Mutex> lock(dag_graph_ptr->status_mutex);
+        std::unique_lock<std::mutex> lock(dag_graph_ptr->status_mutex);
         dag_graph_ptr->plan_send_addresses.emplace(address_info);
     }
 
@@ -48,7 +48,7 @@ void sendPlanSegmentsToAddress(
     const WorkerID & worker_id)
 {
     {
-        std::unique_lock<bthread::Mutex> lock(dag_graph_ptr->status_mutex);
+        std::unique_lock<std::mutex> lock(dag_graph_ptr->status_mutex);
         dag_graph_ptr->plan_send_addresses.emplace(address_info);
     }
 

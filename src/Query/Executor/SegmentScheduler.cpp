@@ -32,7 +32,7 @@ SegmentScheduler::insertPlanSegments(const String & query_id, PlanSegmentTree * 
     buildDAGGraph(plan_segments_ptr, dag_ptr);
     dag_ptr->setContext(query_context);
     {
-        std::unique_lock<bthread::Mutex> lock(mutex);
+        std::unique_lock<std::mutex> lock(mutex);
         if (query_map.find(query_id) != query_map.end())
         {
             // cancel running query
@@ -49,14 +49,14 @@ SegmentScheduler::insertPlanSegments(const String & query_id, PlanSegmentTree * 
     }
 
     {
-        std::unique_lock<bthread::Mutex> lock(segment_status_mutex);
+        std::unique_lock<std::mutex> lock(segment_status_mutex);
         segment_status_map[query_id];
         query_status_map.emplace(query_id, std::make_shared<RuntimeSegmentStatus>());
     }
 
     if (query_context->getOptimizerContext()->getSettingsRef().report_segment_profiles)
     {
-        std::unique_lock<bthread::Mutex> lock(segment_profile_mutex);
+        std::unique_lock<std::mutex> lock(segment_profile_mutex);
         segment_profile_map[query_id];
     }
 
@@ -142,7 +142,7 @@ CancellationCode SegmentScheduler::cancelPlanSegments(
 
     if (dag_graph_ptr == nullptr) // try to get the dag_graph_ptr
     {
-        std::unique_lock<bthread::Mutex> lock(mutex);
+        std::unique_lock<std::mutex> lock(mutex);
         auto query_map_ite = query_map.find(query_id);
         if (query_map_ite == query_map.end())
             return CancellationCode::NotFound;
@@ -155,7 +155,7 @@ CancellationCode SegmentScheduler::cancelPlanSegments(
 
     {
         {
-            std::unique_lock<bthread::Mutex> lock(dag_ptr->status_mutex);
+            std::unique_lock<std::mutex> lock(dag_ptr->status_mutex);
             LOG_ERROR(log, "query({}) receive error from host:{} with exception:{} and plan_send_addresses size:{}",
                     query_id, origin_host_name, exception, dag_ptr->plan_send_addresses.size());
 
@@ -179,7 +179,7 @@ void SegmentScheduler::cancelWorkerPlanSegments(const String & query_id, const D
     std::vector<brpc::CallId> call_ids;
     std::set<AddressInfo> plan_send_addresses;
     {
-        std::unique_lock<bthread::Mutex> lock(dag_ptr->status_mutex);
+        std::unique_lock<std::mutex> lock(dag_ptr->status_mutex);
         plan_send_addresses = dag_ptr->plan_send_addresses;
     }
     Protos::CancelQueryRequest request;
@@ -204,7 +204,7 @@ void SegmentScheduler::cancelWorkerPlanSegments(const String & query_id, const D
 bool SegmentScheduler::finishPlanSegments(const String & query_id)
 {
 
-    std::unique_lock<bthread::Mutex> lock(mutex);
+    std::unique_lock<std::mutex> lock(mutex);
     auto query_map_ite = query_map.find(query_id);
     if (query_map_ite != query_map.end())
     {
@@ -212,7 +212,7 @@ bool SegmentScheduler::finishPlanSegments(const String & query_id)
     }
 
     {
-        std::unique_lock<bthread::Mutex> lock(segment_profile_mutex);
+        std::unique_lock<std::mutex> lock(segment_profile_mutex);
 
         auto seg_profile_map_ite = segment_profile_map.find(query_id);
         if (seg_profile_map_ite != segment_profile_map.end())
@@ -220,7 +220,7 @@ bool SegmentScheduler::finishPlanSegments(const String & query_id)
     }
 
     {
-        std::unique_lock<bthread::Mutex> lock(segment_status_mutex);
+        std::unique_lock<std::mutex> lock(segment_status_mutex);
         auto seg_status_map_ite = segment_status_map.find(query_id);
         if (seg_status_map_ite != segment_status_map.end())
             segment_status_map.erase(seg_status_map_ite);
@@ -235,7 +235,7 @@ bool SegmentScheduler::finishPlanSegments(const String & query_id)
 
 AddressInfos SegmentScheduler::getWorkerAddress(const String & query_id, size_t segment_id)
 {
-    std::unique_lock<bthread::Mutex> lock(mutex);
+    std::unique_lock<std::mutex> lock(mutex);
     auto query_map_ite = query_map.find(query_id);
     if (query_map_ite == query_map.end())
         return {};
@@ -248,7 +248,7 @@ AddressInfos SegmentScheduler::getWorkerAddress(const String & query_id, size_t 
 
 void SegmentScheduler::updateQueryStatus(const RuntimeSegmentStatus & segment_status)
 {
-    std::unique_lock<bthread::Mutex> lock(segment_status_mutex);
+    std::unique_lock<std::mutex> lock(segment_status_mutex);
     auto query_iter = query_status_map.find(segment_status.query_id);
     if (query_iter == query_status_map.end())
         return;
@@ -260,7 +260,7 @@ void SegmentScheduler::updateQueryStatus(const RuntimeSegmentStatus & segment_st
 
 void SegmentScheduler::updateSegmentStatus(const RuntimeSegmentStatus & segment_status)
 {
-    std::unique_lock<bthread::Mutex> lock(segment_status_mutex);
+    std::unique_lock<std::mutex> lock(segment_status_mutex);
     auto segment_status_iter = segment_status_map.find(segment_status.query_id);
     if (segment_status_iter == segment_status_map.end())
         return;
@@ -283,7 +283,7 @@ void SegmentScheduler::updateSegmentStatus(const RuntimeSegmentStatus & segment_
 
 void SegmentScheduler::updateSegmentProfile(PlanSegmentProfilePtr & segment_profile)
 {
-    std::unique_lock<bthread::Mutex> lock(segment_profile_mutex);
+    std::unique_lock<std::mutex> lock(segment_profile_mutex);
     auto segment_profile_iter = segment_profile_map.find(segment_profile->query_id);
     if (segment_profile_iter == segment_profile_map.end())
         return;
@@ -296,7 +296,7 @@ std::unordered_map<size_t, PlanSegmentProfiles> SegmentScheduler::getSegmentsPro
 {
     std::unordered_map<size_t, PlanSegmentProfiles> res;
     {
-        std::unique_lock<bthread::Mutex> lock(segment_profile_mutex);
+        std::unique_lock<std::mutex> lock(segment_profile_mutex);
         auto segment_profile_iter = segment_profile_map.find(query_id);
         if (segment_profile_iter == segment_profile_map.end())
             return res;
@@ -310,7 +310,7 @@ void SegmentScheduler::checkQueryCpuTime(const String & query_id)
     UInt64 max_cpu_seconds = 0;
     OverflowMode overflow_mode = OverflowMode::THROW;
 
-    std::unique_lock<bthread::Mutex> lock(mutex);
+    std::unique_lock<std::mutex> lock(mutex);
     auto query_map_ite = query_map.find(query_id);
     if (query_map_ite == query_map.end())
     {
@@ -333,7 +333,7 @@ void SegmentScheduler::checkQueryCpuTime(const String & query_id)
     if (max_cpu_seconds <= 0)
         return;
 
-    std::unique_lock<bthread::Mutex> status_lock(segment_status_mutex);
+    std::unique_lock<std::mutex> status_lock(segment_status_mutex);
     UInt64 total_cpu_micros = 0;
     auto query_iter = query_status_map.find(query_id);
     if (query_iter != query_status_map.end())
@@ -363,7 +363,7 @@ void SegmentScheduler::updateReceivedSegmentStatusCounter(const String & query_i
 {
     std::shared_ptr<DAGGraph> dag_ptr;
     {
-        std::unique_lock<bthread::Mutex> lock(mutex);
+        std::unique_lock<std::mutex> lock(mutex);
         auto all_segments_iterator = query_map.find(query_id);
         if (all_segments_iterator == query_map.end())
         {
@@ -382,7 +382,7 @@ void SegmentScheduler::updateReceivedSegmentStatusCounter(const String & query_i
         bool all_received = true;
         {
             // update counter and return
-            std::unique_lock<bthread::Mutex> lock(segment_status_mutex);
+            std::unique_lock<std::mutex> lock(segment_status_mutex);
             auto segment_status_counter_iterator = query_status_received_counter_map[query_id].find(segment_id);
             if (segment_status_counter_iterator == query_status_received_counter_map[query_id].end())
             {
@@ -413,7 +413,7 @@ void SegmentScheduler::updateReceivedSegmentStatusCounter(const String & query_i
 
 bool SegmentScheduler::alreadyReceivedAllSegmentStatus(const String & query_id)
 {
-    std::unique_lock<bthread::Mutex> lock(segment_status_mutex);
+    std::unique_lock<std::mutex> lock(segment_status_mutex);
     auto all_segments_iterator = query_map.find(query_id);
     auto received_status_segments_counter_iterator = query_status_received_counter_map.find(query_id);
     if (received_status_segments_counter_iterator == query_status_received_counter_map.end() && all_segments_iterator == query_map.end())
@@ -630,7 +630,7 @@ SegmentScheduler::scheduleV2(const String & query_id, ContextPtr query_context, 
 
 PlanSegmentSet SegmentScheduler::getIOPlanSegmentInstanceIDs(const String & query_id) const
 {
-    std::unique_lock<bthread::Mutex> lock(mutex);
+    std::unique_lock<std::mutex> lock(mutex);
     auto iter = query_map.find(query_id);
     if (iter == query_map.end() || !iter->second)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "query_id-{} does not exist in scheduler query map", query_id);

@@ -1,7 +1,7 @@
 #include "BrpcChannelPoolConfigHolder.h"
 #include <iomanip>
 #include <Poco/Util/AbstractConfiguration.h>
-#include <Common/Brpc/BaseConfigHolder.h>
+#include <Query/Exchange/bRPC/BaseConfigHolder.h>
 
 namespace DB
 {

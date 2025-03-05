@@ -1,6 +1,6 @@
 #include "BrpcChannelPoolOptions.h"
 #include <iostream>
-#include <Processors/Exchange/DataTrans/RpcChannelPool.h>
+#include <Query/Exchange/RpcChannelPool.h>
 
 namespace DB
 {
