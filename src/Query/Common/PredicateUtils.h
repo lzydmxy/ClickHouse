@@ -10,6 +10,8 @@ namespace DB
 {
 class ConstHashAST;
 
+static constexpr size_t PREDICATE_VECTOR_SIZE = 7;
+
 template <typename T>
 using enable_if_ast = typename std::enable_if_t<std::is_same_v<T, ASTPtr> || std::is_same_v<T, ConstASTPtr>, bool>;
 class PredicateUtils
@@ -74,13 +76,13 @@ public:
     static ConstASTPtr distributePredicate(ConstASTPtr or_predicate, ContextMutablePtr & context);
 
     template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combineConjuncts(const absl::InlinedVector<T,7> & predicates);
+    static ASTPtr combineConjuncts(const absl::InlinedVector<T,PREDICATE_VECTOR_SIZE> & predicates);
     template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combineDisjuncts(const absl::InlinedVector<T,7> & predicates);
+    static ASTPtr combineDisjuncts(const absl::InlinedVector<T,PREDICATE_VECTOR_SIZE> & predicates);
     template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combineDisjunctsWithDefault(const absl::InlinedVector<T,7> & predicates, const ASTPtr & default_ast);
+    static ASTPtr combineDisjunctsWithDefault(const absl::InlinedVector<T,PREDICATE_VECTOR_SIZE> & predicates, const ASTPtr & default_ast);
     template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combinePredicates(const String & fun, absl::InlinedVector<T,7> predicates);
+    static ASTPtr combinePredicates(const String & fun, absl::InlinedVector<T,PREDICATE_VECTOR_SIZE> predicates);
 
     template <typename T, enable_if_ast<T> = true>
     static bool isTruePredicate(const T & predicate);
