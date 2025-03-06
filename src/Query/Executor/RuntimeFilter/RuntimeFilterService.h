@@ -1,10 +1,9 @@
 #pragma once
-
-#include <Common/Logger.h>
+#include <Common/logger_useful.h>
 #include <Interpreters/Context.h>
-#include <Protos/runtime_filter.pb.h>
 #include <brpc/server.h>
 #include <brpc/stream.h>
+#include <Query/Protos/runtime_filter.pb.h>
 #include <Query/Exchange/bRPC/BrpcServiceDefines.h>
 
 namespace DB

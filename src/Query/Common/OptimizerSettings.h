@@ -63,6 +63,8 @@ DECLARE_SETTING_ENUM(SchedulerMode);
     M(Bool, enable_batch_send_plan_segment, true, "Whether enable combined sending plan segments to reduce rpc calls", 0) \
     /** Runtime Filter settings */ \
     M(UInt64, wait_runtime_filter_timeout, 1000, "Execute filter wait for runtime filter timeout ms", 0) \
+    M(Bool, enable_range_cover, true, "Whether use range rather than bloom or values set for runtime filter", 0) \
+    M(UInt64, clean_rf_time_limit, 300000, "Threshold to clean runtime filters in manager to prevent memory leak", 0) \
     /** Debug settings */ \
     M(Bool, log_segment_profiles, false, "Log profile of each segment info including runtime and planning information.", 0) \
     M(Bool, report_segment_profiles, false, "Report plan segment profile to coordinator.", 0) \

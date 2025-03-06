@@ -1,11 +1,11 @@
 #include "RuntimeFilterConsumer.h"
 #include <brpc/server.h>
-#include <Common/LinkedHashMap.h>
-#include <Interpreters/RuntimeFilter/RuntimeFilterManager.h>
+#include <Query/Common/LinkedHashMap.h>
 #include <Query/Exchange/RpcChannelPool.h>
 #include <Query/Exchange/RpcClient.h>
-#include <Protos/runtime_filter.pb.h>
 #include <Query/Exchange/bRPC/BrpcChannelPoolOptions.h>
+#include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
+#include <Query/Protos/runtime_filter.pb.h>
 
 namespace DB
 {
@@ -117,14 +117,15 @@ void RuntimeFilterConsumer::bypass(BypassType type)
 static void OnSendRuntimeFilterCallback(
     Protos::TransferRuntimeFilterResponse * response, brpc::Controller * cntl, std::shared_ptr<RpcClient> rpc_channel)
 {
+    auto logger = getLogger("RuntimeFilterBuild");
     std::unique_ptr<Protos::TransferRuntimeFilterResponse> response_guard(response);
     std::unique_ptr<brpc::Controller> cntl_guard(cntl);
 
     rpc_channel->checkAliveWithController(*cntl);
     if (cntl->Failed())
-        LOG_DEBUG(getLogger("RuntimeFilterBuild"), "Send to coordinator failed, message: " + cntl->ErrorText());
+        LOG_DEBUG(logger, "Send to coordinator failed, message: {}", cntl->ErrorText());
     else
-        LOG_DEBUG(getLogger("RuntimeFilterBuild"), "Send to coordinator success");
+        LOG_DEBUG(logger, "Send to coordinator success");
 }
 
 void RuntimeFilterConsumer::transferRuntimeFilter(RuntimeFilterData && data)

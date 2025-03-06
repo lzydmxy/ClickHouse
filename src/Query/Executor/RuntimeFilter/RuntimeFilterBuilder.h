@@ -1,18 +1,19 @@
 #pragma once
-
 #include <Columns/IColumn.h>
 #include <Core/Block.h>
+#include <Common/logger_useful.h>
 #include <IO/ReadHelpers.h>
 #include <IO/WriteHelpers.h>
 #include <Interpreters/Aggregator.h>
 #include <Interpreters/Context.h>
-#include <Query/ProtosHelper/QueryProto.h>
-#include <Query/ProtosHelper/AddressInfo.h>
 #include <Interpreters/ExpressionActions.h>
-#include <Query/Executor/RuntimeFilter/RuntimeFilterTypes.h>
 #include <Parsers/IAST.h>
 #include <Query/Common/LinkedHashMap.h>
-#include <Common/logger_useful.h>
+#include <Query/Common/OptimizerContext.h>
+#include <Query/ProtosHelper/QueryProto.h>
+#include <Query/ProtosHelper/AddressInfo.h>
+#include <Query/Executor/RuntimeFilter/RuntimeFilterTypes.h>
+
 
 namespace DB
 {
@@ -116,7 +117,7 @@ using RuntimeFilterBuilderPtr = std::shared_ptr<RuntimeFilterBuilder>;
 class RuntimeFilterBuilder
 {
 public:
-    explicit RuntimeFilterBuilder(const Settings & settings, const LinkedHashMap<String, RuntimeFilter> & runtime_filters_);
+    explicit RuntimeFilterBuilder(const OptimizerSettings & settings, const LinkedHashMap<String, RuntimeFilter> & runtime_filters_);
 
     UInt32 getId() const { return builder_id; }
 

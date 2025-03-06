@@ -1,8 +1,8 @@
-#include "RuntimeFilterService.h>"
-
-#include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
+#include "RuntimeFilterService.h"
+#include <Query/ProtosHelper/FieldHelper.h>
 #include <Query/Exchange/RpcChannelPool.h>
-// #include <Query/Executor/SegmentScheduler.h>
+#include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
+#include <Query/Executor/SegmentScheduler.h>
 // #include <QueryPlan/PlanSerDerHelper.h>
 
 namespace DB
@@ -21,7 +21,7 @@ onDispatchRuntimeFilter(
 
     rpc_channel->checkAliveWithController(*cntl);
     if (cntl->Failed())
-        LOG_DEBUG(log, "dispatch runtime filter to worker failed, message: " + cntl->ErrorText());
+        LOG_DEBUG(log, "dispatch runtime filter to worker failed, message: {}", cntl->ErrorText());
     else
         LOG_DEBUG(log, "dispatch runtime filter to worker success");
 }

@@ -3,7 +3,6 @@
 // #include <AggregateFunctions/AggregateFunctionFactory.h>
 // #include <DataStreams/IBlockInputStream.h>
 // #include <DataTypes/DataTypeNullable.h>
-// #include <Interpreters/RuntimeFilter/RuntimeFilterBuilder.h>
 // #include <Parsers/ASTIdentifier.h>
 // #include <Query/Protos/plan_node.pb.h>
 // #include <QueryPlan/Assignment.h>
@@ -18,7 +17,7 @@ String distributionToString(RRuntimeFilter::Enum distribution)
 {
     if (distribution == RRuntimeFilter::LOCAL)
         return "Local";
-    else if (distribution == RuntimeFilter::DISTRIBUTED)
+    else if (distribution == RRuntimeFilter::DISTRIBUTED)
         return "Distributed";
     else
         return "UNKNOWN";
@@ -34,13 +33,13 @@ String bypassTypeToString(BypassType type)
             return "BYPASS_EMPTY_HT";
         case BypassType::BYPASS_LARGE_HT:
             return "BYPASS_LARGE_HT";
-        default:
-            return "UNKNOWN";
+        // default:
+        //     return "UNKNOWN";
     }
 }
 
 
-RuntimeFilterBuilder::RuntimeFilterBuilder(const Settings & settings, const LinkedHashMap<String, RuntimeFilter> & runtime_filters_)
+RuntimeFilterBuilder::RuntimeFilterBuilder(const OptimizerSettings & settings, const LinkedHashMap<String, RuntimeFilter> & runtime_filters_)
     : runtime_filters(runtime_filters_)
     , enable_range_cover(settings.enable_range_cover)
 {

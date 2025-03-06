@@ -1,12 +1,12 @@
 #include "RuntimeFilterManager.h"
 #include <Common/logger_useful.h>
-#include <Optimizer/Property/Equivalences.h>
-#include <Optimizer/RuntimeFilterUtils.h>
-#include <QueryPlan/FilterStep.h>
-#include <QueryPlan/IQueryPlanStep.h>
-#include <QueryPlan/JoinStep.h>
+#include <Processors/QueryPlan/FilterStep.h>
+#include <Processors/QueryPlan/IQueryPlanStep.h>
+#include <Processors/QueryPlan/JoinStep.h>
 #include <Processors/QueryPlan/QueryPlan.h>
-#include <QueryPlan/TableScanStep.h>
+#include <Query/Processors/QueryPlan/TableScanStepExt.h>
+#include <Query/Optimizer/Property/Equivalences.h>
+#include <Query/Executor/RuntimeFilter/RuntimeFilterUtils.h>
 
 namespace DB
 {
@@ -22,48 +22,50 @@ namespace
             if (!visited.emplace(plan_segment).second)
                 return;
 
-            auto collect_runtime_filters = [&](const ConstASTPtr & filter) {
-                for (const auto & runtime_filter : RuntimeFilterUtils::extractRuntimeFilters(filter).first)
-                {
-                    auto id = RuntimeFilterUtils::extractId(runtime_filter);
-                    runtime_filter_probes[id].emplace(plan_segment);
-                }
-            };
+            //TODO: Need new QueryPlan class
 
-            for (auto & node : plan_segment->getQueryPlan().getNodes())
-            {
-                if (node.step->getType() == IQueryPlanStep::Type::Join)
-                {
-                    const auto & join_step = static_cast<const JoinStep &>(*node.step);
-                    for (const auto & runtime_filter : join_step.getRuntimeFilterBuilders())
-                    {
-                        runtime_filter_builds.emplace(runtime_filter.second.id, std::make_pair(plan_segment, &node));
-                        if (runtime_filter.second.distribution == RRuntimeFilter::DISTRIBUTED)
-                            remote_runtime_filter_builds.emplace(runtime_filter.second.id);
-                        else
-                            local_runtime_filter_builds.emplace(runtime_filter.second.id);
-                    }
-                }
+            // auto collect_runtime_filters = [&](const ConstASTPtr & filter) {
+            //     for (const auto & runtime_filter : RuntimeFilterUtils::extractRuntimeFilters(filter).first)
+            //     {
+            //         auto id = RuntimeFilterUtils::extractId(runtime_filter);
+            //         runtime_filter_probes[id].emplace(plan_segment);
+            //     }
+            // };
 
-                if (node.step->getType() == IQueryPlanStep::Type::Filter)
-                {
-                    const auto & filter_step = dynamic_cast<const FilterStep &>(*node.step);
-                    collect_runtime_filters(filter_step.getFilter());
-                }
-                else if (node.step->getType() == IQueryPlanStep::Type::TableScan)
-                {
-                    const auto & table_step = dynamic_cast<const TableScanStep &>(*node.step);
-                    if (const auto * filter = table_step.getPushdownFilterCast())
-                        collect_runtime_filters(filter->getFilter());
-                    auto * query = table_step.getQueryInfo().query->as<ASTSelectQuery>();
-                    if (auto query_filter = query->getWhere())
-                        collect_runtime_filters(query_filter);
-                    if (auto query_filter = query->getPrewhere())
-                        collect_runtime_filters(query_filter);
-                    if (auto partition_filter = table_step.getQueryInfo().partition_filter)
-                        collect_runtime_filters(partition_filter);
-                }
-            }
+            // for (auto & node : plan_segment->getQueryPlan().getNodes())
+            // {
+            //     if (node.step->getType() == IQueryPlanStep::Type::Join)
+            //     {
+            //         const auto & join_step = static_cast<const JoinStep &>(*node.step);
+            //         for (const auto & runtime_filter : join_step.getRuntimeFilterBuilders())
+            //         {
+            //             runtime_filter_builds.emplace(runtime_filter.second.id, std::make_pair(plan_segment, &node));
+            //             if (runtime_filter.second.distribution == RRuntimeFilter::DISTRIBUTED)
+            //                 remote_runtime_filter_builds.emplace(runtime_filter.second.id);
+            //             else
+            //                 local_runtime_filter_builds.emplace(runtime_filter.second.id);
+            //         }
+            //     }
+
+            //     if (node.step->getType() == IQueryPlanStep::Type::Filter)
+            //     {
+            //         const auto & filter_step = dynamic_cast<const FilterStep &>(*node.step);
+            //         collect_runtime_filters(filter_step.getFilter());
+            //     }
+            //     else if (node.step->getType() == IQueryPlanStep::Type::TableScan)
+            //     {
+            //         const auto & table_step = dynamic_cast<const TableScanStep &>(*node.step);
+            //         if (const auto * filter = table_step.getPushdownFilterCast())
+            //             collect_runtime_filters(filter->getFilter());
+            //         auto * query = table_step.getQueryInfo().query->as<ASTSelectQuery>();
+            //         if (auto query_filter = query->getWhere())
+            //             collect_runtime_filters(query_filter);
+            //         if (auto query_filter = query->getPrewhere())
+            //             collect_runtime_filters(query_filter);
+            //         if (auto partition_filter = table_step.getQueryInfo().partition_filter)
+            //             collect_runtime_filters(partition_filter);
+            //     }
+            // }
 
             for (auto * child : plan_segment_node.children)
                 visit(*child);
@@ -185,16 +187,19 @@ void RuntimeFilterManager::registerQuery(const String & query_id, PlanSegmentTre
     std::unordered_map<RuntimeFilterBuilderId, RuntimeFilterCollectionPtr> builders;
     std::unordered_map<RuntimeFilterId, std::unordered_set<size_t>> targets;
 
+    //TODO: Need createRuntimeFilterBuilder method
+
     // register remote runtime filters information in coordinator
-    for (const auto & id : collector.remote_runtime_filter_builds) {
-        const auto & runtime_filter_build = collector.runtime_filter_builds[id];
-        const auto * plan_segment = runtime_filter_build.first;
-        auto * join_step = dynamic_cast<JoinStep *>(runtime_filter_build.second->step.get());
-        auto builder = join_step->createRuntimeFilterBuilder(context);
-        builders.emplace(builder->getId(), std::make_shared<RuntimeFilterCollection>(builder, plan_segment->getParallelSize()));
-        for (const auto * probe_plan_segment : collector.runtime_filter_probes[id])
-            targets[id].emplace(probe_plan_segment->getPlanSegmentId());
-    }
+    // for (const auto & id : collector.remote_runtime_filter_builds)
+    // {
+    //     const auto & runtime_filter_build = collector.runtime_filter_builds[id];
+    //     const auto * plan_segment = runtime_filter_build.first;
+    //     auto * join_step = dynamic_cast<JoinStep *>(runtime_filter_build.second->step.get());
+    //     auto builder = join_step->createRuntimeFilterBuilder(context);
+    //     builders.emplace(builder->getId(), std::make_shared<RuntimeFilterCollection>(builder, plan_segment->getParallelSize()));
+    //     for (const auto * probe_plan_segment : collector.runtime_filter_probes[id])
+    //         targets[id].emplace(probe_plan_segment->getPlanSegmentId());
+    // }
 
     if (log->debug())
     {
@@ -214,12 +219,12 @@ void RuntimeFilterManager::registerQuery(const String & query_id, PlanSegmentTre
             }
             ss << "\n";
         }
-        LOG_DEBUG(log, ss.str());
+        LOG_DEBUG(log, "{}", ss.str());
     }
 
     auto runtime_filter_collection_context = std::make_shared<RuntimeFilterCollectionContext>(std::move(builders), std::move(targets));
     runtime_filter_collection_contexts.put(query_id, runtime_filter_collection_context);
-    clean_rf_time_limit = context->getSettingsRef().clean_rf_time_limit;
+    clean_rf_time_limit = context->getOptimizerContext()->getSettingsRef().clean_rf_time_limit;
 }
 
 void RuntimeFilterManager::removeQuery(const String & query_id)

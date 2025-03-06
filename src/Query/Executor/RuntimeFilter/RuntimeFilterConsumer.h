@@ -2,7 +2,7 @@
 #include <Common/logger_useful.h>
 #include <Query/Common/LinkedHashMap.h>
 #include <Processors/ISimpleTransform.h>
-#include <Interpreters/RuntimeFilter/RuntimeFilterBuilder.h>
+#include <Query/Executor/RuntimeFilter/RuntimeFilterBuilder.h>
 
 namespace DB
 {

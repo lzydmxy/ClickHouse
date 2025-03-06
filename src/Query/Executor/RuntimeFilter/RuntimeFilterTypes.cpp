@@ -1,4 +1,6 @@
 #include "RuntimeFilterTypes.h"
+#include <numeric>
+#include <Query/ProtosHelper/FieldHelper.h>
 
 namespace DB
 {
@@ -128,7 +130,7 @@ void BloomFilterWithRange::addFieldKey(const DB::Field & f)
         }
         default:
         {
-            throw Exception(ErrorCodes::LOGICAL_ERROR, "addFieldKey unexpected type: " + f.dump() + " info:" + debugString());
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "addFieldKey unexpected type:{} info:{}", f.dump(), debugString());
         }
     }
 }
@@ -170,4 +172,5 @@ String BloomFilterWithRange::debugString() const
             return "ndv:" + std::to_string(ndv) + " num_partition:" + std::to_string(num_partitions);
     }
 }
-} // DB
+
+}

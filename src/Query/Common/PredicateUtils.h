@@ -74,13 +74,13 @@ public:
     static ConstASTPtr distributePredicate(ConstASTPtr or_predicate, ContextMutablePtr & context);
 
     template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combineConjuncts(const std::vector<T> & predicates);
+    static ASTPtr combineConjuncts(const absl::InlinedVector<T,7> & predicates);
     template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combineDisjuncts(const std::vector<T> & predicates);
+    static ASTPtr combineDisjuncts(const absl::InlinedVector<T,7> & predicates);
     template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combineDisjunctsWithDefault(const std::vector<T> & predicates, const ASTPtr & default_ast);
+    static ASTPtr combineDisjunctsWithDefault(const absl::InlinedVector<T,7> & predicates, const ASTPtr & default_ast);
     template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combinePredicates(const String & fun, std::vector<T> predicates);
+    static ASTPtr combinePredicates(const String & fun, absl::InlinedVector<T,7> predicates);
 
     template <typename T, enable_if_ast<T> = true>
     static bool isTruePredicate(const T & predicate);
