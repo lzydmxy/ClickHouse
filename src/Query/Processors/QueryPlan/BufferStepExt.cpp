@@ -1,4 +1,5 @@
 #include <Query/Processors/QueryPlan/BufferStepExt.h>
+#include <Query/Processors/Transforms/BufferTransformExt.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 
 namespace DB
@@ -10,13 +11,12 @@ BufferStepExt::BufferStepExt(const DataStream & input_stream_) : ITransformingSt
 
 void BufferStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &)
 {
-    // TODO: implement
-    // pipeline.addSimpleTransform(
-    //     [&](const Block & header)
-    //     {
-    //         auto transform = std::make_shared<BufferTransform>(header);
-    //         return transform;
-    //     });
+    pipeline.addSimpleTransform(
+        [&](const Block & header)
+        {
+            auto transform = std::make_shared<BufferTransformExt>(header);
+            return transform;
+        });
 }
 
 void BufferStepExt::updateOutputStream()

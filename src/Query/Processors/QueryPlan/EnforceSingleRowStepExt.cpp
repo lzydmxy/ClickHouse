@@ -1,5 +1,6 @@
 #include <Interpreters/JoinUtils.h>
 #include <Query/Processors/QueryPlan/EnforceSingleRowStepExt.h>
+#include <Query/Processors/Transforms/EnforceSingleRowTransformExt.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 
 namespace DB
@@ -12,9 +13,8 @@ EnforceSingleRowStepExt::EnforceSingleRowStepExt(const DB::DataStream & input_st
 
 void EnforceSingleRowStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &)
 {
-    // TODO: implement
-    // pipeline.resize(1);
-    // pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<EnforceSingleRowTransform>(header); });
+    pipeline.resize(1);
+    pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<EnforceSingleRowTransformExt>(header); });
 }
 
 void EnforceSingleRowStepExt::updateOutputStream()

@@ -10,7 +10,8 @@ namespace JoinCommon
 
 DataTypePtr tryConvertTypeToNullable(const DataTypePtr & type);
 
-}
+ColumnPtr tryConvertColumnToNullable(ColumnPtr col);
 
 }
 
+}

@@ -1,6 +1,8 @@
 
 #include <Query/Processors/QueryPlan/PartitionTopNStepExt.h>
+#include <Query/Processors/Transforms/PartitionTopNTransformExt.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
+#include "Core/ColumnNumbers.h"
 
 namespace DB
 {
@@ -13,21 +15,21 @@ PartitionTopNStepExt::PartitionTopNStepExt(
 
 void PartitionTopNStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & context)
 {
-    // TODO: implement
-    // auto input_header = pipeline.getHeader();
+    auto input_header = pipeline.getHeader();
+    // FIXME: No member named 'context' in 'DB::BuildQueryPipelineSettings'
     // pipeline.resize(context.context->getSettingsRef().max_threads);
 
-    // ColumnNumbers partition_by_columns;
-    // for (const auto & col : partition)
-    //     partition_by_columns.emplace_back(input_header.getPositionByName(col));
+    ColumnNumbers partition_by_columns;
+    for (const auto & col : partition)
+        partition_by_columns.emplace_back(input_header.getPositionByName(col));
 
-    // ColumnNumbers order_by_columns;
-    // for (const auto & col : order_by)
-    //     order_by_columns.emplace_back(input_header.getPositionByName(col));
+    ColumnNumbers order_by_columns;
+    for (const auto & col : order_by)
+        order_by_columns.emplace_back(input_header.getPositionByName(col));
 
-    // pipeline.addSimpleTransform(
-    //     [&](const Block & header)
-    //     { return std::make_shared<PartitionTopNTransform>(header, limit, partition_by_columns, order_by_columns, model, true); });
+    pipeline.addSimpleTransform(
+        [&](const Block & header)
+        { return std::make_shared<PartitionTopNTransformExt>(header, limit, partition_by_columns, order_by_columns, model, true); });
 }
 
 void PartitionTopNStepExt::updateOutputStream()
