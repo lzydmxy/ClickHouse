@@ -35,6 +35,8 @@ public:
     void transform(Chunk & chunk) override;
 
 private:
+    friend class FilterTransformExt;
+
     ExpressionActionsPtr expression;
     String filter_column_name;
     bool remove_filter_column;

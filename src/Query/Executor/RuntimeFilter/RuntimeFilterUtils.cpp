@@ -59,7 +59,7 @@ ConstASTPtr RuntimeFilterUtils::createRuntimeFilterExpression(const RuntimeFilte
     //     partition_columns_tuple);
 }
 
-bool RuntimeFilterUtils::containsRuntimeFilters(const ASTPtr & filter)
+bool RuntimeFilterUtils::containsRuntimeFilters(ConstASTPtr filter)
 {
     if (!filter)
         return false;
@@ -85,7 +85,7 @@ bool RuntimeFilterUtils::isExecutableRuntimeFilter(const ASTPtr & expr)
     return false;
 }
 
-bool RuntimeFilterUtils::isInternalRuntimeFilter(const ASTPtr & expr)
+bool RuntimeFilterUtils::isInternalRuntimeFilter(const ConstASTPtr & expr)
 {
     //return expr && getAstType(expr) == ASTType::ASTFunction && expr->as<ASTFunction &>().name == InternalFunctionRuntimeFilter::name;
     //TODO: Need InternalFunctionRuntimeFilter
@@ -158,7 +158,7 @@ std::pair<ASTs, ASTs> RuntimeFilterUtils::extractExecutableRuntimeFilters(const 
     return std::make_pair(runtime_filters, static_filters);
 }
 
-std::pair<ASTs, ASTs> RuntimeFilterUtils::extractRuntimeFilters(const ASTPtr & conjuncts)
+std::pair<ASTs, ASTs> RuntimeFilterUtils::extractRuntimeFilters(const ConstASTPtr & conjuncts)
 {
     ASTs runtime_filters;
     ASTs static_filters;

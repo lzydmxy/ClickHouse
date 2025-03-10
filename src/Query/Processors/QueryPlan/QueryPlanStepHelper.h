@@ -132,6 +132,12 @@ public:
     QueryPlanStepHelper() = default;
     ~QueryPlanStepHelper() = default;
 
+    static ActionsDAGPtr createFilterExpressionActions(ContextPtr context, const ASTPtr & filter, const Block & header);
+    static ActionsDAGPtr createExpressionActions(
+        ContextPtr context, const NamesAndTypesList & source, const Names & output, const ASTPtr & ast, bool add_project = true);
+    static ActionsDAGPtr createExpressionActions(
+        ContextPtr context, const NamesAndTypesList & source, const NamesWithAliases & output, const ASTPtr & ast, bool add_project = true);
+
     static bool isLogicalQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step) { return !isPhysicalQueryPlanStep(query_plan_step); }
 
     static bool isPhysicalQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step)

@@ -16,6 +16,8 @@ public:
     String getName() const override { return "FilterStepExt"; }
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr context) const;
 
+    void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings) override;
+
     static ConstASTPtr
     rewriteRuntimeFilter(const ConstASTPtr & filter, QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & build_context);
 
