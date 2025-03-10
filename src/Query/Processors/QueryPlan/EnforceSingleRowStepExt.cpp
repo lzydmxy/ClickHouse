@@ -30,14 +30,13 @@ std::shared_ptr<IQueryPlanStep> EnforceSingleRowStepExt::copy(ContextPtr) const
 void EnforceSingleRowStepExt::makeOutputNullable()
 {
     auto input_header = input_streams[0].header;
-    NamesAndTypes nullable_output_header;
+    ColumnsWithTypeAndName nullable_output_header;
     for (auto & input : input_header)
         if (!JoinCommon::canBecomeNullable(input.type))
-            nullable_output_header.emplace_back(input.name, input.type);
+            nullable_output_header.emplace_back(input.type, input.name);
         else
-            nullable_output_header.emplace_back(input.name, JoinCommon::convertTypeToNullable(input.type));
-    // FIXME: No matching constructor for initialization of 'Block'
-    // output_stream = DataStream{.header = {nullable_output_header}};
+            nullable_output_header.emplace_back(JoinCommon::convertTypeToNullable(input.type), input.name);
+    output_stream = DataStream{.header = {nullable_output_header}};
 }
 
 }
