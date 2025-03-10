@@ -16,7 +16,6 @@
 
 namespace DB
 {
-//class SegmentScheduler;
 class Context;
 
 using SettingsChangesPtr = std::shared_ptr<SettingsChanges>;
@@ -68,6 +67,7 @@ class PlanSegmentRpcService : public RPlanSegmentService
 public:
     explicit PlanSegmentRpcService(ContextMutablePtr context_)
         : context(context_)
+        , optimizer_context(context_->getOptimizerContext())
         , log(getLogger("PlanSegmentRpcService"))
     {
         report_metrics_timer = std::make_unique<ResourceMonitorTimer>(context, 1000, "ResourceMonitorTimer", log);
@@ -87,28 +87,21 @@ public:
         }
     }
 
-    /// execute query described by plan segment
+    /// execute query described by plan segment (coordinator -> executor)
     void executePlanSegment(
         ::google::protobuf::RpcController * controller,
         const RPlanSegmentRequest * request,
         RPlanSegmentResponse * response,
         ::google::protobuf::Closure * done) override;
 
-    /// execute queries described by plan segments
+    /// execute queries described by plan segments (coordinator -> executor)
     void executePlanSegments(
         ::google::protobuf::RpcController * controller,
         const RPlanSegmentsRequest * request,
         RPlanSegmentResponse * response,
         ::google::protobuf::Closure * done) override;
 
-    /// receive exception report send terminate query (coordinate host ---> segment executor host)
-    void cancelQuery(
-        ::google::protobuf::RpcController * /*controller*/,
-        const RCancelQueryRequest * request,
-        RCancelQueryResponse * response,
-        ::google::protobuf::Closure * done) override;
-
-    /// report plan segment status (segment executor host --> coordinator host)
+    /// report plan segment status (executor -> coordinator)
     void reportPlanSegmentStatus(
         ::google::protobuf::RpcController * /*controller*/,
         const RPlanSegmentStatusRequest * request,
@@ -119,6 +112,33 @@ public:
         ::google::protobuf::RpcController * /*controller*/,
         const RPlanSegmentProfileRequest * request,
         RPlanSegmentProfileResponse * /*response*/,
+        ::google::protobuf::Closure * done) override;
+
+    /// execute progress (coordinator -> executor)
+    void executeProgress(
+        ::google::protobuf::RpcController * /*controller*/,
+        const ::DB::Protos::ProgressRequest * request,
+        ::DB::Protos::ProgressResponse * response,
+        ::google::protobuf::Closure * done) override;
+
+    /// reporet processor profile (executor -> coordinator)
+    void reportProcessorProfile(
+        ::google::protobuf::RpcController * /*controller*/,
+        const ::DB::Protos::ProcessorProfileRequest * request,
+        ::DB::Protos::ProcessorProfileResponse * /*response*/,
+        ::google::protobuf::Closure * done) override;
+
+    void reportProcessorsProfile(
+        ::google::protobuf::RpcController * /*controller*/,
+        const ::DB::Protos::ProcessorsProfileRequest * request,
+        ::DB::Protos::ProcessorProfileResponse * /*response*/,
+        ::google::protobuf::Closure * done) override;
+
+    /// receive exception report send terminate query (coordinator -> executor)
+    void cancelQuery(
+        ::google::protobuf::RpcController * /*controller*/,
+        const RCancelQueryRequest * request,
+        RCancelQueryResponse * response,
         ::google::protobuf::Closure * done) override;
 private:
     void prepareCommonParams(
@@ -154,6 +174,7 @@ private:
         ContextMutablePtr query_context = nullptr);
 
     ContextMutablePtr context;
+    OptimizerContextPtr optimizer_context;
     ResourceMonitorTimerPtr report_metrics_timer;
     LoggerPtr log;
 };

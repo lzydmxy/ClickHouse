@@ -212,14 +212,59 @@ message PlanSegmentProfileResponse {
     string message = 3;
 }
 
+// execute progress and report progress profile
+message ProgressRequest {
+    string query_id = 1;
+    uint64 segment_id = 2;
+    uint64 parallel_id = 3;
+    Progress progress = 4;
+}
+
+message ProgressResponse {
+    int32 status_code = 1;
+    string message = 2;
+}
+
+message ProcessorProfileRequest {
+    uint64 event_time = 1;
+    uint64 event_time_microseconds = 2;
+    string query_id = 3;
+    uint64 id = 4;
+    uint64 parent_ids = 5;
+    uint64 plan_step = 6;
+    uint64 plan_group = 7;
+    string processor_name = 8;
+    uint32 elapsed_us = 9;
+    uint32 input_wait_elapsed_us = 10;
+    uint32 output_wait_elapsed_us = 11;
+    uint64 input_rows = 12;
+    uint64 input_bytes = 13;
+    uint64 output_rows = 14;
+    uint64 output_bytes = 15;
+    int64 step_id = 16;
+    string worker_address = 17;
+}
+
+message ProcessorsProfileRequest {
+    string query_id = 1;
+    repeated ProcessorProfileRequest request = 2;
+}
+
+message ProcessorProfileResponse {
+    int32 status_code = 1;
+    string message = 2;
+}
+
 /*
-* The RPC service for query plan segment execution includes four services: 
-* single execution, batch execution, cancellation, and reporting. 
+* The RPC service for query plan segment and process execution
 */
 service PlanSegmentService {
     rpc executePlanSegment(PlanSegmentRequest) returns (PlanSegmentResponse);
     rpc executePlanSegments(PlanSegmentsRequest) returns (PlanSegmentResponse);
-    rpc cancelQuery(CancelQueryRequest) returns (CancelQueryResponse);
     rpc reportPlanSegmentStatus(PlanSegmentStatusRequest) returns (PlanSegmentStatusResponse);
     rpc reportPlanSegmentProfile(PlanSegmentProfileRequest) returns (PlanSegmentProfileResponse);
+    rpc executeProgress(ProgressRequest) returns (ProgressResponse);
+    rpc reportProcessorProfile(ProcessorProfileRequest) returns (ProcessorProfileResponse);
+    rpc reportProcessorsProfile(ProcessorsProfileRequest) returns (ProcessorProfileResponse);
+    rpc cancelQuery(CancelQueryRequest) returns (CancelQueryResponse);
 };

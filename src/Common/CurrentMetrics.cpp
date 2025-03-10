@@ -291,7 +291,11 @@
     \
     M(RaftThreads, "Number of total threads in the raft server for requests.") \
     M(RaftThreadsActive, "Number of active threads in the raft server for requests.") \
-    M(RaftThreadsScheduled, "Number of scheduled threads in the raft server for requests.")
+    M(RaftThreadsScheduled, "Number of scheduled threads in the raft server for requests.") \
+    \
+    M(ProfileThreads, "Number of total threads in the profile hub consumer.") \
+    M(ProfileThreadsActive, "Number of active threads in the profile hub consumer.") \
+    M(ProfileThreadsScheduled, "Number of scheduled threads in the profile hub consumer.")
 
 #ifdef APPLY_FOR_EXTERNAL_METRICS
     #define APPLY_FOR_METRICS(M) APPLY_FOR_BUILTIN_METRICS(M) APPLY_FOR_EXTERNAL_METRICS(M)

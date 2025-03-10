@@ -38,6 +38,7 @@ DECLARE_SETTING_ENUM(SchedulerMode);
 #define LIST_OF_COORDINATION_SETTINGS(M, ALIAS) \
     /** Coordinator settings*/ \
     M(SchedulerMode, scheduler_mode, SchedulerMode::RANDOM, "scheduler shard mode: random/first_order/random_order/cpu_rank/memory_rank", 0) \
+    M(UInt64, push_queue_timeout_millseconds, 10, "Timeout millseconds of push profile or others to queue.", 0) \
     /** Query optimizer relative settings */ \
     M(Bool, enable_optimizer, true, "Whether enable query optimizer", 0) \
     M(Bool, enable_legacy_optimizer, false, "Whether enable query optimizer", 0) \

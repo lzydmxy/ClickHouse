@@ -3,17 +3,7 @@
 
 namespace DB
 {
-/*
-    UInt64 read_rows = 0;
-    UInt64 read_bytes = 0;
-    UInt64 total_rows_to_read = 0;
-    UInt64 total_bytes_to_read = 0;
-    UInt64 written_rows = 0;
-    UInt64 written_bytes = 0;
-    UInt64 result_rows = 0;
-    UInt64 result_bytes = 0;
-    UInt64 elapsed_ns = 0;
-*/
+
 RProgress ProgressHelper::toProto(const ProgressValues & vals)
 {
     RProgress proto;
@@ -43,6 +33,32 @@ ProgressValues ProgressHelper::fromProto(const RProgress & progress)
     vals.elapsed_ns = progress.elapsed_ns();
     return vals;
 }
+
+RProgress ProgressHelper::progressToProto(const Progress & progress)
+{
+    auto progress_values = progress.getValues();
+    return toProto(progress_values);
+}
+
+Progress ProgressHelper::progressFromProto(const RProgress & rprogress)
+{
+    Progress progress;
+    progress.read_rows.store(rprogress.read_rows(), std::memory_order_relaxed);
+    progress.read_bytes.store(rprogress.read_bytes(), std::memory_order_relaxed);
+
+    progress.total_rows_to_read.store(rprogress.total_rows_to_read(), std::memory_order_relaxed);
+    progress.total_bytes_to_read.store(rprogress.total_bytes_to_read(), std::memory_order_relaxed);
+
+    progress.written_rows.store(rprogress.written_rows(), std::memory_order_relaxed);
+    progress.written_bytes.store(rprogress.written_bytes(), std::memory_order_relaxed);
+
+    progress.result_rows.store(rprogress.result_rows(), std::memory_order_relaxed);
+    progress.result_bytes.store(rprogress.result_bytes(), std::memory_order_relaxed);
+
+    progress.elapsed_ns.store(rprogress.elapsed_ns(), std::memory_order_relaxed);
+    return progress;
+}
+
 bool ProgressHelper::empty(const ProgressValues & vals)
 {
     return vals.read_rows == 0 && vals.read_bytes == 0

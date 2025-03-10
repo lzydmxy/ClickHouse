@@ -5,12 +5,15 @@
 #include <Common/Exception.h>
 #include <IO/Progress.h>
 #include <Interpreters/Context_fwd.h>
+#include <Interpreters/ProcessorsProfileLog.h>
 #include <Access/AccessControl.h>
 #include <Access/User.h>
 #include <Query/Common/QueryCommon.h>
 #include <Query/Common/OptimizerContext.h>
 #include <Query/ProtosHelper/AddressInfo.h>
-//#include <Query/Executor/SegmentScheduler.h>
+#include <Query/ProtosHelper/ProgressHelper.h>
+#include <Query/Executor/ProfileLogHub.h>
+#include <Query/Executor/SegmentScheduler.h>
 #include <Query/Executor/PlanSegmentInstance.h>
 #include <Query/Executor/PlanSegmentReport.h>
 #include <Query/Executor/executePlanSegment.h>
@@ -47,8 +50,8 @@ void PlanSegmentRpcService::cancelQuery(
 
     try
     {
-        auto cancel_code
-            = context->getOptimizerContext()->getPlanSegmentProcessList()->tryCancelPlanSegmentGroup(request->query_id(), request->coordinator_address());
+        auto cancel_code = optimizer_context->getPlanSegmentProcessList()->tryCancelPlanSegmentGroup(
+            request->query_id(), request->coordinator_address());
         response->set_status_code(std::to_string(static_cast<int>(cancel_code)));
     }
     catch (...)
@@ -90,32 +93,30 @@ void PlanSegmentRpcService::reportPlanSegmentStatus(
             RuntimeSegmentsMetrics(request->metrics()),
             request->message(),
             request->status_code()};
-        //TODO: 
-        // SegmentSchedulerPtr scheduler = context->getOptimizerContext()->getSegmentScheduler();
-        // scheduler->updateSegmentStatus(status);
-        // scheduler->updateQueryStatus(status);
-        // scheduler->updateReceivedSegmentStatusCounter(request->query_id(), request->segment_id(), request->parallel_index());
-        // if (!status.is_cancelled && status.code == 0)
-        // {
-        //     try
-        //     {
-        //         scheduler->checkQueryCpuTime(status.query_id);
-        //     }
-        //     catch (const Exception & e)
-        //     {
-        //         status.message = e.message();
-        //         status.code = e.code();
-        //         status.is_succeed = false;
-        //     }
-        // }
+
+        SegmentSchedulerPtr scheduler = optimizer_context->getSegmentScheduler();
+        scheduler->updateSegmentStatus(status);
+        scheduler->updateQueryStatus(status);
+        scheduler->updateReceivedSegmentStatusCounter(request->query_id(), request->segment_id(), request->parallel_index());
+        if (!status.is_cancelled && status.code == 0)
+        {
+            try
+            {
+                scheduler->checkQueryCpuTime(status.query_id);
+            }
+            catch (const Exception & e)
+            {
+                status.message = e.message();
+                status.code = e.code();
+                status.is_succeed = false;
+            }
+        }
 
         // this means exception happened during execution.
         auto coordinator = QueryMPPManager::instance().getCoordinator(request->query_id());
         if (coordinator && request->metrics().has_progress())
         {
-            Progress progress;
-            // TODO: pb to Progress
-            // progress.fromProto(status.metrics.final_progress);
+            Progress progress = ProgressHelper::progressFromProto(status.metrics.final_progress);
             coordinator->onFinalProgress(request->segment_id(), request->parallel_index(), progress);
         }
         if (!status.is_succeed)
@@ -131,8 +132,7 @@ void PlanSegmentRpcService::reportPlanSegmentStatus(
                     request->segment_id(),
                     request->parallel_index());
             }
-            // TODO:
-            // scheduler->onSegmentFinished(status);
+            scheduler->onSegmentFinished(status);
         }
         // todo  scheduler.cancelSchedule
     }
@@ -152,9 +152,8 @@ void PlanSegmentRpcService::reportPlanSegmentProfile(
 {
     brpc::ClosureGuard done_guard(done);
     PlanSegmentProfilePtr profile = PlanSegmentProfile::fromProto(*request);
-    //TODO:
-    //const SegmentSchedulerPtr & scheduler = context->getOptimizerContext()->getSegmentScheduler();
-    //scheduler->updateSegmentProfile(profile);
+    const SegmentSchedulerPtr & scheduler = optimizer_context->getSegmentScheduler();
+    scheduler->updateSegmentProfile(profile);
 }
 
 void PlanSegmentRpcService::prepareCommonParams(
@@ -218,34 +217,8 @@ ContextMutablePtr PlanSegmentRpcService::createQueryContext(
 {
     /// Create context.
     ContextMutablePtr query_context;
-    //UInt64 txn_id = query_common->txn_id();
-    //UInt64 primary_txn_id = query_common->primary_txn_id();
-    /// Create session context for worker
-    if (global_context->getOptimizerContext()->getServiceType() == ServiceType::node)
-    {
-        size_t max_execution_time_ms = 0;
-        if (query_common->query_expiration_timestamp() > 0)
-        {
-            max_execution_time_ms = getDeltaTimeFromNow(query_common->query_expiration_timestamp());
-            if (max_execution_time_ms == 0)
-                throw Exception(ErrorCodes::TIMEOUT_EXCEEDED,
-                    "Max execution time exceeded before submit plan segment, try increase max_execution_time, current timestamp:{} "
-                    "expires at:{}",
-                    timeInMilliseconds(std::chrono::system_clock::now()),
-                    query_common->query_expiration_timestamp());
-        }
-        // auto named_session
-        //     = global_context->acquireNamedCnchSession(txn_id, (max_execution_time_ms / 1000) + 1, query_common->check_session());
-        // query_context = Context::createCopy(named_session->context);
-        //query_context->setSessionContext(query_context);
-        //query_context->setTemporaryTransaction(txn_id, primary_txn_id);
-    }
-    /// execute plan semgent instance in server
-    else
-    {
-        query_context = Context::createCopy(global_context);
-        //query_context->setTemporaryTransaction(txn_id, primary_txn_id, false);
-    }
+    /// Create session context for worker such as ClusterProxy/executeQuery/updateSettingsForCluster function
+    query_context = Context::createCopy(global_context);
     auto optimizer_context = query_context->getOptimizerContext();
     auto address = std::make_shared<AddressInfo>();
     address->fromProto(query_common->coordinator_address());
@@ -270,7 +243,6 @@ ContextMutablePtr PlanSegmentRpcService::createQueryContext(
     client_info.current_query_id = client_info.initial_query_id + "_" + std::to_string(instance_id.segment_id);
     client_info.current_address = std::move(current_socket_address);
     //client_info.rpc_port = query_common->coordinator_address().exchange_port();
-
     //client_info.parent_initial_query_id = query_common->parent_query_id();
     query_context->setInternalQuery(query_common->is_internal_query());
 
@@ -303,8 +275,8 @@ void PlanSegmentRpcService::initQueryContext(
     /// compatibility.
     query_context->setSetting("normalize_function_names", Field(0));
 
+    //TODO: Need grant access and set quota
     //query_context->grantAllAccess();
-
     //query_context->setQuotaKey(query_common->quota());
 
     if (!query_context->hasQueryContext())
@@ -519,6 +491,108 @@ void PlanSegmentRpcService::executePlanSegments(
         auto error_msg = getCurrentExceptionMessage(true);
         cntl->SetFailed(error_msg);
         LOG_ERROR(log, "executeQuery failed: {}", error_msg);
+    }
+}
+
+void PlanSegmentRpcService::executeProgress(
+    ::google::protobuf::RpcController * controller,
+    const ::DB::Protos::ProgressRequest * request,
+    ::DB::Protos::ProgressResponse * /*response*/,
+    ::google::protobuf::Closure * done)
+{
+    brpc::ClosureGuard done_guard(done);
+    try
+    {
+        auto progress = ProgressHelper::progressFromProto(request->progress());
+        auto coordinator = QueryMPPManager::instance().getCoordinator(request->query_id());
+        if (coordinator)
+        {
+            coordinator->onProgress(request->segment_id(), request->parallel_id(), progress);
+        }
+        else
+            LOG_INFO(log, "sendProgress cant find coordinator for query_id:{}", request->query_id());
+    }
+    catch (...)
+    {
+        auto error_msg = getCurrentExceptionMessage(true);
+        controller->SetFailed(error_msg);
+        LOG_ERROR(log, "sendProgress failed: {}", error_msg);
+    }
+}
+
+void parseProcessorProfileRequest(ProcessorProfileLogElement & profile_log, const ::DB::Protos::ProcessorProfileRequest * request)
+{
+    profile_log.query_id = request->query_id();
+    profile_log.event_time = request->event_time();
+    profile_log.event_time_microseconds = request->event_time_microseconds();
+    profile_log.elapsed_us = request->elapsed_us();
+    profile_log.input_wait_elapsed_us = request->input_wait_elapsed_us();
+    profile_log.output_wait_elapsed_us = request->output_wait_elapsed_us();
+    profile_log.id = request->id();
+    profile_log.input_rows = request->input_rows();
+    profile_log.input_bytes = request->input_bytes();
+    profile_log.output_rows = request->output_rows();
+    profile_log.output_bytes = request->output_bytes();
+    profile_log.processor_name = request->processor_name();
+    profile_log.plan_group = request->plan_group();
+    profile_log.plan_step = request->plan_step();
+    // ProcessorProfileLogElement does not have the following fields
+    //profile_log.step_id = request->step_id();
+    //profile_log.worker_address = request->worker_address();
+    //profile_log.parent_ids = std::vector<UInt64>(request->parent_ids().begin(), request->parent_ids().end());
+}
+
+void PlanSegmentRpcService::reportProcessorProfile(
+    ::google::protobuf::RpcController * controller,
+    const ::DB::Protos::ProcessorProfileRequest * request,
+    ::DB::Protos::ProcessorProfileResponse * /*response*/,
+    ::google::protobuf::Closure * done)
+{
+    brpc::ClosureGuard done_guard(done);
+    ProcessorProfileLogElement element;
+    try
+    {
+        parseProcessorProfileRequest(element, request);
+        auto query_id = element.query_id;
+        auto timeout = context->getOptimizerContext()->getSettingsRef().push_queue_timeout_millseconds;
+
+        if (ProfileLogHub<ProcessorProfileLogElement>::getInstance().hasConsumer())
+            ProfileLogHub<ProcessorProfileLogElement>::getInstance().tryPushElement(query_id, element, timeout);
+    }
+    catch (...)
+    {
+        auto error_msg = getCurrentExceptionMessage(true);
+        controller->SetFailed(error_msg);
+        LOG_ERROR(log, "reportProcessorProfileMetrics failed: {}", error_msg);
+    }
+}
+
+void PlanSegmentRpcService::reportProcessorsProfile(
+    ::google::protobuf::RpcController * controller,
+    const ::DB::Protos::ProcessorsProfileRequest * request,
+    ::DB::Protos::ProcessorProfileResponse * /*response*/,
+    ::google::protobuf::Closure * done)
+{
+    brpc::ClosureGuard done_guard(done);
+    std::vector<ProcessorProfileLogElement> elements;
+    try
+    {
+        const auto & query_id = request->query_id();
+        for (const auto & inner_request : request->request())
+        {
+            ProcessorProfileLogElement element;
+            parseProcessorProfileRequest(element, &inner_request);
+            elements.emplace_back(std::move(element));
+        }
+        auto timeout = context->getOptimizerContext()->getSettingsRef().push_queue_timeout_millseconds;
+        if (ProfileLogHub<ProcessorProfileLogElement>::getInstance().hasConsumer())
+            ProfileLogHub<ProcessorProfileLogElement>::getInstance().tryPushElement(query_id, elements, timeout);
+    }
+    catch (...)
+    {
+        auto error_msg = getCurrentExceptionMessage(true);
+        controller->SetFailed(error_msg);
+        LOG_ERROR(log, "batchReportProcessorProfileMetrics failed: {}", error_msg);
     }
 }
 
