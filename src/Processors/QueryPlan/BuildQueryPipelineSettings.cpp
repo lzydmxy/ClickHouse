@@ -16,6 +16,7 @@ const BuildQueryPipelineSettingsExt & BuildQueryPipelineSettings::getBuildPipeli
 BuildQueryPipelineSettings BuildQueryPipelineSettings::fromContextExt(ContextPtr from)
 {
     auto settings = fromContext(from);
+    settings.build_pipeline_settings_ext = BuildQueryPipelineSettingsExt();
     settings.build_pipeline_settings_ext->fromContext(from);
     return settings;
 }
@@ -24,6 +25,7 @@ BuildQueryPipelineSettings BuildQueryPipelineSettings::fromPlanSegmentExt(
     PlanSegment * plan_segment, const PlanSegmentExecutionInfo & info, ContextPtr context, bool is_explain)
 {
     auto settings = fromContext(context);
+    settings.build_pipeline_settings_ext = BuildQueryPipelineSettingsExt();
     settings.build_pipeline_settings_ext->fromPlanSegment(plan_segment, info, context, is_explain);
     return settings;
 }
