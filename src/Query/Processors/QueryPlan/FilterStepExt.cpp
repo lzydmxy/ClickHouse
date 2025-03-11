@@ -31,7 +31,7 @@ void FilterStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const Bui
     if (!actions_dag)
     {
         rewrite_filter = rewriteRuntimeFilter(filter, pipeline, settings);
-        actions_dag = QueryPlanStepHelper::createFilterExpressionActions(settings.context, rewrite_filter->clone(), input_streams[0].header);
+        actions_dag = QueryPlanStepHelper::createFilterExpressionActions(settings.getBuildPipelineSettingsExt().context, rewrite_filter->clone(), input_streams[0].header);
         filter_column_name = rewrite_filter->getColumnName();
     }
 
@@ -65,11 +65,11 @@ ConstASTPtr FilterStepExt::rewriteRuntimeFilter(const ConstASTPtr & filter, Quer
     if (filters.first.empty())
         return filter;
 
-    bool only_bf = build_context.context->getSettingsRef().enable_rewrite_bf_into_prewhere;
+    bool only_bf = build_context.getBuildPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().enable_rewrite_bf_into_prewhere;
 
     ASTs predicates = std::move(filters.second);
 
-    if (build_context.context->getSettingsRef().enable_two_stages_prewhere)
+    if (build_context.getBuildPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().enable_two_stages_prewhere)
     {
         //skip all runtime_filters in FilterStepExt, since all runtime_filters has been moved into TableScanStep.
     }
@@ -79,7 +79,7 @@ ConstASTPtr FilterStepExt::rewriteRuntimeFilter(const ConstASTPtr & filter, Quer
         {
             auto description = RuntimeFilterUtils::extractDescription(runtime_filter).value();
             auto runtime_filters
-                = RuntimeFilterUtils::createRuntimeFilterForFilter(description, build_context.context->getInitialQueryId(), only_bf);
+                = RuntimeFilterUtils::createRuntimeFilterForFilter(description, build_context.getBuildPipelineSettingsExt().context->getInitialQueryId(), only_bf);
             predicates.insert(predicates.end(), runtime_filters.begin(), runtime_filters.end());
         }
     }

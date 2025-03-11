@@ -167,9 +167,9 @@ std::pair<ASTs, ASTs> RuntimeFilterUtils::extractRuntimeFilters(const ConstASTPt
 
     for (auto & filter : PredicateUtils::extractConjuncts(conjuncts))
         if (isInternalRuntimeFilter(filter))
-            runtime_filters.emplace_back(filter);
+            runtime_filters.emplace_back(filter->clone());
         else
-            static_filters.emplace_back(filter);
+            static_filters.emplace_back(filter->clone());
     return std::make_pair(runtime_filters, static_filters);
 }
 
