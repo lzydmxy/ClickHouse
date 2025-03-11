@@ -3935,6 +3935,16 @@ std::shared_ptr<QueryThreadLog> Context::getQueryThreadLog() const
     return shared->system_logs->query_thread_log;
 }
 
+std::shared_ptr<QueryExchangeLog> Context::getQueryExchangeLog() const
+{
+    SharedLockGuard lock(shared->mutex);
+
+    if (!shared->system_logs)
+        return {};
+
+    return shared->system_logs->query_exchange_log;
+}
+
 std::shared_ptr<QueryViewsLog> Context::getQueryViewsLog() const
 {
     SharedLockGuard lock(shared->mutex);

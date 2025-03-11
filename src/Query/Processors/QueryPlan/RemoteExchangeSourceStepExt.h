@@ -5,8 +5,13 @@
 #include <Query/Exchange/ExchangeUtils.h>
 #include <Processors/QueryPlan/ISourceStep.h>
 #include <Query/ProtosHelper/AddressInfo.h>
+#include <Query/Common/MultiPathBoundedQueue.h>
+#include <Query/Exchange/Local/LocalChannelOptions.h>
+#include <QueryPipeline/QueryPipelineBuilder.h>
+#include <Query/Exchange/bRPC/BrpcRemoteBroadcastReceiver.h>
 
 #include <memory>
+
 
 namespace DB
 {
@@ -36,7 +41,7 @@ public:
         input_streams = {std::move(input_stream_)};
     }
 
-    void setPlanSegment(PlanSegmentSharedPtr plan_segment_, ContextPtr context_);
+    void setPlanSegment(const PlanSegmentSharedPtr & plan_segment_, ContextPtr context_);
     PlanSegmentSharedPtr getPlanSegment() const { return plan_segment; }
     size_t getPlanSegmentId() const { return plan_segment_id; }
 
@@ -51,8 +56,20 @@ public:
     bool isAddExtremes() const  { return is_add_extremes; }
 
 private:
-    // TODO: need registerAllReceivers
-    // TODO: need createReceiver
+    // TODO: if bsp_mode is required, then add other codes
+    BroadcastReceiverPtr createReceiver(
+        bool is_local_exchange,
+        const LocalChannelOptions & local_options,
+        size_t write_plan_segment_id,
+        size_t exchange_id,
+        size_t partition_id,
+        ExchangeDataKeyPtr data_key,
+        const Block & exchange_header,
+        bool keep_order,
+        bool enable_metrics,
+        const String & write_address_info,
+        MultiPathQueuePtr collector,
+        std::shared_ptr<QueryExchangeLog> query_exchange_log);
     PlanSegmentInputs inputs;
     PlanSegmentSharedPtr plan_segment;
     LoggerPtr logger;

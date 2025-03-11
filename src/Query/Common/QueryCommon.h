@@ -2,6 +2,7 @@
 #include <set>
 #include <string>
 #include <Common/DateLUT.h>
+#include <Poco/Timespan.h>
 
 /// Version of ClickHouse inter server BRPC protocol.
 /// It's not necessary to increase this version number in most cases
@@ -56,6 +57,25 @@ inline timespec chronoToTimespec(const TimePoint& tp)
     ts.tv_sec = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
     ts.tv_nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(duration % std::chrono::seconds(1)).count();
     return ts;
+}
+
+inline TimePoint timespecToTimePoint(const timespec& ts) {
+    auto duration = std::chrono::seconds(ts.tv_sec) + std::chrono::microseconds(ts.tv_nsec);
+    return TimePoint(duration);
+}
+
+inline TimePoint timespanToTimePoint(const Poco::Timespan& ts) {
+    TimePoint now = std::chrono::system_clock::now();
+    auto duration = std::chrono::seconds(ts.totalSeconds()) +
+                    std::chrono::microseconds(ts.useconds());
+    return now + duration;
+}
+
+inline timespec timespanToTimespec(const Poco::Timespan& ts) {
+    timespec timespec;
+    timespec.tv_sec = ts.totalSeconds();
+    timespec.tv_nsec = ts.totalMicroseconds() * 1000;
+    return timespec;
 }
 
 }

@@ -92,4 +92,15 @@ bool OptimizerContext::isExplainQuery() const
     return is_explain_query;
 }
 
+void OptimizerContext::setPlanSegmentProcessListEntry(std::shared_ptr<PlanSegmentProcessListEntry> segment_process_list_entry_)
+{
+    segment_process_list_entry = segment_process_list_entry_;
+}
+
+std::weak_ptr<PlanSegmentProcessListEntry> OptimizerContext::getPlanSegmentProcessListEntry() const
+{
+    return segment_process_list_entry;
+}
+
+
 }

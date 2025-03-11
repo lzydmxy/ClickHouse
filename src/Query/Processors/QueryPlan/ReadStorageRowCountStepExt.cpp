@@ -6,6 +6,7 @@
 #include <Parsers/ASTFunction.h>
 #include <AggregateFunctions/AggregateFunctionCount.h>
 #include <Columns/ColumnAggregateFunction.h>
+#include <Processors/Sources/SourceFromSingleChunk.h>
 
 namespace DB
 {
@@ -37,7 +38,6 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
         auto & select_query = query->as<ASTSelectQuery &>();
         if (!select_query.where() && !select_query.prewhere())
         {
-            rows_cnt = storage->totalRows(context->getSettingsRef());
             rows_cnt = storage->totalRows(context->getSettingsRef());
         }
         else // It's possible to optimize count() given only partition predicates
@@ -118,17 +118,16 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
         output_header.insert({std::move(column), std::make_shared<DataTypeAggregateFunction>(func, func->getArgumentTypes(), agg_desc.parameters), agg_desc.column_name});
     }
 
-    // todo: need to implement OneBlockInputStream and SourceFromInputStream
-    //auto istream = std::make_shared<OneBlockInputStream>(output_header);
-    //auto pipe = Pipe(std::make_shared<SourceFromInputStream>(istream));
+    auto pipe = Pipe(std::make_shared<SourceFromSingleChunk>(output_header));
 
-    //for (const auto & processor : pipe.getProcessors())
-    //    processors.emplace_back(processor);
+    for (const auto & processor : pipe.getProcessors())
+        processors.emplace_back(processor);
 
-    //pipeline.init(std::move(pipe));
+    pipeline.init(std::move(pipe));
 
-    //if (context)
-    //    pipeline.addInterpreterContext(context);
+    // TODO: need addInterpreterContext
+    // if (context)
+    //     pipeline.addInterpreterContext(context);
 }
 
 }

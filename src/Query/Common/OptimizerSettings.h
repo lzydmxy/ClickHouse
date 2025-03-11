@@ -68,6 +68,11 @@ DECLARE_SETTING_ENUM(SchedulerMode);
     M(UInt64, exchange_remote_receiver_queue_size, 10, "Queue size for remote exchange receiver",0) \
     M(UInt64, exchange_stream_max_buf_size, 20971520, "Default 20M, -1 means no limit", 0) \
     M(Bool, exchange_enable_block_compress, true, "Whether enable exchange block compress ", 0) \
+    M(UInt64, exchange_local_receiver_queue_size, 30, "Queue size for local exchange receiver",0) \
+    M(UInt64, exchange_multi_path_receiver_queue_size, 20, "Queue size for multi path exchange receiver", 0) \
+    M(UInt64, exchange_stream_back_pressure_max_wait_ms, 0, "Default 0, 0 means no control", 0) \
+    M(Bool, exchange_enable_multipath_reciever, true, "Whether enable exchange new mode ", 0) \
+    M(UInt64, exchange_source_pipeline_threads, 16, "Recommend number of threads for pipeline which reading data from exchange, ingoned if exchange need keep data order", 0) \
     /** Runtime Filter settings */ \
     M(UInt64, wait_runtime_filter_timeout, 1000, "Execute filter wait for runtime filter timeout ms", 0) \
     M(Bool, enable_range_cover, true, "Whether use range rather than bloom or values set for runtime filter", 0) \
@@ -78,6 +83,7 @@ DECLARE_SETTING_ENUM(SchedulerMode);
     M(Bool, report_segment_profiles, false, "Report plan segment profile to coordinator.", 0) \
     /** Optimizer relative settings, CBO, CTE, MagicSet, MV */ \
     M(QueryDryRunMode, query_dry_run_mode, QueryDryRunMode::NONE, "Whether to choose a query debug mode, in order to skip some workloads", 0) \
+    M(Bool, enable_shuffle_with_order, false, "Whether enable keep data order when shuffle", 0) \
     /** Complex query settings **/\
     M(Milliseconds, send_plan_segment_timeout_ms, 10000, "Default timeout for send plan segment by rpc", 0) \
     M(Bool, enable_distributed_stages, false, "Enable complex query mode to split plan to distributed stages", 0)\

@@ -4,6 +4,7 @@
 #include <Interpreters/StorageID.h>
 #include <Interpreters/AggregateDescription.h>
 #include <Interpreters/Cluster.h>
+#include <QueryPipeline/QueryPipelineBuilder.h>
 
 namespace DB
 {

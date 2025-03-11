@@ -13,6 +13,7 @@ class PlanSegmentProcessList;
 using PlanSegmentProcessListPtr = std::shared_ptr<PlanSegmentProcessList>;
 class PlanSegmentProcessListEntry;
 using PlanSegmentProcessListEntryPtr = std::shared_ptr<PlanSegmentProcessListEntry>;
+using PlanSegmentProcessListEntryWeakPtr = std::weak_ptr<PlanSegmentProcessListEntry>;
 class QueryStatus;
 using QueryStatusPtr = std::shared_ptr<QueryStatus>;
 class HostWithPorts;
@@ -51,6 +52,8 @@ public:
     ExceptionHandlerPtr getExceptionHandler() const;
 
     void setPlanSegmentProcessListEntry(PlanSegmentProcessListEntryPtr segment_process_list_entry_);
+    PlanSegmentProcessListEntryWeakPtr getPlanSegmentProcessListEntry() const;
+
     PlanSegmentProcessListPtr getPlanSegmentProcessList();
 
     void setProcessListElement(QueryStatusPtr elem);
@@ -91,6 +94,7 @@ private:
     ProcessListEntryPtr process_list_entry;
     std::function<void()> send_tcp_progress{nullptr};
     bool is_explain_query{false};
+    PlanSegmentProcessListEntryWeakPtr segment_process_list_entry;
     QueryExchangeLogPtr query_exchange_log;
 };
 
