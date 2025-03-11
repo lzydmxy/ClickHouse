@@ -17,8 +17,8 @@ struct BuildQueryPipelineSettingsExt
     bool is_expand = false;
     std::unordered_map<UInt64, std::vector<PlanSegmentPartitionSource>> sources;
 
-    void initFromContext(ContextPtr from);
-    void initFromPlanSegment(PlanSegment * plan_segment, const PlanSegmentExecutionInfo & info, ContextPtr context, bool is_explain = false);
+    void fromContext(ContextPtr from);
+    void fromPlanSegment(PlanSegment * plan_segment, const PlanSegmentExecutionInfo & info, ContextPtr context, bool is_explain = false);
 };
 
 }

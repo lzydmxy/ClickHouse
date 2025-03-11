@@ -4,12 +4,12 @@
 namespace DB
 {
 
-void BuildQueryPipelineSettingsExt::initFromContext(ContextPtr from)
+void BuildQueryPipelineSettingsExt::fromContext(ContextPtr from)
 {
     this->context = from;
 }
 
-void BuildQueryPipelineSettingsExt::initFromPlanSegment(
+void BuildQueryPipelineSettingsExt::fromPlanSegment(
     PlanSegment * plan_segment, const PlanSegmentExecutionInfo & info, ContextPtr context, bool is_explain)
 {
     this->distributed_settings = DistributedPipelineSettings::fromPlanSegment(plan_segment, info);
