@@ -138,6 +138,8 @@ public:
     static ActionsDAGPtr createExpressionActions(
         ContextPtr context, const NamesAndTypesList & source, const NamesWithAliases & output, const ASTPtr & ast, bool add_project = true);
 
+    static void projection(QueryPipelineBuilder & pipeline, const Block & target, const BuildQueryPipelineSettings & settings);
+
     static bool isLogicalQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step) { return !isPhysicalQueryPlanStep(query_plan_step); }
 
     static bool isPhysicalQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step)

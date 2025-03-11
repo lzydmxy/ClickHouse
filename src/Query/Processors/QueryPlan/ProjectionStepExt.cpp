@@ -1,8 +1,10 @@
 #include <IO/Operators.h>
+#include <Interpreters/Context.h>
 #include <Interpreters/ExpressionActions.h>
 #include <Parsers/ASTExpressionList.h>
 #include <Processors/Transforms/ExpressionTransform.h>
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 
 namespace DB
@@ -26,12 +28,11 @@ ProjectionStepExt::ProjectionStepExt(
 
 void ProjectionStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
-    // TODO: implement
-    // auto actions = createActions(settings.context);
-    // auto expression = std::make_shared<ExpressionActions>(actions, settings.getActionsSettings());
+    auto actions = createActions(settings.getBuildPipelineSettingsExt().context);
+    auto expression = std::make_shared<ExpressionActions>(actions, settings.getActionsSettings());
 
-    // pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<ExpressionTransform>(header, expression); });
-    // projection(pipeline, output_stream->header, settings);
+    pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<ExpressionTransform>(header, expression); });
+    QueryPlanStepHelper::projection(pipeline, output_stream->header, settings);
 }
 
 std::shared_ptr<IQueryPlanStep> ProjectionStepExt::copy(ContextPtr) const
@@ -49,9 +50,7 @@ ActionsDAGPtr ProjectionStepExt::createActions(ContextPtr context) const
         expr_list->children.emplace_back(item.second->clone());
         output.emplace_back(NameWithAlias{item.second->getColumnName(), item.first});
     }
-    // TODO: implement
-    // return createExpressionActions(context, input_streams[0].header.getNamesAndTypesList(), output, expr_list);
-    return nullptr;
+    return QueryPlanStepHelper::createExpressionActions(context, input_streams[0].header.getNamesAndTypesList(), output, expr_list);
 }
 
 ActionsDAGPtr ProjectionStepExt::createActions(const Assignments & assignments, const NamesAndTypesList & source, ContextPtr context)
@@ -64,16 +63,7 @@ ActionsDAGPtr ProjectionStepExt::createActions(const Assignments & assignments, 
         expr_list->children.emplace_back(item.second->clone());
         output.emplace_back(NameWithAlias{item.second->getColumnName(), item.first});
     }
-    // TODO: implement
-    // return createExpressionActions(context, source, output, expr_list);
-    return nullptr;
+    return QueryPlanStepHelper::createExpressionActions(context, source, output, expr_list);
 }
-
-// TODO: implement
-// void ProjectionStepExt::prepare(const PreparedStatementContext & prepared_context)
-// {
-//     for (auto & assign : assignments)
-//         prepared_context.prepare(assign.second);
-// }
 
 }

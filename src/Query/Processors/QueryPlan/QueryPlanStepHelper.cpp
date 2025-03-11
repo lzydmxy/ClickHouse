@@ -1,4 +1,7 @@
+#include <Interpreters/ExpressionActions.h>
+#include <Processors/Transforms/ExpressionTransform.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <QueryPipeline/QueryPipelineBuilder.h>
 
 
 namespace DB
@@ -62,6 +65,18 @@ ActionsDAGPtr QueryPlanStepHelper::createExpressionActions(
         names_with_aliases.emplace_back(NameWithAlias{item, ""});
 
     return createExpressionActions(context, source, names_with_aliases, ast, add_project);
+}
+
+void QueryPlanStepHelper::projection(QueryPipelineBuilder & pipeline, const Block & target, const BuildQueryPipelineSettings & settings)
+{
+    if (!blocksHaveEqualStructure(pipeline.getHeader(), target))
+    {
+        auto convert_actions_dag = ActionsDAG::makeConvertingActions(
+            pipeline.getHeader().getColumnsWithTypeAndName(), target.getColumnsWithTypeAndName(), ActionsDAG::MatchColumnsMode::Name);
+        auto convert_actions = std::make_shared<ExpressionActions>(convert_actions_dag, settings.getActionsSettings());
+
+        pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<ExpressionTransform>(header, convert_actions); });
+    }
 }
 
 }

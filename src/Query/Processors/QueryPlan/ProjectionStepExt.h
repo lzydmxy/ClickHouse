@@ -25,8 +25,6 @@ public:
 
     String getName() const override { return "ProjectionStepExt"; }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
-    // TODO: implement
-    // void prepare(const PreparedStatementContext & prepared_context) override;
 
     const Assignments & getAssignments() const { return assignments; }
     const NameToType & getNameToType() const { return name_to_type; }

@@ -13,11 +13,10 @@ PartitionTopNStepExt::PartitionTopNStepExt(
 {
 }
 
-void PartitionTopNStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & context)
+void PartitionTopNStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
     auto input_header = pipeline.getHeader();
-    // FIXME: No member named 'context' in 'DB::BuildQueryPipelineSettings'
-    // pipeline.resize(context.context->getSettingsRef().max_threads);
+    pipeline.resize(settings.getBuildPipelineSettingsExt().context->getSettingsRef().max_threads);
 
     ColumnNumbers partition_by_columns;
     for (const auto & col : partition)
