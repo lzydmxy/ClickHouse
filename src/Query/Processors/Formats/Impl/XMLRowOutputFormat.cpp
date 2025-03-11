@@ -1,8 +1,7 @@
-#include <IO/WriteHelpers.h>
-#include <IO/WriteBufferValidUTF8.h>
-#include <Query/Processors/Formats/Impl/XMLRowOutputFormat.h>
 #include <Formats/FormatFactory.h>
-
+#include <IO/WriteBufferValidUTF8.h>
+#include <IO/WriteHelpers.h>
+#include <Query/Processors/Formats/Impl/XMLRowOutputFormat.h>
 
 namespace DB
 {
@@ -29,20 +28,14 @@ XMLRowOutputFormat::XMLRowOutputFormat(WriteBuffer & out_, const Block & header_
         for (const char * pos = begin; pos != end; ++pos)
         {
             char c = *pos;
-            if (!(isAlphaASCII(c)
-                || (pos != begin && isNumericASCII(c))
-                || c == '_'
-                || c == '-'
-                || c == '.'))
+            if (!(isAlphaASCII(c) || (pos != begin && isNumericASCII(c)) || c == '_' || c == '-' || c == '.'))
             {
                 is_column_name_suitable = false;
                 break;
             }
         }
 
-        field_tag_names[i] = is_column_name_suitable
-            ? fields[i].name
-            : "field";
+        field_tag_names[i] = is_column_name_suitable ? fields[i].name : "field";
     }
 
     if (need_validate_utf8)
@@ -53,7 +46,6 @@ XMLRowOutputFormat::XMLRowOutputFormat(WriteBuffer & out_, const Block & header_
     else
         ostr = &out;
 }
-
 
 void XMLRowOutputFormat::writePrefix()
 {
@@ -81,7 +73,6 @@ void XMLRowOutputFormat::writePrefix()
     writeCString("\t<data>\n", *ostr);
 }
 
-
 void XMLRowOutputFormat::writeField(const IColumn & column, const ISerialization & serialization, size_t row_num)
 {
     writeCString("\t\t\t<", *ostr);
@@ -94,12 +85,10 @@ void XMLRowOutputFormat::writeField(const IColumn & column, const ISerialization
     ++field_number;
 }
 
-
 void XMLRowOutputFormat::writeRowStartDelimiter()
 {
     writeCString("\t\t<row>\n", *ostr);
 }
-
 
 void XMLRowOutputFormat::writeRowEndDelimiter()
 {
@@ -108,13 +97,10 @@ void XMLRowOutputFormat::writeRowEndDelimiter()
     ++row_count;
 }
 
-
 void XMLRowOutputFormat::writeSuffix()
 {
     writeCString("\t</data>\n", *ostr);
-
 }
-
 
 void XMLRowOutputFormat::writeBeforeTotals()
 {
@@ -143,7 +129,6 @@ void XMLRowOutputFormat::writeAfterTotals()
 {
     writeCString("\t</totals>\n", *ostr);
 }
-
 
 void XMLRowOutputFormat::writeBeforeExtremes()
 {
@@ -192,7 +177,6 @@ void XMLRowOutputFormat::writeExtremesElement(const char * title, const Columns 
     writeCString(">\n", *ostr);
 }
 
-
 void XMLRowOutputFormat::onProgress(const Progress & value)
 {
     progress.incrementPiecewiseAtomically(value);
@@ -200,7 +184,6 @@ void XMLRowOutputFormat::onProgress(const Progress & value)
 
 void XMLRowOutputFormat::finalizeImpl()
 {
-
     writeCString("\t<rows>", *ostr);
     writeIntText(row_count, *ostr);
     writeCString("</rows>\n", *ostr);
@@ -239,16 +222,12 @@ void XMLRowOutputFormat::writeStatistics()
     writeCString("\t</statistics>\n", *ostr);
 }
 
-
 void registerOutputFormatXML(FormatFactory & factory)
 {
-    factory.registerOutputFormat("XML", [](
-        WriteBuffer & buf,
-        const Block & sample,
-        const FormatSettings & settings)
-    {
-        return std::make_shared<XMLRowOutputFormat>(buf, sample, settings);
-    });
+    factory.registerOutputFormat(
+        "XML",
+        [](WriteBuffer & buf, const Block & sample, const FormatSettings & settings)
+        { return std::make_shared<XMLRowOutputFormat>(buf, sample, settings); });
 }
 
 }

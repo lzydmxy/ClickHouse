@@ -1,19 +1,13 @@
-#include <IO/WriteHelpers.h>
-#include <IO/WriteBufferValidUTF8.h>
-#include <Query/Processors/Formats/Impl/JSONEachRowRowOutputFormat.h>
 #include <Formats/FormatFactory.h>
-
+#include <IO/WriteBufferValidUTF8.h>
+#include <IO/WriteHelpers.h>
+#include <Query/Processors/Formats/Impl/JSONEachRowRowOutputFormat.h>
 
 namespace DB
 {
 
-
-JSONEachRowRowOutputFormat::JSONEachRowRowOutputFormat(
-    WriteBuffer & out_,
-    const Block & header_,
-    const FormatSettings & settings_)
-        : IRowOutputFormat(header_, out_),
-            settings(settings_)
+JSONEachRowRowOutputFormat::JSONEachRowRowOutputFormat(WriteBuffer & out_, const Block & header_, const FormatSettings & settings_)
+    : IRowOutputFormat(header_, out_), settings(settings_)
 {
     const auto & sample = getPort(PortKind::Main).getHeader();
     size_t columns = sample.columns();
@@ -25,7 +19,6 @@ JSONEachRowRowOutputFormat::JSONEachRowRowOutputFormat(
         writeJSONString(sample.getByPosition(i).name, buf, settings);
     }
 }
-
 
 void JSONEachRowRowOutputFormat::writeField(const IColumn & column, const ISerialization & serialization, size_t row_num)
 {
@@ -45,18 +38,15 @@ void JSONEachRowRowOutputFormat::writeField(const IColumn & column, const ISeria
     ++field_number;
 }
 
-
 void JSONEachRowRowOutputFormat::writeFieldDelimiter()
 {
     writeChar(',', out);
 }
 
-
 void JSONEachRowRowOutputFormat::writeRowStartDelimiter()
 {
     writeChar('{', out);
 }
-
 
 void JSONEachRowRowOutputFormat::writeRowEndDelimiter()
 {
@@ -85,69 +75,51 @@ void JSONEachRowRowOutputFormat::writeRowEndDelimiter()
     // delimiters. For compatibility, I preserve the bug in case of non-array
     // output.
     if (settings.json.array_of_rows)
-    {
         writeCString("}", out);
-    }
     else
-    {
         writeCString("}\n", out);
-    }
     field_number = 0;
 }
-
 
 void JSONEachRowRowOutputFormat::writeRowBetweenDelimiter()
 {
     // We preserve an existing bug here for compatibility. See the comment above.
     if (settings.json.array_of_rows)
-    {
         writeCString(",\n", out);
-    }
 }
-
 
 void JSONEachRowRowOutputFormat::writePrefix()
 {
     if (settings.json.array_of_rows)
-    {
         writeCString("[\n", out);
-    }
 }
-
 
 void JSONEachRowRowOutputFormat::writeSuffix()
 {
     if (settings.json.array_of_rows)
-    {
         writeCString("\n]\n", out);
-    }
 }
-
 
 void registerOutputFormatJSONEachRow(FormatFactory & factory)
 {
-    factory.registerOutputFormat("JSONEachRow", [](
-        WriteBuffer & buf,
-        const Block & sample,
-        const FormatSettings & _format_settings)
-    {
-        FormatSettings settings = _format_settings;
-        settings.json.serialize_as_strings = false;
-        return std::make_shared<JSONEachRowRowOutputFormat>(buf, sample,
-            settings);
-    });
+    factory.registerOutputFormat(
+        "JSONEachRow",
+        [](WriteBuffer & buf, const Block & sample, const FormatSettings & _format_settings)
+        {
+            FormatSettings settings = _format_settings;
+            settings.json.serialize_as_strings = false;
+            return std::make_shared<JSONEachRowRowOutputFormat>(buf, sample, settings);
+        });
     factory.markOutputFormatSupportsParallelFormatting("JSONEachRow");
 
-    factory.registerOutputFormat("JSONStringsEachRow", [](
-        WriteBuffer & buf,
-        const Block & sample,
-        const FormatSettings & _format_settings)
-    {
-        FormatSettings settings = _format_settings;
-        settings.json.serialize_as_strings = true;
-        return std::make_shared<JSONEachRowRowOutputFormat>(buf, sample,
-            settings);
-    });
+    factory.registerOutputFormat(
+        "JSONStringsEachRow",
+        [](WriteBuffer & buf, const Block & sample, const FormatSettings & _format_settings)
+        {
+            FormatSettings settings = _format_settings;
+            settings.json.serialize_as_strings = true;
+            return std::make_shared<JSONEachRowRowOutputFormat>(buf, sample, settings);
+        });
     factory.markOutputFormatSupportsParallelFormatting("JSONStringEachRow");
 }
 

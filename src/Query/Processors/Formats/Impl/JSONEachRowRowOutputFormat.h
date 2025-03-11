@@ -1,10 +1,9 @@
 #pragma once
 
 #include <Core/Block.h>
+#include <Formats/FormatSettings.h>
 #include <IO/WriteBuffer.h>
 #include <Processors/Formats/IRowOutputFormat.h>
-#include <Formats/FormatSettings.h>
-
 
 namespace DB
 {
@@ -15,10 +14,7 @@ namespace DB
 class JSONEachRowRowOutputFormat : public IRowOutputFormat
 {
 public:
-    JSONEachRowRowOutputFormat(
-        WriteBuffer & out_,
-        const Block & header_,
-        const FormatSettings & settings_);
+    JSONEachRowRowOutputFormat(WriteBuffer & out_, const Block & header_, const FormatSettings & settings_);
 
     String getName() const override { return "JSONEachRowRowOutputFormat"; }
 
@@ -32,8 +28,8 @@ public:
 
 protected:
     /// No totals and extremes.
-    void consumeTotals(Chunk) override {}
-    void consumeExtremes(Chunk) override {}
+    void consumeTotals(Chunk) override { }
+    void consumeExtremes(Chunk) override { }
 
     size_t field_number = 0;
 

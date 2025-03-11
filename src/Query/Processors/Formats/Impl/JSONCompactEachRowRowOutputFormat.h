@@ -1,9 +1,9 @@
 #pragma once
 
 #include <Core/Block.h>
+#include <Formats/FormatSettings.h>
 #include <IO/WriteBuffer.h>
 #include <Processors/Formats/IRowOutputFormat.h>
-#include <Formats/FormatSettings.h>
 
 namespace DB
 {
@@ -15,19 +15,15 @@ class JSONCompactEachRowRowOutputFormat : public IRowOutputFormat
 {
 public:
     JSONCompactEachRowRowOutputFormat(
-        WriteBuffer & out_,
-        const Block & header_,
-        const FormatSettings & settings_,
-        bool with_names_,
-        bool yield_strings_);
+        WriteBuffer & out_, const Block & header_, const FormatSettings & settings_, bool with_names_, bool yield_strings_);
 
     String getName() const override { return "JSONCompactEachRowRowOutputFormat"; }
 
     void writePrefix() override;
 
-    void writeBeforeTotals() override {}
+    void writeBeforeTotals() override { }
     void writeTotals(const Columns & columns, size_t row_num) override;
-    void writeAfterTotals() override {}
+    void writeAfterTotals() override { }
 
     void writeField(const IColumn & column, const ISerialization & serialization, size_t row_num) override;
     void writeFieldDelimiter() override;
@@ -37,7 +33,7 @@ public:
 protected:
     void consumeTotals(Chunk) override;
     /// No extremes.
-    void consumeExtremes(Chunk) override {}
+    void consumeExtremes(Chunk) override { }
 
 private:
     FormatSettings settings;

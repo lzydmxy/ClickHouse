@@ -1,17 +1,12 @@
-#include <IO/WriteHelpers.h>
-#include <IO/WriteBufferValidUTF8.h>
-#include <Query/Processors/Formats/Impl/JSONRowOutputFormat.h>
 #include <Formats/FormatFactory.h>
-
+#include <IO/WriteBufferValidUTF8.h>
+#include <IO/WriteHelpers.h>
+#include <Query/Processors/Formats/Impl/JSONRowOutputFormat.h>
 
 namespace DB
 {
 
-JSONRowOutputFormat::JSONRowOutputFormat(
-    WriteBuffer & out_,
-    const Block & header,
-    const FormatSettings & settings_,
-    bool yield_strings_)
+JSONRowOutputFormat::JSONRowOutputFormat(WriteBuffer & out_, const Block & header, const FormatSettings & settings_, bool yield_strings_)
     : IRowOutputFormat(header, out_), settings(settings_), yield_strings(yield_strings_)
 {
     const auto & sample = getPort(PortKind::Main).getHeader();
@@ -38,7 +33,6 @@ JSONRowOutputFormat::JSONRowOutputFormat(
     else
         ostr = &out;
 }
-
 
 void JSONRowOutputFormat::writePrefix()
 {
@@ -68,7 +62,6 @@ void JSONRowOutputFormat::writePrefix()
     writeCString("\t\"data\":\n", *ostr);
     writeCString("\t[\n", *ostr);
 }
-
 
 void JSONRowOutputFormat::writeField(const IColumn & column, const ISerialization & serialization, size_t row_num)
 {
@@ -113,12 +106,10 @@ void JSONRowOutputFormat::writeFieldDelimiter()
     writeCString(",\n", *ostr);
 }
 
-
 void JSONRowOutputFormat::writeRowStartDelimiter()
 {
     writeCString("\t\t{\n", *ostr);
 }
-
 
 void JSONRowOutputFormat::writeRowEndDelimiter()
 {
@@ -128,12 +119,10 @@ void JSONRowOutputFormat::writeRowEndDelimiter()
     ++row_count;
 }
 
-
 void JSONRowOutputFormat::writeRowBetweenDelimiter()
 {
     writeCString(",\n", *ostr);
 }
-
 
 void JSONRowOutputFormat::writeSuffix()
 {
@@ -267,21 +256,15 @@ void JSONRowOutputFormat::onProgress(const Progress & value)
 
 void registerOutputFormatJSON(FormatFactory & factory)
 {
-    factory.registerOutputFormat("JSON", [](
-        WriteBuffer & buf,
-        const Block & sample,
-        const FormatSettings & format_settings)
-    {
-        return std::make_shared<JSONRowOutputFormat>(buf, sample, format_settings, false);
-    });
+    factory.registerOutputFormat(
+        "JSON",
+        [](WriteBuffer & buf, const Block & sample, const FormatSettings & format_settings)
+        { return std::make_shared<JSONRowOutputFormat>(buf, sample, format_settings, false); });
 
-    factory.registerOutputFormat("JSONStrings", [](
-        WriteBuffer & buf,
-        const Block & sample,
-        const FormatSettings & format_settings)
-    {
-        return std::make_shared<JSONRowOutputFormat>(buf, sample, format_settings, true);
-    });
+    factory.registerOutputFormat(
+        "JSONStrings",
+        [](WriteBuffer & buf, const Block & sample, const FormatSettings & format_settings)
+        { return std::make_shared<JSONRowOutputFormat>(buf, sample, format_settings, true); });
 }
 
 }

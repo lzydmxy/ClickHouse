@@ -3,7 +3,6 @@
 #include <IO/WriteBuffer.h>
 #include <Processors/Formats/IRowOutputFormat.h>
 
-
 namespace DB
 {
 

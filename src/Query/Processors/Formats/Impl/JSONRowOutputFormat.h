@@ -1,12 +1,11 @@
 #pragma once
 
 #include <Core/Block.h>
+#include <Formats/FormatSettings.h>
 #include <IO/Progress.h>
 #include <IO/WriteBuffer.h>
-#include <Common/Stopwatch.h>
 #include <Processors/Formats/IRowOutputFormat.h>
-#include <Formats/FormatSettings.h>
-
+#include <Common/Stopwatch.h>
 
 namespace DB
 {
@@ -16,11 +15,7 @@ namespace DB
 class JSONRowOutputFormat : public IRowOutputFormat
 {
 public:
-    JSONRowOutputFormat(
-        WriteBuffer & out_,
-        const Block & header,
-        const FormatSettings & settings_,
-        bool yield_strings_);
+    JSONRowOutputFormat(WriteBuffer & out_, const Block & header, const FormatSettings & settings_, bool yield_strings_);
 
     String getName() const override { return "JSONRowOutputFormat"; }
 
@@ -70,7 +65,7 @@ protected:
     void writeStatistics();
 
 
-    std::unique_ptr<WriteBuffer> validating_ostr;    /// Validates UTF-8 sequences, replaces bad sequences with replacement character.
+    std::unique_ptr<WriteBuffer> validating_ostr; /// Validates UTF-8 sequences, replaces bad sequences with replacement character.
     WriteBuffer * ostr;
 
     size_t field_number = 0;
