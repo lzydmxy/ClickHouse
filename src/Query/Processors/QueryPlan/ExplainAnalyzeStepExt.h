@@ -2,6 +2,7 @@
 
 #include <Processors/QueryPlan/ITransformingStep.h>
 #include <Processors/QueryPlan/QueryPlan.h>
+#include <Query/Common/ExplainSettings.h>
 #include <Query/Parsers/ASTExplainQueryExt.h>
 
 namespace DB
@@ -9,30 +10,6 @@ namespace DB
 struct PlanSegmentDescription;
 using PlanSegmentDescriptionPtr = std::shared_ptr<PlanSegmentDescription>;
 using PlanSegmentDescriptions = std::vector<PlanSegmentDescriptionPtr>;
-
-// TODO: have defined in src/Interpreters/InterpreterExplainQuery.cpp
-struct QueryPlanSettings
-{
-    QueryPlan::ExplainPlanOptions query_plan_options;
-
-    /// Apply query plan optimizations.
-    bool optimize = true;
-    bool json = false;
-
-    constexpr static char name[] = "PLAN";
-
-    std::unordered_map<std::string, std::reference_wrapper<bool>> boolean_settings = {
-        {"header", query_plan_options.header},
-        {"description", query_plan_options.description},
-        {"actions", query_plan_options.actions},
-        {"indexes", query_plan_options.indexes},
-        {"optimize", optimize},
-        {"json", json},
-        {"sorting", query_plan_options.sorting},
-    };
-
-    std::unordered_map<std::string, std::reference_wrapper<Int64>> integer_settings;
-};
 
 class ExplainAnalyzeStepExt : public ITransformingStep
 {

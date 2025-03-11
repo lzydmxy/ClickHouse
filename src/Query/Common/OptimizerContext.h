@@ -29,6 +29,10 @@ struct PlanSegmentInstanceID;
 class ProcessListEntry;
 using ProcessListEntryPtr = std::shared_ptr<ProcessListEntry>;
 
+struct ProcessorProfileLogElement;
+template <typename>
+class ProfileElementConsumer;
+
 class QueryExchangeLog;
 using QueryExchangeLogPtr = std::shared_ptr<QueryExchangeLog>;
 
@@ -76,6 +80,10 @@ public:
 
     void setProcessListEntry(ProcessListEntryPtr process_list_entry_);
     ProcessListEntryPtr getProcessListEntry() const;
+
+    void
+    setProcessorProfileElementConsumer(std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> processor_log_element_consumer_);
+    std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> getProcessorProfileElementConsumer() const;
 
     void setSendTCPProgress(std::function<void()> callback);
     std::function<void()> getSendTCPProgress() const;

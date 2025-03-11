@@ -1,5 +1,6 @@
 #include <DataTypes/DataTypeString.h>
 #include <Query/Processors/QueryPlan/ExplainAnalyzeStepExt.h>
+#include <Query/Processors/Transforms/ExplainAnalyzeTransformExt.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 
 namespace DB
@@ -22,16 +23,15 @@ ExplainAnalyzeStepExt::ExplainAnalyzeStepExt(
 
 void ExplainAnalyzeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &)
 {
-    // TODO: implement
-    // if (!query_plan_ptr)
-    //     throw Exception(ErrorCodes::LOGICAL_ERROR, "QueryPlan is not set");
-    // pipeline.resize(1);
-    // pipeline.addSimpleTransform(
-    //     [&](const Block & header)
-    //     {
-    //         return std::make_shared<ExplainAnalyzeTransform>(
-    //             header, output_stream->header, kind, query_plan_ptr, context, segment_descriptions, settings);
-    //     });
+    if (!query_plan_ptr)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "QueryPlan is not set");
+    pipeline.resize(1);
+    pipeline.addSimpleTransform(
+        [&](const Block & header)
+        {
+            return std::make_shared<ExplainAnalyzeTransformExt>(
+                header, output_stream->header, kind, query_plan_ptr, context, segment_descriptions, settings);
+        });
 }
 
 std::shared_ptr<IQueryPlanStep> ExplainAnalyzeStepExt::copy(ContextPtr) const
