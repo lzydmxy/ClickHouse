@@ -32,7 +32,7 @@ enum class SchedulerMode
 DECLARE_SETTING_ENUM(SchedulerMode);
 
 
-/** These settings represent fine tunes for internal details of query optimizer 
+/** These settings represent fine tunes for internal details of query optimizer
  * and should not be changed by the user without a reason.
   */
 #define LIST_OF_COORDINATION_SETTINGS(M, ALIAS) \
@@ -70,23 +70,9 @@ DECLARE_SETTING_ENUM(SchedulerMode);
     M(Bool, exchange_enable_block_compress, true, "Whether enable exchange block compress ", 0) \
     /** Runtime Filter settings */ \
     M(UInt64, wait_runtime_filter_timeout, 1000, "Execute filter wait for runtime filter timeout ms", 0) \
-    M(Bool, enable_runtime_filter, true, "Whether enable runtime filter for join", 0) \
-    M(Bool, enable_runtime_filter_cost, false, "Whether enable runtime filter cost", 0) \
-    M(Bool, enable_local_runtime_filter, true, "Whether enable runtime filter in local mode", 0) \
-    M(UInt64, runtime_filter_min_filter_rows, 10000, "Set minimum row to enable runtime filter", 0) \
-    M(Float, runtime_filter_min_filter_factor, 0.4, "Set minimum filter factor to enable runtime filter", 0) \
-    M(Float, runtime_filter_min_filter_factor_for_non_table_scan, 0.9, "Set minimum filter factor to enable runtime filter if runtime filter can not pushdown", 0) \
     M(Bool, enable_range_cover, true, "Whether use range rather than bloom or values set for runtime filter", 0) \
-    M(Bool, enable_rewrite_bf_into_prewhere, true, "Whether enable pushdown runtime filter to prewhere for join", 0) \
-    M(UInt64, runtime_filter_bloom_build_threshold, 2048000, "The threshold of right table to build bloom filter", 0) \
-    M(UInt64, runtime_filter_in_build_threshold, 1024, "The threshold of right table to build value set filter", 0) \
-    M(Bool, enable_runtime_filter_pipeline_poll, true, "No additional segment needed for the left side during broadcast join, polling time bounded", 0) \
-    M(Float, adjust_range_set_filter_rate, 0.1, "If the prewhere is not range or set, adjust use this value as priority to bloom filter ", 0) \
-    M(UInt64, shuffle_aware_ndv_threshold, 0, "Threshold to to use shuffle-aware grf or to use pre enlarge ndv, 0 disable shuffle-aware grf", 0) \
-    M(String, runtime_filter_black_list, "", "Runtime filter ids need be blocked", 0) \
-    M(Bool, runtime_filter_parallel_build_for_local, false, "Runtime filter parallel build for local.", 0) \
     M(UInt64, clean_rf_time_limit, 300000, "Threshold to clean runtime filters in manager to prevent memory leak", 0) \
-    \
+    M(Bool, enable_rewrite_bf_into_prewhere, true, "Whether enable pushdown runtime filter to prewhere for join", 0) \
     /** Debug settings */ \
     M(Bool, log_segment_profiles, false, "Log profile of each segment info including runtime and planning information.", 0) \
     M(Bool, report_segment_profiles, false, "Report plan segment profile to coordinator.", 0) \
@@ -104,7 +90,19 @@ DECLARE_SETTING_ENUM(SchedulerMode);
     M(Float, streaming_agg_local_ratio, 0.25, "The ratio of local streaming agg, 0-all streaming, 1-all local merged", 0) \
     M(OverflowMode, timeout_overflow_mode, OverflowMode::THROW, "What to do when the limit is exceeded.", 0) \
 
-DECLARE_SETTINGS_TRAITS(OptimizerSettingsTraits, LIST_OF_COORDINATION_SETTINGS)
+#define MAKE_COORDINATION_OBSOLETE(M, TYPE, NAME, DEFAULT) \
+    M(TYPE, NAME, DEFAULT, "Obsolete setting, does nothing.", BaseSettingsHelpers::Flags::OBSOLETE)
+
+#define OBSOLETE_COORDINATION_SETTINGS(M, ALIAS) \
+    /** Obsolete settings that do nothing now but left for compatibility reasons. Remove them or implement them when you have free time. */ \
+    MAKE_COORDINATION_OBSOLETE(M, Bool, enable_two_stages_prewhere, false) \
+    /** End of OBSOLETE_COORDINATION_SETTINGS */ \
+
+#define ALL_COORDINATION_SETTINGS(M, ALIAS) \
+LIST_OF_COORDINATION_SETTINGS(M, ALIAS) \
+OBSOLETE_COORDINATION_SETTINGS(M, ALIAS) \
+
+DECLARE_SETTINGS_TRAITS(OptimizerSettingsTraits, ALL_COORDINATION_SETTINGS)
 
 
 struct OptimizerSettings : public BaseSettings<OptimizerSettingsTraits>
