@@ -15,6 +15,9 @@
 #include <Processors/Executors/PullingAsyncPipelineExecutor.h>
 #include <Processors/QueryPlan/Optimizations/QueryPlanOptimizationSettings.h>
 #include <Query/Common/OptimizerContext.h>
+#include <Query/Common/SystemLogHelper.h>
+#include <Query/ProtosHelper/QueryProto.h>
+#include <Query/ProtosHelper/RPCHelpers.h>
 #include <Query/Transforms/BufferedCopyTransform.h>
 #include <Query/Exchange/DataTrans/IBroadcastSender.h>
 #include <Query/Exchange/RpcChannelPool.h>
@@ -28,6 +31,7 @@
 #include <Query/Exchange/LoadBalancedExchangeSink.h>
 #include <Query/Executor/PlanSegmentReport.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
+#include <Query/Processors/IQueryPlanStepExt.h>
 
 namespace ProfileEvents
 {
@@ -69,7 +73,7 @@ void setExceptionStackTrace(QueryLogElement & elem)
 void PlanSegmentExecutor::prepareSegmentInfo() const
 {
     query_log_element->client_info = context->getClientInfo();
-    // query_log_element->segment_id = plan_segment->getPlanSegmentId();
+    query_log_element->segment_id = plan_segment->getPlanSegmentId();
     // query_log_element->segment_parallel = plan_segment->getParallelSize();
     // query_log_element->segment_parallel_index = plan_segment_instance->info.parallel_id;
     query_log_element->type = QueryLogElementType::QUERY_START;
@@ -89,7 +93,7 @@ PlanSegmentExecutor::PlanSegmentExecutor(
     , plan_segment(plan_segment_instance->plan_segment.get())
     , plan_segment_outputs(plan_segment_instance->plan_segment->getPlanSegmentOutputs())
     , logger(getLogger("PlanSegmentExecutor"))
-    , query_log_element(std::make_unique<QueryLogElement>())
+    , query_log_element(std::make_unique<QueryLogElementExt>())
 {
     options = ExchangeUtils::getExchangeOptions(context);
     if (plan_segment->getPlanSegmentId() > 0)
@@ -108,7 +112,7 @@ PlanSegmentExecutor::PlanSegmentExecutor(
     , plan_segment_outputs(plan_segment_instance->plan_segment->getPlanSegmentOutputs())
     , options(std::move(options_))
     , logger(getLogger("PlanSegmentExecutor"))
-    , query_log_element(std::make_unique<QueryLogElement>())
+    , query_log_element(std::make_unique<QueryLogElementExt>())
 {
     if (plan_segment->getPlanSegmentId() > 0)
         prepareSegmentInfo();
@@ -141,13 +145,7 @@ std::optional<PlanSegmentExecutor::ExecutionResult> PlanSegmentExecutor::execute
     LOG_DEBUG(logger, "execute PlanSegment: {}", plan_segment->toString());
     try
     {
-        // if (context->getSettingsRef().log_normalized_query_plan_hash)
-        // {
-        //     auto logical_plan = generatePlanSegmentPlanHash(plan_segment, context);
-        //     LOG_TRACE(logger, "Logical plan is {}", logical_plan);
-        //     query_log_element->normalized_query_plan_hash = std::hash<std::string>()(logical_plan);
-        // }
-
+        /// Remove normalized_query_plan_hash code, see normalized_query_hash
         context->getOptimizerContext()->initExceptionHandler();
         doExecute();
 
@@ -217,15 +215,10 @@ BlockIO PlanSegmentExecutor::lazyExecute(bool /*add_output_processors*/)
     if (!CurrentThread::get().getQueryContext() || CurrentThread::get().getQueryContext().get() != context.get())
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Context not match");
 
-    //TODO: Need to redesign which class plan_segment_process_entry should be in
-    //res.plan_segment_process_entry = context->getOptimizerContext()->getPlanSegmentProcessList().insertGroup(context, plan_segment->getPlanSegmentId());
-    //context->getOptimizerContext()->getPlanSegmentProcessList().insertProcessList(res.plan_segment_process_entry, plan_segment->getPlanSegmentId(), context);
+    auto plan_segment_process_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(context, plan_segment->getPlanSegmentId());
+    optimizer_context->getPlanSegmentProcessList()->insertProcessList(plan_segment_process_entry, plan_segment->getPlanSegmentId(), context);
     // set entry before buildPipeline to control memory usage of exchange queue
-    //context->getOptimizerContext()->setPlanSegmentProcessListEntry(res.plan_segment_process_entry);
-
-    auto plan_segment_process_entry = context->getOptimizerContext()->getPlanSegmentProcessList()->insertGroup(context, plan_segment->getPlanSegmentId());
-    context->getOptimizerContext()->getPlanSegmentProcessList()->insertProcessList(plan_segment_process_entry, plan_segment->getPlanSegmentId(), context);
-    context->getOptimizerContext()->setPlanSegmentProcessListEntry(plan_segment_process_entry);
+    optimizer_context->setPlanSegmentProcessListEntry(plan_segment_process_entry);
     res.pipeline = std::move(*buildPipeline());
     return res;
 }
@@ -237,18 +230,12 @@ void PlanSegmentExecutor::collectSegmentQueryRuntimeMetric(const QueryStatus * q
 
     query_log_element->read_bytes = query_status_info.read_bytes;
     query_log_element->read_rows = query_status_info.read_rows;
-    //query_log_element->disk_cache_read_bytes = query_status_info.disk_cache_read_bytes;
     query_log_element->written_bytes = query_status_info.written_bytes;
     query_log_element->written_rows = query_status_info.written_rows;
     query_log_element->memory_usage = query_status_info.peak_memory_usage > 0 ? query_status_info.peak_memory_usage : 0;
     query_log_element->query_duration_ms = query_status_info.elapsed_microseconds;
-    //query_log_element->max_io_time_thread_ms = query_status_info.max_io_time_thread_ms;
-    //query_log_element->max_io_time_thread_name = query_status_info.max_io_time_thread_name;
-    //query_log_element->max_thread_io_profile_counters = query_status_info.max_io_thread_profile_counters;
     query_log_element->thread_ids = std::move(query_status_info.thread_ids);
     query_log_element->profile_counters = query_status_info.profile_counters;
-    
-
     query_log_element->query_tables = query_access_info.tables;
 }
 
@@ -280,7 +267,6 @@ void fillPlanSegmentProfile(
         segment_profile->read_bytes = query_status_info.read_bytes;
         segment_profile->read_rows = query_status_info.read_rows;
         segment_profile->query_duration_ms = query_status_info.elapsed_microseconds;
-        //segment_profile->io_wait_ms = query_status_info.max_io_time_thread_ms;
     }
 
     if (type == RReportProfileType::Unspecified)
@@ -300,19 +286,34 @@ void fillPlanSegmentProfile(
         auto step_profile = GroupedProcessorProfile::aggregateOperatorProfileToStepLevel(grouped_profiles);
         for (auto & [step_id, profile] : step_profile)
             segment_profile->profiles.emplace(step_id, profile);
-        //TODO: Wait new query plan
-        // auto & plan = plan_segment->getQueryPlan();
-        // for (auto & node : plan.getNodes())
-        // {
-        //     if (!node.step->getAttributeDescriptions().empty() && segment_profile->profiles.contains(node.id))
-        //     {
-        //         for (auto & att : node.step->getAttributeDescriptions())
-        //         {
-        //             auto attribute_ptr = std::make_shared<RuntimeAttributeDescription>(att.second);
-        //             segment_profile->profiles.at(node.id)->attributes.emplace(att.first, attribute_ptr);
-        //         }
-        //     }
-        // }
+
+        auto & query_plan = plan_segment->getQueryPlan();
+        std::vector<QueryPlan::Node *> nodes_to_process;
+        nodes_to_process.push_back(query_plan.getRootNode());
+
+        /// Index starts at 1
+        size_t node_index = 0;
+        /// Depth-first traversal
+        while (!nodes_to_process.empty())
+        {
+            const auto * node_to_process = nodes_to_process.back();
+            node_index++;
+            nodes_to_process.pop_back();
+            nodes_to_process.insert(nodes_to_process.end(), node_to_process->children.begin(), node_to_process->children.end());
+
+            auto * step_ext = dynamic_cast<IQueryPlanStepExt*>(node_to_process->step.get());
+            if (step_ext)
+            {
+                if (!step_ext->getAttributeDescriptions().empty() && segment_profile->profiles.contains(node_index))
+                {
+                    for (auto & att : step_ext->getAttributeDescriptions())
+                    {
+                        auto attribute_ptr = std::make_shared<RuntimeAttributeDescription>(att.second);
+                        segment_profile->profiles.at(node_index)->attributes.emplace(att.first, attribute_ptr);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -331,11 +332,6 @@ void PlanSegmentExecutor::doExecute()
 
     QueryPipelinePtr pipeline;
     BroadcastSenderPtrs senders;
-    SCOPE_EXIT({
-        //TODO: Wait pipe line
-        // if (pipeline)
-        //     pipeline->clearUncompletedCache(context);
-    });
     buildPipeline(pipeline, senders);
 
     pipeline->setProcessListElement(query_status);
@@ -375,6 +371,7 @@ void PlanSegmentExecutor::doExecute()
         metrics.cpu_micros = CurrentThread::getGroup()->performance_counters[ProfileEvents::SystemTimeMicroseconds]
                 + CurrentThread::getGroup()->performance_counters[ProfileEvents::UserTimeMicroseconds];
     }
+    //TODO: Print pipeline with GraphvizPrinter
     //pipeline_executor = async_pipeline_executor.getPipelineExecutor();
     // GraphvizPrinter::printPipeline(pipeline_executor->getProcessors(), pipeline_executor->getExecutingGraph(), 
     //     context, plan_segment->getPlanSegmentId(), extractExchangeHostPort(plan_segment_instance->info.execution_address));
@@ -388,14 +385,14 @@ void PlanSegmentExecutor::doExecute()
                 status.code, status.message);
     }
 
-    if (optimizer_context->getSettings()->log_segment_profiles)
-    {
-        //TODO: Need add segment_profiles in QueryLogElement
-        // query_log_element->segment_profiles = std::make_shared<std::vector<String>>();
-        // query_log_element->segment_profiles->emplace_back(
-        //     PlanSegmentDescription::getPlanSegmentDescription(plan_segment_instance->plan_segment, true)
-        //         ->jsonPlanSegmentDescriptionAsString(collectStepRuntimeProfiles(pipeline)));
-    }
+    //TODO: Need PlanSegmentDescription in PlanPrinter.h
+    // if (optimizer_context->getSettings()->log_segment_profiles)
+    // {
+    //     query_log_element->segment_profiles = std::make_shared<std::vector<String>>();
+    //     query_log_element->segment_profiles->emplace_back(
+    //         PlanSegmentDescription::getPlanSegmentDescription(plan_segment_instance->plan_segment, true)
+    //             ->jsonPlanSegmentDescriptionAsString(collectStepRuntimeProfiles(pipeline)));
+    // }
     if (optimizer_context->getSettings()->report_segment_profiles && plan_segment)
     {
         segment_profile = std::make_shared<PlanSegmentProfile>(query_log_element->client_info.initial_query_id, plan_segment->getPlanSegmentId());
@@ -408,34 +405,30 @@ void PlanSegmentExecutor::doExecute()
 
         if (!processors_profile_log)
             return;
-        // processors_profile_log->addLogs(pipeline.get(),
-        //                                 context->getClientInfo().initial_query_id,
-        //                                 std::chrono::system_clock::now(),
-        //                                 plan_segment->getPlanSegmentId());
+        ProcessorProfileLogElement processor_profile_log;
+
+        SystemLogHelper::addProcessorsProfileLog(processors_profile_log,
+                                    pipeline.get(),
+                                    context->getClientInfo().initial_query_id,
+                                    std::chrono::system_clock::now(),
+                                    plan_segment->getPlanSegmentId());
     }
 }
 
 static QueryPlanOptimizationSettings buildOptimizationSettingsWithCheck(LoggerPtr log, ContextMutablePtr& context)
 {
     QueryPlanOptimizationSettings settings = QueryPlanOptimizationSettings::fromContext(context);
-    // if(!settings.enable_optimizer)
-    // {
-    //     LOG_WARNING(log, "enable_optimizer should be true");
-    //     settings.enable_optimizer = true;
-    // }
     return settings;
 }
 
 QueryPipelinePtr PlanSegmentExecutor::buildPipeline()
 {
-    // auto builder = plan_segment->getQueryPlan().buildQueryPipeline(
-    //     buildOptimizationSettingsWithCheck(logger, context),
-    //     BuildQueryPipelineSettings::fromPlanSegment(plan_segment, plan_segment_instance->info, context));
-
-    BuildQueryPipelineSettings builder_settings;
+    //TODO: Maybe we need QueryPlanOptimizationSettingsExt and BuildQueryPipelineSettingsExt
     auto builder = plan_segment->getQueryPlan().buildQueryPipeline(
         buildOptimizationSettingsWithCheck(logger, context),
-        builder_settings);
+        BuildQueryPipelineSettings::fromContext(context));
+        // BuildQueryPipelineSettings::fromPlanSegment(plan_segment, plan_segment_instance->info, context));
+
     auto pipeline = QueryPipelineBuilder::getPipeline(std::move(*builder));
     registerAllExchangeReceivers(logger, pipeline, optimizer_context->getSettings()->exchange_wait_accept_max_timeout_ms);
     return std::unique_ptr<QueryPipeline>(&pipeline);
@@ -443,7 +436,6 @@ QueryPipelinePtr PlanSegmentExecutor::buildPipeline()
 
 void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSenderPtrs & senders)
 {
-    //UInt64 current_tx_id = context->getOptimizerContext()->getCurrentTransactionID().toUInt64();
     std::vector<BroadcastSenderPtrs> senders_list;
     const auto opt_settings = context->getOptimizerContext()->getSettings();
     auto sender_options
@@ -492,27 +484,18 @@ void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSe
         senders_list.emplace_back(std::move(current_exchange_senders));
     }
 
-    
-    // pipeline = plan_segment->getQueryPlan().buildQueryPipeline(
-    //     buildOptimizationSettingsWithCheck(logger, context),
-    //     BuildQueryPipelineSettings::fromPlanSegment(plan_segment, plan_segment_instance->info, context)
-    // );
-    //TODO:
-    BuildQueryPipelineSettings build_settings;
+    //TODO: Maybe we need QueryPlanOptimizationSettingsExt and BuildQueryPipelineSettingsExt
     auto builder = plan_segment->getQueryPlan().buildQueryPipeline(
         buildOptimizationSettingsWithCheck(logger, context),
-        build_settings
-    );
+        BuildQueryPipelineSettings::fromContext(context));
     auto pipeline_ = QueryPipelineBuilder::getPipeline(std::move(*builder));
     pipeline = std::unique_ptr<QueryPipeline>(&pipeline_);
 
-    // TODO:
+    // TODO: Set ChunkInfoTotals to Chunk in TotalsPortToMainPortTransform, It doesn't seem to work.
     // pipeline->setTotalsPortToMainPortTransform();
     // pipeline->setExtremesPortToMainPortTransform();
 
     registerAllExchangeReceivers(logger, *pipeline, optimizer_context->getSettingsRef().exchange_wait_accept_max_timeout_ms);
-
-    //pipeline->setNumThreads(pipeline->getNumThreads());
 
     if (plan_segment->getPlanSegmentOutputs().empty())
         throw Exception(ErrorCodes::LOGICAL_ERROR, "PlanSegment has no output");
@@ -525,8 +508,8 @@ void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSe
         LOG_DEBUG(logger, "Decrease plan_segment {} exchange output parallel size to {}", plan_segment->getPlanSegmentId(), max_output_size);
         output_size = max_output_size;
     }
-    //TODO:
-    //pipeline->limitMinThreads(output_size * plan_segment_outputs.size());
+    //TODO: Set max/min threads for pipeline or pipeline builder
+    // pipeline->limitMinThreads(output_size * plan_segment_outputs.size());
 
     for (size_t i = 0; i < plan_segment_outputs.size(); ++i)
     {
@@ -900,8 +883,6 @@ Processors PlanSegmentExecutor::buildLoadBalancedExchangeSink(BroadcastSenderPtr
 
 void PlanSegmentExecutor::sendProgress()
 {
-    //Send profile
-    /*
     try
     {
         auto address = extractExchangeHostPort(plan_segment->getCoordinatorAddress());
@@ -909,12 +890,13 @@ void PlanSegmentExecutor::sendProgress()
             = RpcChannelPool::getInstance().getClient(address, BrpcChannelPoolOptions::DEFAULT_CONFIG_KEY);
         Protos::PlanSegmentService_Stub manager(&rpc_client->getChannel());
         brpc::Controller * cntl = new brpc::Controller;
-        Protos::SendProgressRequest * request = new Protos::SendProgressRequest;
-        Protos::SendProgressResponse * response = new Protos::SendProgressResponse;
+        auto * request = new RProgressRequest();
+        auto * response = new RProgressResponse();
         request->set_query_id(plan_segment->getQueryId());
         request->set_segment_id(plan_segment->getPlanSegmentId());
         request->set_parallel_id(plan_segment_instance->info.parallel_id);
-        *request->mutable_progress() = progress.fetchAndResetPiecewiseAtomically().toProto();
+        //TODO: Need progress to proto
+        //*request->mutable_progress() = progress.fetchAndResetPiecewiseAtomically().toProto();
         cntl->set_timeout_ms(20000);
 
         std::function<String()> construct_err_msg = [request = request]() -> String {
@@ -922,7 +904,7 @@ void PlanSegmentExecutor::sendProgress()
                 "PlanSegment-{} send profile to coordinator failed, query id-{}", request->segment_id(), request->query_id());
         };
 
-        manager.sendProgress(
+        manager.executeProgress(
             cntl,
             request,
             response,
@@ -932,7 +914,6 @@ void PlanSegmentExecutor::sendProgress()
     {
         tryLogCurrentException(__PRETTY_FUNCTION__);
     }
-    */
 }
 
 }

@@ -35,6 +35,7 @@ using RSenderMetrics = Protos::SenderMetrics;
 
 using RQueryCommon = Protos::QueryCommon;
 using RQueryCommonPtr = std::shared_ptr<RQueryCommon>;
+
 using RPlanSegmentRequest = Protos::PlanSegmentRequest;
 using RPlanSegmentHeader = Protos::PlanSegmentHeader;
 using RPlanSegmentsRequest = Protos::PlanSegmentsRequest;
@@ -42,8 +43,10 @@ using RPlanSegmentResponse = Protos::PlanSegmentResponse;
 
 using RCancelQueryRequest = Protos::CancelQueryRequest;
 using RCancelQueryResponse = Protos::CancelQueryResponse;
+
 using RPlanSegmentStatusRequest = Protos::PlanSegmentStatusRequest;
 using RPlanSegmentStatusResponse = Protos::PlanSegmentStatusResponse;
+
 using RPlanSegmentProfileRequest = Protos::PlanSegmentProfileRequest;
 using RPlanSegmentProfileResponse = Protos::PlanSegmentProfileResponse;
 
@@ -62,6 +65,13 @@ using RQueryPlan = Protos::QueryPlan;
 using RPlanSegmentService = Protos::PlanSegmentService;
 //For bRPC client
 using RPlanSegmentServiceStub = Protos::PlanSegmentService_Stub;
+
+using RProgressRequest = Protos::ProgressRequest;
+using RProgressResponse = Protos::ProgressResponse;
+using RProcessorProfileRequest = Protos::ProcessorProfileRequest;
+using RProcessorsProfileRequest = Protos::ProcessorsProfileRequest;
+using RProcessorProfileResponse = Protos::ProcessorProfileResponse;
+
 
 String planSegmentTypeToString(const RIPlanSegment::Enum & type);
 

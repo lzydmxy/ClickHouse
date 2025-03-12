@@ -38,7 +38,6 @@ public:
 
     SummarizedQueryStatus waitUntilFinish(int error_code, const String & error_msg);
 
-    //TODO: redefine RuntimeSegmentsStatus
     void updateSegmentInstanceStatus(const RuntimeSegmentStatus & status);
 
     /// normal progress received from sendProgress rpc
@@ -59,17 +58,12 @@ public:
 
     ~QueryMPPCoordinator();
 
-    UInt64 getNormalizedQueryPlanHash() const
-    {
-        return normalized_query_plan_hash;
-    }
-
 private:
     std::string cluster_name;
+    PlanSegmentTreePtr plan_segment_tree;
     ContextMutablePtr query_context;
     OptimizerContextPtr optimizer_context;
     QueryMPPOptions options;
-    PlanSegmentTreePtr plan_segment_tree;
     const String & query_id;
     ProgressManager progress_manager;
     LoggerPtr log;
@@ -83,7 +77,9 @@ private:
     std::unordered_map<PostProcessingRPCID, PlanSegmentSet> post_processing_rpc_waiting = {};
     bool post_processing_rpc_waiting_initialized = false;
 
-    UInt64 normalized_query_plan_hash = 0;
+    void beginQuery();
+    void cancelQuery(const QueryError & query_error, bool is_canceled);
+    void finishQuery();
 };
 
 using QueryMPPCoordinatorPtr = std::shared_ptr<QueryMPPCoordinator>;

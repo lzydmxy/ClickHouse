@@ -5,7 +5,7 @@
 #include <Common/logger_useful.h>
 #include <IO/Progress.h>
 #include <Interpreters/Context_fwd.h>
-#include <Interpreters/QueryLog.h>
+#include <Query/Interpreters/QueryLogExt.h>
 #include <QueryPipeline/QueryPipeline.h>
 #include <Processors/Executors/PipelineExecutor.h>
 #include <Query/Common/PlanSegmentProfile.h>
@@ -74,7 +74,7 @@ private:
     ExchangeOptions options;
     LoggerPtr logger;
     RuntimeSegmentsMetrics metrics;
-    std::unique_ptr<QueryLogElement> query_log_element;
+    std::unique_ptr<QueryLogElementExt> query_log_element;
     SenderMetrics sender_metrics;
     Progress progress;
     Progress final_progress;

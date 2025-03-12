@@ -36,6 +36,8 @@ DECLARE_SETTING_ENUM(SchedulerMode);
  * and should not be changed by the user without a reason.
   */
 #define LIST_OF_COORDINATION_SETTINGS(M, ALIAS) \
+    /** General extension settings */ \
+    M(Bool, log_normalized_query_plan_hash, 0, "Log json format query plan to the system query_log table.", 0) \
     /** Coordinator settings*/ \
     M(SchedulerMode, scheduler_mode, SchedulerMode::RANDOM, "scheduler shard mode: random/first_order/random_order/cpu_rank/memory_rank", 0) \
     M(UInt64, push_queue_timeout_millseconds, 10, "Timeout millseconds of push profile or others to queue.", 0) \
