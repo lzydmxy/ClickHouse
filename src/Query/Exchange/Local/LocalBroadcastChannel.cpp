@@ -57,10 +57,6 @@ RecvDataPacket LocalBroadcastChannel::recv(timespec timeout_ts)
         {
             return RecvDataPacket(*broadcast_status.load(std::memory_order_acquire));
         }
-        else
-        {
-            //
-        }
     }
 
     BroadcastStatus current_status = finish(
