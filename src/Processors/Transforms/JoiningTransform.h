@@ -34,6 +34,7 @@ public:
         }
 
     private:
+        friend class JoiningTransformExt;
         const size_t total;
         std::atomic<size_t> finished{0};
     };
@@ -64,6 +65,7 @@ protected:
     void transform(Chunk & chunk);
 
 private:
+    friend class JoiningTransformExt;
     Chunk input_chunk;
     Chunk output_chunk;
     bool has_input = false;
@@ -102,7 +104,7 @@ public:
     Status prepare() override;
     void work() override;
 
-private:
+protected:
     JoinPtr join;
     Chunk chunk;
     bool stop_reading = false;

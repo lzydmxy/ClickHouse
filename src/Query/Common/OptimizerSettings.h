@@ -31,6 +31,9 @@ enum class SchedulerMode
 };
 DECLARE_SETTING_ENUM(SchedulerMode);
 
+constexpr UInt64 RUNTIME_FILTER_BLOOM_BUILD_THRESHOLD = 2048000;
+constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024;
+
 
 /** These settings represent fine tunes for internal details of query optimizer
  * and should not be changed by the user without a reason.
@@ -78,6 +81,13 @@ DECLARE_SETTING_ENUM(SchedulerMode);
     M(Bool, enable_range_cover, true, "Whether use range rather than bloom or values set for runtime filter", 0) \
     M(UInt64, clean_rf_time_limit, 300000, "Threshold to clean runtime filters in manager to prevent memory leak", 0) \
     M(Bool, enable_rewrite_bf_into_prewhere, true, "Whether enable pushdown runtime filter to prewhere for join", 0) \
+    M(UInt64, runtime_filter_bloom_build_threshold, RUNTIME_FILTER_BLOOM_BUILD_THRESHOLD, "The threshold of right table to build bloom filter", 0) \
+    M(UInt64, runtime_filter_in_build_threshold, RUNTIME_FILTER_IN_BUILD_THRESHOLD, "The threshold of right table to build value set filter", 0) \
+    /** Optimizer join settings */ \
+    M(Bool, enforce_all_join_to_any_join, false, "Whether enforce all join to any join", 0) \
+    M(Bool, enable_nested_loop_join, false, "Whether enable nest loop join for outer join with filter", 0)\
+    M(Bool, use_grace_hash_only_repartition, false, "Only use grace hash join when exchange type is repartition", 0) \
+    M(UInt64, grace_hash_join_left_side_parallel, 1, "Initial number of grace hash join left side parallel", 0) \
     /** Debug settings */ \
     M(Bool, log_segment_profiles, false, "Log profile of each segment info including runtime and planning information.", 0) \
     M(Bool, report_segment_profiles, false, "Report plan segment profile to coordinator.", 0) \

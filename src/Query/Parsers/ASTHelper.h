@@ -147,6 +147,12 @@ if (auto * casted_ast = ast->as<type>()) \
     return ASTType::type; \
 }
 
+inline ASTType getAstType(const ASTPtr & ast)
+{
+    APPLY_AST_TYPES(CHECK_AND_RETURN_AST_TYPE)
+    return ASTType::UNDEFINED;
+}
+
 inline ASTType getAstType(const ConstASTPtr & ast)
 {
     APPLY_AST_TYPES(CHECK_AND_RETURN_AST_TYPE)

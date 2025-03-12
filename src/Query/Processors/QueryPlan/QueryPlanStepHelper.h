@@ -326,6 +326,8 @@ public:
 
         return nullptr;
     }
+
+    static void projection(QueryPipelineBuilder & pipeline, const Block & target, const BuildQueryPipelineSettings & settings);
 };
 
 }

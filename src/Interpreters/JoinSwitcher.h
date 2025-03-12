@@ -78,6 +78,7 @@ public:
     }
 
 private:
+    friend class JoinRuntimeFiltersHelper;
     JoinPtr join;
     SizeLimits limits;
     bool switched;

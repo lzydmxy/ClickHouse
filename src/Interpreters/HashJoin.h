@@ -402,6 +402,7 @@ public:
 
 private:
     friend class NotJoinedHash;
+    friend class JoinRuntimeFiltersHelper;
 
     friend class JoinSource;
 

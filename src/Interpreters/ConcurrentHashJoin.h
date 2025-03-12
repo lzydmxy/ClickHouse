@@ -57,6 +57,9 @@ public:
     getNonJoinedBlocks(const Block & left_sample_block, const Block & result_sample_block, UInt64 max_block_size) const override;
 
 private:
+    friend class JoinRuntimeFiltersHelper;
+    friend class JoiningTransformExt;
+
     struct InternalHashJoin
     {
         std::mutex mutex;

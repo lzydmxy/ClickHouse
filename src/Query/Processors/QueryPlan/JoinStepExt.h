@@ -5,15 +5,17 @@
 
 #include <Interpreters/ActionsVisitor.h>
 
-#include <Query/Interpreters/asof.h>
-#include <Query/Common/PredicateConst.h>
 #include <Query/Common/LinkedHashMap.h>
+#include <Query/Common/PredicateConst.h>
+#include <Query/Interpreters/asof.h>
 #include <Query/Parsers/ASTHelper.h>
+
+#include <Query/Executor/RuntimeFilter/RuntimeFilterBuilder.h>
 
 namespace DB
 {
 
- ENUM_WITH_PROTO_CONVERTER(
+ENUM_WITH_PROTO_CONVERTER(
     DistributionType, // enum name
     Protos::DistributionType, // proto enum message
     (UNKNOWN, 0),
@@ -51,13 +53,13 @@ public:
         ConstASTPtr filter_ = PredicateConst::TRUE_VALUE,
         bool has_using_ = false,
         std::optional<std::vector<bool>> require_right_keys_ = std::nullopt,
-        ASOF::Inequality asof_inequality_ = ASOF::Inequality::GreaterOrEquals,
+        ASOFJoinInequality asof_inequality_ = ASOFJoinInequality::GreaterOrEquals,
         DistributionType distribution_type_ = DistributionType::UNKNOWN,
         JoinAlgorithm join_algorithm = JoinAlgorithm::AUTO,
         bool is_magic_ = false,
         bool is_ordered_ = false,
-        bool simple_reordered_ = false
-        /*LinkedHashMap<String, RuntimeFilterBuildInfos> runtime_filter_builders = {}*/);
+        bool simple_reordered_ = false,
+        LinkedHashMap<String, RuntimeFilter> runtime_filter_builders = {});
 
 
     String getName() const override { return "JoinStepExt"; }
@@ -86,7 +88,7 @@ public:
         require_right_keys = std::nullopt;
     }
     std::optional<std::vector<bool>> getRequireRightKeys() const { return require_right_keys; }
-    ASOF::Inequality getAsofInequality() const { return asof_inequality; }
+    ASOFJoinInequality getAsofInequality() const { return asof_inequality; }
     DistributionType getDistributionType() const { return distribution_type; }
     void setDistributionType(DistributionType distribution_type_) { distribution_type = distribution_type_; }
 
@@ -108,14 +110,12 @@ public:
 
     bool isLeftOuterJoin() const
     {
-        return kind == JoinKind::Left
-            && (strictness == JoinStrictness::All || strictness == JoinStrictness::Any);
+        return kind == JoinKind::Left && (strictness == JoinStrictness::All || strictness == JoinStrictness::Any);
     }
 
     bool isRightOuterJoin() const
     {
-        return kind == JoinKind::Right
-            && (strictness == JoinStrictness::All || strictness == JoinStrictness::Any);
+        return kind == JoinKind::Right && (strictness == JoinStrictness::All || strictness == JoinStrictness::Any);
     }
 
     bool isMagic() const { return is_magic; }
@@ -136,8 +136,7 @@ public:
     bool supportSwap() const
     {
         if (getStrictness() != JoinStrictness::Unspecified && getStrictness() != JoinStrictness::All
-            && getStrictness() != JoinStrictness::Any && getStrictness() != JoinStrictness::Semi
-            && getStrictness() != JoinStrictness::Anti)
+            && getStrictness() != JoinStrictness::Any && getStrictness() != JoinStrictness::Semi && getStrictness() != JoinStrictness::Anti)
             return false;
 
         // todo can support swap
@@ -162,12 +161,12 @@ public:
         return isRightOrFull(kind);
     }
 
-    // JoinPtr makeJoin(
-    //     ContextPtr context,
-    //     std::shared_ptr<RuntimeFilterConsumer> && consumer,
-    //     size_t num_streams,
-    //     ExpressionActionsPtr filter_action,
-    //     String filter_column_name);
+    JoinPtr makeJoin(
+        ContextPtr context,
+        std::shared_ptr<RuntimeFilterConsumer> && consumer,
+        size_t num_streams,
+        ExpressionActionsPtr filter_action,
+        String filter_column_name);
 
     bool enforceGraceHashJoin() const;
 
@@ -176,8 +175,8 @@ public:
     void setOutputStream(DataStream output_stream_);
     // TODO(gouguilin): protobuf serde
 
-    // const LinkedHashMap<String, RuntimeFilterBuildInfos> & getRuntimeFilterBuilders() const { return runtime_filter_builders; }
-    // RuntimeFilterBuilderPtr createRuntimeFilterBuilder(ContextPtr context) const;
+    const LinkedHashMap<String, RuntimeFilter> & getRuntimeFilterBuilders() const { return runtime_filter_builders; }
+    RuntimeFilterBuilderPtr createRuntimeFilterBuilder(ContextPtr context) const;
 
 protected:
     JoinKind kind;
@@ -213,7 +212,7 @@ protected:
     //   if require_right_keys = TRUE, it outputs: [1], [NULL] (currently QueryPlanner does not generate this case)
     std::optional<std::vector<bool>> require_right_keys;
 
-    ASOF::Inequality asof_inequality;
+    ASOFJoinInequality asof_inequality;
 
     DistributionType distribution_type = DistributionType::UNKNOWN;
     JoinAlgorithm join_algorithm = JoinAlgorithm::AUTO;
@@ -221,7 +220,7 @@ protected:
     bool is_ordered;
     bool simple_reordered;
 
-    // LinkedHashMap<String, RuntimeFilterBuildInfos> runtime_filter_builders;
+    LinkedHashMap<String, RuntimeFilter> runtime_filter_builders;
 };
 
 }

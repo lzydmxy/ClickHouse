@@ -1,16 +1,17 @@
 #include <Query/Processors/QueryPlan/UnionStepExt.h>
 
-#include <Interpreters/ExpressionActions.h>
-
-#include <Query/Common/Utils.h>
-#include <QueryPipeline/QueryPipelineBuilder.h>
-
-#include <Parsers/ASTExpressionList.h>
 #include <Common/assert_cast.h>
 #include <Columns/ColumnConst.h>
-
+#include <Interpreters/ExpressionActions.h>
+#include <Interpreters/Context.h>
+#include <Parsers/ASTIdentifier.h>
+#include <Parsers/ASTExpressionList.h>
 #include <Processors/Sources/NullSource.h>
 #include <Processors/Transforms/ExpressionTransform.h>
+#include <Query/Common/Utils.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <QueryPipeline/QueryPipelineBuilder.h>
+
 
 namespace DB
 {
@@ -121,13 +122,6 @@ UnionStepExt::UnionStepExt(
                 "Every source needs to map its symbols to an output operation symbol");
         }
     }
-
-//    header = Block();
-//    for (auto & item : output_stream->header)
-//        header.insert(ColumnWithTypeAndName(item.type, item.name));
-//
-//    if (header.columns() > 1 && header.has("_dummy"))
-//        header.erase("_dummy");
 }
 
 const OutputToInputs & UnionStepExt::getOutToInputs() const
@@ -155,12 +149,45 @@ QueryPipelineBuilderPtr UnionStepExt::updatePipeline(QueryPipelineBuilders pipel
         return pipeline;
     }
 
-    // TODO Impl updatePipeline for UnionStepExt
-    // size_t index = 0;
+    size_t index = 0;
     for (auto & cur_pipeline : pipelines)
     {
         ASTPtr expr_list = std::make_shared<ASTExpressionList>();
         NamesWithAliases output_names;
+        bool need_rename = false;
+
+        for (const auto & item : output_stream->header)
+        {
+            auto rename_from = output_to_inputs.at(item.name).at(index);
+            output_names.emplace_back(rename_from, item.name);
+            ASTPtr identifier = std::make_shared<ASTIdentifier>(rename_from);
+            identifier->setAlias(item.name);
+            expr_list->children.emplace_back(identifier);
+            if (item.name != rename_from)
+            {
+                need_rename = true;
+            }
+        }
+
+        if (need_rename)
+        {
+            auto project_action
+                = QueryPlanStepHelper::createExpressionActions(Context::getGlobalContextInstance(), cur_pipeline->getHeader().getNamesAndTypesList(), output_names, expr_list);
+            auto expression = std::make_shared<ExpressionActions>(project_action, settings.getActionsSettings());
+            cur_pipeline->addSimpleTransform(
+                [&](const Block & header_) { return std::make_shared<ExpressionTransform>(header_, expression); });
+
+            if (!blocksHaveEqualStructure(cur_pipeline->getHeader(), getOutputStream().header))
+            {
+                auto actions_dag = ActionsDAG::makeConvertingActions(
+                    cur_pipeline->getHeader().getColumnsWithTypeAndName(),
+                    getOutputStream().header.getColumnsWithTypeAndName(),
+                    ActionsDAG::MatchColumnsMode::Position);
+                auto converting_actions = std::make_shared<ExpressionActions>(std::move(actions_dag));
+                cur_pipeline->addSimpleTransform(
+                    [&](const Block & cur_header) { return std::make_shared<ExpressionTransform>(cur_header, converting_actions); });
+            }
+        }
 
         /// Headers for union must be equal.
         /// But, just in case, convert it to the same header if not.
@@ -175,7 +202,7 @@ QueryPipelineBuilderPtr UnionStepExt::updatePipeline(QueryPipelineBuilders pipel
             cur_pipeline->addSimpleTransform(
                 [&](const Block & cur_header) { return std::make_shared<ExpressionTransform>(cur_header, converting_actions); });
         }
-        // index++;
+        index++;
     }
 
     *pipeline = QueryPipelineBuilder::unitePipelines(std::move(pipelines), getMaxThreads());
