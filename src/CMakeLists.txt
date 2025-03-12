@@ -263,6 +263,7 @@ add_object_library(clickhouse_query_executor_runtimefilter Query/Executor/Runtim
 #add_object_library(clickhouse_query_optimizer_costmodel Query/Optimizer/CostModel)
 #add_object_library(clickhouse_query_optimizer_cascades Query/Optimizer/Cascades)
 #add_object_library(clickhouse_query_optimizer_property Query/Optimizer/Property)
+add_object_library(clickhouse_query_processors_transforms Query/Processors/Transforms)
 add_object_library(clickhouse_formats Formats)
 add_object_library(clickhouse_processors Processors)
 add_object_library(clickhouse_processors_executors Processors/Executors)
