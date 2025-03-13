@@ -83,9 +83,9 @@ inline String extractHostPort(const AddressInfo & address)
     return createHostPortString(address.getHostName(), address.getPort()); 
 }
 
-inline String extractExchangeHostPort(const AddressInfoPtr & address) 
+inline String extractExchangeHostPort(const AddressInfo & address) 
 {
-    return createHostPortString(address->getHostName(), toString(address->getExchangePort())); 
+    return createHostPortString(address.getHostName(), toString(address.getExchangePort())); 
 }
 
 struct PlanSegmentPartitionSource

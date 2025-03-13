@@ -26,7 +26,7 @@ ExplainAnalyzeTransformExt::ExplainAnalyzeTransformExt(
     , segment_descriptions(segment_descriptions_)
     , settings(settings_)
 {
-    coordinator_address = extractExchangeHostPort(context->getOptimizerContext()->getCoordinatorAddress());
+    coordinator_address = extractExchangeHostPort(*(context->getOptimizerContext()->getCoordinatorAddress()));
 }
 
 void ExplainAnalyzeTransformExt::transform(Chunk & chunk)
