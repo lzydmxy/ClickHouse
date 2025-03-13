@@ -44,6 +44,7 @@
 #include <Processors/Executors/PushingPipelineExecutor.h>
 #include <Storages/IStorage.h>
 #include <Storages/MergeTree/MergeTreeSettings.h>
+#include <Query/Exchange/QueryExchangeLog.h>
 
 #include <fmt/core.h>
 
@@ -305,6 +306,7 @@ SystemLogs::SystemLogs(ContextPtr global_context, const Poco::Util::AbstractConf
     backup_log = createSystemLog<BackupLog>(global_context, "system", "backup_log", config, "backup_log", "Contains logging entries with the information about BACKUP and RESTORE operations.");
     s3_queue_log = createSystemLog<S3QueueLog>(global_context, "system", "s3queue_log", config, "s3queue_log", "Contains logging entries with the information files processes by S3Queue engine.");
     blob_storage_log = createSystemLog<BlobStorageLog>(global_context, "system", "blob_storage_log", config, "blob_storage_log", "Contains logging entries with information about various blob storage operations such as uploads and deletes.");
+    query_exchange_log = createSystemLog<QueryExchangeLog>(global_context, "system", "query_exchange_log", config, "query_exchange_log", "Contains information about exchange, for example, start time, duration of processing.");
 
     if (query_log)
         logs.emplace_back(query_log.get());
@@ -349,6 +351,8 @@ SystemLogs::SystemLogs(ContextPtr global_context, const Poco::Util::AbstractConf
         logs.emplace_back(s3_queue_log.get());
     if (blob_storage_log)
         logs.emplace_back(blob_storage_log.get());
+    if (query_exchange_log)
+        logs.emplace_back(query_exchange_log.get());
 
     try
     {
