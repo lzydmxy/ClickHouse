@@ -17,18 +17,20 @@ ExpandTransformExt::ExpandTransformExt(const Block & header_, const Block & outp
 
 void ExpandTransformExt::transform(Chunk & chunk)
 {
-    // size_t num_rows = chunk.getNumRows();
+    size_t num_rows = chunk.getNumRows();
 
     /// step 1 : generate multiple blocks
     std::vector<Block> blocks;
     Columns columns = chunk.detachColumns();
-    //TODO FIXME getSideBlock!!!!
-    // for (auto & expression : expressions)
-    // {
-    //     auto block = getInputPort().getHeader().cloneWithColumns(columns);
+   
+    for (auto & expression : expressions)
+    {
+        auto block = getInputPort().getHeader().cloneWithColumns(columns);
+         //TODO FIXME getSideBlock!!!!
+        expression->execute(block, num_rows, num_rows);
         // expression->execute(block, chunk.getSideBlock(), num_rows);
-    //     blocks.emplace_back(block);
-    // }
+        blocks.emplace_back(block);
+    }
 
     // step 2 : check block header with output header, convert if necessary.
     Block output_block = getOutputPort().getHeader();
@@ -39,9 +41,11 @@ void ExpandTransformExt::transform(Chunk & chunk)
             auto converting_dag = ActionsDAG::makeConvertingActions(
                 block.getColumnsWithTypeAndName(), output_block.getColumnsWithTypeAndName(), ActionsDAG::MatchColumnsMode::Name);
 
-            //TODO FIXME getSideBlock!!!!
-            // auto converting_actions = std::make_shared<ExpressionActions>(std::move(converting_dag));
+           
+            auto converting_actions = std::make_shared<ExpressionActions>(std::move(converting_dag));
+             //TODO FIXME getSideBlock!!!!
             // converting_actions->execute(block, chunk.getSideBlock(), num_rows);
+            converting_actions->execute(block, num_rows, num_rows);
         }
     }
 

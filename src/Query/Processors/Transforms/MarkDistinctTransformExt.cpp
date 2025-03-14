@@ -12,11 +12,10 @@ namespace ErrorCodes
 
 Block MarkDistinctTransformExt::transformHeader(Block header, String marker_symbol)
 {
-    //TODO FIXME DataTypeUInt8
-    // auto type_int = std::make_shared<DataTypeUInt8>();
-    // MutableColumnPtr column = type_int->createColumn();
-    // ColumnWithTypeAndName unique{std::move(column), type_int, marker_symbol};
-    // header.insert(unique);
+    auto type_int = std::make_shared<DataTypeUInt8>();
+    MutableColumnPtr column = type_int->createColumn();
+    ColumnWithTypeAndName unique{std::move(column), type_int, marker_symbol};
+    header.insert(unique);
     return header;
 }
 
