@@ -4,6 +4,8 @@
 #include <Interpreters/SystemLog.h>
 #include <Interpreters/ClientInfo.h>
 #include <Common/ProfileEvents.h>
+#include <Storages/ColumnsDescription.h>
+
 
 namespace DB
 {
@@ -67,6 +69,7 @@ struct QueryExchangeLogElement
 
     static NamesAndTypesList getNamesAndTypes();
     static NamesAndAliases getNamesAndAliases();
+    static ColumnsDescription getColumnsDescription();
     void appendToBlock(MutableColumns & columns) const;
 };
 

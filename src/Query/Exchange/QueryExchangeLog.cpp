@@ -57,6 +57,53 @@ NamesAndTypesList QueryExchangeLogElement::getNamesAndTypes()
     };
 }
 
+ColumnsDescription QueryExchangeLogElement::getColumnsDescription()
+{
+    // TODO: complete field description
+    return {
+        {"initial_query_id", std::make_shared<DataTypeString>(), "ID of the initial query (for distributed query execution)."},
+        {"event_date", std::make_shared<DataTypeDate>(), "The date when the thread has finished execution of the query."},
+        {"event_time", std::make_shared<DataTypeDateTime>(), "The date and time when the thread has finished execution of the query."},
+        {"type", std::make_shared<DataTypeString>(), "Exchange type."},
+        {"exchange_id", std::make_shared<DataTypeUInt64>(), "Exchange id."},
+        {"partition_id", std::make_shared<DataTypeUInt64>(), "ID of the partition that the data part was inserted to. The column takes the `all` value if the partitioning is by `tuple()`."},
+        {"parallel_index", std::make_shared<DataTypeUInt64>(), "Parallel index."},
+        {"coordinator_address", std::make_shared<DataTypeString>(), "Coordinator address."},
+
+        {"finish_code", std::make_shared<DataTypeInt32>(), "Finish code."},
+        {"is_modifier", std::make_shared<DataTypeInt8>(), "Is modifier."},
+        {"message", std::make_shared<DataTypeString>(), "Message."},
+
+        {"send_time_ms", std::make_shared<DataTypeUInt64>(), "Send cost."},
+        {"send_rows", std::make_shared<DataTypeUInt64>(), "Send rows."},
+        {"send_bytes", std::make_shared<DataTypeUInt64>(), "IO buf bytes, for DiskPartitionWriter will be zero."},
+        {"send_uncompressed_bytes", std::make_shared<DataTypeUInt64>(), "Chunk bytes, for some data types like `ColumnAggregateFunction`, send_uncompressed_bytes can be inaccurate."},
+        {"num_send_times", std::make_shared<DataTypeUInt64>(), "Send times."},
+        {"ser_time_ms", std::make_shared<DataTypeUInt64>(), "Serialization cost."},
+        {"send_retry", std::make_shared<DataTypeInt64>(), "Send retry."},
+        {"send_retry_ms", std::make_shared<DataTypeInt64>(), "Send retry cost."},
+        {"overcrowded_retry", std::make_shared<DataTypeInt64>(), "Overcrowded retry."},
+
+        {"recv_counts", std::make_shared<DataTypeUInt64>(), "Received counts."},
+        {"recv_rows", std::make_shared<DataTypeUInt64>(), "Received rows."},
+        {"recv_time_ms", std::make_shared<DataTypeUInt64>(), "Receive cost."},
+        {"register_time_ms", std::make_shared<DataTypeUInt64>(), "Register cost."},
+        {"recv_bytes", std::make_shared<DataTypeUInt64>(), "IO buff bytes."},
+        {"recv_uncompressed_bytes", std::make_shared<DataTypeUInt64>(), "Chunk bytes."},
+        {"dser_time_ms", std::make_shared<DataTypeInt64>(), "Deserialization cost."},
+
+        {"disk_partition_writer_create_file_ms", std::make_shared<DataTypeUInt64>(), "Create initial file cost."},
+        {"disk_partition_writer_pop_ms", std::make_shared<DataTypeUInt64>(), "Background thread pop cost."},
+        {"disk_partition_writer_write_ms", std::make_shared<DataTypeUInt64>(), "Push to queue cost."},
+        {"disk_partition_writer_write_num", std::make_shared<DataTypeUInt64>(), "How many times write op is invoked."},
+        {"disk_partition_writer_commit_ms", std::make_shared<DataTypeUInt64>(), "Rename file cost."},
+        {"disk_partition_writer_sync_ms", std::make_shared<DataTypeUInt64>(), "Last sync op cost."},
+        {"disk_partition_writer_wait_done_ms", std::make_shared<DataTypeUInt64>(), "Wait for bg task done cost."},
+
+        {"ProfileEvents", std::make_shared<DataTypeMap>(std::make_shared<DataTypeString>(), std::make_shared<DataTypeUInt64>()), "All the profile events captured during this operation."},
+    };
+}
+
 NamesAndAliases QueryExchangeLogElement::getNamesAndAliases()
 {
     return
