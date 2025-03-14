@@ -93,7 +93,7 @@ public:
     using TopNFilteringTransformExt::TopNFilteringTransformExt;
     String getName() const override
     {
-        return "TopNFilteringByLimitingTransform";
+        return "TopNFilteringByLimitingTransformExt";
     }
 
 protected:
@@ -106,7 +106,7 @@ public:
     TopNFilteringByHeapTransformExt(const Block & header_, SortDescription sort_description_, UInt64 size_, TopNModel model_);
     String getName() const override
     {
-        return "TopNFilteringByHeapTransform";
+        return "TopNFilteringByHeapTransformExt";
     }
 
 protected:

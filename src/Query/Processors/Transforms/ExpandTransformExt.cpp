@@ -1,6 +1,5 @@
 #include <cstddef>
 #include <memory>
-// #include <math.h>
 #include <Core/Block.h>
 #include <Core/ColumnWithTypeAndName.h>
 #include <DataTypes/DataTypeNullable.h>

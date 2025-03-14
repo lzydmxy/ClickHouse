@@ -1,4 +1,5 @@
 #pragma once
+
 #include <vector>
 #include <Processors/ISimpleTransform.h>
 
@@ -14,7 +15,7 @@ class ExpandTransformExt : public ISimpleTransform
 {
 public:
     ExpandTransformExt(const Block & header_, const Block & output_header_, std::vector<ExpressionActionsPtr> expressions_);
-    String getName() const override { return "ExpandTransform"; }
+    String getName() const override { return "ExpandTransformExt"; }
 
 protected:
     void transform(Chunk & chunk) override;

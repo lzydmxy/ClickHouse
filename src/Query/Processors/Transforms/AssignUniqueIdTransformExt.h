@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Processors/ISimpleTransform.h>
 
 namespace DB
@@ -8,7 +9,7 @@ class AssignUniqueIdTransformExt : public ISimpleTransform
 public:
     AssignUniqueIdTransformExt(const Block & header_, String symbol_);
 
-    String getName() const override { return "AssignUniqueIdTransform"; }
+    String getName() const override { return "AssignUniqueIdTransformExt"; }
     static Block transformHeader(Block header, String symbol);
 
 protected:
