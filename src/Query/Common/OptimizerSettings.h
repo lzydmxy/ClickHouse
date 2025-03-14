@@ -31,8 +31,8 @@ enum class SchedulerMode
 };
 DECLARE_SETTING_ENUM(SchedulerMode);
 
-constexpr UInt64 RUNTIME_FILTER_BLOOM_BUILD_THRESHOLD = 2048000;
-constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024;
+constexpr UInt64 RUNTIME_FILTER_BLOOM_BUILD_THRESHOLD = 2048000; // Default threshold of right table to build bloom filter
+constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold of right table to build value set filter
 
 
 /** These settings represent fine tunes for internal details of query optimizer

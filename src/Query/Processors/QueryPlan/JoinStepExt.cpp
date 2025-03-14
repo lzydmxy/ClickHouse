@@ -187,7 +187,7 @@ JoinPtr JoinStepExt::makeJoin(
         {
             if (GraceHashJoin::isSupported(table_join) ) {
                 table_join->join_algorithm = {JoinAlgorithm::GRACE_HASH};
-                // todo aron let optimizer decide this(parallel)
+                // TODO support join left side parallel for GraceHashJoin
                 // auto parallel = (context->getOptimizerContext()->getSettings()->grace_hash_join_left_side_parallel != 0 ? context->getOptimizerContext()->getSettings()->grace_hash_join_left_side_parallel: num_streams);
                 return std::make_shared<GraceHashJoin>(context, table_join, l_sample_block, r_sample_block, context->getTempDataOnDisk(), false);
             } else if (allow_merge_join) { // fallback into merge join
@@ -205,6 +205,7 @@ JoinPtr JoinStepExt::makeJoin(
     else if ((table_join->forceGraceHashJoin() || join_algorithm == JoinAlgorithm::GRACE_HASH) && allow_grace_hash_join)
     {
         if (GraceHashJoin::isSupported(table_join) ) {
+            // TODO support join left side parallel for GraceHashJoin
             // auto parallel = (context->getOptimizerContext()->getSettings()->grace_hash_join_left_side_parallel != 0 ? context->getOptimizerContext()->getSettings()->grace_hash_join_left_side_parallel: num_streams);
             // return std::make_shared<GraceHashJoin>(context, table_join, l_sample_block, r_sample_block, context->getTempDataOnDisk(), parallel, context->getSettingsRef().spill_mode == SpillMode::AUTO, false, num_streams);
             return std::make_shared<GraceHashJoin>(context, table_join, l_sample_block, r_sample_block, context->getTempDataOnDisk(), false);

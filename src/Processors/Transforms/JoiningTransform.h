@@ -104,7 +104,8 @@ public:
     Status prepare() override;
     void work() override;
 
-protected:
+private:
+    friend class FillingRightJoinSideTransformExt;
     JoinPtr join;
     Chunk chunk;
     bool stop_reading = false;
