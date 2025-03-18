@@ -53,7 +53,6 @@ class AsynchronousInsertLog;
 class BackupLog;
 class S3QueueLog;
 class BlobStorageLog;
-class QueryExchangeLog;
 
 /// System logs should be destroyed in destructor of the last Context and before tables,
 ///  because SystemLog destruction makes insert query while flushing data into underlying tables
@@ -67,7 +66,6 @@ struct SystemLogs
 
     std::shared_ptr<QueryLog> query_log;                /// Used to log queries.
     std::shared_ptr<QueryThreadLog> query_thread_log;   /// Used to log query threads.
-    std::shared_ptr<QueryExchangeLog> query_exchange_log;   /// Used to log query exchange.
     std::shared_ptr<PartLog> part_log;                  /// Used to log operations with parts
     std::shared_ptr<TraceLog> trace_log;                /// Used to log traces from query profiler
     std::shared_ptr<CrashLog> crash_log;                /// Used to log server crashes.

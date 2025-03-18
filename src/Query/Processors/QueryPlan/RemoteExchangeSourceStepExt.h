@@ -6,7 +6,7 @@
 #include <Processors/QueryPlan/ISourceStep.h>
 #include <Query/ProtosHelper/AddressInfo.h>
 #include <Query/Common/MultiPathBoundedQueue.h>
-#include <Query/Exchange/Local/LocalChannelOptions.h>
+#include <Query/Exchange/ExchangeUtils.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Query/Exchange/bRPC/BrpcRemoteBroadcastReceiver.h>
 
@@ -58,6 +58,7 @@ public:
 private:
     // TODO: if bsp_mode is required, then add other codes
     BroadcastReceiverPtr createReceiver(
+        DiskExchangeDataManagerPtr disk_mgr,
         bool is_local_exchange,
         const LocalChannelOptions & local_options,
         size_t write_plan_segment_id,
@@ -69,6 +70,7 @@ private:
         bool enable_metrics,
         const String & write_address_info,
         MultiPathQueuePtr collector,
+        BrpcExchangeReceiverRegistryService::RegisterMode register_mode,
         std::shared_ptr<QueryExchangeLog> query_exchange_log);
     PlanSegmentInputs inputs;
     PlanSegmentSharedPtr plan_segment;

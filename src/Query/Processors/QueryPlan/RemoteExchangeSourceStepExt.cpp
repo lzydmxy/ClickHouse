@@ -7,8 +7,7 @@
 #include <Query/Exchange/DataTrans/BroadcastSenderProxyRegistry.h>
 #include <Query/Exchange/DataTrans/DataTrans_fwd.h>
 #include <Query/Exchange/DataTrans/IBroadcastReceiver.h>
-#include <Query/Exchange/Local/LocalBroadcastChannel.h>
-#include <Query/Exchange/Local/LocalChannelOptions.h>
+#include <Query/Exchange/DataTrans/LocalBroadcastChannel.h>
 #include <Query/Exchange/DataTrans/MultiPathReceiver.h>
 #include <Query/Exchange/DataTrans/DeserializeBufTransform.h>
 #include <Query/Exchange/ExchangeDataKey.h>
@@ -100,11 +99,10 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
     if (is_add_extremes)
         extremes_source = std::make_shared<ExchangeExtremesSourceExt>(source_header);
     auto enable_metrics = optimizer_context->getSettingsRef().log_query_exchange;
-    auto query_exchange_log = enable_metrics ? context->getQueryExchangeLog(): nullptr;
-    // TODO: if bsp_mode is required, then add other codes
-    // auto register_mode = BrpcExchangeReceiverRegistryService::BRPC;
-    // TODO: if bsp_mode is required, then add other codes
-    // auto disk_exchange_mgr = nullptr;
+    auto query_exchange_log = enable_metrics ? context->getOptimizerContext()->getQueryExchangeLog(): nullptr;
+    auto register_mode = BrpcExchangeReceiverRegistryService::BRPC;
+    // TODO: need bsp_mode context->getSettingsRef().bsp_mode ? context->getDiskExchangeDataManager()
+    auto disk_exchange_mgr = nullptr;
     size_t local_queue_size = optimizer_context->getSettingsRef().exchange_local_receiver_queue_size;
     size_t remote_queue_size = optimizer_context->getSettingsRef().exchange_remote_receiver_queue_size;
     size_t multi_path_queue_size = optimizer_context->getSettingsRef().exchange_multi_path_receiver_queue_size;
@@ -126,7 +124,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
             exchange_parallel_size = 1;
         size_t partition_id_start = parallel_id * exchange_parallel_size;
         LocalChannelOptions local_options{
-            .queue_size = local_queue_size, .max_timeout_ts = timespanToTimespec(options.exchange_timeout_ts.totalMilliseconds()), .enable_metrics = enable_metrics};
+            .queue_size = local_queue_size, .max_timeout_ts = options.exchange_timeout_ts, .enable_metrics = enable_metrics};
         auto iter = settings.getBuildPipelineSettingsExt().sources.find(exchange_id);
         if (input->getSourceAddress().empty()
             && !settings.getBuildPipelineSettingsExt().distributed_settings.is_explain
@@ -164,6 +162,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
                             = std::make_shared<ExchangeDataKey>(current_tx_id, exchange_id, partition_id, data_key_parallel_id);
                         bool is_local_exchange = ExchangeUtils::isLocalExchange(read_address_info, *source.address);
                         BroadcastReceiverPtr receiver = createReceiver(
+                            disk_exchange_mgr,
                             is_local_exchange,
                             local_options,
                             write_plan_segment_id,
@@ -175,6 +174,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
                             enable_metrics,
                             write_address,
                             collector,
+                            register_mode,
                             query_exchange_log);
                         receivers.emplace_back(std::move(receiver));
                     }
@@ -194,6 +194,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
 
                 bool is_local_exchange = ExchangeUtils::isLocalExchange(read_address_info, source_address);
                 BroadcastReceiverPtr receiver = createReceiver(
+                    disk_exchange_mgr,
                     is_local_exchange,
                     local_options,
                     write_plan_segment_id,
@@ -205,6 +206,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
                     enable_metrics,
                     write_address,
                     collector,
+                    register_mode,
                     query_exchange_log);
                 receivers.emplace_back(std::move(receiver));
             }
@@ -226,6 +228,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
                     keep_order,
                     name,
                     std::move(queue),
+                    register_mode,
                     query_exchange_log);
                 brpc_receiver->setEnableReceiverMetrics(enable_metrics);
                 BroadcastReceiverPtr receiver = std::dynamic_pointer_cast<IBroadcastReceiver>(brpc_receiver);
@@ -293,6 +296,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
 }
 
 BroadcastReceiverPtr RemoteExchangeSourceStepExt::createReceiver(
+    DiskExchangeDataManagerPtr disk_mgr,
     bool is_local_exchange,
     const LocalChannelOptions & local_options,
     size_t write_plan_segment_id,
@@ -304,6 +308,7 @@ BroadcastReceiverPtr RemoteExchangeSourceStepExt::createReceiver(
     bool enable_metrics,
     const String & write_address,
     MultiPathQueuePtr collector,
+    BrpcExchangeReceiverRegistryService::RegisterMode register_mode,
     std::shared_ptr<QueryExchangeLog> query_exchange_log)
 {
     BroadcastReceiverPtr receiver;
@@ -353,6 +358,7 @@ BroadcastReceiverPtr RemoteExchangeSourceStepExt::createReceiver(
                 keep_order,
                 name,
                 std::move(queue),
+                register_mode,
                 query_exchange_log,
                 coordinator_address);
             brpc_receiver->setEnableReceiverMetrics(enable_metrics);
@@ -380,6 +386,7 @@ BroadcastReceiverPtr RemoteExchangeSourceStepExt::createReceiver(
             keep_order,
             name,
             std::move(queue),
+            register_mode,
             query_exchange_log,
             coordinator_address);
         brpc_receiver->setEnableReceiverMetrics(enable_metrics);

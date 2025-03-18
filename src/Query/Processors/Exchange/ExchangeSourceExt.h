@@ -4,7 +4,7 @@
 #include <Query/Exchange/DataTrans/IBroadcastReceiver.h>
 #include <Query/Exchange/ExchangeUtils.h>
 #include <Common/Logger.h>
-#include <Query/Processors/Exchange/ExchangeHelper.h>
+#include <Query/Exchange/ChunkInfo.h>
 
 #include <atomic>
 

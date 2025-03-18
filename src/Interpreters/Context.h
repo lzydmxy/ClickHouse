@@ -232,7 +232,6 @@ using IHostContextPtr = std::shared_ptr<IHostContext>;
 
 class OptimizerContext;
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;
-class QueryExchangeLog;
 
 /// A small class which owns ContextShared.
 /// We don't use something like unique_ptr directly to allow ContextShared type to be incomplete.
@@ -1088,7 +1087,6 @@ public:
     /// Nullptr if the query log is not ready for this moment.
     std::shared_ptr<QueryLog> getQueryLog() const;
     std::shared_ptr<QueryThreadLog> getQueryThreadLog() const;
-    std::shared_ptr<QueryExchangeLog> getQueryExchangeLog() const;
     std::shared_ptr<QueryViewsLog> getQueryViewsLog() const;
     std::shared_ptr<TraceLog> getTraceLog() const;
     std::shared_ptr<TextLog> getTextLog() const;

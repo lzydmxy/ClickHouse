@@ -83,7 +83,7 @@ std::optional<Chunk> ExchangeSourceExt::tryGenerate()
     if (was_query_canceled || was_receiver_finished)
         return std::nullopt;
 
-    RecvDataPacket packet = receiver->recv(options.exchange_timeout_ts.totalMilliseconds());
+    RecvDataPacket packet = receiver->recv(options.exchange_timeout_ts);
 
     if (std::holds_alternative<Chunk>(packet))
     {
@@ -91,12 +91,12 @@ std::optional<Chunk> ExchangeSourceExt::tryGenerate()
 #ifndef NDEBUG
         LOG_TRACE(logger, "{} receive chunk with rows: {}", getName(), chunk.getNumRows());
 #endif
-        if (chunk && chunk.getChunkInfo() &&  getChunkType(chunk) == ChunkType::Totals && totals_source)
+        if (chunk && chunk.getChunkInfo() &&  getChunkType(chunk.getChunkInfo()) == ChunkType::Totals && totals_source)
         {
             totals_source->setTotals(std::move(chunk)); // assuming only one totals chunk, so it should be safe to do so.
             chunk = {};
         }
-        else if (chunk && chunk.getChunkInfo() &&  getChunkType(chunk) == ChunkType::Extremes && extremes_source)
+        else if (chunk && chunk.getChunkInfo() &&  getChunkType(chunk.getChunkInfo()) == ChunkType::Extremes && extremes_source)
         {
             extremes_source->setExtremes(std::move(chunk)); // assuming only one extremes chunk, so it should be safe to do so.
             chunk = {};

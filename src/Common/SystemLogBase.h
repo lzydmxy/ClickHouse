@@ -32,8 +32,7 @@
     M(FilesystemReadPrefetchesLogElement) \
     M(AsynchronousInsertLogElement) \
     M(BackupLogElement) \
-    M(BlobStorageLogElement) \
-    M(QueryExchangeLogElement)
+    M(BlobStorageLogElement)
 
 namespace Poco
 {

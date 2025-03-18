@@ -71,11 +71,4 @@ inline TimePoint timespanToTimePoint(const Poco::Timespan& ts) {
     return now + duration;
 }
 
-inline timespec timespanToTimespec(const Poco::Timespan& ts) {
-    timespec timespec;
-    timespec.tv_sec = ts.totalSeconds();
-    timespec.tv_nsec = ts.totalMicroseconds() * 1000;
-    return timespec;
-}
-
 }

@@ -32,7 +32,7 @@ public:
 
 using ChunkInfoPtr = std::shared_ptr<const ChunkInfo>;
 
-ChunkType getChunkType(ChunkInfoPtr & chunk_info)
+ChunkType getChunkType(const ChunkInfoPtr & chunk_info)
 {
     if (typeid_cast<const AggregatedChunkInfo *>(chunk_info.get()))
         return ChunkType::AggregatedChunkInfo;
