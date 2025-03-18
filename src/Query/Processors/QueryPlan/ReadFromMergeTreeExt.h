@@ -1,10 +1,27 @@
 #pragma once
 
 #include <unordered_set>
+#include <absl/container/flat_hash_set.h>
 
+#include <Common/escapeForFileName.h>
+#include <DataTypes/DataTypeArray.h>
+#include <DataTypes/DataTypeMap.h>
+#include <DataTypes/DataTypeTuple.h>
+#include <Interpreters/ExpressionAnalyzer.h>
+#include <Parsers/ASTFunction.h>
+#include <Parsers/ASTSelectQuery.h>
+#include <Processors/LimitTransform.h>
+#include <Processors/Merges/MergingSortedTransform.h>
 #include <Processors/QueryPlan/ISourceStep.h>
 #include <Processors/QueryPlan/ReadFromMergeTree.h>
+#include <Processors/Sources/NullSource.h>
+#include <Processors/Transforms/ExpressionTransform.h>
+#include <Processors/Transforms/FilterTransform.h>
+#include <Query/Common/MapHelpers.h>
+#include <Query/Common/OptimizerContext.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
+#include <Storages/MergeTree/MergeTreeDataSelectExecutor.h>
+
 
 namespace DB
 {
@@ -44,18 +61,21 @@ public:
         DeleteBitmapGetter delete_bitmap_getter_,
         const size_t min_block_size_,
         const bool size_predictor_estimate_lc_size_by_fullstate_,
-        const bool map_column_keys_column_queried_
+        const bool map_column_keys_column_queried_,
+        const bool sample_factor_column_queried_
     );
 
     String getName() const override { return "ReadFromMergeTreeExt"; }
     void initializePipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
     std::shared_ptr<IQueryPlanStep> copy() const;
+    void fillRuntimeAttributeDescriptions(const ReadFromMergeTree::AnalysisResult & result);
 
 public:
     DeleteBitmapGetter delete_bitmap_getter;
     const size_t min_block_size;
     const bool size_predictor_estimate_lc_size_by_fullstate;
     const bool map_column_keys_column_queried;
+    const bool sample_factor_column_queried;
 };
 
 }

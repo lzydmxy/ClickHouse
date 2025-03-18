@@ -44,7 +44,7 @@
 
 namespace DB
 {
-using QueryPlanStepShardPtr = std::shared_ptr<IQueryPlanStep>;
+using QueryPlanStepSharedPtr = std::shared_ptr<IQueryPlanStep>;
 
 
 #define APPLY_QUERY_PLAN_STEP_TYPES(M) \
@@ -118,7 +118,7 @@ if (auto casted_query_plan_step = std::dynamic_pointer_cast<type>(query_plan_ste
     return QueryPlanStepType::type; \
 }
 
-inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStepShardPtr & query_plan_step)
+inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStepSharedPtr & query_plan_step)
 {
     APPLY_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE)
     return QueryPlanStepType::UNDEFINED;
@@ -133,16 +133,12 @@ public:
     ~QueryPlanStepHelper() = default;
 
     static ActionsDAGPtr createFilterExpressionActions(ContextPtr context, const ASTPtr & filter, const Block & header);
-    static ActionsDAGPtr createExpressionActions(
-        ContextPtr context, const NamesAndTypesList & source, const Names & output, const ASTPtr & ast, bool add_project = true);
-    static ActionsDAGPtr createExpressionActions(
-        ContextPtr context, const NamesAndTypesList & source, const NamesWithAliases & output, const ASTPtr & ast, bool add_project = true);
-
+    static ActionsDAGPtr createExpressionActions(ContextPtr context, const NamesAndTypesList & source, const Names & output, const ASTPtr & ast, bool add_project = true);
+    static ActionsDAGPtr createExpressionActions(ContextPtr context, const NamesAndTypesList & source, const NamesWithAliases & output, const ASTPtr & ast, bool add_project = true);
     static void projection(QueryPipelineBuilder & pipeline, const Block & target, const BuildQueryPipelineSettings & settings);
+    static bool isLogicalQueryPlanStep(const QueryPlanStepSharedPtr & query_plan_step) { return !isPhysicalQueryPlanStep(query_plan_step); }
 
-    static bool isLogicalQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step) { return !isPhysicalQueryPlanStep(query_plan_step); }
-
-    static bool isPhysicalQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step)
+    static bool isPhysicalQueryPlanStep(const QueryPlanStepSharedPtr & query_plan_step)
     {
         if (auto join_step_ext = std::dynamic_pointer_cast<JoinStepExt>(query_plan_step))
             return join_step_ext->getDistributionType() != DistributionType::UNKNOWN;
@@ -152,7 +148,7 @@ public:
         return true;
     }
 
-    static QueryPlanStepShardPtr copyQueryPlanStep(const QueryPlanStepShardPtr & query_plan_step, ContextPtr context)
+    static QueryPlanStepSharedPtr copyQueryPlanStep(const QueryPlanStepSharedPtr & query_plan_step, ContextPtr context)
     {
         if (auto step_ptr = std::dynamic_pointer_cast<OffsetStep>(query_plan_step))
             return std::make_shared<OffsetStep>(step_ptr->input_streams[0], step_ptr->offset);
@@ -328,8 +324,6 @@ public:
 
         return nullptr;
     }
-
-    static void projection(QueryPipelineBuilder & pipeline, const Block & target, const BuildQueryPipelineSettings & settings);
 };
 
 }
