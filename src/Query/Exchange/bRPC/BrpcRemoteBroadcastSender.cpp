@@ -1,0 +1,319 @@
+#include "BrpcRemoteBroadcastSender.h"
+#include <algorithm>
+#include <cerrno>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <boost/algorithm/string/join.hpp>
+#include <brpc/protocol.h>
+#include <brpc/stream.h>
+#include <Common/ClickHouseRevision.h>
+#include <Common/Exception.h>
+#include <Common/Stopwatch.h>
+#include <Compression/CompressedWriteBuffer.h>
+#include <Compression/CompressionFactory.h>
+#include <DataTypes/DataTypeFactory.h>
+#include <Query/Common/OptimizerContext.h>
+#include <Query/Exchange/QueryExchangeLog.h>
+#include <Query/Exchange/bRPC/BrpcProxy.h>
+#include <Query/Exchange/bRPC/WriteBufferFromBrpc.h>
+#include <Query/Exchange/ExchangeDataKey.h>
+#include <Query/Exchange/DataTrans/NativeChunkOutputStream.h>
+
+namespace DB
+{
+
+namespace ErrorCodes
+{
+    extern const int LOGICAL_ERROR;
+    extern const int BRPC_EXCEPTION;
+}
+
+/**
+ * 1-1 sender, to make 1-n sener, merge n 1-1 sender
+ */
+BrpcRemoteBroadcastSender::BrpcRemoteBroadcastSender(
+    ExchangeDataKeyPtr trans_key_, brpc::StreamId stream_id, ContextPtr context_, Block header_)
+    : IBroadcastSender(context_->getOptimizerContext()->getSettingsRef().log_query_exchange)
+    , context(std::move(context_))
+    , optimizer_context(context->getOptimizerContext())
+    , header(std::move(header_))
+{
+    trans_keys.emplace_back(std::move(trans_key_));
+    sender_stream_ids.push_back(stream_id);
+}
+
+BrpcRemoteBroadcastSender::~BrpcRemoteBroadcastSender()
+{
+    try
+    {
+        for (brpc::StreamId sender_stream_id : sender_stream_ids)
+        {
+            if(sender_stream_id != brpc::INVALID_STREAM_ID)
+                BrpcProxy::getInstance().StreamClose(sender_stream_id);
+        }
+        if (trans_keys.empty())
+            return;
+        if (enable_sender_metrics)
+        {
+            QueryExchangeLogElement element;
+            const auto & key = trans_keys.front();
+            element.initial_query_id = context->getInitialQueryId();
+            element.exchange_id = key->exchange_id;
+            element.partition_id = key->partition_id;
+            element.event_time =
+                std::chrono::duration_cast<std::chrono::seconds>(
+                    std::chrono::system_clock::now().time_since_epoch()).count();
+            element.send_time_ms = sender_metrics.send_time_ms.get_value();
+            element.send_rows = sender_metrics.send_rows.get_value();
+            element.send_bytes = sender_metrics.send_bytes.get_value();
+            element.send_uncompressed_bytes = sender_metrics.send_uncompressed_bytes.get_value();
+            element.num_send_times = sender_metrics.num_send_times.get_value();
+            element.ser_time_ms = sender_metrics.ser_time_ms.get_value();
+            element.send_retry = sender_metrics.send_retry.get_value();
+            element.send_retry_ms = sender_metrics.send_retry_ms.get_value();
+            element.overcrowded_retry = sender_metrics.overcrowded_retry.get_value();
+            element.finish_code = sender_metrics.finish_code;
+            element.is_modifier = sender_metrics.is_modifier;
+            element.message = sender_metrics.message;
+            element.type = "brpc_sender";
+            if (auto query_exchange_log = optimizer_context->getQueryExchangeLog())
+                query_exchange_log->add(element);
+        }
+    }
+    catch (...)
+    {
+        tryLogCurrentException(log);
+    }
+}
+
+BroadcastStatus BrpcRemoteBroadcastSender::sendImpl(Chunk chunk)
+{
+    Stopwatch s;
+    WriteBufferFromBrpc out;
+    serializeChunkToIoBuffer(std::move(chunk), out);
+    const auto & buf = out.getFinishedBuf();
+    if (enable_sender_metrics)
+    {
+        sender_metrics.send_bytes << buf.length();
+        sender_metrics.ser_time_ms << s.elapsedMilliseconds();
+    }
+    auto res = BroadcastStatus(BroadcastStatusCode::RUNNING);
+    for (size_t i = 0; i < sender_stream_ids.size(); ++i)
+    {
+        BroadcastStatus ret_status = sendIOBuffer(buf, sender_stream_ids[i], *trans_keys[i]);
+        if (ret_status.is_modified_by_operator && ret_status.code != BroadcastStatusCode::RUNNING)
+        {
+            finish(
+                BroadcastStatusCode::SEND_CANCELLED,
+                "Cancelled by other, code: " + std::to_string(ret_status.code) + " msg: " + ret_status.message);
+            return ret_status;
+        }
+
+        if (ret_status.code != BroadcastStatusCode::RUNNING)
+            res = ret_status;
+    }
+    return res;
+}
+
+void BrpcRemoteBroadcastSender::serializeChunkToIoBuffer(Chunk chunk, WriteBufferFromBrpc & out) const
+{
+    const auto & settings = context->getSettingsRef();
+    if (optimizer_context->getSettingsRef().exchange_enable_block_compress)
+    {
+        std::string method = Poco::toUpper(settings.network_compression_method.toString());
+        std::optional<int> level;
+        if (method == "ZSTD")
+            level = settings.network_zstd_compression_level;
+        const CompressionCodecPtr & codec = CompressionCodecFactory::instance().get(method, level);
+        CompressedWriteBuffer compressed_out(out, codec, DBMS_DEFAULT_BUFFER_SIZE * 2);
+        NativeChunkOutputStream chunk_out(compressed_out, header);
+        chunk_out.write(chunk);
+        compressed_out.next();
+    }
+    else
+    {
+        NativeChunkOutputStream chunk_out(out, header);
+        chunk_out.write(chunk);
+    }
+}
+
+BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_buffer, brpc::StreamId stream_id, const ExchangeDataKey & data_key)
+{
+    if (io_buffer.size() > brpc::FLAGS_max_body_size)
+        throw Exception(ErrorCodes::BRPC_EXCEPTION,
+            "{} write stream-{} buffer fail, io buffer size is bigger than {} current is {}",
+            CurrentThread::getQueryId(),
+            stream_id, brpc::FLAGS_max_body_size, io_buffer.size());
+
+    size_t retry_count = 0;
+    size_t overcrowded_retry = 0;
+    Stopwatch s;
+    bool success = false;
+    auto query_expiration_tp = optimizer_context->getQueryExpirationTimeStamp();
+    while (std::chrono::system_clock::now() < query_expiration_tp)
+    {
+        int rect_code = BrpcProxy::getInstance().StreamWrite(stream_id, io_buffer);
+        if (rect_code == 0)
+        {
+            success = true;
+            break;
+        }
+        else if (rect_code == EAGAIN)
+        {
+            int wait_res_code = BrpcProxy::getInstance().StreamWait(stream_id, query_expiration_tp);
+            if (wait_res_code == EINVAL)
+            {
+                // TODO: retain stream object before finish code is read.
+                // Ingore error when writing to the closed stream, because this stream is closed by remote peer before read any finish code.
+                LOG_INFO(log, "Stream-{} with key {} is closed", stream_id, data_key);
+                return BroadcastStatus(BroadcastStatusCode::RECV_UNKNOWN_ERROR, false, "Stream is closed by peer");
+            }
+
+            LOG_TRACE(
+                log,
+                "Stream write buffer full wait, retry count-{}, stream_id-{} ,with data_key-{} wait res code:{} size:{} ",
+                retry_count,
+                stream_id,
+                data_key,
+                wait_res_code,
+                io_buffer.size());
+        }
+        else if (rect_code == EINVAL)
+        {
+            // Ingore error when writing to the closed stream, because this stream is closed by remote peer before read any finish code.
+            LOG_INFO(log, "Stream-{} with key {} is closed", stream_id, data_key);
+            return BroadcastStatus(BroadcastStatusCode::RECV_UNKNOWN_ERROR, false, "Stream is closed by peer");
+        }
+        else if (rect_code == 1011) //EOVERCROWDED   | 1011 | The server is overcrowded
+        {
+            auto now = std::chrono::system_clock::now();
+            if (now < query_expiration_tp)
+            {
+                if (enable_sender_metrics)
+                    sender_metrics.overcrowded_retry << 1;
+                overcrowded_retry += 1;
+                auto delta = static_cast<size_t>(std::chrono::duration_cast<std::chrono::milliseconds>(query_expiration_tp - now).count());
+                size_t sleep_time = std::min(1000 * overcrowded_retry, delta);
+
+                bthread_usleep(1000 * sleep_time);
+            }
+            LOG_WARNING(
+                log,
+                "Stream-{} write buffer error rect_code:{}, server is overcrowded, data_key:{}, retry_count:{}, overcrowded_retry:{}",
+                stream_id,
+                rect_code,
+                data_key,
+                retry_count,
+                overcrowded_retry);
+        }
+        // stream finished
+        else if (rect_code == -1)
+        {
+            int stream_finished_code = 0;
+            auto rc = BrpcProxy::getInstance().StreamFinishedCode(stream_id, stream_finished_code);
+            // Stream is closed by remote peer and we can get finish code now
+            if (rc == EINVAL)
+                return BroadcastStatus(BroadcastStatusCode::RECV_UNKNOWN_ERROR, false, "Stream is closed by peer");
+            LOG_INFO(log, "Stream-{} write receive finish request, finish code:{}, data_key-{}", stream_id, rect_code, data_key);
+            return BroadcastStatus(static_cast<BroadcastStatusCode>(rect_code), false, "Stream Write receive finish request");
+        }
+        else
+        {
+            throw Exception(ErrorCodes::BRPC_EXCEPTION,
+                "Stream-{} write buffer occurred error, the rect_code that we can not handle:{}, data_key-{}",
+                stream_id, rect_code, data_key.toString());
+        }
+        retry_count++;
+    }
+    if (enable_sender_metrics)
+    {
+        sender_metrics.send_retry_ms << s.elapsedMilliseconds();
+        sender_metrics.send_retry << retry_count;
+    }
+    if (!success)
+    {
+        const auto msg = fmt::format("Write stream-{} timeout, with data_key-{}, size:{}, retry_count:{}, overcrowded_retry:{}, query_expiration_ms_ts:{}, maximum:{}"
+            , stream_id, data_key, io_buffer.size(), retry_count, overcrowded_retry, timeInMilliseconds(query_expiration_tp)
+            , optimizer_context->getQueryMaxExecutionTime() / 1000);
+        LOG_ERROR(log, "{}", msg);
+        auto current_status = BroadcastStatus(BroadcastStatusCode::SEND_TIMEOUT, true, msg);
+        int actual_status_code = BroadcastStatusCode::RUNNING;
+        int ret_code = BrpcProxy::getInstance().StreamFinish(stream_id, actual_status_code, BroadcastStatusCode::SEND_TIMEOUT, true);
+         if (ret_code != 0)
+             return BroadcastStatus(static_cast<BroadcastStatusCode>(actual_status_code), false, "Stream Write receive finish request");
+        // coverity[uninit_use_in_call]
+        return current_status;
+    }
+#ifndef NDEBUG
+    LOG_TRACE(
+        log,
+        "Send exchange data size-{} KB with data_key-{}, stream-{} retry times:{} cost:{} ms",
+        io_buffer.size() / 1024.0,
+        data_key,
+        stream_id,
+        retry_count,
+        s.elapsedMilliseconds());
+#endif
+    return BroadcastStatus(RUNNING);
+}
+
+BroadcastStatus BrpcRemoteBroadcastSender::finish(BroadcastStatusCode status_code, String message)
+{
+    int code = 0;
+    bool is_modifer = false;
+    for (auto stream_id : sender_stream_ids)
+    {
+        int actual_status_code = status_code;
+        int ret_code = BrpcProxy::getInstance().StreamFinish(stream_id, actual_status_code, status_code, true);
+        if (ret_code == 0)
+        {
+            is_modifer = true;
+            // Close stream if all data are sent to make peer stream finished faster
+            if (actual_status_code == BroadcastStatusCode::ALL_SENDERS_DONE)
+                BrpcProxy::getInstance().StreamClose(stream_id);
+        }
+        else
+            // already has been changed
+            code = actual_status_code;
+    }
+    if (is_modifer)
+    {
+        sender_metrics.finish_code = status_code;
+        sender_metrics.is_modifier = 1;
+        sender_metrics.message = message;
+        LOG_TRACE(log, "{} finished finish_code:{} message:'{}'", getName(), status_code, message);
+        return BroadcastStatus(status_code, true, message);
+    }
+    else
+    {
+        const auto *const msg = "BrpcRemoteBroadcastSender::finish, already has been finished";
+        sender_metrics.finish_code = status_code;
+        sender_metrics.is_modifier = 0;
+        return BroadcastStatus(
+            static_cast<BroadcastStatusCode>(code), false, msg);
+    }
+}
+
+void BrpcRemoteBroadcastSender::merge(IBroadcastSender && sender)
+{
+    BrpcRemoteBroadcastSender * other = dynamic_cast<BrpcRemoteBroadcastSender *>(&sender);
+    if (!other)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Sender to merge is not BrpcRemoteBroadcastSender");
+    trans_keys.insert(
+        trans_keys.end(), std::make_move_iterator(other->trans_keys.begin()), std::make_move_iterator(other->trans_keys.end()));
+    other->trans_keys.clear();
+    sender_stream_ids.insert(sender_stream_ids.end(), other->sender_stream_ids.begin(), other->sender_stream_ids.end());
+    other->sender_stream_ids.clear();
+}
+
+
+String BrpcRemoteBroadcastSender::getName() const
+{
+    return fmt::format(
+        "BrpcSender with keys:",
+        boost::algorithm::join(
+            trans_keys | boost::adaptors::transformed([](const ExchangeDataKeyPtr & key) { return key->toString(); }), "\n"));
+}
+
+}

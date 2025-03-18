@@ -167,7 +167,7 @@ void prepareQueryCommonBuf(
     query_common.set_database(context->getCurrentDatabase());
     query_common.set_check_session(!opt_settings.enable_prune_source_plan_segment);
     auto query_expiration_ts = opt_context->getQueryExpirationTimeStamp();
-    query_common.set_query_expiration_timestamp(query_expiration_ts.totalMilliseconds());
+    query_common.set_query_expiration_timestamp(timeInMilliseconds(query_expiration_ts));
     const String & quota_key = client_info.quota_key;
     if (!client_info.quota_key.empty())
         query_common.set_quota(quota_key);

@@ -13,6 +13,7 @@ namespace DB
 {
 
 using PlanNodeId = UInt32;
+using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
 
 template <typename T>
 std::string containerToString(const T& container)
@@ -27,8 +28,6 @@ std::string containerToString(const T& container)
     return result;
 }
 
-using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
-
 inline TimePoint getDeltaTimePoint(UInt64 milliseconds)
 {
     return std::chrono::system_clock::now() + std::chrono::milliseconds(milliseconds);
@@ -38,6 +37,25 @@ inline UInt64 getDeltaTimeFromNow(UInt64 timestamp_ms)
 {
     auto now = timeInMilliseconds(std::chrono::system_clock::now());
     return timestamp_ms >= now ? timestamp_ms - now : 0;
+}
+
+inline std::string timeToString(UInt64 timestamp)
+{
+    return DateLUT::serverTimezoneInstance().timeToString(timestamp);
+}
+
+inline std::string timeToString(TimePoint time_point)
+{
+    return DateLUT::serverTimezoneInstance().timeToString(timeInSeconds(time_point));
+}
+
+inline timespec chronoToTimespec(const TimePoint& tp)
+{
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(tp.time_since_epoch());
+    timespec ts;
+    ts.tv_sec = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
+    ts.tv_nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(duration % std::chrono::seconds(1)).count();
+    return ts;
 }
 
 }

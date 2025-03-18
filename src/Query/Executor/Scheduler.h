@@ -107,7 +107,7 @@ public:
     {
         cluster_nodes.all_workers.emplace_back(local_address, NodeType::Local, "");
         auto query_expiration_ts = query_context->getOptimizerContext()->getQueryExpirationTimeStamp();
-        query_expiration_ms = query_expiration_ts.totalMilliseconds();
+        query_expiration_ms = timeInMilliseconds(query_expiration_ts);
     }
 
     virtual ~Scheduler() = default;

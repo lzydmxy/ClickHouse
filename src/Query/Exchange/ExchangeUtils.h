@@ -1,5 +1,6 @@
 #pragma once
 #include <Interpreters/Context.h>
+#include <Query/Common/QueryCommon.h>
 #include <Query/ProtosHelper/AddressInfo.h>
 #include <Query/Exchange/DataTrans/IBroadcastSender.h>
 #include <Query/Exchange/ExchangeDataKey.h>
@@ -7,20 +8,20 @@
 namespace DB
 {
 
-enum ChunkInfoType
-{
-    AGGREGATED = 1,
-    TOTALS = 2,
-    EXTREMES = 3,
-};
-
 struct ExchangeOptions
 {
-    Poco::Timespan exchange_timeout_ts;
+    TimePoint exchange_timeout_ts;
     UInt64 send_threshold_in_bytes;
     UInt64 send_threshold_in_row_num;
     bool force_remote_mode = false;
     bool force_use_buffer = false;
+};
+
+struct LocalChannelOptions
+{
+    size_t queue_size;
+    TimePoint max_timeout_ts;
+    bool enable_metrics;
 };
 
 class ExchangeUtils

@@ -38,6 +38,7 @@ DECLARE_SETTING_ENUM(SchedulerMode);
 #define LIST_OF_COORDINATION_SETTINGS(M, ALIAS) \
     /** General extension settings */ \
     M(Bool, log_normalized_query_plan_hash, 0, "Log json format query plan to the system query_log table.", 0) \
+    M(Bool, log_query_exchange, false, "Log query exchange metric.", 0) \
     /** Coordinator settings*/ \
     M(SchedulerMode, scheduler_mode, SchedulerMode::RANDOM, "scheduler shard mode: random/first_order/random_order/cpu_rank/memory_rank", 0) \
     M(UInt64, push_queue_timeout_millseconds, 10, "Timeout millseconds of push profile or others to queue.", 0) \
@@ -64,6 +65,9 @@ DECLARE_SETTING_ENUM(SchedulerMode);
     M(UInt64, disk_shuffle_advisory_partition_size, 104857600, "Disk shuffle files's advisory partition size(including all files in a partition), used by partition coalescing", 0) \
     M(Bool, enable_disk_shuffle_partition_coalescing, true, "If enabled, sheduler will try to coalesce overly-small partitions, thus avoid small plan segments and I/O waste", 0) \
     M(Bool, enable_batch_send_plan_segment, true, "Whether enable combined sending plan segments to reduce rpc calls", 0) \
+    M(UInt64, exchange_remote_receiver_queue_size, 10, "Queue size for remote exchange receiver",0) \
+    M(UInt64, exchange_stream_max_buf_size, 20971520, "Default 20M, -1 means no limit", 0) \
+    M(Bool, exchange_enable_block_compress, true, "Whether enable exchange block compress ", 0) \
     /** Runtime Filter settings */ \
     M(UInt64, wait_runtime_filter_timeout, 1000, "Execute filter wait for runtime filter timeout ms", 0) \
     M(Bool, enable_range_cover, true, "Whether use range rather than bloom or values set for runtime filter", 0) \
@@ -91,6 +95,8 @@ DECLARE_SETTINGS_TRAITS(OptimizerSettingsTraits, LIST_OF_COORDINATION_SETTINGS)
 struct OptimizerSettings : public BaseSettings<OptimizerSettingsTraits>
 {
     void loadFromConfig(const String & config_elem, const Poco::Util::AbstractConfiguration & config);
+    /// TODO: Need dump to map and send to rpc service
+    std::unordered_map<String, String> dumpToMap() const;
 };
 
 using OptimizerSettingsPtr = std::shared_ptr<OptimizerSettings>;

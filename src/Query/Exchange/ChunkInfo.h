@@ -1,5 +1,6 @@
 #pragma once
 #include <Processors/Chunk.h>
+#include <Processors/Transforms/AggregatingTransform.h>
 
 namespace DB
 {
@@ -31,6 +32,17 @@ public:
 
 using ChunkInfoPtr = std::shared_ptr<const ChunkInfo>;
 
+ChunkType getChunkType(ChunkInfoPtr & chunk_info)
+{
+    if (typeid_cast<const AggregatedChunkInfo *>(chunk_info.get()))
+        return ChunkType::AggregatedChunkInfo;
+    else if (typeid_cast<const ChunkInfoTotals *>(chunk_info.get()))
+        return ChunkType::Totals;
+    else if (typeid_cast<const ChunkInfoExtremes *>(chunk_info.get()))
+        return ChunkType::Extremes;
+    else
+        return ChunkType::Any;
+}
 
 void readAggregatedChunkInfo(ReadBuffer & in, std::shared_ptr<AggregatedChunkInfo> agg_info)
 {
@@ -38,7 +50,7 @@ void readAggregatedChunkInfo(ReadBuffer & in, std::shared_ptr<AggregatedChunkInf
     readVarUInt(agg_info->bucket_num, in);
 }
 
-void writeAggregatedChunkInfo(WriteBuffer & out, std::shared_ptr<AggregatedChunkInfo> agg_info)
+void writeAggregatedChunkInfo(WriteBuffer & out, const AggregatedChunkInfo * agg_info)
 {
     writeVarUInt(agg_info->is_overflows, out);
     writeVarUInt(agg_info->bucket_num, out);

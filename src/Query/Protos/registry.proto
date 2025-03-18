@@ -1,0 +1,87 @@
+syntax = "proto3";
+import "plan_node.proto";
+
+package DB.Protos;
+
+option cc_generic_services = true;
+
+message RegistryRequest {
+    string query_id = 1;
+    uint64 exchange_id = 2;
+    uint64 parallel_id = 3;
+    string coordinator_address = 4;
+    uint32 wait_timeout_ms = 5;
+    uint64 query_unique_id = 6;
+    uint64 parallel_index = 7;
+};
+
+message RegistryDiskSenderRequest {
+    RegistryRequest registry = 1;
+    Block header = 2; // needed for registerSenderFromDisk
+    map<string, string> settings = 3; // needed for registerSenderFromDisk
+    int64 initial_query_start_time = 4; // needed for registerSenderFromDisk  
+}
+
+message RegistryResponse {
+    string message = 1;
+};
+
+message GetExchangeStatusRequest {
+    string query_id = 1;
+    uint64 exchange_id = 2;
+};
+
+message ExchangeStatus {
+    uint64 parallel_index = 1;
+    string host_port = 2;
+    repeated uint64 length = 3;
+}
+
+message GetExchangeStatusResponse {
+    uint64 num_sinks = 1;
+    repeated ExchangeStatus status = 2;
+}
+
+message CancelExchangeDataReaderRequest {
+    uint64 query_unique_id = 1;
+    uint64 exchange_id = 2;
+}
+
+message CancelExchangeDataReaderResponse {
+    string message = 1;
+}
+
+message CleanupExchangeDataRequest {
+    uint64 query_unique_id = 1;
+}
+
+message CleanupExchangeDataResponse {
+    string message = 1;
+}
+
+message AliveQueryInfo {
+    uint64 query_unique_id = 1;
+    string query_id = 2;
+    string coordinator_address = 3;
+};
+
+message QueryExchangeDataHeartbeatInfo {
+    uint64 query_unique_id = 1;
+    string query_id = 2;
+};
+
+message ExchangeDataHeartbeatRequest {
+    repeated QueryExchangeDataHeartbeatInfo infos = 1;
+}
+
+message ExchangeDataHeartbeatResponse {
+    repeated QueryExchangeDataHeartbeatInfo not_alive_queries = 1;
+}
+
+service RegistryService {
+    rpc registry(RegistryRequest) returns (RegistryResponse);
+    rpc registerSenderFromDisk(RegistryDiskSenderRequest) returns (RegistryResponse);
+    rpc cancelExchangeDataReader(CancelExchangeDataReaderRequest) returns (CancelExchangeDataReaderResponse);
+    rpc cleanupExchangeData(CleanupExchangeDataRequest) returns (CleanupExchangeDataResponse);
+    rpc sendExchangeDataHeartbeat(ExchangeDataHeartbeatRequest) returns (ExchangeDataHeartbeatResponse);
+};

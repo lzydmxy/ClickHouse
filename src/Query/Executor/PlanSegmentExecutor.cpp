@@ -1,4 +1,5 @@
 #include "PlanSegmentExecutor.h"
+#include <boost/algorithm/string.hpp>
 #include <base/types.h>
 #include <base/time.h>
 #include <Common/MemoryTracker.h>
@@ -19,16 +20,19 @@
 #include <Query/ProtosHelper/QueryProto.h>
 #include <Query/ProtosHelper/RPCHelpers.h>
 #include <Query/Transforms/BufferedCopyTransform.h>
-#include <Query/Exchange/DataTrans/IBroadcastSender.h>
 #include <Query/Exchange/RpcChannelPool.h>
 #include <Query/Exchange/ExchangeUtils.h>
-#include <Query/Exchange/DataTrans/BroadcastSenderProxy.h>
-#include <Query/Exchange/DataTrans/BroadcastSenderProxyRegistry.h>
 #include <Query/Exchange/RepartitionTransform.h>
 #include <Query/Exchange/SinglePartitionExchangeSink.h>
 #include <Query/Exchange/MultiPartitionExchangeSink.h>
 #include <Query/Exchange/BroadcastExchangeSink.h>
 #include <Query/Exchange/LoadBalancedExchangeSink.h>
+#include <Query/Exchange/DataTrans/IBroadcastSender.h>
+#include <Query/Exchange/DataTrans/BroadcastSenderProxy.h>
+#include <Query/Exchange/DataTrans/BroadcastSenderProxyRegistry.h>
+#include <Query/Exchange/DataTrans/MultiPathReceiver.h>
+#include <Query/Exchange/DataTrans/LocalBroadcastChannel.h>
+#include <Query/Exchange/bRPC/AsyncRegisterResult.h>
 #include <Query/Executor/PlanSegmentReport.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
 #include <Query/Processors/IQueryPlanStepExt.h>
@@ -692,81 +696,80 @@ void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSe
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Plan segment has no exchange sender!");
 }
 
-void PlanSegmentExecutor::registerAllExchangeReceivers(LoggerPtr /*log*/, const QueryPipeline & /*pipeline*/, UInt32 /*register_timeout_ms*/)
+void PlanSegmentExecutor::registerAllExchangeReceivers(LoggerPtr log, const QueryPipeline & pipeline, UInt32 register_timeout_ms)
 {
-    // TODO: Not supported async remote broadcast now
+    //const Processors & procesors = pipeline.getProcessors();
+    std::vector<AsyncRegisterResult> async_results;
+    std::vector<LocalBroadcastChannel *> local_receivers;
+    std::vector<MultiPathReceiver *> multi_receivers;
+    std::exception_ptr exception;
 
-    // const Processors & procesors = pipeline.getProcessors();
-    // std::vector<AsyncRegisterResult> async_results;
-    // std::vector<LocalBroadcastChannel *> local_receivers;
-    // std::vector<MultiPathReceiver *> multi_receivers;
-    // std::exception_ptr exception;
+    try
+    {
+        // TODO: Wait ExchangeSourceExt class
+        // for (const auto & processor : procesors)
+        // {
+        //     auto exchange_source_ptr = std::dynamic_pointer_cast<ExchangeSource>(processor);
+        //     if (!exchange_source_ptr)
+        //         continue;
+        //     auto * receiver_ptr = exchange_source_ptr->getReceiver().get();
 
-    // try
-    // {
-    //     for (const auto & processor : procesors)
-    //     {
-    //         auto exchange_source_ptr = std::dynamic_pointer_cast<ExchangeSource>(processor);
-    //         if (!exchange_source_ptr)
-    //             continue;
-    //         auto * receiver_ptr = exchange_source_ptr->getReceiver().get();
+        //     if (auto * brpc_receiver = dynamic_cast<BrpcRemoteBroadcastReceiver *>(receiver_ptr))
+        //         async_results.emplace_back(brpc_receiver->registerToSendersAsync(register_timeout_ms));
+        //     else if (auto * local_receiver = dynamic_cast<LocalBroadcastChannel *>(receiver_ptr))
+        //         local_receivers.push_back(local_receiver);
+        //     else if (auto * multi_receiver = dynamic_cast<MultiPathReceiver *>(receiver_ptr))
+        //     {
+        //         multi_receiver->registerToSendersAsync(register_timeout_ms);
+        //         multi_receivers.push_back(multi_receiver);
+        //     }
 
-    //         if (auto * brpc_receiver = dynamic_cast<BrpcRemoteBroadcastReceiver *>(receiver_ptr))
-    //             async_results.emplace_back(brpc_receiver->registerToSendersAsync(register_timeout_ms));
-    //         else if (auto * local_receiver = dynamic_cast<LocalBroadcastChannel *>(receiver_ptr))
-    //             local_receivers.push_back(local_receiver);
-    //         else if (auto * multi_receiver = dynamic_cast<MultiPathReceiver *>(receiver_ptr))
-    //         {
-    //             multi_receiver->registerToSendersAsync(register_timeout_ms);
-    //             multi_receivers.push_back(multi_receiver);
-    //         }
+        //     auto * receiver_ptr = exchange_source_ptr->getReceiver().get();
+        //     if (auto * local_receiver = dynamic_cast<LocalBroadcastChannel *>(receiver_ptr))
+        //         local_receivers.push_back(local_receiver);
+        //     else
+        //         throw Exception(ErrorCodes::LOGICAL_ERROR, "Unexpected SubReceiver Type: {}", typeid(receiver_ptr).name());
+        // }
 
-    //         auto * receiver_ptr = exchange_source_ptr->getReceiver().get();
-    //         if (auto * local_receiver = dynamic_cast<LocalBroadcastChannel *>(receiver_ptr))
-    //             local_receivers.push_back(local_receiver);
-    //         else
-    //             throw Exception(ErrorCodes::LOGICAL_ERROR, "Unexpected SubReceiver Type: {}", typeid(receiver_ptr).name());
-    //     }
+        for (auto * receiver_ptr : local_receivers)
+            receiver_ptr->registerToSenders(register_timeout_ms);
+        for (auto * receiver_ptr : multi_receivers)
+            receiver_ptr->registerToLocalSenders(register_timeout_ms);
+        for (auto * receiver_ptr : multi_receivers)
+            receiver_ptr->registerToSendersJoin();
+    }
+    catch (...)
+    {
+        exception = std::current_exception();
+    }
 
-    //     for (auto * receiver_ptr : local_receivers)
-    //         receiver_ptr->registerToSenders(register_timeout_ms);
-    //     for (auto * receiver_ptr : multi_receivers)
-    //         receiver_ptr->registerToLocalSenders(register_timeout_ms);
-    //     for (auto * receiver_ptr : multi_receivers)
-    //         receiver_ptr->registerToSendersJoin();
-    // }
-    // catch (...)
-    // {
-    //     exception = std::current_exception();
-    // }
+    // Wait all brpc register rpc done
+    for (auto & res : async_results)
+        brpc::Join(res.cntl->call_id());
 
-    /// Wait all brpc register rpc done
-    // for (auto & res : async_results)
-    //     brpc::Join(res.cntl->call_id());
+    if (exception)
+        std::rethrow_exception(std::move(exception));
 
-    // if (exception)
-    //     std::rethrow_exception(std::move(exception));
-
-    /// get result
-    // for (auto & res : async_results)
-    // {
-    //     // if exchange_enable_force_remote_mode = 1, sender and receiver in same process and sender stream may close before rpc end
-    //     if (res.cntl->ErrorCode() == brpc::EREQUEST && boost::algorithm::ends_with(res.cntl->ErrorText(), "was closed before responded"))
-    //     {
-    //         LOG_INFO(
-    //             log,
-    //             "Receiver register sender successfully but sender already finished, host: {}, request: {}",
-    //             butil::endpoint2str(res.cntl->remote_side()).c_str(),
-    //             *res.request);
-    //         continue;
-    //     }
-    //     res.channel->assertController(*res.cntl, ErrorCodes::EXCHANGE_DATA_TRANS_EXCEPTION);
-    //     LOG_TRACE(
-    //         log,
-    //         "Receiver register sender successfully, host: {}, request: {}",
-    //         butil::endpoint2str(res.cntl->remote_side()).c_str(),
-    //         *res.request);
-    // }
+    // get result
+    for (auto & res : async_results)
+    {
+        // if exchange_enable_force_remote_mode = 1, sender and receiver in same process and sender stream may close before rpc end
+        if (res.cntl->ErrorCode() == brpc::EREQUEST && boost::algorithm::ends_with(res.cntl->ErrorText(), "was closed before responded"))
+        {
+            LOG_INFO(
+                log,
+                "Receiver register sender successfully but sender already finished, host: {}, request: {}",
+                butil::endpoint2str(res.cntl->remote_side()).c_str(),
+                *res.request);
+            continue;
+        }
+        res.channel->assertController(*res.cntl, ErrorCodes::EXCHANGE_DATA_TRANS_EXCEPTION);
+        LOG_TRACE(
+            log,
+            "Receiver register sender successfully, host: {}, request: {}",
+            butil::endpoint2str(res.cntl->remote_side()).c_str(),
+            *res.request);
+    }
 }
 
 Processors PlanSegmentExecutor::buildRepartitionExchangeSink(

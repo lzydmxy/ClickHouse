@@ -5,6 +5,7 @@
 #include <sys/time.h>
 #include <Common/DateLUT.h>
 #include <Processors/Chunk.h>
+#include <Query/Common/QueryCommon.h>
 #include <Query/Exchange/QueryExchangeLog.h>
 #include <Query/Exchange/DataTrans/DataTrans_fwd.h>
 
@@ -37,11 +38,9 @@ public:
     virtual void registerToSenders(UInt32 timeout_ms) = 0;
     virtual RecvDataPacket recv(UInt32 timeout_ms)
     {
-        UInt64 timeout_ms_ts = timeInMilliseconds(std::chrono::system_clock::now()) + timeout_ms;
-        timespec timeout_ts {.tv_sec = long(timeout_ms_ts/1000), .tv_nsec = long(timeout_ms_ts % 1000) * 1000000};
-        return recv(timeout_ts);
+        return recv(getDeltaTimePoint(timeout_ms));
     }
-    virtual RecvDataPacket recv(timespec timeout_ts) = 0;
+    virtual RecvDataPacket recv(TimePoint timeout_ts) = 0;
     virtual BroadcastStatus finish(BroadcastStatusCode status_code, String message) = 0;
     virtual String getName() const = 0;
     virtual ~IBroadcastReceiver() = default;

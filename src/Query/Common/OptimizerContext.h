@@ -1,5 +1,6 @@
 #pragma once
 #include <Poco/Util/AbstractConfiguration.h>
+#include <Query/Common/QueryCommon.h>
 #include <Query/Common/ExceptionHandler.h>
 #include <Query/Common/OptimizerSettings.h>
 
@@ -26,6 +27,9 @@ struct PlanSegmentInstanceID;
 
 class ProcessListEntry;
 using ProcessListEntryPtr = std::shared_ptr<ProcessListEntry>;
+
+class QueryExchangeLog;
+using QueryExchangeLogPtr = std::shared_ptr<QueryExchangeLog>;
 
 enum ServiceType
 {
@@ -64,7 +68,7 @@ public:
     PlanSegmentInstanceID getPlanSegmentInstanceID() const;
 
     UInt32 getQueryMaxExecutionTime() const;
-    Poco::Timespan getQueryExpirationTimeStamp() const;
+    TimePoint getQueryExpirationTimeStamp() const;
     void initQueryExpirationTimeStamp();
 
     void setProcessListEntry(ProcessListEntryPtr process_list_entry_);
@@ -75,6 +79,9 @@ public:
 
     void setIsExplainQuery(const bool & is_explain_query_);
     bool isExplainQuery() const;
+
+    QueryExchangeLogPtr getQueryExchangeLog();
+
 private:
     OptimizerSettingsPtr query_settings;
     OptimizerSettings settings;
@@ -84,6 +91,7 @@ private:
     ProcessListEntryPtr process_list_entry;
     std::function<void()> send_tcp_progress{nullptr};
     bool is_explain_query{false};
+    QueryExchangeLogPtr query_exchange_log;
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;

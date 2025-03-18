@@ -57,7 +57,7 @@ Chunk NativeChunkInputStream::readImpl()
         UInt8 chunk_info_type;
         readVarUInt(chunk_info_type, istr);
         // todo:: current we only support AggregatedChunkInfo
-        if (chunk_info_type == static_cast<UInt8>(ChunkInfoType::AGGREGATED))
+        if (chunk_info_type == static_cast<UInt8>(ChunkType::AggregatedChunkInfo))
         {
             auto chunk_info = std::make_shared<AggregatedChunkInfo>();
             readAggregatedChunkInfo(istr, chunk_info);
