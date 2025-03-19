@@ -1,5 +1,6 @@
 #pragma once
 #include <condition_variable>
+#include <shared_mutex>
 #include <base/types.h>
 #include <Core/Types.h>
 #include <Common/logger_useful.h>
@@ -28,13 +29,11 @@ public:
         Decimal64 initial_query_start_time_ms_,
         bool use_query_memory_tracker_,
         size_t queue_bytes_,
-        const String & parent_initial_query_id_,
         bool is_internal_query_)
         : initial_query_id(std::move(initial_query_id_))
         , coordinator_address(std::move(coordinator_address_))
         , initial_query_start_time_ms(initial_query_start_time_ms_)
         , use_query_memory_tracker(use_query_memory_tracker_)
-        , parent_initial_query_id(parent_initial_query_id_)
         , is_internal_query(is_internal_query_)
     {
         if (queue_bytes_ != 0)
@@ -105,7 +104,7 @@ public:
     // for all planSegment
     std::shared_ptr<MemoryController> memory_controller = nullptr;
     // support subquery, for children to add itself into parent
-    String parent_initial_query_id;
+    // String parent_initial_query_id;
     std::set<String> children_initial_query_id;
     bool is_internal_query = false;
 };
@@ -165,8 +164,9 @@ public:
     size_t size() const { return initail_query_to_groups.size(); }
 
 private:
-    PlanSegmentGroupPtr getGroup(const String & initial_query_id) const;
+    PlanSegmentGroupPtr getGroup(const String & initial_query_id);
     bool tryCascadeCancel(PlanSegmentGroupPtr segment_group, bool internal);
+    std::shared_mutex query_mutex;
     Container initail_query_to_groups;
     mutable std::mutex mutex;
     mutable std::condition_variable remove_group;

@@ -35,9 +35,6 @@ PlanSegmentProcessList::insertGroup(ContextMutablePtr query_context, std::vector
     const auto & client_info = query_context->getClientInfo();
     const String & initial_query_id = client_info.initial_query_id;
     const String & coordinator_address = extractExchangeHostPort(*address);
-    //TODO:
-    //const String & parent_initial_query_id = client_info.parent_initial_query_id;
-    String parent_initial_query_id{""};
     bool is_internal_query = query_context->isInternalQuery();
     bool need_wait_cancel = false;
 
@@ -62,8 +59,8 @@ PlanSegmentProcessList::insertGroup(ContextMutablePtr query_context, std::vector
         }
     }
 
-    // TODO:
-    // if (!is_internal_query && !optimizer_context->getProcessListEntry().lock())
+    // TODO: Check running query, see void ProcessList::checkRunningQuery()
+    // if (!is_internal_query && !optimizer_context->getProcessListEntry())
     //     query_context->getProcessList().checkRunningQuery(query_context, false, force);
 
     if (need_wait_cancel)
@@ -87,43 +84,21 @@ PlanSegmentProcessList::insertGroup(ContextMutablePtr query_context, std::vector
     }
 
     PlanSegmentGroupPtr segment_group;
-
-    // auto exists = [&](Container::value_type & v) {
-    //     if (v.second->coordinator_address == coordinator_address && v.second->initial_query_start_time_ms == initial_query_start_time_ms)
-    //     {
-    //         bool emplace = v.second->emplace_null(segment_ids);
-    //         if (emplace)
-    //             segment_group = v.second;
-    //     }
-    // };
-    // auto emplace = [&](const Container::constructor & ctor) {
-    //     bool use_query_memory_tracker
-    //         = settings.exchange_use_query_memory_tracker && (segment_ids.size() != 1 || segment_ids[0] != 0);
-    //     size_t queue_bytes = settings.exchange_queue_bytes;
-    //     segment_group = std::make_shared<PlanSegmentGroup>(
-    //         initial_query_id,
-    //         coordinator_address,
-    //         initial_query_start_time_ms,
-    //         use_query_memory_tracker,
-    //         queue_bytes,
-    //         parent_initial_query_id,
-    //         is_internal_query);
-    //     segment_group->emplace_null(segment_ids);
-    //     ctor(initial_query_id, segment_group);
-    // };
-    // bool create = initail_query_to_groups.lazy_emplace_l(initial_query_id, exists, emplace);
-
-    auto it = initail_query_to_groups.find(initial_query_id);
-    if (it != initail_query_to_groups.end())
     {
-        if (it->second->coordinator_address == coordinator_address &&
-            it->second->initial_query_start_time_ms == initial_query_start_time_ms)
+        std::unique_lock<std::shared_mutex> lock(query_mutex);
+        auto it = initail_query_to_groups.find(initial_query_id);
+        if (it != initail_query_to_groups.end())
         {
-            bool emplace = it->second->emplace_null(segment_ids);
-            if (emplace)
-                segment_group = it->second;
+            if (it->second->coordinator_address == coordinator_address &&
+                it->second->initial_query_start_time_ms == initial_query_start_time_ms)
+            {
+                bool emplace = it->second->emplace_null(segment_ids);
+                if (emplace)
+                    segment_group = it->second;
+            }
         }
     }
+
     if (!segment_group)
     {
         bool use_query_memory_tracker
@@ -135,19 +110,20 @@ PlanSegmentProcessList::insertGroup(ContextMutablePtr query_context, std::vector
             initial_query_start_time_ms,
             use_query_memory_tracker,
             queue_bytes,
-            parent_initial_query_id,
             is_internal_query);
         segment_group->emplace_null(segment_ids);
+
+        std::unique_lock<std::shared_mutex> lock(query_mutex);
         initail_query_to_groups.emplace(initial_query_id, segment_group);
     }
-
-    if (!parent_initial_query_id.empty())
-    {
-        auto parent_segment_group = getGroup(parent_initial_query_id);
-        // It's not important to find a real parent.
-        if (parent_segment_group)
-            parent_segment_group->addChildQuery(initial_query_id);
-    }
+    // No need sub query and parent_initial_query_id
+    // if (!parent_initial_query_id.empty())
+    // {
+    //     auto parent_segment_group = getGroup(parent_initial_query_id);
+    //     // It's not important to find a real parent.
+    //     if (parent_segment_group)
+    //         parent_segment_group->addChildQuery(initial_query_id);
+    // }
 
     std::vector<EntryPtr> entries;
     for (size_t segment_id : segment_ids)
@@ -238,11 +214,14 @@ bool PlanSegmentProcessList::remove(std::string initial_query_id, size_t segment
             // size_t num_erased
             //     = initail_query_to_groups.erase_if(initial_query_id, [](const Container::value_type & v) { return v.second->empty(); });
             size_t num_erased{0};
-            auto it = initail_query_to_groups.find(initial_query_id);
-            if (it != initail_query_to_groups.end() && it->second->empty())
             {
-                initail_query_to_groups.erase(it);
-                num_erased = 1;
+                std::unique_lock<std::shared_mutex> lock(query_mutex);
+                auto it = initail_query_to_groups.find(initial_query_id);
+                if (it != initail_query_to_groups.end() && it->second->empty())
+                {
+                    initail_query_to_groups.erase(it);
+                    num_erased = 1;
+                }
             }
             LOG_TRACE(
                 logger,
@@ -313,8 +292,9 @@ bool PlanSegmentProcessList::tryCascadeCancel(PlanSegmentGroupPtr segment_group,
     return found;
 }
 
-PlanSegmentGroupPtr PlanSegmentProcessList::getGroup(const String & initial_query_id) const
+PlanSegmentGroupPtr PlanSegmentProcessList::getGroup(const String & initial_query_id)
 {
+    std::shared_lock<std::shared_mutex> lock(query_mutex);
     PlanSegmentGroupPtr segment_group;
     auto it = initail_query_to_groups.find(initial_query_id);
     if (it != initail_query_to_groups.end())
@@ -335,10 +315,7 @@ PlanSegmentProcessListEntry::~PlanSegmentProcessListEntry()
 
 void PlanSegmentProcessListEntry::prepareQueryScope(ContextMutablePtr query_context)
 {
-    // TODO::Need QueryScope support memory_tracker
-    // if (segment_group->use_query_memory_tracker)
-    //     query_scope.emplace(query_context, &segment_group->memory_tracker);
-    // else
     query_scope.emplace(query_context);
 }
+
 }

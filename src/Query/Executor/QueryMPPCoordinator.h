@@ -33,6 +33,7 @@ class QueryMPPCoordinator final: public std::enable_shared_from_this<QueryMPPCoo
 {
 public:
     QueryMPPCoordinator(const std::string cluster_name_, PlanSegmentTreeUniqPtr plan_segment_tree_, ContextMutablePtr query_context_, QueryMPPOptions options_);
+
     /// Invoke this in InterpreterSelectQueryUseOptimizer's execute method
     BlockIO execute();
 

@@ -97,6 +97,7 @@ struct AddressWithWorkerID
 using PlanSegmentHeaders = std::vector<PlanSegmentHeader>;
 using BatchPlanSegmentHeaders = std::unordered_map<AddressWithWorkerID, PlanSegmentHeaders, AddressWithWorkerID::Hash>;
 
+/// Local execute plan segment in coodinator
 BlockIO lazyExecutePlanSegmentLocally(PlanSegmentInstancePtr plan_segment_instance, ContextMutablePtr context);
 
 void executePlanSegmentInternal(

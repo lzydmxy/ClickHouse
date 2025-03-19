@@ -243,7 +243,6 @@ ContextMutablePtr PlanSegmentRpcService::createQueryContext(
     client_info.current_query_id = client_info.initial_query_id + "_" + std::to_string(instance_id.segment_id);
     client_info.current_address = std::move(current_socket_address);
     //client_info.rpc_port = query_common->coordinator_address().exchange_port();
-    //client_info.parent_initial_query_id = query_common->parent_query_id();
     query_context->setInternalQuery(query_common->is_internal_query());
 
     return query_context;

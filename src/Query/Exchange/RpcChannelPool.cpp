@@ -7,6 +7,7 @@ namespace DB
 
 void RpcChannelPool::createExpireTimer()
 {
+    std::unique_lock<std::shared_mutex> lock(pool_mutex);
     if (rpc_channel_pool_check_interval_seconds > 0 && rpc_channel_pool_expired_seconds > 0)
     {
         expireThread = std::make_unique<std::thread>([this]() {
@@ -48,6 +49,8 @@ size_t RpcChannelPool::checkAndClearExpiredPool(const std::string & client_type)
 {
     size_t expired_num = 0;
     time_t current_ts = time(nullptr);
+    std::unique_lock<std::shared_mutex> lock(pool_mutex);
+
     auto & host_port_pool = channel_pool[client_type].host_port_pool;
 
     std::vector<HostPort> expired_host_ports;
@@ -97,18 +100,22 @@ std::shared_ptr<RpcClient> RpcChannelPool::getClient(const String & host_port, c
     }
     auto & pool_options = local_iter->second;
     auto max_connections = pool_options->max_connections;
+
     PoolPtr pool = nullptr;
-    auto & host_pool = iter->second.host_port_pool;
-    auto host_it = host_pool.find(host_port);
-    if (host_it != host_pool.end())
     {
-        pool = host_it->second;
-        pool->updateRecentUsedTime();
-    }
-    else
-    {
-        pool = std::make_shared<Pool>(max_connections);
-        host_pool.emplace(host_port, pool);
+        std::unique_lock<std::shared_mutex> lock(pool_mutex);
+        auto & host_pool = iter->second.host_port_pool;
+        auto host_it = host_pool.find(host_port);
+        if (host_it != host_pool.end())
+        {
+            pool = host_it->second;
+            pool->updateRecentUsedTime();
+        }
+        else
+        {
+            pool = std::make_shared<Pool>(max_connections);
+            host_pool.emplace(host_port, pool);
+        }
     }
 
     if (likely(pool_options->load_balancer == "rr")) // round robin

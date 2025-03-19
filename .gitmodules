@@ -510,3 +510,6 @@
 [submodule "contrib/leveldb"]
 	path = contrib/leveldb
 	url = git@github.com:google/leveldb.git
+[submodule "contrib/parallel-hashmap"]
+	path = contrib/parallel-hashmap
+	url = git@github.com:greg7mdp/parallel-hashmap.git

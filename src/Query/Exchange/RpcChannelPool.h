@@ -79,6 +79,7 @@ private:
 
     using PoolOptionsPtr = std::shared_ptr<BrpcChannelPoolOptions::PoolOptions>;
     using Container = std::unordered_map<HostPort,PoolPtr>;
+    std::shared_mutex pool_mutex;
     struct PoolContent
     {
         PoolOptionsPtr pool_options;

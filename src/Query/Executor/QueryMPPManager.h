@@ -24,6 +24,7 @@ public:
 
 private:
     QueryMPPManager() = default;
+    std::shared_mutex coor_mutex;
     CoordinatorMap coordinator_map;
     LoggerPtr log {getLogger("QueryMPPManager")};
 };
