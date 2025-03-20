@@ -11,8 +11,7 @@
 #include <Parsers/formatAST.h>
 #include <Common/ErrorCodes.h>
 #include <Query/Common/QueryException.h>
-
-#include <boost/hana.hpp>
+// #include <boost/hana.hpp>
 
 namespace DB
 {
@@ -101,9 +100,9 @@ public:
     {
         auto to_string = [](const auto & obj) -> String {
             using T = std::decay_t<decltype(obj)>;
-            constexpr auto has_std_to_string = boost::hana::is_valid([](auto && x) -> decltype(std::to_string(x)) {});
-            constexpr auto has_to_string = boost::hana::is_valid([](auto && x) -> decltype(x.toString()) {});
-
+            // The kernel does not have a reference to boost::hana, so it is not supported yet.
+            // constexpr auto has_std_to_string = boost::hana::is_valid([](auto && x) -> decltype(std::to_string(x)) {});
+            // constexpr auto has_to_string = boost::hana::is_valid([](auto && x) -> decltype(x.toString()) {});
             if constexpr (std::is_same_v<T, String>)
             {
                 return obj;
@@ -112,14 +111,14 @@ public:
             {
                 return serializeAST(*obj, true);
             }
-            else if constexpr (decltype(has_std_to_string(obj))::value)
-            {
-                return std::to_string(obj);
-            }
-            else if constexpr (decltype(has_to_string(obj))::value)
-            {
-                return obj.toString();
-            }
+            // else if constexpr (decltype(has_std_to_string(obj))::value)
+            // {
+            //     return std::to_string(obj);
+            // }
+            // else if constexpr (decltype(has_to_string(obj))::value)
+            // {
+            //     return obj.toString();
+            // }
             else
             {
                 return "[unserializable object]";
@@ -137,4 +136,4 @@ private:
     std::unordered_set<Key, Hash> set;
 };
 
-} // namespace DB
+}

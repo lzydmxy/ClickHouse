@@ -1,18 +1,7 @@
-#include <random>
-#include <Loggers/Loggers.h>
-#include <Poco/ConsoleChannel.h>
-#include <Poco/Util/Application.h>
-#include <Poco/Util/LayeredConfiguration.h>
 #include <gtest/gtest.h>
-#include <Columns/ColumnNullable.h>
-#include <Functions/FunctionsHashing.h>
-#include <IO/ReadBufferFromString.h>
-#include <IO/WriteBufferFromString.h>
-#include <Common/Stopwatch.h>
+#include <DataTypes/DataTypesNumber.h>
 #include <Interpreters/Context.h>
-#include <Query/Common/LinkedHashMap.h>
 #include <Query/Common/OptimizerSettings.h>
-#include <Query/ProtosHelper/QueryProto.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterBuilder.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterTypes.h>
 

@@ -170,9 +170,9 @@ public:
     {
         auto to_string = [](const auto & obj) -> String {
             using T = std::decay_t<decltype(obj)>;
+            // The kernel does not have a reference to boost::hana, so it is not supported yet.
             // constexpr auto has_std_to_string = boost::hana::is_valid([](auto && x) -> decltype(std::to_string(x)) {});
             // constexpr auto has_to_string = boost::hana::is_valid([](auto && x) -> decltype(x.toString()) {});
-
             if constexpr (std::is_same_v<T, String>)
             {
                 return obj;
