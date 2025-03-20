@@ -1,4 +1,5 @@
 #include "RuntimeFilterBuilder.h"
+#include <Common/logger_useful.h>
 
 // #include <AggregateFunctions/AggregateFunctionFactory.h>
 // #include <DataStreams/IBlockInputStream.h>
@@ -51,6 +52,7 @@ RuntimeFilterBuilder::RuntimeFilterBuilder(const OptimizerSettings & settings, c
 
 RuntimeFilterData RuntimeFilterBuilder::merge(std::map<UInt32, RuntimeFilterData> && data_sets) const
 {
+    auto log = &Poco::Logger::get("RuntimeFilter");
     RuntimeFilterData res;
     // if all empty bypass
     bool all_empty = true;
@@ -89,6 +91,7 @@ RuntimeFilterData RuntimeFilterBuilder::merge(std::map<UInt32, RuntimeFilterData
     }
 
     std::vector<RuntimeFilterId> invalid_ids;
+    /// <id, RuntimeFilterData> -> <RuntimeFilterId, RuntimeFilterVal>
     for (auto && [pid, rfs] : data_sets)
     {
         if (rfs.bypass == BypassType::BYPASS_EMPTY_HT)
@@ -101,11 +104,13 @@ RuntimeFilterData RuntimeFilterBuilder::merge(std::map<UInt32, RuntimeFilterData
                 if (res.runtime_filters[rf_id].is_bf != rfv.is_bf)
                 {
                     /// try merge the value set back to bloom filter, only support numeric type
+                    /// Need num_partitions == 0 and has_min_max with bloomfilter and set
                     bool merge_value_set_success = false;
                     if (res.runtime_filters[rf_id].is_bf)
                     {
                         if (res.runtime_filters[rf_id].bloom_filter->num_partitions > 0) /// shuffle's component cannot merge value set
                         {
+                            LOG_TRACE(log, "partition num > 0, res rf id {}, dump {}", rf_id, res.runtime_filters[rf_id].dump());
                             invalid_ids.push_back(rf_id);
                             continue;
                         }
@@ -125,19 +130,25 @@ RuntimeFilterData RuntimeFilterBuilder::merge(std::map<UInt32, RuntimeFilterData
                             merge_value_set_success = true;
                         }
                     }
-
                     // for global rf, if different worker generate different rf, this rf should be invalid
                     if (!merge_value_set_success)
+                    {
+                        LOG_TRACE(log, "merge no min_max, res rf id {}, dump {}", rf_id, res.runtime_filters[rf_id].dump());
                         invalid_ids.push_back(rf_id);
+                    }
                     continue ;
                 }
 
                 if (rfv.is_bf)
                 {
                     if (is_all_pre_enlarged.at(rf_id))
+                    {
                         res.runtime_filters[rf_id].bloom_filter->mergeInplace(std::move(*rfv.bloom_filter));
+                    }
                     else
+                    {
                         res.runtime_filters[rf_id].bloom_filter->concatInplace(std::move(*rfv.bloom_filter));
+                    }
                 }
                 else
                 {
@@ -152,14 +163,13 @@ RuntimeFilterData RuntimeFilterBuilder::merge(std::map<UInt32, RuntimeFilterData
                     res.runtime_filters[rf_id].bloom_filter->initForConcat();
                 }
             }
+            LOG_TRACE(log, "res runtime filters {} dump {}, {}", rf_id, rfv.dump(), res.runtime_filters[rf_id].dump());
         }
     }
-
     for (const auto id: invalid_ids)
     {
         res.runtime_filters.erase(id);
     }
-
     data_sets.clear();
     return res;
 }
@@ -296,9 +306,15 @@ String RuntimeFilterVal::dump() const
 {
     std::stringstream ss;
     if (bloom_filter)
-        ss << "bloom filter";
+    {
+        ss << "bloom filter:";
+        ss << bloom_filter->debugString();
+    }
     else if (values_set)
-        ss << "values set"; 
+    {
+        ss << "values set:";
+        ss << values_set->debugString();
+    }
     else
         ss << "empty";
     return ss.str();

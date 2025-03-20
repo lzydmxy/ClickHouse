@@ -125,6 +125,7 @@ public:
 
     void deserialize(ReadBuffer & buf);
     void serializeToBuffer(WriteBuffer & buf);
+    String debugString() const;
 
 public:
     std::set<Field> set;

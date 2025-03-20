@@ -130,9 +130,6 @@ public:
     std::unordered_map<RuntimeFilterId, InternalDynamicData> extractDistributedValues(RuntimeFilterData && data) const;
 
 private:
-    /**
-     * Meta
-     */
     LinkedHashMap<String, RuntimeFilter> runtime_filters;
     UInt32 builder_id;
     bool enable_range_cover = false;

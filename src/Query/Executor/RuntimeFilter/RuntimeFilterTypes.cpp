@@ -40,6 +40,15 @@ void ValueSetWithRange::serializeToBuffer(WriteBuffer & buf)
     }
 }
 
+
+String ValueSetWithRange::debugString() const
+{
+    if (has_min_max)
+        return "size:" + std::to_string(set.size()) + " min:" + min.dump() + " max:" + max.dump() ;
+    else
+        return "size:" + std::to_string(set.size());
+}
+
 void BloomFilterWithRange::deserialize(ReadBuffer & istr)
 {
     readBinary(has_min_max, istr);
@@ -68,7 +77,6 @@ void BloomFilterWithRange::deserialize(ReadBuffer & istr)
             part_bfs.emplace_back(std::move(filter));
         }
     }
-
 }
 
 void BloomFilterWithRange::serializeToBuffer(WriteBuffer & ostr)
@@ -150,12 +158,12 @@ void BloomFilterWithRange::mergeValueSet(const DB::ValueSetWithRange & valueSetW
 
 String BloomFilterWithRange::debugString() const
 {
+    String str;
     if (num_partitions == 0)
     {
+        str = "ndv:" + std::to_string(bf.ndv);
         if (has_min_max)
-            return "ndv:" + std::to_string(bf.ndv) + " min:" + min_max->dumpMin() + " max:" + min_max->dumpMax() ;
-        else
-            return "ndv:" + std::to_string(bf.ndv);
+            str += " min:" + min_max->dumpMin() + " max:" + min_max->dumpMax() ;
     }
     else
     {
@@ -163,14 +171,12 @@ String BloomFilterWithRange::debugString() const
         {
             return init + r2.ndv;
         };
-
         size_t ndv = std::accumulate(part_bfs.begin(), part_bfs.end(), 0, sum_ndv);
+        str = "ndv:" + std::to_string(ndv) + " num_partition:" + std::to_string(num_partitions);
         if (has_min_max)
-            return "ndv:" + std::to_string(ndv) + " min:" + min_max->dumpMin() + " max:" + min_max->dumpMax()
-                + " num_partition:" + std::to_string(num_partitions);
-        else
-            return "ndv:" + std::to_string(ndv) + " num_partition:" + std::to_string(num_partitions);
+            str +=  " min:" + min_max->dumpMin() + " max:" + min_max->dumpMax();
     }
+    return str;
 }
 
 }
