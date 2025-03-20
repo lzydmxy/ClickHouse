@@ -77,8 +77,7 @@ public:
         return join->hasDelayedBlocks();
     }
 
-private:
-    friend class JoinRuntimeFiltersHelper;
+public:
     JoinPtr join;
     SizeLimits limits;
     bool switched;

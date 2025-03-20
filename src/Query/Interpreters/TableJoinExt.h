@@ -19,8 +19,8 @@ public:
     {
     }
 
-    TableJoinExt(const Settings & settings, const OptimizerSettingsPtr & optimizer_settings, VolumePtr tmp_volume)
-        : TableJoin(settings, tmp_volume), runtime_filter_bloom_build_threshold(optimizer_settings->runtime_filter_bloom_build_threshold)
+    TableJoinExt(const Settings & settings, const OptimizerSettingsPtr & optimizer_settings, VolumePtr tmp_volume_ext)
+        : TableJoin(settings, tmp_volume_ext), runtime_filter_bloom_build_threshold(optimizer_settings->runtime_filter_bloom_build_threshold)
         , runtime_filter_in_build_threshold(optimizer_settings->runtime_filter_in_build_threshold)
     {
     }
@@ -52,9 +52,6 @@ public:
 
 private:
     friend class JoinStepExt;
-
-    /// Original name -> name. Only renamed columns.
-    std::unordered_map<String, String> renames;
 
     std::shared_ptr<RuntimeFilterConsumer> runtime_filter_consumer = nullptr;
     ExpressionActionsPtr inequal_condition_actions;

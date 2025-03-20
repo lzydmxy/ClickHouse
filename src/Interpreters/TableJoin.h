@@ -124,7 +124,7 @@ public:
         return fmt::format("{}", fmt::join(res, "; "));
     }
 
-private:
+public:
     /** Query of the form `SELECT expr(x) AS k FROM t1 ANY LEFT JOIN (SELECT expr(x) AS k FROM t2) USING k`
       * The join is made by column k.
       * During the JOIN,
@@ -136,9 +136,6 @@ private:
       *     to the subquery will be added expression `expr(t2 columns)`.
       * It's possible to use name `expr(t2 columns)`.
       */
-    friend class JoinStepExt;
-    friend class TableJoinExt;
-
     SizeLimits size_limits;
     const size_t default_max_bytes = 0;
     const bool join_use_nulls = false;

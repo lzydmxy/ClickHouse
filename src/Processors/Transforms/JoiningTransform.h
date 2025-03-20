@@ -33,8 +33,7 @@ public:
             return finished.fetch_add(1) + 1 >= total;
         }
 
-    private:
-        friend class JoiningTransformExt;
+    public:
         const size_t total;
         std::atomic<size_t> finished{0};
     };
@@ -64,8 +63,7 @@ public:
 protected:
     void transform(Chunk & chunk);
 
-private:
-    friend class JoiningTransformExt;
+protected:
     Chunk input_chunk;
     Chunk output_chunk;
     bool has_input = false;
@@ -104,8 +102,7 @@ public:
     Status prepare() override;
     void work() override;
 
-private:
-    friend class FillingRightJoinSideTransformExt;
+protected:
     JoinPtr join;
     Chunk chunk;
     bool stop_reading = false;

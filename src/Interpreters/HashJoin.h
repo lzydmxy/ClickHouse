@@ -400,11 +400,7 @@ public:
 
     void setMaxJoinedBlockRows(size_t value) { max_joined_block_rows = value; }
 
-private:
-    friend class NotJoinedHash;
-    friend class JoinRuntimeFiltersHelper;
-
-    friend class JoinSource;
+public:
 
     std::shared_ptr<TableJoin> table_join;
     const JoinKind kind;
