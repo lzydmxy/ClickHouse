@@ -307,7 +307,7 @@ QueryPipelineBuilderPtr JoinStepExt::updatePipeline(QueryPipelineBuilders pipeli
 
     ExpressionActionsPtr filter_action;
 
-    const auto & settings_ext = settings.getBuildPipelineSettingsExt();
+    const auto & settings_ext = settings.getBuildQueryPipelineSettingsExt();
 
     if (!join)
     {

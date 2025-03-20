@@ -16,7 +16,7 @@ PartitionTopNStepExt::PartitionTopNStepExt(
 void PartitionTopNStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
     auto input_header = pipeline.getHeader();
-    pipeline.resize(settings.getBuildPipelineSettingsExt().context->getSettingsRef().max_threads);
+    pipeline.resize(settings.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_threads);
 
     ColumnNumbers partition_by_columns;
     for (const auto & col : partition)

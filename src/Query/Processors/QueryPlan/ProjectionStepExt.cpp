@@ -28,7 +28,7 @@ ProjectionStepExt::ProjectionStepExt(
 
 void ProjectionStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
-    auto actions = createActions(settings.getBuildPipelineSettingsExt().context);
+    auto actions = createActions(settings.getBuildQueryPipelineSettingsExt().context);
     auto expression = std::make_shared<ExpressionActions>(actions, settings.getActionsSettings());
 
     pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<ExpressionTransform>(header, expression); });

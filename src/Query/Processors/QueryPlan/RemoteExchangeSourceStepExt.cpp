@@ -125,10 +125,10 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
         size_t partition_id_start = parallel_id * exchange_parallel_size;
         LocalChannelOptions local_options{
             .queue_size = local_queue_size, .max_timeout_ts = options.exchange_timeout_ts, .enable_metrics = enable_metrics};
-        auto iter = settings.getBuildPipelineSettingsExt().sources.find(exchange_id);
+        auto iter = settings.getBuildQueryPipelineSettingsExt().sources.find(exchange_id);
         if (input->getSourceAddress().empty()
-            && !settings.getBuildPipelineSettingsExt().distributed_settings.is_explain
-            && iter == settings.getBuildPipelineSettingsExt().sources.end())
+            && !settings.getBuildQueryPipelineSettingsExt().distributed_settings.is_explain
+            && iter == settings.getBuildQueryPipelineSettingsExt().sources.end())
             throw Exception(
                 ErrorCodes::LOGICAL_ERROR,
                     "No source address for segment {}'s input segment {}, parallel id is {}",
@@ -143,7 +143,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
         bool is_final_plan_segment = plan_segment_id == 0;
         size_t input_index = 0;
         // TODO: need bsp_mode context->getSettingsRef().bsp_mode &&
-        if (iter != settings.getBuildPipelineSettingsExt().sources.end())
+        if (iter != settings.getBuildQueryPipelineSettingsExt().sources.end())
         {
             for (const auto & source : iter->second)
             {
@@ -214,7 +214,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
         }
         if (optimizer_context->getSettingsRef().exchange_enable_multipath_reciever && !keep_order)
         {
-            if (settings.getBuildPipelineSettingsExt().distributed_settings.is_explain)
+            if (settings.getBuildQueryPipelineSettingsExt().distributed_settings.is_explain)
             {
                 ExchangeDataKeyPtr data_key = std::make_shared<ExchangeDataKey>(current_tx_id, exchange_id, partition_id_start);
                 String name = BrpcRemoteBroadcastReceiver::generateName(
@@ -248,7 +248,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
         }
         else
         {
-            if (settings.getBuildPipelineSettingsExt().distributed_settings.is_explain)
+            if (settings.getBuildQueryPipelineSettingsExt().distributed_settings.is_explain)
             {
                 ExchangeDataKeyPtr data_key = std::make_shared<ExchangeDataKey>(current_tx_id, exchange_id, partition_id_start);
                 String name = BrpcRemoteBroadcastReceiver::generateName(
