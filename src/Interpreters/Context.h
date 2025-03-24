@@ -985,7 +985,7 @@ public:
     void setSystemZooKeeperLogAfterInitializationIfNeeded();
 
     void initializeOptimizerContext() const;
-    OptimizerContextPtr getOptimizerContext() const;
+    OptimizerContextPtr getOptimizerContext() const { return nullptr;};
 
     /// --- Caches ------------------------------------------------------------------------------------------
 
