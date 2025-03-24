@@ -39,7 +39,7 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
 /** These settings represent fine tunes for internal details of query optimizer
  * and should not be changed by the user without a reason.
   */
-#define LIST_OF_COORDINATION_SETTINGS(M, ALIAS) \
+#define LIST_OF_OPTIMIZER_SETTINGS(M, ALIAS) \
     /** General extension settings */ \
     M(Bool, log_normalized_query_plan_hash, 0, "Log json format query plan to the system query_log table.", 0) \
     M(Bool, log_query_exchange, false, "Log query exchange metric.", 0) \
@@ -56,6 +56,7 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(Bool, exchange_force_use_buffer, false, "Force exchange use buffer as possible", 0) \
     M(Bool, enable_prune_source_plan_segment, false, "Whether prune source plan segment", 0) \
     /** Exchange settings */ \
+    M(UInt64, exchange_timeout_ms, 1000000, "Exchange request timeout ms",0) \
     M(UInt64, exchange_queue_bytes, 209715200, "Queue size(bytes) for exchange queue, 0 means disable", 0) \
     M(Bool, exchange_use_query_memory_tracker, true, "Use query-level memory tracker", 0) \
     M(UInt64, exchange_parallel_size, 1, "Exchange parallel size", 0) \
@@ -113,19 +114,19 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(Bool, enable_deterministic_sample_by_range, false, "Deterministic sample by range if it is true", 0) \
     M(Bool, force_read_in_partition_order, 0, "Similar to optimize_read_in_partition_order, but throw an exception if it cannot be applied to the query, mainly for testing", 0) \
 
-#define MAKE_COORDINATION_OBSOLETE(M, TYPE, NAME, DEFAULT) \
+#define MAKE_OPTIMIZER_OBSOLETE(M, TYPE, NAME, DEFAULT) \
     M(TYPE, NAME, DEFAULT, "Obsolete setting, does nothing.", BaseSettingsHelpers::Flags::OBSOLETE)
 
-#define OBSOLETE_COORDINATION_SETTINGS(M, ALIAS) \
+#define OBSOLETE_OPTIMIZER_SETTINGS(M, ALIAS) \
     /** Obsolete settings that do nothing now but left for compatibility reasons. Remove them or implement them when you have free time. */ \
-    MAKE_COORDINATION_OBSOLETE(M, Bool, enable_two_stages_prewhere, false) \
-    /** End of OBSOLETE_COORDINATION_SETTINGS */ \
+    MAKE_OPTIMIZER_OBSOLETE(M, Bool, enable_two_stages_prewhere, false) \
+    /** End of OBSOLETE_OPTIMIZER_SETTINGS */ \
 
-#define ALL_COORDINATION_SETTINGS(M, ALIAS) \
-LIST_OF_COORDINATION_SETTINGS(M, ALIAS) \
-OBSOLETE_COORDINATION_SETTINGS(M, ALIAS) \
+#define ALL_OPTIMIZER_SETTINGS(M, ALIAS) \
+LIST_OF_OPTIMIZER_SETTINGS(M, ALIAS) \
+OBSOLETE_OPTIMIZER_SETTINGS(M, ALIAS) \
 
-DECLARE_SETTINGS_TRAITS(OptimizerSettingsTraits, ALL_COORDINATION_SETTINGS)
+DECLARE_SETTINGS_TRAITS(OptimizerSettingsTraits, ALL_OPTIMIZER_SETTINGS)
 
 
 struct OptimizerSettings : public BaseSettings<OptimizerSettingsTraits>

@@ -30,7 +30,7 @@ PlanSegmentProcessList::insertGroup(ContextMutablePtr query_context, std::vector
 {
     auto & settings = query_context->getSettingsRef();
     auto optimizer_context = query_context->getOptimizerContext();
-    auto & optimizer_settings = optimizer_context->getSettings();
+    auto & optimizer_settings = optimizer_context->getSettingsRef();
     auto address = optimizer_context->getCoordinatorAddress();
     const auto & client_info = query_context->getClientInfo();
     const String & initial_query_id = client_info.initial_query_id;
@@ -102,8 +102,8 @@ PlanSegmentProcessList::insertGroup(ContextMutablePtr query_context, std::vector
     if (!segment_group)
     {
         bool use_query_memory_tracker
-            = optimizer_settings->exchange_use_query_memory_tracker && (segment_ids.size() != 1 || segment_ids[0] != 0);
-        size_t queue_bytes = optimizer_settings->exchange_queue_bytes;
+            = optimizer_settings.exchange_use_query_memory_tracker && (segment_ids.size() != 1 || segment_ids[0] != 0);
+        size_t queue_bytes = optimizer_settings.exchange_queue_bytes;
         segment_group = std::make_shared<PlanSegmentGroup>(
             initial_query_id,
             coordinator_address,

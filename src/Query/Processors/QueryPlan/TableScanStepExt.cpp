@@ -1,7 +1,11 @@
 
+#include <Interpreters/convertFieldToType.h>
 #include <Query/Processors/QueryPlan/TableScanStepExt.h>
 #include <Query/Processors/QueryPlan/ExecutePlanElement.h>
 #include <Query/Optimizer/SymbolTransformMap.h>
+#include <Interpreters/evaluateConstantExpression.h>
+#include <Planner/Utils.h>
+
 
 namespace DB
 {
@@ -877,10 +881,10 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
             descriptions.emplace_back(RuntimeFilterUtils::extractDescription(predicate).value());
 
         const auto & query_id = build_settings.getBuildQueryPipelineSettingsExt().distributed_settings.query_id;
-        const auto & setting = build_settings.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettings();
-        size_t wait_ms = use_expand_pipe ? 0 : setting->wait_runtime_filter_timeout;
-        bool enable_bf_in_prewhere = setting->enable_rewrite_bf_into_prewhere;
-        bool enable_range_cover = setting->enable_range_cover;
+        const auto & setting = build_settings.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef();
+        size_t wait_ms = use_expand_pipe ? 0 : setting.wait_runtime_filter_timeout;
+        bool enable_bf_in_prewhere = setting.enable_rewrite_bf_into_prewhere;
+        bool enable_range_cover = setting.enable_range_cover;
         for (auto & description : descriptions)
         {
             bool is_range_or_set = false;
@@ -925,11 +929,11 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
         });
 
         const auto & query_id = build_settings.getBuildQueryPipelineSettingsExt().distributed_settings.query_id;
-        const auto & setting = build_settings.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettings();
-        bool enable_2stags_prewhere = setting->enable_two_stages_prewhere;
-        size_t wait_ms = use_expand_pipe ? 0 : setting->wait_runtime_filter_timeout;
-        bool enable_bf_in_prewhere = setting->enable_rewrite_bf_into_prewhere;
-        bool enable_range_cover =  setting->enable_range_cover;
+        const auto & setting = build_settings.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef();
+        bool enable_2stags_prewhere = setting.enable_two_stages_prewhere;
+        size_t wait_ms = use_expand_pipe ? 0 : setting.wait_runtime_filter_timeout;
+        bool enable_bf_in_prewhere = setting.enable_rewrite_bf_into_prewhere;
+        bool enable_range_cover =  setting.enable_range_cover;
         //todo: need adjust_gap in settings
         //double adjust_gap = setting.adjust_range_set_filter_rate;
         double adjust_gap = 1.0;

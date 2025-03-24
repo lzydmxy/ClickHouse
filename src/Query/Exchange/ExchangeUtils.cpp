@@ -12,7 +12,7 @@ namespace ErrorCodes
     extern const int TIMEOUT_EXCEEDED;
 }
 
-inline bool ExchangeUtils::isLocalExchange(const AddressInfo & read_address_info, const AddressInfo & write_address_info)
+bool ExchangeUtils::isLocalExchange(const AddressInfo & read_address_info, const AddressInfo & write_address_info)
 {
     return static_cast<bool>(
         (read_address_info.getHostName() == "localhost" && read_address_info.getPort() == 0)
@@ -20,7 +20,7 @@ inline bool ExchangeUtils::isLocalExchange(const AddressInfo & read_address_info
         || read_address_info == write_address_info);
 }
 
-inline ExchangeOptions ExchangeUtils::getExchangeOptions(const ContextPtr & context)
+ExchangeOptions ExchangeUtils::getExchangeOptions(const ContextPtr & context)
 {
     const auto & settings = context->getOptimizerContext()->getSettingsRef();    
     return {
@@ -31,7 +31,7 @@ inline ExchangeOptions ExchangeUtils::getExchangeOptions(const ContextPtr & cont
         .force_use_buffer = settings.exchange_force_use_buffer};
 }
 
-inline BroadcastStatus ExchangeUtils::sendAndCheckReturnStatus(IBroadcastSender & sender, Chunk chunk)
+BroadcastStatus ExchangeUtils::sendAndCheckReturnStatus(IBroadcastSender & sender, Chunk chunk)
 {
     BroadcastStatus status = sender.send(std::move(chunk));
     if (status.is_modified_by_operator && status.code > 0)
@@ -60,7 +60,7 @@ inline BroadcastStatus ExchangeUtils::sendAndCheckReturnStatus(IBroadcastSender 
     return status;
 }
 
-inline void ExchangeUtils::mergeSenders(BroadcastSenderPtrs & senders)
+void ExchangeUtils::mergeSenders(BroadcastSenderPtrs & senders)
 {
     BroadcastSenderPtrs senders_to_merge;
     for (auto it = senders.begin(); it != senders.end();)
@@ -83,7 +83,7 @@ inline void ExchangeUtils::mergeSenders(BroadcastSenderPtrs & senders)
     senders.emplace_back(std::move(merged_sender));
 }
 
-inline void ExchangeUtils::transferGlobalMemoryToThread(Int64 /*bytes*/)
+void ExchangeUtils::transferGlobalMemoryToThread(Int64 /*bytes*/)
 {
     //TODO:: free should not be used directly
     // if (DB::MainThreadStatus::get())

@@ -128,7 +128,7 @@ void Scheduler::prepareFinalTask()
     }
     PlanSegment * final_segment = dag_graph_ptr->getPlanSegmentPtr(dag_graph_ptr->final);
 
-    const auto & final_address_info = getLocalAddress(*query_context);
+    const auto & final_address_info = getLocalAddress(query_context);
     final_segment->setCoordinatorAddress(final_address_info);
     prepareFinalTaskImpl(final_segment, final_address_info);
 

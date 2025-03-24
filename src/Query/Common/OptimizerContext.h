@@ -24,8 +24,6 @@ using SegmentSchedulerPtr = std::shared_ptr<SegmentScheduler>;
 class AddressInfo;
 using AddressInfoPtr = std::shared_ptr<AddressInfo>;
 
-struct PlanSegmentInstanceID;
-
 class ProcessListEntry;
 using ProcessListEntryPtr = std::shared_ptr<ProcessListEntry>;
 
@@ -35,6 +33,11 @@ class ProfileElementConsumer;
 
 class QueryExchangeLog;
 using QueryExchangeLogPtr = std::shared_ptr<QueryExchangeLog>;
+
+struct Settings;
+struct PlanSegmentInstanceID;
+
+class OptimizerContextData;
 
 enum ServiceType
 {
@@ -47,36 +50,30 @@ enum ServiceType
 class OptimizerContext
 {
 public:
-    OptimizerContext(OptimizerSettingsPtr query_settings_);
+    OptimizerContext(const Settings & settings_, OptimizerSettings & optimizer_settings_);
 
-    const OptimizerSettingsPtr & getSettings() const;
-    const OptimizerSettings & getSettingsRef() const { return settings; }
+    const OptimizerSettings & getSettingsRef() const { return optimizer_settings; }
+    const OptimizerSettings getSettings() const { return optimizer_settings; }
+
+    /// milliseconds
+    UInt32 getQueryMaxExecutionTime() const;
+    TimePoint getQueryExpirationTimeStamp() const;
+    void initQueryExpirationTimeStamp();
 
     void initExceptionHandler();
     ExceptionHandlerPtr getExceptionHandler() const;
 
-    void setPlanSegmentProcessListEntry(PlanSegmentProcessListEntryPtr segment_process_list_entry_);
-    PlanSegmentProcessListEntryWeakPtr getPlanSegmentProcessListEntry() const;
-
-    PlanSegmentProcessListPtr getPlanSegmentProcessList();
-
-    void setProcessListElement(QueryStatusPtr elem);
-
-    HostWithPorts getHostWithPorts() const;
-
-    SegmentSchedulerPtr getSegmentScheduler() const;
-
-    ServiceType getServiceType() const;
-
     void setCoordinatorAddress(const AddressInfoPtr address);
     AddressInfoPtr getCoordinatorAddress() const;
 
-    void setPlanSegmentInstanceID(const PlanSegmentInstanceID & instance_id);
-    PlanSegmentInstanceID getPlanSegmentInstanceID() const;
+    void setRPCPort(UInt16 rpc_port_);
+    UInt16 getRPCPort();
 
-    UInt32 getQueryMaxExecutionTime() const;
-    TimePoint getQueryExpirationTimeStamp() const;
-    void initQueryExpirationTimeStamp();
+    void setPlanSegmentProcessListEntry(PlanSegmentProcessListEntryPtr segment_process_list_entry_);
+    PlanSegmentProcessListEntryPtr getPlanSegmentProcessListEntry() const;
+
+    void setPlanSegmentProcessList(PlanSegmentProcessListPtr segment_process_list_);
+    PlanSegmentProcessListPtr getPlanSegmentProcessList() const;
 
     void setProcessListEntry(ProcessListEntryPtr process_list_entry_);
     ProcessListEntryPtr getProcessListEntry() const;
@@ -85,8 +82,19 @@ public:
     setProcessorProfileElementConsumer(std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> processor_log_element_consumer_);
     std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> getProcessorProfileElementConsumer() const;
 
+    void setProcessListElement(QueryStatusPtr elem);
+    QueryStatusPtr getProcessListElement() const;
+
+    void setPlanSegmentInstanceID(const PlanSegmentInstanceID & instance_id);
+    PlanSegmentInstanceID getPlanSegmentInstanceID();
+
     void setSendTCPProgress(std::function<void()> callback);
     std::function<void()> getSendTCPProgress() const;
+
+    HostWithPorts getHostWithPorts() const;
+    SegmentSchedulerPtr getSegmentScheduler() const;
+
+    ServiceType getServiceType() const;
 
     void setIsExplainQuery(const bool & is_explain_query_);
     bool isExplainQuery() const;
@@ -94,15 +102,19 @@ public:
     QueryExchangeLogPtr getQueryExchangeLog();
 
 private:
-    OptimizerSettingsPtr query_settings;
-    OptimizerSettings settings;
+    OptimizerSettings optimizer_settings;
+    UInt32 query_max_execution_time;
+    TimePoint query_expiration_timestamp;
     AddressInfoPtr coordinator_address;
+    UInt16 rpc_port;
+    std::shared_ptr<OptimizerContextData> data;
     ExceptionHandlerPtr exception_handler;
+    PlanSegmentProcessListEntryPtr segment_process_list_entry;
     PlanSegmentProcessListPtr plan_segment_process_list;
     ProcessListEntryPtr process_list_entry;
+    QueryStatusPtr query_process_element;
     std::function<void()> send_tcp_progress{nullptr};
     bool is_explain_query{false};
-    PlanSegmentProcessListEntryWeakPtr segment_process_list_entry;
     QueryExchangeLogPtr query_exchange_log;
 };
 

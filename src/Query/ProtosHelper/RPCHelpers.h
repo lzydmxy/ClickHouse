@@ -25,7 +25,6 @@ namespace DB
 
 using IOBufPtr = std::shared_ptr<butil::IOBuf>;
 
-
 namespace RPCHelpers
 {
     inline UUID createUUID(const RUUID & uuid) { return UUID(UInt128{uuid.low(), uuid.high()}); }
@@ -67,6 +66,15 @@ namespace RPCHelpers
     template <typename Req, typename Resp>
     void onAsyncCallDoneAssertController(Req * request, Resp * response, brpc::Controller * cntl, LoggerPtr logger,
         std::function<String()> construct_err_msg);
+
+    void onAsyncCallDoneAssertControllerProgress(RProgressRequest * request, RProgressResponse * response,
+            brpc::Controller * cntl, LoggerPtr logger, std::function<String()> construct_err_msg);
+
+    void onAsyncCallDoneAssertControllerStatus(RPlanSegmentStatusRequest * request, RPlanSegmentStatusResponse * response,
+        brpc::Controller * cntl, LoggerPtr logger, std::function<String()> construct_err_msg);
+
+    void onAsyncCallDoneAssertControllerProfile(RPlanSegmentProfileRequest * request, RPlanSegmentProfileResponse * response,
+        brpc::Controller * cntl, LoggerPtr logger, std::function<String()> construct_err_msg);
 
     template <typename Resp>
     void onAsyncCallDoneWithFailedInfo(Resp * response, brpc::Controller * cntl, ExceptionHandlerWithFailedInfoPtr handler, const WorkerID worker_id);

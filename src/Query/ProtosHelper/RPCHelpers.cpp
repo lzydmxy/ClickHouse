@@ -126,8 +126,8 @@ namespace RPCHelpers
     }
 
     template <typename Req, typename Resp>
-    void onAsyncCallDoneAssertController(
-        Req * request, Resp * response, brpc::Controller * cntl, LoggerPtr logger, std::function<String()> construct_err_msg)
+    void onAsyncCallDoneAssertController(Req * request, Resp * response, brpc::Controller * cntl, LoggerPtr logger,
+        std::function<String()> construct_err_msg)
     {
         // request will be use in construct_err_msg
         std::unique_ptr<Req> request_guard(request);
@@ -141,6 +141,24 @@ namespace RPCHelpers
         {
             tryLogCurrentException(logger, construct_err_msg());
         }
+    }
+
+    void onAsyncCallDoneAssertControllerProgress(RProgressRequest * request, RProgressResponse * response,
+        brpc::Controller * cntl, LoggerPtr logger, std::function<String()> construct_err_msg)
+    {
+        onAsyncCallDoneAssertController<RProgressRequest, RProgressResponse>(request, response, cntl, logger, construct_err_msg);
+    }
+
+    void onAsyncCallDoneAssertControllerStatus(RPlanSegmentStatusRequest * request, RPlanSegmentStatusResponse * response,
+        brpc::Controller * cntl, LoggerPtr logger, std::function<String()> construct_err_msg)
+    {
+        onAsyncCallDoneAssertController<RPlanSegmentStatusRequest, RPlanSegmentStatusResponse>(request, response, cntl, logger, construct_err_msg);
+    }
+
+    void onAsyncCallDoneAssertControllerProfile(RPlanSegmentProfileRequest * request, RPlanSegmentProfileResponse * response,
+        brpc::Controller * cntl, LoggerPtr logger, std::function<String()> construct_err_msg)
+    {
+        onAsyncCallDoneAssertController<RPlanSegmentProfileRequest, RPlanSegmentProfileResponse>(request, response, cntl, logger, construct_err_msg);
     }
 
     template <typename Resp>

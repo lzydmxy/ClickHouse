@@ -12,7 +12,7 @@ BufferedCopyTransform::BufferedCopyTransform(const Block & header, size_t num_ou
     : IProcessor(InputPorts(1, header), OutputPorts(num_outputs, header)), max_queue_size(max_queue_size_), output_queues(num_outputs)
 {
     if (num_outputs <= 1)
-        throw Exception("BufferedCopyTransform expects more than 1 outputs, got " + std::to_string(num_outputs), ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "BufferedCopyTransform expects more than 1 outputs, got {}", num_outputs);
 
     output_vec.resize(num_outputs);
     auto output_it = outputs.begin();

@@ -72,9 +72,10 @@ private:
     UInt16 exchange_port;
 };
 
-
-AddressInfo getLocalAddress(const Context & query_context);
-AddressInfoPtr getLocalAddressPtr(const Context & query_context);
+/// Get local RPC address with host and port
+AddressInfo getLocalAddress(ContextPtr & context);
+/// Get local RPC address with host and port
+AddressInfoPtr getLocalAddressPtr(ContextPtr & context);
 
 AddressInfoPtr getRemoteAddress(HostWithPorts host_with_ports, ContextPtr & query_context);
 
