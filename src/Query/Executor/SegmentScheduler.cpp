@@ -61,7 +61,7 @@ SegmentScheduler::insertPlanSegments(const String & query_id, PlanSegmentTree * 
     }
 
     auto * final_segment = plan_segments_ptr->getRoot()->getPlanSegment();
-    auto local_address = getLocalAddress(*query_context);
+    auto local_address = getLocalAddress(query_context);
     final_segment->setCoordinatorAddress(local_address);
     //fast path for single node query
     if (plan_segments_ptr->getNodes().size() == 1)

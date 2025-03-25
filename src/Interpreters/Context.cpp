@@ -116,6 +116,8 @@
 #include <Parsers/ASTSelectWithUnionQuery.h>
 #include <Interpreters/InterpreterSelectWithUnionQuery.h>
 #include <base/defines.h>
+#include <Query/Common/OptimizerContext.h>
+#include <Query/Common/OptimizerSettings.h>
 
 
 namespace fs = std::filesystem;
@@ -426,6 +428,9 @@ struct ContextSharedPart : boost::noncopyable
     mutable std::mutex raft_dispatcher_mutex;
     mutable std::shared_ptr<RaftDispatcher> raft_dispatcher TSA_GUARDED_BY(raft_dispatcher_mutex);
 #endif
+
+    mutable std::mutex optimizer_context_mutex;
+    mutable OptimizerContextPtr optimizer_context TSA_GUARDED_BY(optimizer_context_mutex);
 
     ContextSharedPart()
         : access_control(std::make_unique<AccessControl>())
@@ -3544,6 +3549,23 @@ std::shared_ptr<RaftDispatcher> Context::tryGetRaftDispatcher() const
     return shared->raft_dispatcher;
 }
 #endif
+
+void Context::initializeOptimizerContext() const
+{
+    std::lock_guard lock(shared->optimizer_context_mutex);
+    if (shared->optimizer_context)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Trying to initialize optimizer context multiple times");
+    OptimizerSettings optimizer_settings;
+    shared->optimizer_context = std::make_shared<OptimizerContext>(getSettingsRef(), optimizer_settings);
+}
+
+OptimizerContextPtr Context::getOptimizerContext() const
+{
+    std::lock_guard lock(shared->optimizer_context_mutex);
+    if (!shared->optimizer_context)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Raft must be initialized before requests");
+    return shared->optimizer_context;
+}
 
 zkutil::ZooKeeperPtr Context::getAuxiliaryZooKeeper(const String & name) const
 {

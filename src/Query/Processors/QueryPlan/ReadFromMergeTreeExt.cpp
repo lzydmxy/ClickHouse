@@ -148,7 +148,7 @@ void ReadFromMergeTreeExt::initializePipeline(QueryPipelineBuilder & pipeline, c
         result.selected_marks,
         result.selected_ranges);
 
-    if (build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettings()->report_segment_profiles)
+    if (build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().report_segment_profiles)
         fillRuntimeAttributeDescriptions(result);
 
     auto query_id_holder = MergeTreeDataSelectExecutor::checkLimits(data, result, context);
@@ -166,8 +166,8 @@ void ReadFromMergeTreeExt::initializePipeline(QueryPipelineBuilder & pipeline, c
     Names column_names_to_read = std::move(result.column_names_to_read);
     const auto & select = query_info.query->as<ASTSelectQuery &>();
     if (!select.final() && result.sampling.use_sampling &&
-     !build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettings()->enable_sample_by_range &&
-     !build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettings()->enable_deterministic_sample_by_range)
+     !build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().enable_sample_by_range &&
+     !build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().enable_deterministic_sample_by_range)
     {
         std::vector<String> add_columns = result.sampling.filter_expression->getRequiredColumns().getNames();
         column_names_to_read.insert(column_names_to_read.end(), add_columns.begin(), add_columns.end());
@@ -219,9 +219,9 @@ void ReadFromMergeTreeExt::initializePipeline(QueryPipelineBuilder & pipeline, c
         auto sorting_key_prefix_expr = ExpressionAnalyzer(order_key_prefix_ast, syntax_result, context).getActionsDAG(false);
 
         // todo: need partition_by_monotonicity_hint in mergetree settings 
-        can_read_in_partition_order = (build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettings()->optimize_read_in_partition_order ||
-                                       build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettings()->force_read_in_partition_order);
-        //&& canReadInPartitionOrder(*metadata_for_reading, *input_order_info, query_info.query->as<ASTSelectQuery &>(),data.getSettings()->partition_by_monotonicity_hint);
+        can_read_in_partition_order = (build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().optimize_read_in_partition_order ||
+                                       build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().force_read_in_partition_order);
+        //&& canReadInPartitionOrder(*metadata_for_reading, *input_order_info, query_info.query->as<ASTSelectQuery &>(),data.getSettingsRef().partition_by_monotonicity_hint);
 
         //todo: need selected_partitions in AnalysisResult
         //if (can_read_in_partition_order && result.selected_partitions > 1)
@@ -256,7 +256,7 @@ void ReadFromMergeTreeExt::initializePipeline(QueryPipelineBuilder & pipeline, c
             column_names_to_read);
     }
 
-    if (build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettings()->force_read_in_partition_order &&
+    if (build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().force_read_in_partition_order &&
         !can_read_in_partition_order)
         throw Exception(ErrorCodes::INDEX_NOT_USED, "Cannot read in partition order but 'force_read_in_partition_order' is set");
 
@@ -267,8 +267,8 @@ void ReadFromMergeTreeExt::initializePipeline(QueryPipelineBuilder & pipeline, c
     }
 
     if (result.sampling.use_sampling &&
-        !build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettings()->enable_sample_by_range &&
-        !build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettings()->enable_deterministic_sample_by_range)
+        !build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().enable_sample_by_range &&
+        !build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().enable_deterministic_sample_by_range)
     {
         auto sampling_actions = std::make_shared<ExpressionActions>(result.sampling.filter_expression);
         pipe.addSimpleTransform([&](const Block & header)
@@ -306,10 +306,10 @@ void ReadFromMergeTreeExt::initializePipeline(QueryPipelineBuilder & pipeline, c
 
     if (map_column_keys_column_queried)
     {
-        if (build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettings()->early_limit_for_map_virtual_columns > 0)
+        if (build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().early_limit_for_map_virtual_columns > 0)
         {
             pipe.addSimpleTransform([&](const Block & header) {
-                return std::make_shared<LimitTransform>(header, build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettings()->early_limit_for_map_virtual_columns, 0);
+                return std::make_shared<LimitTransform>(header, build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().early_limit_for_map_virtual_columns, 0);
             });
         }
 

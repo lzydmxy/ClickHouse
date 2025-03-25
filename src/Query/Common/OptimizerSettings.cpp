@@ -13,7 +13,7 @@ namespace ErrorCodes
     extern const int BAD_ARGUMENTS;
 }
 
-IMPLEMENT_SETTINGS_TRAITS(OptimizerSettingsTraits, LIST_OF_COORDINATION_SETTINGS)
+IMPLEMENT_SETTINGS_TRAITS(OptimizerSettingsTraits, LIST_OF_OPTIMIZER_SETTINGS)
 
 IMPLEMENT_SETTING_ENUM(SchedulerMode, ErrorCodes::BAD_ARGUMENTS, {
     {"random", SchedulerMode::RANDOM},

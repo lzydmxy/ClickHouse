@@ -101,7 +101,7 @@ public:
         , dag_graph_ptr(dag_graph_ptr_)
         , cluster_nodes(std::move(cluster_nodes_))
         , node_selector(cluster_nodes, query_context, dag_graph_ptr)
-        , local_address(getLocalAddress(*query_context))
+        , local_address(getLocalAddress(query_context))
         , batch_schedule(batch_schedule_)
         , log(getLogger("Scheduler"))
     {

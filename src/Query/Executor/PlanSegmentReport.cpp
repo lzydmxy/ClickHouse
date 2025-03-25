@@ -37,7 +37,7 @@ void reportSuccessPlanSegmentProfile(const PlanSegmentExecutor::ExecutionResult 
             cntl,
             request,
             response,
-            brpc::NewCallback(RPCHelpers::onAsyncCallDoneAssertController, request, response, cntl, logger, construct_err_msg));
+            brpc::NewCallback(RPCHelpers::onAsyncCallDoneAssertControllerProfile, request, response, cntl, logger, construct_err_msg));
     }
     catch (...)
     {
@@ -192,7 +192,7 @@ PlanSegmentExecutor::ExecutionResult convertSuccessPlanSegmentStatusToResult(
     result.runtime_segment_status.is_cancelled = false;
     result.runtime_segment_status.message = "execute success";
     result.sender_metrics = senderMetricsToProto(plan_segment_outputs, sender_metrics, *execution_info.execution_address);
-    if (query_context->getOptimizerContext()->getSettings()->report_segment_profiles && segment_profile)
+    if (query_context->getOptimizerContext()->getSettingsRef().report_segment_profiles && segment_profile)
         result.segment_profile = segment_profile;
     return result;
 }

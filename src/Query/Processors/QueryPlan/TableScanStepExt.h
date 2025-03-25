@@ -8,11 +8,9 @@
 #include <Interpreters/DatabaseCatalog.h>
 #include <Interpreters/PreparedSets.h>
 #include <Interpreters/TableJoin.h>
-#include <Interpreters/evaluateConstantExpression.cpp>
 #include <Interpreters/getTableExpressions.h>
 #include <Parsers/ASTSelectQuery.h>
 #include <Parsers/queryToString.h>
-#include <Planner/Utils.cpp>
 #include <Processors/QueryPlan/AggregatingStep.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
 #include <Processors/QueryPlan/ISourceStep.h>
@@ -45,6 +43,8 @@ using DataTypePtr = std::shared_ptr<const IDataType>;
 using NameToType = std::map<String, DataTypePtr>;
 using ASTSelectQueryPtr = std::shared_ptr<ASTSelectQuery>;
 using RuntimeFilterId = UInt32;
+
+StreamLocalLimits getLimitsForStorage(const Settings & settings, const SelectQueryOptions & options);
 
 struct RewriteInQueryMatcher
 {

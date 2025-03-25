@@ -110,6 +110,11 @@ void ClusterNodes::selectOrderWorkers(bool first)
         std::iota(rank_worker_ids.begin(), rank_worker_ids.end(), 0);
 }
 
+void ClusterNodes::selectUtilizationWorkers()
+{
+   selectRandomWorkers();
+}
+
 void NodeSelector::setSources(
     PlanSegment * plan_segment_ptr, NodeSelectorResult * result, std::map<PlanSegmentInstanceID, std::vector<UInt32>> & read_partitions)
 {
@@ -322,7 +327,7 @@ std::map<PlanSegmentInstanceID, std::vector<UInt32>> NodeSelector::splitReadPart
 NodeSelectorResult LocalNodeSelector::select(PlanSegment *, ContextPtr query_context)
 {
     NodeSelectorResult result;
-    auto local_address = getLocalAddress(*query_context);
+    auto local_address = getLocalAddress(query_context);
     result.worker_nodes.emplace_back(WorkerNode{local_address, NodeType::Local});
     return result;
 }
@@ -587,7 +592,7 @@ NodeSelectorResult SourceNodeSelector::select(PlanSegment * plan_segment_ptr, Co
     }
     else
     {
-        auto local_address = getLocalAddress(*query_context);
+        auto local_address = getLocalAddress(query_context);
         if (dag_graph_ptr->source_pruner
             && dag_graph_ptr->source_pruner->plan_segment_workers_map.contains(plan_segment_ptr->getPlanSegmentId()))
         {
@@ -628,7 +633,7 @@ NodeSelectorResult ComputeNodeSelector::select(PlanSegment * plan_segment_ptr, C
     checkClusterInfo(plan_segment_ptr);
     NodeSelectorResult result;
 
-    auto local_address = getLocalAddress(*query_context);
+    auto local_address = getLocalAddress(query_context);
     if (dag_graph_ptr->source_pruner && query_context->getOptimizerContext()->getSettingsRef().enable_prune_source_plan_segment
         && dag_graph_ptr->source_pruner->plan_segment_workers_map.contains(plan_segment_ptr->getPlanSegmentId()))
     {

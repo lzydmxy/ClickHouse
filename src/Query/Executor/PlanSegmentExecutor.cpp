@@ -263,7 +263,7 @@ void fillPlanSegmentProfile(
     ContextPtr context,
     PlanSegment * plan_segment)
 {
-    auto current_address = getLocalAddress(*context);
+    auto current_address = getLocalAddress(context);
     segment_profile->worker_address = extractExchangeHostPort(current_address);
     if (query_status)
     {
@@ -390,14 +390,14 @@ void PlanSegmentExecutor::doExecute()
     }
 
     //TODO: Need PlanSegmentDescription in PlanPrinter.h
-    // if (optimizer_context->getSettings()->log_segment_profiles)
+    // if (optimizer_context->getSettingsRef().log_segment_profiles)
     // {
     //     query_log_element->segment_profiles = std::make_shared<std::vector<String>>();
     //     query_log_element->segment_profiles->emplace_back(
     //         PlanSegmentDescription::getPlanSegmentDescription(plan_segment_instance->plan_segment, true)
     //             ->jsonPlanSegmentDescriptionAsString(collectStepRuntimeProfiles(pipeline)));
     // }
-    if (optimizer_context->getSettings()->report_segment_profiles && plan_segment)
+    if (optimizer_context->getSettingsRef().report_segment_profiles && plan_segment)
     {
         segment_profile = std::make_shared<PlanSegmentProfile>(query_log_element->client_info.initial_query_id, plan_segment->getPlanSegmentId());
         fillPlanSegmentProfile(segment_profile, pipeline, plan_segment->getProfileType(), query_status.get(), context, plan_segment);
@@ -434,16 +434,16 @@ QueryPipelinePtr PlanSegmentExecutor::buildPipeline()
         // BuildQueryPipelineSettings::fromPlanSegment(plan_segment, plan_segment_instance->info, context));
 
     auto pipeline = QueryPipelineBuilder::getPipeline(std::move(*builder));
-    registerAllExchangeReceivers(logger, pipeline, optimizer_context->getSettings()->exchange_wait_accept_max_timeout_ms);
+    registerAllExchangeReceivers(logger, pipeline, optimizer_context->getSettingsRef().exchange_wait_accept_max_timeout_ms);
     return std::unique_ptr<QueryPipeline>(&pipeline);
 }
 
 void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSenderPtrs & senders)
 {
     std::vector<BroadcastSenderPtrs> senders_list;
-    const auto opt_settings = context->getOptimizerContext()->getSettings();
+    const auto opt_settings = context->getOptimizerContext()->getSettingsRef();
     auto sender_options
-        = SenderProxyOptions{.wait_timeout_ms = opt_settings->exchange_wait_accept_max_timeout_ms + opt_settings->wait_runtime_filter_timeout};
+        = SenderProxyOptions{.wait_timeout_ms = opt_settings.exchange_wait_accept_max_timeout_ms + opt_settings.wait_runtime_filter_timeout};
     auto & sender_registry = BroadcastSenderProxyRegistry::instance();
     auto thread_group = CurrentThread::getGroup();
 

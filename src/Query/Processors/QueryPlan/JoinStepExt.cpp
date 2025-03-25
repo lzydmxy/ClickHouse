@@ -37,8 +37,8 @@ JoinPtr JoinStepExt::makeJoin(
     String filter_column_name)
 {
     const auto & settings = context->getSettingsRef();
-    auto optimizer_settings = context->getOptimizerContext()->getSettings();
-    auto table_join = std::make_shared<TableJoinExt>(settings, context->getOptimizerContext()->getSettings(), context->getGlobalTemporaryVolume());
+    const auto & optimizer_settings = context->getOptimizerContext()->getSettingsRef();
+    auto table_join = std::make_shared<TableJoinExt>(settings, optimizer_settings, context->getGlobalTemporaryVolume());
     if (consumer)
         table_join->setRuntimeFilterConsumer(consumer);
 
@@ -120,7 +120,7 @@ JoinPtr JoinStepExt::makeJoin(
     }
 
     table_join->setAsofInequality(asof_inequality);
-    if (context->getOptimizerContext()->getSettings()->enforce_all_join_to_any_join)
+    if (context->getOptimizerContext()->getSettingsRef().enforce_all_join_to_any_join)
     {
         strictness = JoinStrictness::RightAny;
     }
@@ -130,7 +130,7 @@ JoinPtr JoinStepExt::makeJoin(
 
     if (enforceNestLoopJoin())
     {
-        if (context->getOptimizerContext()->getSettings()->enable_nested_loop_join)
+        if (context->getOptimizerContext()->getSettingsRef().enable_nested_loop_join)
             throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Set enable_nested_loop_join=1 to enable outer join with filter");
         // TODO support NESTED_LOOP_JOIN join Algorithm, we may not need
         // table_join->join_algorithm = JoinAlgorithm::NESTED_LOOP_JOIN;
@@ -140,7 +140,7 @@ JoinPtr JoinStepExt::makeJoin(
 
     bool allow_merge_join = table_join->allowMergeJoin();
     bool allow_grace_hash_join = true;
-    if (context->getOptimizerContext()->getSettings()->use_grace_hash_only_repartition && distribution_type != DistributionType::REPARTITION)
+    if (context->getOptimizerContext()->getSettingsRef().use_grace_hash_only_repartition && distribution_type != DistributionType::REPARTITION)
         allow_grace_hash_join = false;
     /// HashJoin with Dictionary optimisation
     auto l_sample_block = input_streams[0].header;
@@ -188,7 +188,7 @@ JoinPtr JoinStepExt::makeJoin(
             if (GraceHashJoin::isSupported(table_join) ) {
                 table_join->join_algorithm = {JoinAlgorithm::GRACE_HASH};
                 // TODO support join left side parallel for GraceHashJoin
-                // auto parallel = (context->getOptimizerContext()->getSettings()->grace_hash_join_left_side_parallel != 0 ? context->getOptimizerContext()->getSettings()->grace_hash_join_left_side_parallel: num_streams);
+                // auto parallel = (context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel != 0 ? context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel: num_streams);
                 return std::make_shared<GraceHashJoin>(context, table_join, l_sample_block, r_sample_block, context->getTempDataOnDisk(), false);
             } else if (allow_merge_join) { // fallback into merge join
                 LOG_WARNING(getLogger("JoinStep::makeJoin"), "Grace hash join is not support, fallback into merge join.");
@@ -206,7 +206,7 @@ JoinPtr JoinStepExt::makeJoin(
     {
         if (GraceHashJoin::isSupported(table_join) ) {
             // TODO support join left side parallel for GraceHashJoin
-            // auto parallel = (context->getOptimizerContext()->getSettings()->grace_hash_join_left_side_parallel != 0 ? context->getOptimizerContext()->getSettings()->grace_hash_join_left_side_parallel: num_streams);
+            // auto parallel = (context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel != 0 ? context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel: num_streams);
             // return std::make_shared<GraceHashJoin>(context, table_join, l_sample_block, r_sample_block, context->getTempDataOnDisk(), parallel, context->getSettingsRef().spill_mode == SpillMode::AUTO, false, num_streams);
             return std::make_shared<GraceHashJoin>(context, table_join, l_sample_block, r_sample_block, context->getTempDataOnDisk(), false);
         } else if (allow_merge_join) { // fallback into merge join
@@ -479,7 +479,7 @@ void JoinStepExt::describePipeline(FormatSettings & settings) const
 
 RuntimeFilterBuilderPtr JoinStepExt::createRuntimeFilterBuilder(ContextPtr context) const
 {
-    return std::make_shared<RuntimeFilterBuilder>(*context->getOptimizerContext()->getSettings(), runtime_filter_builders);
+    return std::make_shared<RuntimeFilterBuilder>(context->getOptimizerContext()->getSettings(), runtime_filter_builders);
 }
 
 bool JoinStepExt::mustReplicate() const

@@ -54,7 +54,9 @@ BlockIO QueryMPPCoordinator::execute()
     }
 
     auto optimizer_context = query_context->getOptimizerContext();
-    optimizer_context->setCoordinatorAddress(getLocalAddressPtr(*query_context));
+    auto context_ptr = std::const_pointer_cast<const Context>(query_context);
+    auto local_address = getLocalAddressPtr(context_ptr);
+    optimizer_context->setCoordinatorAddress(local_address);
     optimizer_context->setPlanSegmentInstanceID(PlanSegmentInstanceID{0, 0});
 
     /// set progress_callback before send plan segment
@@ -97,7 +99,7 @@ BlockIO QueryMPPCoordinator::execute()
 
     auto final_segment_instance = std::make_unique<PlanSegmentInstance>();
     final_segment_instance->info = scheduler_status->final_execution_info;
-    final_segment_instance->info.execution_address = getLocalAddressPtr(*query_context);
+    final_segment_instance->info.execution_address = local_address;
     final_segment_instance->plan_segment = std::make_unique<PlanSegment>(std::move(*final_segment));
 
     try
@@ -118,7 +120,7 @@ BlockIO QueryMPPCoordinator::execute()
 SummarizedQueryStatus QueryMPPCoordinator::waitUntilFinish(int error_code, const String & error_msg)
 {
     std::unique_lock lock(status_mutex);
-    if (status_cv.wait_for(lock, std::chrono::milliseconds(optimizer_context->getSettings()->distributed_query_wait_exception_ms), [this] {
+    if (status_cv.wait_for(lock, std::chrono::milliseconds(optimizer_context->getSettingsRef().distributed_query_wait_exception_ms), [this] {
             return this->query_status.status_code == QueryMPPStatusCode::FINISH;
         }))
     {
@@ -212,7 +214,7 @@ void QueryMPPCoordinator::onProgress(UInt32 segment_id, UInt32 parallel_index, c
 void QueryMPPCoordinator::onFinalProgress(UInt32 segment_id, UInt32 parallel_index, const Progress & progress_)
 {
     progress_manager.onFinalProgress(segment_id, parallel_index, progress_);
-    if (optimizer_context->getSettings()->enable_wait_for_post_processing)
+    if (optimizer_context->getSettingsRef().enable_wait_for_post_processing)
     {
         {
             std::unique_lock lock(post_processing_rpc_waiting_mutex);
@@ -238,7 +240,7 @@ Progress QueryMPPCoordinator::getFinalProgress() const
 
 void QueryMPPCoordinator::initializePostProcessingRPCReceived()
 {
-    if (optimizer_context->getSettings()->enable_wait_for_post_processing)
+    if (optimizer_context->getSettingsRef().enable_wait_for_post_processing)
     {
         {
             std::unique_lock lock(post_processing_rpc_waiting_mutex);
@@ -260,7 +262,7 @@ void QueryMPPCoordinator::initializePostProcessingRPCReceived()
 void QueryMPPCoordinator::waitUntilAllPostProcessingRPCReceived()
 {
     // if setting is not enabled, just skip wait
-    if (!optimizer_context->getSettings()->enable_wait_for_post_processing)
+    if (!optimizer_context->getSettingsRef().enable_wait_for_post_processing)
         return;
     std::unique_lock lock(post_processing_rpc_waiting_mutex);
     bool need_wait = false;
@@ -278,7 +280,7 @@ void QueryMPPCoordinator::waitUntilAllPostProcessingRPCReceived()
     }
 
     if (!post_processing_rpc_waiting_cv.wait_for(
-            lock, std::chrono::milliseconds(optimizer_context->getSettings()->wait_for_post_processing_timeout_ms), [this] {
+            lock, std::chrono::milliseconds(optimizer_context->getSettingsRef().wait_for_post_processing_timeout_ms), [this] {
                 return post_processing_rpc_waiting[PostProcessingRPCID::ReportPlanSegmentCost].empty();
             }))
     {

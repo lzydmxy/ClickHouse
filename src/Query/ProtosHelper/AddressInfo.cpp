@@ -1,20 +1,28 @@
 #include "AddressInfo.h"
 #include <string>
 #include <IO/ReadHelpers.h>
+#include <Interpreters/Context.h>
 #include <Query/Common/QueryCommon.h>
+#include <Query/Common/OptimizerContext.h>
 #include <Query/ProtosHelper/HostWithPorts.h>
 
 namespace DB
 {
 
-// AddressInfo getLocalAddress(const Context & query_context)
-// {
-//     const auto & host = getHostIPFromEnv();
-//     auto port = query_context.getTCPPort();
-//     const ClientInfo & info = query_context.getClientInfo();
-//     auto address = AddressInfo(host, port, info.current_user, info.current_password, query_context.getRPCPort());
-//     return std::move(address);
-// }
+AddressInfo getLocalAddress(ContextPtr & context)
+{
+    return *(getLocalAddressPtr(context).get());
+}
+
+AddressInfoPtr getLocalAddressPtr(ContextPtr & context)
+{
+    auto optimizer_context = context->getOptimizerContext();
+    const auto & host = getFQDNOrHostName();
+    auto tcp_port = context->getTCPPort();
+    auto rpc_port = optimizer_context->getRPCPort();
+    const ClientInfo & info = context->getClientInfo();
+    return std::make_shared<AddressInfo>(host, tcp_port, info.current_user, "", rpc_port);
+}
 
 // AddressInfo getRemoteAddress(HostWithPorts host_with_ports, ContextPtr & query_context)
 // {
