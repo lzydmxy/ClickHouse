@@ -44,6 +44,7 @@
 #include <Processors/Executors/PushingPipelineExecutor.h>
 #include <Storages/IStorage.h>
 #include <Storages/MergeTree/MergeTreeSettings.h>
+#include <Query/Exchange/QueryExchangeLog.h>
 
 #include <fmt/core.h>
 
