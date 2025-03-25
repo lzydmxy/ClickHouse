@@ -99,7 +99,7 @@ public:
     void setIsExplainQuery(const bool & is_explain_query_);
     bool isExplainQuery() const;
 
-    QueryExchangeLogPtr getQueryExchangeLog();
+    QueryExchangeLogPtr getQueryExchangeLog() { return query_exchange_log; }
 
 private:
     OptimizerSettings optimizer_settings;
