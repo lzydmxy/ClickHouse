@@ -8,9 +8,11 @@
 #include <Interpreters/DatabaseCatalog.h>
 #include <Interpreters/PreparedSets.h>
 #include <Interpreters/TableJoin.h>
+#include <Interpreters/evaluateConstantExpression.cpp>
 #include <Interpreters/getTableExpressions.h>
 #include <Parsers/ASTSelectQuery.h>
 #include <Parsers/queryToString.h>
+#include <Planner/Utils.cpp>
 #include <Processors/QueryPlan/AggregatingStep.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
 #include <Processors/QueryPlan/ISourceStep.h>
