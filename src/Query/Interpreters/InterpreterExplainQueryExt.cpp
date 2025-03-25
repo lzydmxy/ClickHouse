@@ -96,7 +96,7 @@ BlockIO InterpreterExplainQueryExt::execute()
 
 Block InterpreterExplainQueryExt::getSampleBlock(const ASTExplainQueryExt::ExplainKindExt kind)
 {
-    if (kind == ASTExplainQueryExt::ExplainKind::QueryEstimates)
+    if (kind == ASTExplainQueryExt::ExplainKindExt::QueryEstimates)
     {
         auto cols = NamesAndTypes{
             {"database", std::make_shared<DataTypeString>()},
@@ -600,10 +600,12 @@ QueryPipeline InterpreterExplainQueryExt::executeImpl()
         case ASTExplainQueryExt::OptimizerPlan:
         {
             // TODO implement need InterpreterSelectQueryUseOptimizer
+            break;
         }
         case ASTExplainQueryExt::PlanSegment:
         {
             // TODO implement need InterpreterSelectQueryUseOptimizer
+            break;
         }
         default:
             throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implemented explain type.");
@@ -623,9 +625,9 @@ void registerInterpreterExplainQuery(InterpreterFactory & factory)
 {
     auto create_fn = [] (const InterpreterFactory::Arguments & args)
     {
-        return std::make_unique<InterpreterExplainQuery>(args.query, args.context);
+        return std::make_unique<InterpreterExplainQueryExt>(args.query, args.context);
     };
-    factory.registerInterpreter("InterpreterExplainQuery", create_fn);
+    factory.registerInterpreter("InterpreterExplainQueryExt", create_fn);
 }
 
 }
