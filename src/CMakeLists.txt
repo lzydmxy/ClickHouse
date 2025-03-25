@@ -684,7 +684,6 @@ if (ENABLE_TESTS)
         clickhouse_parsers
         clickhouse_storages_system
         dbms
-        loggers
         clickhouse_common_config
         clickhouse_common_zookeeper
         string_utils

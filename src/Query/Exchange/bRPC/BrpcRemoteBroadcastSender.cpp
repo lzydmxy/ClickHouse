@@ -77,8 +77,9 @@ BrpcRemoteBroadcastSender::~BrpcRemoteBroadcastSender()
             element.is_modifier = sender_metrics.is_modifier;
             element.message = sender_metrics.message;
             element.type = "brpc_sender";
-            if (auto query_exchange_log = optimizer_context->getQueryExchangeLog())
-                query_exchange_log->add(element);
+            // TODO: Linker failed
+            // if (auto query_exchange_log = optimizer_context->getQueryExchangeLog())
+            //     query_exchange_log->add(element);
         }
     }
     catch (...)

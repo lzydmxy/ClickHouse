@@ -8,6 +8,8 @@ namespace DB
 
 const static int32_t STREAM_RUNNING = 0;
 
+BrpcProxy BrpcProxy::brpc_proxy;
+
 bool BrpcProxy::setStreamStatus(StreamId stream_id, int32_t status_code)
 {
     std::unique_lock<std::shared_mutex> lock(stream_mutex);

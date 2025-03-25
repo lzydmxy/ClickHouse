@@ -156,4 +156,10 @@ bool OptimizerContext::isExplainQuery() const
     return is_explain_query;
 }
 
+/// SystemLogs
+QueryExchangeLogPtr OptimizerContext::getQueryExchangeLog()
+{
+    return query_exchange_log;
+}
+
 }
