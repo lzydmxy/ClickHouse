@@ -1,25 +1,23 @@
 #include <Query/Processors/QueryPlan/JoinStepExt.h>
 
-#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
-#include <Query/Processors/Transforms/FilterTransformExt.h>
-#include <Query/Common/PredicateUtils.h>
 #include <Query/Common/OptimizerContext.h>
+#include <Query/Common/PredicateUtils.h>
+#include <Query/Common/SymbolsExtractor.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterConsumer.h>
 #include <Query/Executor/PlanSegmentInstance.h>
+#include <Query/Interpreters/TableJoinExt.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <Query/Processors/Transforms/FilterTransformExt.h>
+#include <Query/Pipeline/QueryPipelineBuilderHelper.h>
 
 #include <QueryPipeline/QueryPipelineBuilder.h>
-
-
-#include <memory>
 #include <Interpreters/ConcurrentHashJoin.h>
 #include <Interpreters/GraceHashJoin.h>
 #include <Interpreters/HashJoin.h>
 #include <Interpreters/MergeJoin.h>
 #include <Interpreters/JoinSwitcher.h>
-#include <Query/Interpreters/TableJoinExt.h>
-#include <Query/Common/SymbolsExtractor.h>
 
-
+#include <memory>
 
 namespace DB
 {
@@ -375,7 +373,7 @@ QueryPipelineBuilderPtr JoinStepExt::updatePipeline(QueryPipelineBuilders pipeli
         throw Exception(ErrorCodes::NOT_IMPLEMENTED, "QueryPipelineBuilder should support runtime filter.");
     }
 
-    auto pipeline = QueryPipelineBuilder::joinPipelinesRightLeft(
+    auto pipeline = QueryPipelineBuilderHelper::joinPipelinesWithRuntimeFilter(
         std::move(pipelines[0]),
         std::move(pipelines[1]),
         join,
@@ -383,8 +381,9 @@ QueryPipelineBuilderPtr JoinStepExt::updatePipeline(QueryPipelineBuilders pipeli
         max_block_size,
         max_streams,
         keep_left_read_in_order,
-        /* need_build_runtime_filter, TODO QueryPipelineBuilder::joinPipelinesRightLeft support runtime filter.*/
-        &processors);
+        true,
+        &processors,
+        need_build_runtime_filter);
 
     // if NestLoopJoin is choose, no need to add filter stream.
     if (filter && !PredicateUtils::isTruePredicate(filter) /*&& join->getType() != JoinType::NestedLoop*/

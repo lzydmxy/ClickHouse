@@ -28,6 +28,7 @@ public:
         size_t max_block_size_,
         bool on_totals_ = false,
         bool default_totals_ = false,
+        bool join_parallel_left_right_ = true,
         FinishCounterPtr finish_counter_ = nullptr,
         size_t total_size_ = 0,
         size_t index_ = 0,
@@ -37,22 +38,20 @@ public:
 
     String getName() const override { return "JoiningTransform"; }
 
-    static Block transformHeader(Block header, const JoinPtr & join);
-
     OutputPort & getFinishedSignal();
 
     Status prepare() override;
     void work() override;
     int schedule() override { return (*finish_pipe)[index].event_fd; }
 
-protected:
-    void transform(Chunk & chunk);
-
 private:
     size_t total_size = 0;
     size_t index = 0;
     FinishPipePtr finish_pipe;
     bool has_counter_finished = false;
+
+    // TODO impl parallel execute left input and right input
+    bool join_parallel_left_right;
 };
 
 class FillingRightJoinSideTransformExt : public FillingRightJoinSideTransform
@@ -71,4 +70,3 @@ private:
 };
 
 }
-
