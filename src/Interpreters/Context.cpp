@@ -3554,7 +3554,7 @@ void Context::initializeOptimizerContext() const
 {
     std::lock_guard lock(shared->optimizer_context_mutex);
     if (shared->optimizer_context)
-        throw Exception(ErrorCodes::LOGICAL_ERROR, "Trying to initialize optimizer context multiple times");
+        return;
     OptimizerSettings optimizer_settings;
     shared->optimizer_context = std::make_shared<OptimizerContext>(getSettingsRef(), optimizer_settings);
 }
@@ -3563,7 +3563,7 @@ OptimizerContextPtr Context::getOptimizerContext() const
 {
     std::lock_guard lock(shared->optimizer_context_mutex);
     if (!shared->optimizer_context)
-        throw Exception(ErrorCodes::LOGICAL_ERROR, "Raft must be initialized before requests");
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Optimizer context must be initialized");
     return shared->optimizer_context;
 }
 

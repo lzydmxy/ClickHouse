@@ -75,6 +75,6 @@ private:
     BroadcastStatus init_status{BroadcastStatusCode::RUNNING, false, "init"};
     std::atomic<BroadcastStatus *> broadcast_status{&init_status};
     ContextPtr context;
-    LoggerPtr logger;
+    LoggerPtr log;
 };
 }

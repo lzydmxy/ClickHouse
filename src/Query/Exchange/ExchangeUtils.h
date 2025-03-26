@@ -11,8 +11,8 @@ namespace DB
 struct ExchangeOptions
 {
     TimePoint exchange_timeout_ts;
-    UInt64 send_threshold_in_bytes;
-    UInt64 send_threshold_in_row_num;
+    UInt64 send_threshold_in_bytes{0};
+    UInt64 send_threshold_in_row_num{0};
     bool force_remote_mode = false;
     bool force_use_buffer = false;
 };

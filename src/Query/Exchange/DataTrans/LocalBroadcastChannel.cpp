@@ -30,7 +30,7 @@ LocalBroadcastChannel::LocalBroadcastChannel(
     , options(std::move(options_))
     , receive_queue(std::move(queue_))
     , context(std::move(context_))
-    , logger(getLogger("LocalBroadcastChannel"))
+    , log(getLogger("LocalBroadcastChannel"))
 {
 }
 
@@ -56,14 +56,9 @@ RecvDataPacket LocalBroadcastChannel::recv(TimePoint timeout_tp)
         {
             return RecvDataPacket(*broadcast_status.load(std::memory_order_acquire));
         }
-        else
-        {
-            // 
-        }
     }
 
-    BroadcastStatus current_status = finish(
-        BroadcastStatusCode::RECV_TIMEOUT,
+    BroadcastStatus current_status = finish(BroadcastStatusCode::RECV_TIMEOUT,
         "Receive from channel " + name + " timeout after ms: " + timeToString(timeout_tp));
     if (enable_receiver_metrics)
         receiver_metrics.recv_time_ms << s.elapsedMilliseconds();
@@ -109,13 +104,8 @@ BroadcastStatus LocalBroadcastChannel::finish(BroadcastStatusCode status_code, S
 
     if (broadcast_status.compare_exchange_strong(current_status_ptr, new_status_ptr, std::memory_order_release, std::memory_order_acquire))
     {
-        LOG_DEBUG(
-            logger,
-            "{} BroadcastStatus from {} to {} with message: {}",
-            name,
-            current_status_ptr->code,
-            new_status_ptr->code,
-            new_status_ptr->message);
+        LOG_DEBUG(log, "{} BroadcastStatus from {} to {} with message: {}",
+            name, toString(current_status_ptr->code), toString(new_status_ptr->code), new_status_ptr->message);
         if (new_status_ptr->code > 0)
             // close queue immediately
             receive_queue->close();
@@ -132,20 +122,14 @@ BroadcastStatus LocalBroadcastChannel::finish(BroadcastStatusCode status_code, S
     }
     else
     {
-        LOG_TRACE(
-            logger,
-            "Fail to change broadcast(name:{}) status to {}, current status is:{} message:{}",
-            name,
-            new_status_ptr->code,
-            current_status_ptr->code,
-            message);
+        LOG_TRACE(log, "Fail to change broadcast(name:{}) status to {}, current status is:{} message:{}",
+            name,toString(new_status_ptr->code), toString(current_status_ptr->code), message);
         sender_metrics.finish_code = current_status_ptr->code;
         sender_metrics.is_modifier = 0;
         delete new_status_ptr;
         return *current_status_ptr;
     }
 }
-
 
 void LocalBroadcastChannel::registerToSenders(UInt32 timeout_ms)
 {
@@ -169,7 +153,6 @@ String LocalBroadcastChannel::getName() const
 
 LocalBroadcastChannel::~LocalBroadcastChannel()
 {
-    auto optimizer_context = context->getOptimizerContext();
     try
     {
         auto * status = broadcast_status.load(std::memory_order_acquire);
@@ -203,13 +186,12 @@ LocalBroadcastChannel::~LocalBroadcastChannel()
             element.register_time_ms = receiver_metrics.register_time_ms.get_value();
             element.recv_bytes = receiver_metrics.recv_bytes.get_value();
             element.recv_uncompressed_bytes = receiver_metrics.recv_uncompressed_bytes.get_value();
-
             query_exchange_log->add(element);
         }
     }
     catch (...)
     {
-        tryLogCurrentException(logger);
+        tryLogCurrentException(log);
     }
 }
 }

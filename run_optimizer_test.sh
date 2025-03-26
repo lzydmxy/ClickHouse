@@ -4,3 +4,4 @@
 ./build/src/unit_tests_dbms trace --gtest_filter="NodeSelectorTest*"
 ./build/src/unit_tests_dbms trace --gtest_filter="ExchangeQueueTest*"
 ./build/src/unit_tests_dbms trace --gtest_filter="RPCchannelPoolTest*"
+./build/src/unit_tests_dbms trace --gtest_filter="ExchangeSourceTest*"

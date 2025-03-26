@@ -39,7 +39,7 @@ private:
     mutable std::mutex mutex;
     using BroadcastSenderProxyEntry = std::weak_ptr<BroadcastSenderProxy>;
     std::unordered_map<ExchangeDataKey, BroadcastSenderProxyEntry, ExchangeDataKeyHashFunc> proxies;
-    LoggerPtr logger;
+    LoggerPtr log;
 };
 
 }
