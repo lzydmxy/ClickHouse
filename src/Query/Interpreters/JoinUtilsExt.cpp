@@ -4,6 +4,10 @@
 #include <Columns/ColumnSparse.h>
 #include <Query/Interpreters/JoinUtilsExt.h>
 
+#include <DataTypes/DataTypeLowCardinality.h>
+#include <DataTypes/DataTypeNullable.h>
+
+
 namespace DB
 {
 
@@ -50,6 +54,13 @@ ColumnPtr tryConvertColumnToNullable(ColumnPtr col)
         }
     }
     return nullptr;
+}
+
+bool isJoinCompatibleTypes(const DataTypePtr & left, const DataTypePtr & right)
+{
+    auto left_base = removeNullable(recursiveRemoveLowCardinality(left));
+    auto right_base = removeNullable(recursiveRemoveLowCardinality(right));
+    return left_base->equals(*right_base);
 }
 
 }

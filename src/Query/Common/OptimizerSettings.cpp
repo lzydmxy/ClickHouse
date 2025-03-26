@@ -30,6 +30,12 @@ IMPLEMENT_SETTING_ENUM(QueryDryRunMode, ErrorCodes::BAD_ARGUMENTS,
      {"skip_execute_segment", QueryDryRunMode::SKIP_EXECUTE_SEGMENT},
      {"skip_execute_query", QueryDryRunMode::SKIP_EXECUTE_QUERY}})
 
+IMPLEMENT_SETTING_ENUM(CTEMode, ErrorCodes::BAD_ARGUMENTS,
+    {{"INLINED", CTEMode::INLINED},
+     {"SHARED", CTEMode::SHARED},
+     {"AUTO", CTEMode::AUTO},
+     {"ENFORCED", CTEMode::ENFORCED}})
+
 void OptimizerSettings::loadFromConfig(const String & config_elem, const Poco::Util::AbstractConfiguration & config)
 {
     if (!config.has(config_elem))

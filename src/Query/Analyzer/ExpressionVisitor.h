@@ -1,0 +1,265 @@
+#pragma once
+
+#include <Query/Parsers/ASTVisitor.h>
+#include <Query/Analyzer/function_utils.h>
+#include <Query/Analyzer/Analysis.h>
+#include <Query/Processors/QueryPlan/Void.h>
+
+namespace DB
+{
+/// Since the ASTFunction is heavily reused, the AnalyzerExpressionVisitor is used for providing more fine-grained visiting methods.
+template <typename C, typename R = void>
+class AnalyzerExpressionVisitor : public ASTVisitor<R, C>
+{
+protected:
+    ContextPtr context;
+
+    virtual R visitExpression(ASTPtr &, IAST &, C &) { throw Exception(ErrorCodes::NOT_IMPLEMENTED, "not implemented"); }
+
+    virtual R visitLiteral(ASTPtr & node, ASTLiteral & ast, C & visitor_context) { return visitExpression(node, ast, visitor_context); }
+    virtual R visitIdentifier(ASTPtr & node, ASTIdentifier & ast, C & visitor_context) { return visitExpression(node, ast, visitor_context); }
+    virtual R visitFieldReference(ASTPtr & node, ASTFieldReferenceExt & ast, C & visitor_context) { return visitExpression(node, ast, visitor_context); }
+    virtual R visitFunction(ASTPtr & node, ASTFunction & ast, C & visitor_context) { return visitExpression(node, ast, visitor_context); }
+    virtual R visitAggregateFunction(ASTPtr & node, ASTFunction & ast, C & visitor_context) { return visitFunction(node, ast, visitor_context); }
+    virtual R visitWindowFunction(ASTPtr & node, ASTFunction & ast, C & visitor_context) { return visitFunction(node, ast, visitor_context); }
+    virtual R visitLambdaExpression(ASTPtr & node, ASTFunction & ast, C & visitor_context) { return visitFunction(node, ast, visitor_context); }
+    virtual R visitGroupingOperation(ASTPtr & node, ASTFunction & ast, C & visitor_context) { return visitFunction(node, ast, visitor_context); }
+    virtual R visitOrdinaryFunction(ASTPtr & node, ASTFunction & ast, C & visitor_context) { return visitFunction(node, ast, visitor_context); }
+    virtual R visitInSubquery(ASTPtr & node, ASTFunction & ast, C & visitor_context) { return visitFunction(node, ast, visitor_context); }
+    virtual R visitExistsSubquery(ASTPtr & node, ASTFunction & ast, C & visitor_context) { return visitFunction(node, ast, visitor_context); }
+    virtual R visitScalarSubquery(ASTPtr & node, ASTSubquery & ast, C & visitor_context) { return visitExpression(node, ast, visitor_context); }
+    virtual R visitQuantifiedComparisonSubquery(ASTPtr & node, ASTQuantifiedComparisonExt & ast, C & visitor_context) { return visitExpression(node, ast, visitor_context); }
+    // TODO: now do not support ASTCreatePreparedStatementQuery
+    // virtual R visitPreparedParameter(ASTPtr & node, ASTPreparedParameter & ast, C & visitor_context)
+    // {
+    //     return visitExpression(node, ast, visitor_context);
+    // }
+
+public:
+    explicit AnalyzerExpressionVisitor(ContextPtr context_) : context(context_) { }
+
+    virtual R process(ASTPtr & node, C & visitor_context) { return ASTVisitorUtil::accept(node, *this, visitor_context); }
+
+    R visitASTLiteral(ASTPtr & node, C & visitor_context) final { return visitLiteral(node, node->as<ASTLiteral &>(), visitor_context); }
+
+    R visitASTIdentifier(ASTPtr & node, C & visitor_context) final
+    {
+        return visitIdentifier(node, node->as<ASTIdentifier &>(), visitor_context);
+    }
+
+    R visitASTFieldReferenceExt(ASTPtr & node, C & visitor_context) final
+    {
+        return visitFieldReference(node, node->as<ASTFieldReferenceExt &>(), visitor_context);
+    }
+
+    R visitASTSubquery(ASTPtr & node, C & visitor_context) final
+    {
+        return visitScalarSubquery(node, node->as<ASTSubquery &>(), visitor_context);
+    }
+
+    R visitASTFunction(ASTPtr & node, C & visitor_context) final
+    {
+        auto & function = node->as<ASTFunction &>();
+        auto function_type = getFunctionType(function, context);
+
+        switch (function_type)
+        {
+            case FunctionType::FUNCTION:
+                return visitOrdinaryFunction(node, function, visitor_context);
+            case FunctionType::AGGREGATE_FUNCTION:
+                return visitAggregateFunction(node, function, visitor_context);
+            case FunctionType::WINDOW_FUNCTION:
+                return visitWindowFunction(node, function, visitor_context);
+            case FunctionType::GROUPING_OPERATION:
+                return visitGroupingOperation(node, function, visitor_context);
+            case FunctionType::LAMBDA_EXPRESSION:
+                return visitLambdaExpression(node, function, visitor_context);
+            case FunctionType::EXISTS_SUBQUERY:
+                return visitExistsSubquery(node, function, visitor_context);
+            case FunctionType::IN_SUBQUERY:
+                return visitInSubquery(node, function, visitor_context);
+            default:
+                throw Exception(ErrorCodes::NOT_IMPLEMENTED, "unknown function type");
+        }
+    }
+
+    R visitASTQuantifiedComparisonExt(ASTPtr & node, C & visitor_context) final
+    {
+        return visitQuantifiedComparisonSubquery(node, node->as<ASTQuantifiedComparisonExt &>(), visitor_context);
+    }
+
+    // R visitASTPreparedParameter(ASTPtr & node, C & visitor_context) final
+    // {
+    //     return visitPreparedParameter(node, node->as<ASTPreparedParameter &>(), visitor_context);
+    // }
+};
+
+/// ExpressionTreeVisitor is used to provide default traversal logic for expression asts. (used for analyzed expr)
+template <typename UserContext>
+class ExpressionTraversalIncludeSubqueryVisitor: public AnalyzerExpressionVisitor<const Void>
+{
+private:
+    Analysis & analysis;
+    AnalyzerExpressionVisitor<UserContext> & user_visitor;
+    UserContext & user_context;
+
+protected:
+    void visitExpression(ASTPtr &, IAST &, const Void &) override {}
+
+    void visitFunction(ASTPtr &, ASTFunction & ast, const Void &) override { process(ast.arguments); }
+
+    void visitWindowFunction(ASTPtr &, ASTFunction & ast, const Void &) override
+    {
+        process(ast.arguments);
+
+        // window partition by/order by may have been rewritten by Analyzer
+        auto window_analysis = analysis.getWindowAnalysis(ast.ptr());
+        auto resolved_window = window_analysis->resolved_window;
+
+        if (resolved_window->partition_by)
+            process(resolved_window->partition_by);
+
+        if (resolved_window->order_by)
+            process(resolved_window->order_by);
+    }
+
+    void visitLambdaExpression(ASTPtr &, ASTFunction & ast, const Void &) override
+    {
+        auto lambda_body = getLambdaExpressionBody(ast);
+        process(lambda_body);
+    }
+
+    void visitInSubquery(ASTPtr &, ASTFunction & ast, const Void &) override
+    {
+        process(ast.arguments->children[0]);
+        auto subquery = ast.arguments->children[1];
+        process(subquery->children[0]);
+    }
+
+    void visitExistsSubquery(ASTPtr &, ASTFunction & ast, const Void &) override
+    {
+        auto subquery = ast.arguments->children[0];
+        if (ast.name == "not")
+        {
+            if (auto * not_func = subquery->as<ASTFunction>())
+                subquery = not_func->arguments->children[0];
+        }
+        process(subquery->children[0]);
+    }
+
+    void visitScalarSubquery(ASTPtr &, ASTSubquery & ast, const Void &) override { process(ast.children[0]); }
+
+    void visitQuantifiedComparisonSubquery(ASTPtr &, ASTQuantifiedComparisonExt & ast, const Void &) override
+    {
+        process(ast.children[0]);
+        auto subquery = ast.children[1];
+        process(subquery->as<ASTSubquery &>().children[0]);
+    }
+
+public:
+    ExpressionTraversalIncludeSubqueryVisitor(
+        AnalyzerExpressionVisitor<UserContext> & user_visitor_, UserContext & user_context_, Analysis & analysis_, ContextPtr context_)
+        : AnalyzerExpressionVisitor(context_), analysis(analysis_), user_visitor(user_visitor_), user_context(user_context_)
+    {
+    }
+
+    void process(ASTPtr & node, const Void & traversal_context) override
+    {
+        // node is expression AST
+        // TODO: || node->as<ASTPreparedParameter>(), now do not support ASTCreatePreparedStatementQuery
+        if (node->as<ASTIdentifier>() || node->as<ASTFunction>() || node->as<ASTLiteral>() || node->as<ASTSubquery>()
+            || node->as<ASTFieldReferenceExt>() || node->as<ASTQuantifiedComparisonExt>())
+            user_visitor.process(node, user_context);
+
+        return ASTVisitorUtil::accept(node, *this, traversal_context);
+    }
+
+    void process(ASTPtr & node) { process(node, {}); }
+
+    void process(ASTs & nodes)
+    {
+        for (auto & node : nodes)
+            process(node, {});
+    }
+
+    void visitASTSelectQueryExt(ASTPtr & node, const Void &) override
+    {
+        auto & select_query = node->as<ASTSelectQueryExt &>();
+
+        if (auto tables = select_query.tables())
+            process(tables);
+        if (auto where = select_query.where())
+            process(where);
+        if (auto groupBy = select_query.groupBy())
+            process(groupBy);
+        if (auto having = select_query.having())
+            process(having);
+        if (auto select = select_query.select())
+            process(analysis.getSelectExpressions(select_query));
+        if (auto orderBy = select_query.orderBy())
+            process(orderBy);
+        if (auto limitBy = select_query.limitBy())
+            process(limitBy);
+    }
+
+    void visitASTSelectWithUnionQuery(ASTPtr & node, const Void &) override
+    {
+        process(node->as<ASTSelectWithUnionQuery &>().list_of_selects);
+    }
+
+    void visitASTExpressionListExt(ASTPtr & node, const Void &) override { process(node->children); }
+
+    void visitASTOrderByElement(ASTPtr & node, const Void &) override { process(node->children[0]); }
+
+    void visitASTTablesInSelectQuery(ASTPtr & node, const Void &) override { process(node->children); }
+
+    void visitASTTablesInSelectQueryElement(ASTPtr & node, const Void &) override
+    {
+        auto & elem = node->as<ASTTablesInSelectQueryElement &>();
+        if (elem.table_expression)
+            process(elem.table_expression);
+        if (elem.table_join)
+            process(elem.table_join);
+    }
+
+    void visitASTTableJoin(ASTPtr & node, const Void &) override
+    {
+        auto & table_join = node->as<ASTTableJoin &>();
+        if (table_join.on_expression)
+            process(table_join.on_expression);
+        // process JOIN USING list?
+    }
+
+    void visitASTTableExpression(ASTPtr & node, const Void &) override
+    {
+        auto & table_expression = node->as<ASTTableExpression &>();
+        if (table_expression.subquery)
+            process(table_expression.subquery->children[0]);
+    }
+};
+
+template <typename UserContext>
+class ExpressionTraversalVisitor : public ExpressionTraversalIncludeSubqueryVisitor<UserContext>
+{
+public:
+    using ExpressionTraversalIncludeSubqueryVisitor<UserContext>::ExpressionTraversalIncludeSubqueryVisitor;
+    using ExpressionTraversalIncludeSubqueryVisitor<UserContext>::process;
+
+    void visitASTSelectQueryExt(ASTPtr &, const Void &) override { }
+
+    void visitASTSelectWithUnionQuery(ASTPtr &, const Void &) override { }
+};
+
+template <typename UserContext, template <typename> typename TraversalVisitor = ExpressionTraversalVisitor>
+void traverseExpressionTree(
+    ASTPtr & node,
+    AnalyzerExpressionVisitor<UserContext> & user_visitor,
+    UserContext & user_context,
+    Analysis & analysis,
+    ContextPtr context)
+{
+    TraversalVisitor<UserContext> visitor{user_visitor, user_context, analysis, context};
+    visitor.process(node);
+}
+
+}

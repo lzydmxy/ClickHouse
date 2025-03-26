@@ -47,6 +47,8 @@
 #include <Query/Parsers/ASTFieldReferenceExt.h>
 #include <Query/Parsers/ASTPartitionExt.h>
 #include <Query/Parsers/ASTSelectQueryExt.h>
+#include <Query/Parsers/ASTTableColumnReference.h>
+#include <Query/Parsers/ASTQuantifiedComparisonExt.h>
 
 
 namespace DB
@@ -118,7 +120,9 @@ using ASTFunctionPtr = std::shared_ptr<ASTFunction>;
     M(ASTUseQuery) \
     M(ASTWindowDefinition) \
     M(ASTWindowListElement) \
-    M(ASTWithElement)
+    M(ASTWithElement) \
+    M(ASTTableColumnReference) \
+    M(ASTQuantifiedComparisonExt)
 
 #define ENUM_AST_TYPE(ITEM) ITEM,
 enum class ASTType : UInt8
