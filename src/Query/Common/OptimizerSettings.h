@@ -32,6 +32,17 @@ enum class SchedulerMode
 };
 DECLARE_SETTING_ENUM(SchedulerMode);
 
+enum class CTEMode
+{
+    INLINED,
+    SHARED,
+    AUTO,
+    ENFORCED,
+};
+
+DECLARE_SETTING_ENUM(CTEMode)
+
+
 constexpr UInt64 RUNTIME_FILTER_BLOOM_BUILD_THRESHOLD = 2048000; // Default threshold of right table to build bloom filter
 constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold of right table to build value set filter
 
@@ -94,9 +105,19 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     /** Debug settings */ \
     M(Bool, log_segment_profiles, false, "Log profile of each segment info including runtime and planning information.", 0) \
     M(Bool, report_segment_profiles, false, "Report plan segment profile to coordinator.", 0) \
+    /** */ \
+    M(Bool, convert_to_right_type_for_in_subquery, true, "For IN subquery, whether convert arguments to the right type", 0) \
+    /** Optimizer relative settings, Plan build and RBO */ \
+    M(Bool, enable_implicit_type_conversion, true, "Whether enable implicit type conversion for JOIN, Set operation, IN subquery", 0) \
+    M(Bool, enable_subcolumn_optimization_through_union, true, "Whether enable sub column optimization through set operation.", 0) \
+    M(Bool, optimize_json_function_to_subcolumn, false, "Whether to optimize json extract functions to subcolumn read", 0) \
     /** Optimizer relative settings, CBO, CTE, MagicSet, MV */ \
+    M(CTEMode, cte_mode, CTEMode::AUTO, "CTE mode: SHARED|INLINED|AUTO|ENFORCED", 0) \
     M(QueryDryRunMode, query_dry_run_mode, QueryDryRunMode::NONE, "Whether to choose a query debug mode, in order to skip some workloads", 0) \
     M(Bool, enable_shuffle_with_order, false, "Whether enable keep data order when shuffle", 0) \
+    M(Bool, execute_subquery_in_lambda, true, "Whether to execute subquery in lambda", 0) \
+    M(Bool, early_execute_scalar_subquery, false, "Whether to early execute scalar subquery", 0) \
+    M(Bool, early_execute_in_subquery, false, "Whether to early execute in subquery", 0) \
     /** Complex query settings **/\
     M(Milliseconds, send_plan_segment_timeout_ms, 10000, "Default timeout for send plan segment by rpc", 0) \
     M(Bool, enable_distributed_stages, false, "Enable complex query mode to split plan to distributed stages", 0)\
@@ -113,6 +134,8 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(Bool, enable_sample_by_range, false, "Sample by range if it is true", 0) \
     M(Bool, enable_deterministic_sample_by_range, false, "Deterministic sample by range if it is true", 0) \
     M(Bool, force_read_in_partition_order, 0, "Similar to optimize_read_in_partition_order, but throw an exception if it cannot be applied to the query, mainly for testing", 0) \
+    M(Bool, check_identifier_begin_valid, true, "Whether to check identifier", 0) \
+    M(Bool, ignore_array_join_check_in_join_on_condition, false, "Ignore array-join function check in join on condition", 0) \
 
 #define MAKE_OPTIMIZER_OBSOLETE(M, TYPE, NAME, DEFAULT) \
     M(TYPE, NAME, DEFAULT, "Obsolete setting, does nothing.", BaseSettingsHelpers::Flags::OBSOLETE)

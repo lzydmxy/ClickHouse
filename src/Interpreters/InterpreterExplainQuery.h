@@ -20,6 +20,7 @@ public:
     bool supportsTransactions() const override { return true; }
 
 private:
+    friend class InterpreterExplainQueryExt;
     ASTPtr query;
 
     QueryPipeline executeImpl();

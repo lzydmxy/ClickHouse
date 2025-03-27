@@ -202,6 +202,7 @@ public:
     static QueryPipeline getPipeline(QueryPipelineBuilder builder);
 
 private:
+    friend class QueryPipelineBuilderHelper;
 
     /// Destruction order: processors, header, locks, temporary storages, local contexts
     QueryPlanResourceHolder resources;

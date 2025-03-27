@@ -26,6 +26,15 @@ void astToLowerCase(const ASTPtr & ast)
     {
         boost::to_lower(casted_ast->name);
     }
+    else if (auto casted_ast = ast->as<ASTTableColumnReference>())
+    {
+        boost::to_lower(casted_ast->column_name);
+    }
+    else if (auto casted_ast = ast->as<ASTQuantifiedComparisonExt>())
+    {
+        boost::to_lower(casted_ast->alias);
+        boost::to_lower(casted_ast->comparator);
+    }
 
     // TODO add more types
 }
@@ -40,9 +49,18 @@ void astToUpperCase(const ASTPtr & ast)
     {
         boost::to_upper(casted_ast->fields_str);
     }
-    else if ( auto casted_ast = std::dynamic_pointer_cast<ASTProjectionDeclaration>(ast))
+    else if ( auto casted_ast = ast->as<ASTProjectionDeclaration>())
     {
         boost::to_upper(casted_ast->name);
+    }
+    else if (auto casted_ast = ast->as<ASTTableColumnReference>())
+    {
+        boost::to_upper(casted_ast->column_name);
+    }
+    else if (auto casted_ast = ast->as<ASTQuantifiedComparisonExt>())
+    {
+        boost::to_upper(casted_ast->alias);
+        boost::to_upper(casted_ast->comparator);
     }
 
     // TODO add more types

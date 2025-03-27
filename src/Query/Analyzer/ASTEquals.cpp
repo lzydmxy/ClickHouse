@@ -1,16 +1,17 @@
-#include <Analyzers/ASTEquals.h>
+#include <Query/Analyzer/ASTEquals.h>
+
 #include <Parsers/ASTFunction.h>
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/ASTOrderByElement.h>
-#include <Parsers/ASTSelectQuery.h>
 #include <Parsers/ASTSubquery.h>
 #include <Parsers/ASTTablesInSelectQuery.h>
 #include <Parsers/ASTWindowDefinition.h>
 #include <Parsers/ASTSetQuery.h>
-#include <Parsers/ASTTableColumnReference.h>
-#include <Parsers/ASTClusterByElement.h>
+#include <Query/Parsers/ASTTableColumnReference.h>
+#include <Query/Parsers/ASTSelectQueryExt.h>
 #include <Common/SipHash.h>
+
 
 namespace DB::ASTEquality
 {
@@ -43,16 +44,18 @@ bool compareNode(const ASTWindowDefinition & left, const ASTWindowDefinition & r
         left.frame_end_preceding == right.frame_end_preceding;
 }
 
-bool compareNode(const ASTClusterByElement & left, const ASTClusterByElement & right)
-{
-    return left.split_number == right.split_number &&
-        left.is_with_range == right.is_with_range &&
-        left.is_user_defined_expression == right.is_user_defined_expression;
-}
+// TODO: do not support ASTClusterByElement now, need to confirm whether it is really necessary
+// bool compareNode(const ASTClusterByElement & left, const ASTClusterByElement & right)
+// {
+//     return left.split_number == right.split_number &&
+//         left.is_with_range == right.is_with_range &&
+//         left.is_user_defined_expression == right.is_user_defined_expression;
+// }
 
 bool compareNode(const ASTSubquery & left, const ASTSubquery & right)
 {
-    return left.cte_name == right.cte_name && left.database_of_view == right.database_of_view;
+    // TODO: need field database_of_view from  ASTSubquery
+    return left.cte_name == right.cte_name;
 }
 
 bool compareNode(const ASTArrayJoin & left, const ASTArrayJoin & right)
@@ -64,9 +67,9 @@ bool compareNode(const ASTOrderByElement & left, const ASTOrderByElement & right
 {
     return left.direction == right.direction && left.nulls_direction == right.nulls_direction
         && left.nulls_direction_was_explicitly_specified == right.nulls_direction_was_explicitly_specified
-        && left.with_fill == right.with_fill && compareTree(left.collation, right.collation, comparator)
-        && compareTree(left.fill_from, right.fill_from, comparator) && compareTree(left.fill_to, right.fill_to, comparator)
-        && compareTree(left.fill_step, right.fill_step, comparator);
+        && left.with_fill == right.with_fill && compareTree(left.getCollation(), right.getCollation(), comparator)
+        && compareTree(left.getFillFrom(), right.getFillFrom(), comparator) && compareTree(left.getFillTo(), right.getFillTo(), comparator)
+        && compareTree(left.getFillStep(), right.getFillStep(), comparator);
 }
 
 bool compareNode(const ASTSetQuery & left, const ASTSetQuery & right)
@@ -100,12 +103,12 @@ bool compareTree(const ASTPtr & left, const ASTPtr & right, const SubtreeCompara
         return *result;
 
     /// step 3. compare current root
-    if (left->getType() != right->getType())
+    if (getAstType(left) != getAstType(right))
         return false;
 
     bool node_equals;
 
-    switch (left->getType())
+    switch (getAstType(left))
     {
         case ASTType::ASTLiteral:
             node_equals = compareNode(left->as<ASTLiteral &>(), right->as<ASTLiteral &>());
@@ -137,9 +140,10 @@ bool compareTree(const ASTPtr & left, const ASTPtr & right, const SubtreeCompara
         case ASTType::ASTTableIdentifier:
             node_equals = compareNode(left->as<ASTTableIdentifier &>(), right->as<ASTTableIdentifier &>());
             break;
-        case ASTType::ASTClusterByElement:
-            node_equals = compareNode(left->as<ASTClusterByElement &>(), right->as<ASTClusterByElement &>());
-            break;
+        // TODO: do not support ASTClusterByElement now, need to confirm whether it is really necessary
+        // case ASTType::ASTClusterByElement:
+        //     node_equals = compareNode(left->as<ASTClusterByElement &>(), right->as<ASTClusterByElement &>());
+        //     break;
         default:
             /// align with ScopeAwareHash
             node_equals = left->getID() == right->getID();
@@ -153,10 +157,10 @@ bool compareTree(const ASTPtr & left, const ASTPtr & right, const SubtreeCompara
         return false;
 
     /// for ASTSelectQuery, we also check if children with same index are same clause
-    if (left->getType() == ASTType::ASTSelectQuery)
+    if (getAstType(left) == ASTType::ASTSelectQueryExt)
     {
-        const auto & left_query = left->as<ASTSelectQuery &>();
-        const auto & right_query = right->as<ASTSelectQuery &>();
+        const auto & left_query = left->as<ASTSelectQueryExt &>();
+        const auto & right_query = right->as<ASTSelectQueryExt &>();
 
         if (left_query.getExpressionTypes() != right_query.getExpressionTypes())
             return false;

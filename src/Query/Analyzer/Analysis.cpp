@@ -11,13 +11,13 @@ namespace DB
                 if(auto iter = (container).find(key); iter != (container).end())                           \
                     return iter->second;                                                                   \
                 else                                                                                       \
-                    throw QueryException("Object not found in " #container, ErrorCodes::LOGICAL_ERROR);         \
+                    throw Exception(ErrorCodes::LOGICAL_ERROR, "Object not found in {}", #container);         \
             } while(false)
 
 #define MAP_SET(container, key, val)                                                                       \
             do {                                                                                           \
                 if(!(container).emplace((key), (val)).second)                                              \
-                    throw QueryException("Object already exists in " #container, ErrorCodes::LOGICAL_ERROR);    \
+                    throw Exception(ErrorCodes::LOGICAL_ERROR, "Object already exists in {}", #container);    \
             } while(false)                                                                                 \
 
 namespace ErrorCodes
@@ -36,12 +36,12 @@ ScopePtr Analysis::getScope(IAST & statement)
     MAP_GET(scopes, &statement);
 }
 
-void Analysis::setQueryWithoutFromScope(ASTSelectQuery & query, ScopePtr scope)
+void Analysis::setQueryWithoutFromScope(ASTSelectQueryExt & query, ScopePtr scope)
 {
     MAP_SET(query_without_from_scopes, &query, scope);
 }
 
-ScopePtr Analysis::getQueryWithoutFromScope(ASTSelectQuery & query)
+ScopePtr Analysis::getQueryWithoutFromScope(ASTSelectQueryExt & query)
 {
     MAP_GET(query_without_from_scopes, &query);
 }
@@ -106,12 +106,12 @@ ExpressionTypes Analysis::getExpressionTypes()
     return expression_types;
 }
 
-void Analysis::setPreWhere(ASTSelectQuery & select_query, const ASTPtr & prewhere)
+void Analysis::setPreWhere(ASTSelectQueryExt & select_query, const ASTPtr & prewhere)
 {
     MAP_SET(pre_wheres, &select_query, prewhere);
 }
 
-ASTPtr Analysis::tryGetPreWhere(ASTSelectQuery & select_query)
+ASTPtr Analysis::tryGetPreWhere(ASTSelectQueryExt & select_query)
 {
     if (auto it = pre_wheres.find(&select_query); it != pre_wheres.end())
         return it->second;
@@ -141,27 +141,27 @@ const LinkedHashMap<const IAST *, StorageAnalysis> & Analysis::getStorages() con
     return storage_results;
 }
 
-UInt64 Analysis::getLimitByValue(ASTSelectQuery & select_query)
+UInt64 Analysis::getLimitByValue(ASTSelectQueryExt & select_query)
 {
     MAP_GET(limit_by_values, &select_query);
 }
 
-std::vector<ASTPtr> & Analysis::getLimitByItem(ASTSelectQuery & select_query)
+std::vector<ASTPtr> & Analysis::getLimitByItem(ASTSelectQueryExt & select_query)
 {
     return limit_by_items[&select_query];
 }
 
-UInt64 Analysis::getLimitByOffsetValue(ASTSelectQuery & select_query)
+UInt64 Analysis::getLimitByOffsetValue(ASTSelectQueryExt & select_query)
 {
     MAP_GET(limit_by_offset_values, &select_query);
 }
 
-UInt64 Analysis::getLimitLength(ASTSelectQuery & select_query)
+UInt64 Analysis::getLimitLength(ASTSelectQueryExt & select_query)
 {
     MAP_GET(limit_lengths, &select_query);
 }
 
-UInt64 Analysis::getLimitOffset(ASTSelectQuery & select_query)
+UInt64 Analysis::getLimitOffset(ASTSelectQueryExt & select_query)
 {
     MAP_GET(limit_offsets, &select_query);
 }
@@ -215,22 +215,22 @@ std::optional<ResolvedField> Analysis::tryGetLambdaArgumentReference(const ASTPt
     return std::nullopt;
 }
 
-std::vector<AggregateAnalysis> & Analysis::getAggregateAnalysis(ASTSelectQuery & select_query)
+std::vector<AggregateAnalysis> & Analysis::getAggregateAnalysis(ASTSelectQueryExt & select_query)
 {
     return aggregate_results[&select_query];
 }
 
-std::vector<std::pair<String, UInt16>> & Analysis::getInterestEvents(ASTSelectQuery & select_query)
+std::vector<std::pair<String, UInt16>> & Analysis::getInterestEvents(ASTSelectQueryExt & select_query)
 {
     return interest_events[&select_query];
 }
 
-std::vector<ASTFunctionPtr> & Analysis::getGroupingOperations(ASTSelectQuery & select_query)
+std::vector<ASTFunctionPtr> & Analysis::getGroupingOperations(ASTSelectQueryExt & select_query)
 {
     return grouping_operations[&select_query];
 }
 
-void Analysis::addWindowAnalysis(ASTSelectQuery & select_query, WindowAnalysisPtr analysis)
+void Analysis::addWindowAnalysis(ASTSelectQueryExt & select_query, WindowAnalysisPtr analysis)
 {
     window_results_by_select_query[&select_query].push_back(analysis);
     MAP_SET(window_results_by_ast, analysis->expression, analysis);
@@ -241,32 +241,32 @@ WindowAnalysisPtr Analysis::getWindowAnalysis(const ASTPtr & ast)
     MAP_GET(window_results_by_ast, ast);
 }
 
-std::vector<WindowAnalysisPtr> & Analysis::getWindowAnalysisOfSelectQuery(ASTSelectQuery & select_query)
+std::vector<WindowAnalysisPtr> & Analysis::getWindowAnalysisOfSelectQuery(ASTSelectQueryExt & select_query)
 {
     return window_results_by_select_query[&select_query];
 }
 
-bool Analysis::needAggregate(ASTSelectQuery & select_query)
+bool Analysis::needAggregate(ASTSelectQueryExt & select_query)
 {
     return !getAggregateAnalysis(select_query).empty() || select_query.groupBy();
 }
 
-std::vector<ASTPtr> & Analysis::getScalarSubqueries(ASTSelectQuery & select_query)
+std::vector<ASTPtr> & Analysis::getScalarSubqueries(ASTSelectQueryExt & select_query)
 {
     return scalar_subqueries[&select_query];
 }
 
-std::vector<ASTPtr> & Analysis::getInSubqueries(ASTSelectQuery & select_query)
+std::vector<ASTPtr> & Analysis::getInSubqueries(ASTSelectQueryExt & select_query)
 {
     return in_subqueries[&select_query];
 }
 
-std::vector<ASTPtr> & Analysis::getExistsSubqueries(ASTSelectQuery & select_query)
+std::vector<ASTPtr> & Analysis::getExistsSubqueries(ASTSelectQueryExt & select_query)
 {
     return exists_subqueries[&select_query];
 }
 
-std::vector<ASTPtr> & Analysis::getQuantifiedComparisonSubqueries(ASTSelectQuery & select_query)
+std::vector<ASTPtr> & Analysis::getQuantifiedComparisonSubqueries(ASTSelectQueryExt & select_query)
 {
     return quantified_comparison_subqueries[&select_query];
 }
@@ -294,17 +294,17 @@ std::optional<CTEAnalysis> Analysis::tryGetCTEAnalysis(ASTSubquery & subquery)
     return std::nullopt;
 }
 
-ASTs & Analysis::getSelectExpressions(ASTSelectQuery & select_query)
+ASTs & Analysis::getSelectExpressions(ASTSelectQueryExt & select_query)
 {
     return select_expressions[&select_query];
 }
 
-GroupByAnalysis & Analysis::getGroupByAnalysis(ASTSelectQuery & select_query)
+GroupByAnalysis & Analysis::getGroupByAnalysis(ASTSelectQueryExt & select_query)
 {
     return group_by_results[&select_query];
 }
 
-std::vector<std::shared_ptr<ASTOrderByElement>> & Analysis::getOrderByAnalysis(ASTSelectQuery & select_query)
+std::vector<std::shared_ptr<ASTOrderByElement>> & Analysis::getOrderByAnalysis(ASTSelectQueryExt & select_query)
 {
     return order_by_results[&select_query];
 }
@@ -333,17 +333,17 @@ bool Analysis::hasOutputDescription(IAST & ast)
     return output_descriptions.contains(&ast);
 }
 
-void Analysis::setRegisteredWindow(ASTSelectQuery & select_query, const String & name, ResolvedWindowPtr & window)
+void Analysis::setRegisteredWindow(ASTSelectQueryExt & select_query, const String & name, ResolvedWindowPtr & window)
 {
     MAP_SET(registered_windows[&select_query], name, window);
 }
 
-ResolvedWindowPtr Analysis::getRegisteredWindow(ASTSelectQuery & select_query, const String & name)
+ResolvedWindowPtr Analysis::getRegisteredWindow(ASTSelectQueryExt & select_query, const String & name)
 {
     MAP_GET(registered_windows[&select_query], name);
 }
 
-const std::unordered_map<String, ResolvedWindowPtr> & Analysis::getRegisteredWindows(ASTSelectQuery & select_query)
+const std::unordered_map<String, ResolvedWindowPtr> & Analysis::getRegisteredWindows(ASTSelectQueryExt & select_query)
 {
     return registered_windows[&select_query];
 }
@@ -403,7 +403,7 @@ void Analysis::addNonDeterministicFunctions(IAST & ast)
     non_deterministic_functions.insert(&ast);
 }
 
-ArrayJoinAnalysis & Analysis::getArrayJoinAnalysis(ASTSelectQuery & select_query)
+ArrayJoinAnalysis & Analysis::getArrayJoinAnalysis(ASTSelectQueryExt & select_query)
 {
     return array_join_analysis[&select_query];
 }
@@ -418,119 +418,4 @@ void Analysis::addUsedFunctionArgument(const String & func_name, ColumnsWithType
     }
 }
 
-const Block & Analysis::getScalarSubqueryResult(const ASTPtr & subquery, ContextPtr context)
-{
-    auto hash = subquery->getTreeHash(false);
-    String hash_str = toString(hash.low64) + "_" + toString(hash.high64);
-
-    if (!executed_scalar_subqueries.count(hash_str))
-    {
-        auto & ast_subquery = subquery->as<ASTSubquery &>();
-        auto & inner_query = ast_subquery.children.front();
-
-        DataTypes types;
-        auto pre_execute
-            = [&types](InterpreterSelectQueryUseOptimizer & interpreter) { types = interpreter.getSampleBlock().getDataTypes(); };
-
-        auto query_context = createContextForSubQuery(context);
-        SettingsChanges changes;
-        changes.emplace_back("max_result_rows", 1);
-        changes.emplace_back("result_overflow_mode", "throw");
-        changes.emplace_back("extremes", false);
-        changes.emplace_back("limit", 0);
-        changes.emplace_back("offset", 0);
-        changes.emplace_back("final_order_by_all_direction", 0);
-        query_context->applySettingsChanges(changes);
-        auto block = executeSubPipelineWithOneRow(inner_query, query_context, pre_execute);
-
-        if (block.rows() > 1)
-            throw Exception(
-                ErrorCodes::INCORRECT_RESULT_OF_SCALAR_SUBQUERY,
-                "Scalar subquery returned more than one row: {}",
-                subquery->formatForErrorMessage());
-
-        if (block.rows() == 0)
-        {
-            if (types.size() != 1)
-                types = {std::make_shared<DataTypeTuple>(types)};
-
-            auto & type = types[0];
-            if (!type->isNullable())
-            {
-                if (!type->canBeInsideNullable())
-                    throw Exception(
-                        ErrorCodes::INCORRECT_RESULT_OF_SCALAR_SUBQUERY,
-                        "Scalar subquery returned empty result of type {} which cannot be Nullable",
-                        type->getName());
-
-                type = makeNullable(type);
-            }
-
-            auto null_column = type->createColumn();
-            null_column->insert(Null{});
-            block.clear();
-            block.insert(ColumnWithTypeAndName{ColumnPtr{std::move(null_column)}, type, ""});
-        }
-        else
-        {
-            block = materializeBlock(block);
-            size_t columns = block.columns();
-
-            if (columns == 1)
-            {
-                auto & column = block.getByPosition(0);
-                /** Here we wrap type to nullable if we can.
-                 * It is needed cause if subquery return no rows, it's result will be Null.
-                 * In case of many columns, do not check it cause tuple can't be nullable.
-                 */
-                if (!column.type->isNullable() && column.type->canBeInsideNullable())
-                {
-                    column.type = makeNullable(column.type);
-                    column.column = makeNullable(column.column);
-                }
-            }
-            else
-            {
-                ColumnWithTypeAndName ctn;
-                ctn.type = std::make_shared<DataTypeTuple>(block.getDataTypes());
-                ctn.column = ColumnTuple::create(block.getColumns());
-                block = Block{ctn};
-            }
-        }
-
-        executed_scalar_subqueries.emplace(hash_str, std::move(block));
-    }
-
-    return executed_scalar_subqueries.at(hash_str);
-}
-
-SetPtr Analysis::getInSubqueryResult(const ASTPtr & subquery, ContextPtr context)
-{
-    auto hash = subquery->getTreeHash(false);
-    String hash_str = toString(hash.low64) + "_" + toString(hash.high64);
-
-    if (!executed_in_subqueries.count(hash_str))
-    {
-        auto & ast_subquery = subquery->as<ASTSubquery &>();
-        auto & inner_query = ast_subquery.children.front();
-
-        SizeLimits limites(context->getSettingsRef().max_rows_in_set, context->getSettingsRef().max_bytes_in_set, OverflowMode::THROW);
-        SetPtr set = std::make_shared<Set>(limites, true, context->getSettingsRef().transform_null_in);
-        auto pre_execute = [&set](InterpreterSelectQueryUseOptimizer & interpreter) { set->setHeader(interpreter.getSampleBlock()); };
-        auto proc_block = [&set](Block & block) { set->insertFromBlock(block); };
-
-        auto query_context = createContextForSubQuery(context);
-        SettingsChanges changes;
-        changes.emplace_back("limit", 0);
-        changes.emplace_back("offset", 0);
-        changes.emplace_back("final_order_by_all_direction", 0);
-        query_context->applySettingsChanges(changes);
-        executeSubPipeline(inner_query, query_context, pre_execute, proc_block);
-
-        set->finishInsert();
-        executed_in_subqueries.emplace(hash_str, set);
-    }
-
-    return executed_in_subqueries.at(hash_str);
-}
 }

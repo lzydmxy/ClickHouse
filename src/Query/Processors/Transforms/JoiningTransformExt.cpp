@@ -20,6 +20,7 @@ JoiningTransformExt::JoiningTransformExt(
     size_t max_block_size_,
     bool on_totals_,
     bool default_totals_,
+    bool join_parallel_left_right_,
     FinishCounterPtr finish_counter_,
     size_t total_size_,
     size_t index_,
@@ -28,6 +29,7 @@ JoiningTransformExt::JoiningTransformExt(
     , total_size(total_size_)
     , index(index_)
     , finish_pipe(std::move(finish_pipe_))
+    , join_parallel_left_right(join_parallel_left_right_)
 {
 }
 
@@ -284,6 +286,5 @@ void FillingRightJoinSideTransformExt::work()
 
     set_totals = for_totals;
 }
-
 
 }
