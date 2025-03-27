@@ -58,6 +58,8 @@ public:
     if (step_->getType() == IQueryPlanStep::Type::TYPE) \
     { \
         auto spec_step = std::dynamic_pointer_cast<TYPE##Step>(step_); \
+        if (!spec_step) \
+            throw Exception("Type cast failed for "#TYPE"Step", ErrorCodes::LOGICAL_ERROR); \
         plan_node = std::dynamic_pointer_cast<PlanNodeBase>(std::make_shared<PlanNode<TYPE##Step>>(id_, std::move(spec_step), children_)); \
     }
 
@@ -109,6 +111,8 @@ public:
     PlanNodePtr copy(PlanNodeId new_id, ContextPtr context) override
     {
         auto new_step = dynamic_pointer_cast<Step>(step->copy(context));
+        if (!new_step)
+            throw Exception("Failed to copy step with type mismatch", ErrorCodes::LOGICAL_ERROR);
         return createPlanNode(new_id, std::move(new_step), children, statistics);
     }
 
