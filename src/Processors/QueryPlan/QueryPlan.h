@@ -113,16 +113,20 @@ public:
     Node * getRootNode() const { return root; }
     static std::pair<Nodes, QueryPlanResourceHolder> detachNodesAndResources(QueryPlan && plan);
 
-private:
-    QueryPlanResourceHolder resources;
+protected:
+
     Nodes nodes;
     Node * root = nullptr;
 
     void checkInitialized() const;
     void checkNotCompleted() const;
 
-    /// Those fields are passed to QueryPipeline.
     size_t max_threads = 0;
+
+private:
+    QueryPlanResourceHolder resources;
+
+    /// Those fields are passed to QueryPipeline.
     bool concurrency_control = false;
 };
 
