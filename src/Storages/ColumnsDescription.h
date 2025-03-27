@@ -246,6 +246,7 @@ public:
             boost::multi_index::hashed_unique<boost::multi_index::member<NameAndTypePair, String, &NameAndTypePair::name>>,
             boost::multi_index::hashed_non_unique<boost::multi_index::const_mem_fun<NameAndTypePair, String, &NameAndTypePair::getNameInStorage>>>>;
 
+    void addSubcolumnsToList(NamesAndTypesList & source_list) const;
 private:
     ColumnsContainer columns;
 
@@ -259,7 +260,6 @@ private:
     SubcolumnsContainter subcolumns;
 
     void modifyColumnOrder(const String & column_name, const String & after_column, bool first);
-    void addSubcolumnsToList(NamesAndTypesList & source_list) const;
 
     void addSubcolumns(const String & name_in_storage, const DataTypePtr & type_in_storage);
     void removeSubcolumns(const String & name_in_storage);

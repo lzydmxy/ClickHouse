@@ -1,6 +1,8 @@
 #include <Query/Analyzer/SubColumnID.h>
+
 #include <Common/Exception.h>
-#include <DataTypes/MapHelpers.h>
+#include <Query/Common//MapHelpers.h>
+
 
 namespace DB
 {
@@ -23,7 +25,7 @@ String SubColumnID::getSubColumnName(const String & primary_column) const
         case Type::JSON_FIELD:
             return primary_column + "." + json_field_name;
     }
-    throw Exception("Not implemented for this type.", ErrorCodes::NOT_IMPLEMENTED);
+    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implemented for this type.");
 }
 
 bool SubColumnID::operator==(const SubColumnID & other) const

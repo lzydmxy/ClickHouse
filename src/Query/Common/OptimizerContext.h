@@ -101,6 +101,21 @@ public:
 
     QueryExchangeLogPtr getQueryExchangeLog() { return query_exchange_log; }
 
+    void addNonDeterministicFunction(const std::string & fun_name, bool within_query_scope) const
+    {
+        nondeterministic_functions_out_of_query_scope.emplace(fun_name);
+        if (within_query_scope)
+            nondeterministic_functions_within_query_scope.emplace(fun_name);
+    }
+    bool isNonDeterministicFunction(const std::string & fun_name) const
+    {
+        return nondeterministic_functions_within_query_scope.contains(fun_name);
+    }
+    bool isNonDeterministicFunctionOutOfQueryScope(const std::string & fun_name) const
+    {
+        return nondeterministic_functions_out_of_query_scope.contains(fun_name);
+    }
+
 private:
     OptimizerSettings optimizer_settings;
     UInt32 query_max_execution_time;
@@ -116,6 +131,9 @@ private:
     std::function<void()> send_tcp_progress{nullptr};
     bool is_explain_query{false};
     QueryExchangeLogPtr query_exchange_log;
+    // make sure a context not be passed to ExprAnalyzer::analyze concurrently
+    mutable std::unordered_set<std::string> nondeterministic_functions_within_query_scope;
+    mutable std::unordered_set<std::string> nondeterministic_functions_out_of_query_scope;
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;

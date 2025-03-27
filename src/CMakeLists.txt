@@ -259,6 +259,8 @@ add_object_library(clickhouse_query_executor Query/Executor)
 add_object_library(clickhouse_query_executor_runtimefilter Query/Executor/RuntimeFilter)
 add_object_library(clickhouse_query_interpreters Query/Interpreters)
 add_object_library(clickhouse_query_Transforms Query/Transforms)
+add_object_library(clickhouse_query_analyzer Query/Analyzer)
+add_object_library(clickhouse_query_storages Query/Storages)
 add_object_library(clickhouse_query_pipeline Query/Pipeline)
 
 #add_object_library(clickhouse_query_optimizer_cardinalityestimate Query/Optimizer/CardinalityEstimate)
