@@ -2,3 +2,5 @@
 ./build/src/unit_tests_dbms trace --gtest_filter="LinkedHashMap*"
 ./build/src/unit_tests_dbms trace --gtest_filter="RuntimeFilter*"
 ./build/src/unit_tests_dbms trace --gtest_filter="NodeSelectorTest*"
+./build/src/unit_tests_dbms trace --gtest_filter="NameResolutionTest*"
+./build/src/unit_tests_dbms trace --gtest_filter="JSONSuite*"
