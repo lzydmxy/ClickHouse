@@ -8,7 +8,7 @@
 #include <Core/Field.h>
 #include <Interpreters/Context_fwd.h>
 #include <Interpreters/StorageID.h>
-#include <Processors/QueryPlan/QueryPlan.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
 #include <Query/ProtosHelper/QueryProto.h>
 #include <Query/ProtosHelper/AddressInfo.h>
 #include <Query/ProtosHelper/ExchangeMode.h>
@@ -246,11 +246,11 @@ public:
 
     ~PlanSegment() = default;
 
-    QueryPlan & getQueryPlan() { return query_plan; }
+    QueryPlanExt & getQueryPlan() { return query_plan; }
 
-    const QueryPlan & getQueryPlan() const { return query_plan; }
+    const QueryPlanExt & getQueryPlan() const { return query_plan; }
 
-    void setQueryPlan(QueryPlan && query_plan_) { query_plan = std::move(query_plan_); }
+    void setQueryPlan(QueryPlanExt && query_plan_) { query_plan = std::move(query_plan_); }
 
     void serialize(WriteBuffer & buf) const;
 
@@ -289,7 +289,7 @@ public:
 
     void setCoordinatorAddress(const AddressInfo & coordinator_address_) { coordinator_address = coordinator_address_; }
 
-    void setPlanSegmentToQueryPlan(QueryPlan::Node * node, ContextPtr & context);
+    void setPlanSegmentToQueryPlan(QueryPlanExt::Node * node, ContextPtr & context);
 
     PlanSegmentPtr clone();
 
@@ -311,7 +311,7 @@ public:
     void addRuntimeFilter(RuntimeFilterId id) { runtime_filters.emplace(id); }
     const std::unordered_set<RuntimeFilterId> & getRuntimeFilters() const { return runtime_filters; }
 
-    static void getRemoteSegmentId(const QueryPlan::Node * node, std::unordered_map<PlanNodeId, size_t> & exchange_to_segment);
+    static void getRemoteSegmentId(const QueryPlanExt::Node * node, std::unordered_map<PlanNodeId, size_t> & exchange_to_segment);
 
     void setProfileType(const RReportProfileType::Enum & type) { profile_type = type; }
 
@@ -338,7 +338,7 @@ private:
     size_t segment_id;
     String query_id;
     size_t parallel_index = 0;
-    QueryPlan query_plan;
+    QueryPlanExt query_plan;
 
     PlanSegmentInputs inputs;
     PlanSegmentOutputs outputs;

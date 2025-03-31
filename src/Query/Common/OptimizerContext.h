@@ -6,6 +6,9 @@
 #include <Query/Common/ExceptionHandler.h>
 #include <Query/Common/OptimizerSettings.h>
 #include <Query/Processors/QueryPlan/PlanNodeIdAllocator.h>
+#include <Query/Processors/QueryPlan/SymbolAllocator.h>
+#include <Query/Optimizer/OptimizerMetrics.h>
+#include <Query/Processors/QueryPlan/PlanCache.h>
 
 namespace DB
 {
@@ -36,6 +39,11 @@ class ProfileElementConsumer;
 
 class QueryExchangeLog;
 using QueryExchangeLogPtr = std::shared_ptr<QueryExchangeLog>;
+
+class OptimizerMetrics;
+using OptimizerMetricsPtr = std::shared_ptr<OptimizerMetrics>;
+
+class PlanCacheManager;
 
 struct Settings;
 struct PlanSegmentInstanceID;
@@ -126,6 +134,11 @@ public:
     void addQueryPlanInfo(String & query_plan_) { this->query_plan = query_plan_; }
     String getQueryPlan() { return query_plan; }
     void createPlanNodeIdAllocator(int max_id = 1) { id_allocator = std::make_shared<PlanNodeIdAllocator>(max_id); }
+    void createSymbolAllocator() { symbol_allocator = std::make_shared<SymbolAllocator>(); }
+    OptimizerMetricsPtr & getOptimizerMetrics() { return optimizer_metrics; }
+    void createOptimizerMetrics() { optimizer_metrics = std::make_shared<OptimizerMetrics>(); }
+    void setPlanCacheManager(std::unique_ptr<PlanCacheManager> && manager);
+    PlanCacheManager* getPlanCacheManager();
 
 private:
     OptimizerSettings optimizer_settings;
@@ -148,6 +161,9 @@ private:
     PlanNodeIdAllocatorPtr id_allocator = nullptr;
 //    std::shared_ptr<OptimizerProfile> optimizer_profile = nullptr;
     String query_plan;
+    std::shared_ptr<SymbolAllocator> symbol_allocator = nullptr;
+    std::shared_ptr<OptimizerMetrics> optimizer_metrics = nullptr;
+    std::unique_ptr<PlanCacheManager> plan_cache_manager;
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;
