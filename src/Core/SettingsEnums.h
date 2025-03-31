@@ -361,4 +361,14 @@ DECLARE_SETTING_ENUM(SchemaInferenceMode)
 DECLARE_SETTING_ENUM_WITH_RENAME(DateTimeOverflowBehavior, FormatSettings::DateTimeOverflowBehavior)
 
 DECLARE_SETTING_ENUM(SQLSecurityType)
+
+enum class LogExplainAnalyzeType
+{
+    NONE,
+    QUERY_PIPELINE,
+    AGGREGATED_QUERY_PIPELINE,
+};
+
+DECLARE_SETTING_ENUM(LogExplainAnalyzeType)
+
 }

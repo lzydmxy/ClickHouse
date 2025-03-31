@@ -1,8 +1,11 @@
 #pragma once
+
+#include <Common/Logger.h>
 #include <Poco/Util/AbstractConfiguration.h>
 #include <Query/Common/QueryCommon.h>
 #include <Query/Common/ExceptionHandler.h>
 #include <Query/Common/OptimizerSettings.h>
+#include <Query/Processors/QueryPlan/PlanNodeIdAllocator.h>
 
 namespace DB
 {
@@ -116,6 +119,14 @@ public:
         return nondeterministic_functions_out_of_query_scope.contains(fun_name);
     }
 
+    PlanNodeIdAllocatorPtr & getPlanNodeIdAllocator() { return id_allocator; }
+    UInt32 nextNodeId() { return id_allocator->nextId(); }
+    void logOptimizerProfile(LoggerPtr log, String prefix, String name, UInt64 time, bool is_rule = false);
+  //  void initOptimizerProfile() { optimizer_profile = std::make_unique<OptimizerProfile>(); }
+    void addQueryPlanInfo(String & query_plan_) { this->query_plan = query_plan_; }
+    String getQueryPlan() { return query_plan; }
+    void createPlanNodeIdAllocator(int max_id = 1) { id_allocator = std::make_shared<PlanNodeIdAllocator>(max_id); }
+
 private:
     OptimizerSettings optimizer_settings;
     UInt32 query_max_execution_time;
@@ -134,6 +145,9 @@ private:
     // make sure a context not be passed to ExprAnalyzer::analyze concurrently
     mutable std::unordered_set<std::string> nondeterministic_functions_within_query_scope;
     mutable std::unordered_set<std::string> nondeterministic_functions_out_of_query_scope;
+    PlanNodeIdAllocatorPtr id_allocator = nullptr;
+//    std::shared_ptr<OptimizerProfile> optimizer_profile = nullptr;
+    String query_plan;
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;

@@ -5,7 +5,7 @@
 #include <DataTypes/DataTypeNullable.h>
 #include <DataTypes/IDataType.h>
 #include <Parsers/ASTLiteral.h>
-#include <Statistics/Histogram.h>
+//#include <Statistics/Histogram.h>
 
 #include <Poco/JSON/Object.h>
 

@@ -2,8 +2,9 @@
 
 #include <Core/Types.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
-#include <Query/Optimizer/CardinalityEstimate/PlanNodeStatisticsEstimate.h>
+//#include <Query/Optimizer/CardinalityEstimate/PlanNodeStatisticsEstimate.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <Query/Processors/IQueryPlanStepExt.h>
 
 namespace DB
 {
@@ -28,11 +29,10 @@ public:
     PlanNodes & getChildren() { return children; }
     const PlanNodes & getChildren() const { return children; }
     void replaceChildren(const PlanNodes & children_) { replaceChildrenImpl(children_); }
-    void setStatistics(const PlanNodeStatisticsEstimate & statistics_) { statistics = statistics_; }
-    const PlanNodeStatisticsEstimate & getStatistics() const { return statistics; }
+    //void setStatistics(const PlanNodeStatisticsEstimate & statistics_) { statistics = statistics_; }
+    //const PlanNodeStatisticsEstimate & getStatistics() const { return statistics; }
     QueryPlanStepSharedPtr getStep() const { return getStepImpl(); }
     void setStep(QueryPlanStepSharedPtr & step_) { setStepImpl(step_); }
-
 
     virtual PlanNodePtr addStep(PlanNodeId new_id, QueryPlanStepSharedPtr new_step, PlanNodes new_children) = 0;
     virtual PlanNodePtr copy(PlanNodeId new_id, ContextPtr context) = 0;
@@ -48,9 +48,12 @@ public:
     static PlanNodePtr createPlanNode(
         [[maybe_unused]] PlanNodeId id_,
         [[maybe_unused]] QueryPlanStepSharedPtr step_,
-        [[maybe_unused]] const PlanNodes & children_ = {},
-        [[maybe_unused]] const PlanNodeStatisticsEstimate & statistics_ = {})
+        [[maybe_unused]] const PlanNodes & children_ = {})
+        //[[maybe_unused]] const PlanNodeStatisticsEstimate & statistics_ = {})
     {
+
+        //if (step_->getType() == IQueryPlanStep::Type::TYPE)
+
         PlanNodePtr plan_node;
 #define CREATE_PLAN_NODE(TYPE) \
     if (getQueryPlanStepType(step_) == QueryPlanStepType::TYPE) \
@@ -65,14 +68,16 @@ public:
         // CREATE_PLAN_NODE(Any)
         // CREATE_PLAN_NODE(MultiJoin)
 #undef CREATE_PLAN_NODE
-        plan_node->setStatistics(statistics_);
+        //todo: need optimizer Statistics
+        //plan_node->setStatistics(statistics_);
         return plan_node;
     }
 
 protected:
     PlanNodeId id;
     PlanNodes children;
-    PlanNodeStatisticsEstimate statistics;
+    //todo: need optimizer Statistics
+    //PlanNodeStatisticsEstimate statistics;
 
 private:
     virtual QueryPlanStepSharedPtr getStepImpl() const = 0;
@@ -97,11 +102,13 @@ public:
     void setStep(StepPtr & step_) { step = step_; }
     const DataStream & getCurrentDataStream() const override { return step->getOutputStream(); }
 
-    static PlanNodePtr
-    createPlanNode(PlanNodeId id_, StepPtr step_, const PlanNodes & children_ = {}, const PlanNodeStatisticsEstimate & statistics_ = {})
+    //todo: need optimizer Statistics
+    //static PlanNodePtr createPlanNode(PlanNodeId id_, StepPtr step_, const PlanNodes & children_ = {}, const PlanNodeStatisticsEstimate & statistics_ = {})
+    static PlanNodePtr createPlanNode(PlanNodeId id_, StepPtr step_, const PlanNodes & children_ = {})
     {
         PlanNodePtr plan_node = std::make_shared<PlanNode<Step>>(id_, std::move(step_), children_);
-        plan_node->setStatistics(statistics_);
+        ////todo: need optimizer Statistics
+        //plan_node->setStatistics(statistics_);
         return plan_node;
     }
 
@@ -111,7 +118,8 @@ public:
         auto new_step = dynamic_pointer_cast<Step>(step->copy(context));
         if (!new_step)
             throw Exception(ErrorCodes::LOGICAL_ERROR, "Failed to copy step with type mismatch");
-        return createPlanNode(new_id, std::move(new_step), children, statistics);
+        //return createPlanNode(new_id, std::move(new_step), children, statistics);
+        return createPlanNode(new_id, std::move(new_step), children);
     }
 
     PlanNodePtr addStep(PlanNodeId new_id, QueryPlanStepSharedPtr new_step, PlanNodes new_children) override
@@ -156,6 +164,23 @@ private:
 
     StepPtr step;
 };
+
+/*
+class TableScan;
+class TableWrite;
+class CTERef
+{
+
+};
+extern template class PlanNode<TableScan>;
+using TableScanNode = PlanNode<TableScan>;
+
+extern template class PlanNode<TableWrite>;
+using TableWriteNode = PlanNode<TableWrite>;
+
+extern template class PlanNode<CTERef>;
+using CTERefNode = PlanNode<CTERef>;
+*/
 
 #define PLAN_NODE_DEF(TYPE) \
     extern template class PlanNode<TYPE>; \

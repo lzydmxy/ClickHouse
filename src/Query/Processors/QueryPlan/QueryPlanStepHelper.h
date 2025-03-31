@@ -19,10 +19,12 @@
 #include <Processors/QueryPlan/SortingStep.h>
 #include <Processors/QueryPlan/WindowStep.h>
 
+#include <Query/Processors/QueryPlan/TableScanStepExt.h>
 #include <Query/Processors/QueryPlan/AnyStepExt.h>
 #include <Query/Processors/QueryPlan/ApplyStepExt.h>
 #include <Query/Processors/QueryPlan/AssignUniqueIdStepExt.h>
 #include <Query/Processors/QueryPlan/BufferStepExt.h>
+#include <Query/Processors/QueryPlan/CTERefStepExt.h>
 #include <Query/Processors/QueryPlan/EnforceSingleRowStepExt.h>
 #include <Query/Processors/QueryPlan/ExchangeStepExt.h>
 #include <Query/Processors/QueryPlan/ExpandStepExt.h>
@@ -46,6 +48,8 @@ namespace DB
 {
 using QueryPlanStepSharedPtr = std::shared_ptr<IQueryPlanStep>;
 
+class TableScanStepExt;
+
 
 #define APPLY_QUERY_PLAN_STEP_TYPES(M) \
     M(AggregatingProjectionStep) \
@@ -58,6 +62,7 @@ using QueryPlanStepSharedPtr = std::shared_ptr<IQueryPlanStep>;
     M(CreatingSetStep) \
     M(CreatingSetsStep) \
     M(CubeStep) \
+    M(CTERefStepExt) \
     M(EnforceSingleRowStepExt) \
     M(ExchangeStepExt) \
     M(ExpandStepExt) \
@@ -72,6 +77,7 @@ using QueryPlanStepSharedPtr = std::shared_ptr<IQueryPlanStep>;
     M(JoinStepExt) \
     M(LimitByStep) \
     M(LimitStep) \
+    M(TableScanStepExt) \
     M(LocalExchangeStepExt) \
     M(MarkDistinctStepExt) \
     M(MergingAggregatedStep) \
@@ -299,6 +305,7 @@ public:
         M(ApplyStepExt) \
         M(AssignUniqueIdStepExt) \
         M(BufferStepExt) \
+        M(CTERefStepExt) \
         M(EnforceSingleRowStepExt) \
         M(ExchangeStepExt) \
         M(ExpandStepExt) \

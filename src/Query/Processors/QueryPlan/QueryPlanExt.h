@@ -13,7 +13,7 @@ using QueryPlanStepSharedPtr = std::shared_ptr<IQueryPlanStep>;
 class ReadBuffer;
 
 class QueryPlanExt;
-using QueryPlanExtPtr = std::unique_ptr<QueryPlanExt>;
+using QueryPlanExtPtr = std::shared_ptr<QueryPlanExt>;
 
 class PlanNodeBase;
 using PlanNodePtr = std::shared_ptr<PlanNodeBase>;
