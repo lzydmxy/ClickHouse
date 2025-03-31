@@ -1,4 +1,5 @@
 #include <Query/Processors/QueryPlan/CTERefStepExt.h>
+#include <Parsers/ASTIdentifier.h>
 
 namespace DB
 {
@@ -18,9 +19,7 @@ std::shared_ptr<IQueryPlanStep> CTERefStepExt::copy(ContextPtr) const
     return std::make_shared<CTERefStepExt>(output_stream.value(), id, output_columns, has_filter);
 }
 
-// todo: need to implement ProjectionStep
-/*
-std::shared_ptr<ProjectionStep> CTERefStepExt::toProjectionStep() const
+std::shared_ptr<ProjectionStepExt> CTERefStepExt::toProjectionStep() const
 {
     NamesAndTypes inputs;
     Assignments assignments;
@@ -35,9 +34,11 @@ std::shared_ptr<ProjectionStep> CTERefStepExt::toProjectionStep() const
             inputs.emplace_back(NameAndTypePair{it->second, item.type});
         }
     }
-    return std::make_shared<ProjectionStep>(DataStream{inputs}, assignments, name_to_type);
+
+    //todo: need convert from inputs to DataStream
+    //return std::make_shared<ProjectionStepExt>(DataStream{inputs}, assignments, name_to_type);
+    return std::make_shared<ProjectionStepExt>(DataStream{}, assignments, name_to_type);
 }
-*/
 
 //need to add CTEInfo
 /*

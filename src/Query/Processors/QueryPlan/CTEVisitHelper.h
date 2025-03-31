@@ -1,11 +1,12 @@
 #pragma once
 
+#include <unordered_set>
+
 #include <Query/Processors/QueryPlan/CTEInfo.h>
 #include <Query/Processors/QueryPlan/PlanVisitor.h>
 
 namespace DB
 {
-
 using CTEId = UInt32;
 
 class PlanNodeBase;

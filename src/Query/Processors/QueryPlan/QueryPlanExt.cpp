@@ -37,7 +37,7 @@ QueryPlanExt::QueryPlanExt(PlanNodePtr root_, CTEInfo cte_info_, PlanNodeIdAlloc
 {
 }
 
-void QueryPlanExt::unitePlans(QueryPlanStepPtr step, std::vector<std::unique_ptr<QueryPlanExt>> plans)
+void QueryPlanExt::unitePlans(QueryPlanStepPtr step, std::vector<QueryPlanExtPtr> plans)
 {
     if (isInitialized())
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot unite plans because current QueryPlanExt is already initialized");
