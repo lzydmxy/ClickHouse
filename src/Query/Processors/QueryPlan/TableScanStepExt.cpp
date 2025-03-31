@@ -2,6 +2,7 @@
 #include <Interpreters/convertFieldToType.h>
 #include <Query/Processors/QueryPlan/TableScanStepExt.h>
 #include <Query/Processors/QueryPlan/ExecutePlanElement.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Optimizer/SymbolTransformMap.h>
 #include <Interpreters/evaluateConstantExpression.h>
 #include <Planner/Utils.h>

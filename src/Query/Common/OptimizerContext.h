@@ -1,8 +1,10 @@
 #pragma once
-#include <Poco/Util/AbstractConfiguration.h>
-#include <Query/Common/QueryCommon.h>
+
 #include <Query/Common/ExceptionHandler.h>
 #include <Query/Common/OptimizerSettings.h>
+#include <Query/Common/QueryCommon.h>
+#include <Query/Processors/QueryPlan/PlanNodeIdAllocator.h>
+#include <Poco/Util/AbstractConfiguration.h>
 
 namespace DB
 {
@@ -115,6 +117,9 @@ public:
     {
         return nondeterministic_functions_out_of_query_scope.contains(fun_name);
     }
+
+    PlanNodeIdAllocatorPtr id_allocator = nullptr;
+    PlanNodeIdAllocatorPtr & getPlanNodeIdAllocator() { return id_allocator; }
 
 private:
     OptimizerSettings optimizer_settings;

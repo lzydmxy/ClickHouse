@@ -8,8 +8,6 @@
 namespace DB
 {
 
-using QueryPlanStepSharedPtr = std::shared_ptr<IQueryPlanStep>;
-
 class ReadBuffer;
 
 class QueryPlanExt;
@@ -55,12 +53,16 @@ public:
     Pipe
     convertToPipe(const QueryPlanOptimizationSettings & optimization_settings, const BuildQueryPipelineSettings & build_pipeline_settings);
 
+    void explainPipeline(WriteBuffer & buffer, const ExplainPipelineOptions & options) const;
     void explainPipelineWithOptimizer(WriteBuffer & buffer, const ExplainPipelineOptions & options) const;
 
     void setShortCircuit(bool short_circuit_) { short_circuit = short_circuit_; }
     bool isShortCircuit() const { return short_circuit; }
 
     void addInterpreterContext(std::shared_ptr<Context> context);
+
+    std::unordered_map<const Node *, size_t> node_id_map;
+    size_t getNodeId(const Node * node);
 
     using CTEId = UInt32;
     using CTENodes = std::unordered_map<CTEId, Node *>;
@@ -75,9 +77,9 @@ public:
 
     Node * getLastNode() { return &nodes.back(); }
 
-    void addNode(QueryPlan::Node && node_);
+    void addNode(QueryPlan::Node && node_, size_t id);
 
-    void addRoot(QueryPlan::Node && node_);
+    void addRoot(QueryPlan::Node && node_, size_t id);
     UInt32 newPlanNodeId() { return (*max_node_id)++; }
     PlanNodePtr & getPlanNode() { return plan_node; }
     PlanNodePtr getPlanNode() const { return plan_node; }
