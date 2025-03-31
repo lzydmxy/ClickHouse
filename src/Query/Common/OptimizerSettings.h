@@ -136,6 +136,15 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(Bool, force_read_in_partition_order, 0, "Similar to optimize_read_in_partition_order, but throw an exception if it cannot be applied to the query, mainly for testing", 0) \
     M(Bool, check_identifier_begin_valid, true, "Whether to check identifier", 0) \
     M(Bool, ignore_array_join_check_in_join_on_condition, false, "Ignore array-join function check in join on condition", 0) \
+    M(Bool, bsp_mode, false, "If enabled, query will execute in bsp mode", 0) \
+    M(String, exchange_shuffle_method_name, "cityHash64V2", "Shuffle method name used in exchange", 0) \
+    M(UInt64, distributed_max_parallel_size, false, "Max distributed execution parallel size", 0) \
+    M(Bool, enable_memory_catalog, false, "Enable memory catalog for unittest", 0) \
+    M(UInt64, max_plan_segment_num, 500, "maximum plan segments allowed, 0 means no restriction", 0)\
+    M(Bool, log_optimizer_run_time, false, "Whether Log optimizer runtime", 0) \
+    M(Bool, log_query_plan, 0, "Log json format query plan to the system query_log table.", 0) \
+    M(UInt64, iterative_optimizer_timeout, 10000, "Max running time of a single iterative optimizer in ms", 0) \
+    M(LogExplainAnalyzeType, log_explain_analyze_type, LogExplainAnalyzeType::NONE, "Log explain analyze result. Type: NONE|QUERY_PIPELINE|AGGREGATED_QUERY_PIPELINE.", 0) \
 
 #define MAKE_OPTIMIZER_OBSOLETE(M, TYPE, NAME, DEFAULT) \
     M(TYPE, NAME, DEFAULT, "Obsolete setting, does nothing.", BaseSettingsHelpers::Flags::OBSOLETE)

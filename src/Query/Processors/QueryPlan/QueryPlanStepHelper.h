@@ -23,6 +23,7 @@
 #include <Query/Processors/QueryPlan/ApplyStepExt.h>
 #include <Query/Processors/QueryPlan/AssignUniqueIdStepExt.h>
 #include <Query/Processors/QueryPlan/BufferStepExt.h>
+#include <Query/Processors/QueryPlan/CTERefStepExt.h>
 #include <Query/Processors/QueryPlan/EnforceSingleRowStepExt.h>
 #include <Query/Processors/QueryPlan/ExchangeStepExt.h>
 #include <Query/Processors/QueryPlan/ExpandStepExt.h>
@@ -45,6 +46,7 @@
 
 namespace DB
 {
+class TableScanStepExt;
 
 #define APPLY_QUERY_PLAN_STEP_TYPES(M) \
     M(AggregatingProjectionStep) \
@@ -57,6 +59,7 @@ namespace DB
     M(CreatingSetStep) \
     M(CreatingSetsStep) \
     M(CubeStep) \
+    M(CTERefStepExt) \
     M(EnforceSingleRowStepExt) \
     M(ExchangeStepExt) \
     M(ExpandStepExt) \
@@ -294,11 +297,12 @@ public:
         return step_ptr->copy(context); \
     }
 
-#define APPLY_QUERY_PLAN_STEP_TYPES_EXT(M) \
+    #define APPLY_QUERY_PLAN_STEP_TYPES_EXT(M) \
     M(AnyStepExt) \
     M(ApplyStepExt) \
     M(AssignUniqueIdStepExt) \
     M(BufferStepExt) \
+    M(CTERefStepExt) \
     M(EnforceSingleRowStepExt) \
     M(ExchangeStepExt) \
     M(ExpandStepExt) \
@@ -318,7 +322,7 @@ public:
     M(UnionStepExt) \
     M(ValuesStepExt)
 
-        APPLY_QUERY_PLAN_STEP_TYPES_EXT(CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT)
+    APPLY_QUERY_PLAN_STEP_TYPES_EXT(CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT)
 #undef CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT
 #undef APPLY_QUERY_PLAN_STEP_TYPES_EXT
 

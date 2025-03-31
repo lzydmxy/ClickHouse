@@ -156,4 +156,13 @@ bool OptimizerContext::isExplainQuery() const
     return is_explain_query;
 }
 
+void OptimizerContext::logOptimizerProfile(LoggerPtr log, String prefix, String name, UInt64 time, bool is_rule)
+{
+    if (optimizer_settings.log_optimizer_run_time && log)
+        LOG_DEBUG(log, "{} {} {}", prefix, name, time);
+
+//    if (optimizer_profile)
+//        optimizer_profile->setTime(name, time, is_rule);
+}
+
 }
