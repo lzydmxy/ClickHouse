@@ -165,4 +165,18 @@ void OptimizerContext::logOptimizerProfile(LoggerPtr log, String prefix, String 
 //        optimizer_profile->setTime(name, time, is_rule);
 }
 
+void OptimizerContext::setPlanCacheManager(std::unique_ptr<PlanCacheManager> && manager)
+{
+    //todo: need a part shared lock
+    //auto lock = getLock(); // checked
+    plan_cache_manager = std::move(manager);
+}
+
+PlanCacheManager* OptimizerContext::getPlanCacheManager()
+{
+    //todo: need a part shared lock
+    //auto lock = getLock(); // checked
+    return plan_cache_manager ? plan_cache_manager.get() : nullptr;
+}
+
 }

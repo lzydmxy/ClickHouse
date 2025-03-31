@@ -2,6 +2,14 @@
 #include <Query/Executor/QueryMPPCoordinator.h>
 #include <Storages/StorageReplicatedMergeTree.h>
 #include <google/protobuf/util/json_util.h>
+#include <Query/Optimizer/PlanOptimizer.h>
+#include <Query/Optimizer/JoinOrderUtils.h>
+#include <Query/Analyzer/QueryRewriter.h>
+#include <Query/Processors/QueryPlan/QueryPlanner.h>
+#include <Query/Analyzer/QueryAnalyzer.h>
+#include <Query/Processors/QueryPlan/FinalSampleStepExt.h>
+#include <Query/Processors/QueryPlan/GraphvizPrinter.h>
+
 
 namespace ProfileEvents
 {
@@ -71,8 +79,7 @@ QueryPlanExtPtr InterpreterSelectQueryUseOptimizer::getQueryPlan(bool skip_optim
     if (interpret_sub_query)
     {
         QueryPlanExtPtr sub_query_plan = std::make_unique<QueryPlanExt>(sub_plan_ptr, cte_info, context->getOptimizerContext()->getPlanNodeIdAllocator());
-        //todo: need Optimizer
-        //PlanOptimizer::optimize(*sub_query_plan, context);
+        PlanOptimizer::optimize(*sub_query_plan, context);
         return sub_query_plan;
     }
 
@@ -80,9 +87,7 @@ QueryPlanExtPtr InterpreterSelectQueryUseOptimizer::getQueryPlan(bool skip_optim
     QueryPlanExtPtr query_plan;
     UInt128 query_hash;
     // not cache internal query
-    // todo: need add PlanCacheManager
-    //bool enable_plan_cache = !options.is_internal && PlanCacheManager::enableCachePlan(query_ptr, context);
-    bool enable_plan_cache = false;
+    bool enable_plan_cache = !options.is_internal && PlanCacheManager::enableCachePlan(query_ptr, context);
     // remove settings to avoid plan cache miss
     RemoveSettings remove_settings_data;
     RemoveSettingsVisitor(remove_settings_data).visit(query_ptr);
@@ -90,24 +95,20 @@ QueryPlanExtPtr InterpreterSelectQueryUseOptimizer::getQueryPlan(bool skip_optim
     if (!query_plan || context->getOptimizerContext()->getSettingsRef().iterative_optimizer_timeout == 999999)
     {
         buildQueryPlan(query_plan, analysis, skip_optimize);
-        //todo:need GraphvizPrinter
-        //GraphvizPrinter::printLogicalPlan(*query_plan, context, "3997_build_plan_from_query");
+        GraphvizPrinter::printLogicalPlan(*query_plan, context, "3997_build_plan_from_query");
         fillContextQueryAccessInfo(context, analysis);
         if (enable_plan_cache && query_hash && query_plan)
         {
-            // todo: need add plan_cache
-            // if (PlanCacheManager::addPlanToCache(query_hash, query_plan, analysis, context))
-            //   LOG_INFO(log, "plan cache added");
+            if (PlanCacheManager::addPlanToCache(query_hash, query_plan, analysis, context))
+               LOG_INFO(log, "plan cache added");
         }
     }
 
     if (query_plan->getPlanNode())
         block = query_plan->getPlanNode()->getCurrentDataStream().header;
-    //todo:need GraphvizPrinter
-    //GraphvizPrinter::printLogicalPlan(*query_plan, context, "3999_final_plan");
+    GraphvizPrinter::printLogicalPlan(*query_plan, context, "3999_final_plan");
     query_plan->addInterpreterContext(context);
-    //todo: need Optimizer getJoinOrder
-    //LOG_DEBUG(log, "join order {}", JoinOrderUtils::getJoinOrder(*query_plan));
+    LOG_DEBUG(log, "join order {}", JoinOrderUtils::getJoinOrder(*query_plan));
     return query_plan;
 }
 
@@ -125,21 +126,6 @@ std::pair<PlanSegmentTreeUniqPtr, std::set<StorageID>> InterpreterSelectQueryUse
     LOG_DEBUG(log, "optimizer stage run time: plan normalize, {} ms", stage_watch.elapsedMilliseconds());
     stage_watch.restart();
 
-    // select health worker before split
-    //todo: need tryGetCurrentWorkerGroup
-    /*
-    if (context->getOptimizerContext()->getSettingsRef().scheduler_mode != SchedulerMode::SKIP && context->tryGetCurrentWorkerGroup())
-    {
-        context->adaptiveSelectWorkers(context->getSettingsRef().scheduler_mode);
-        auto wg_status = context->getWorkerGroupStatusPtr();
-        if (wg_status && wg_status->getWorkerGroupHealth() == GroupHealthType::Critical)
-            throw Exception(ErrorCodes::LOGICAL_ERROR, "No worker available");
-    }
-    else if (context->->getOptimizerContext()->getSettingsRef().bsp_mode)
-    {
-        context->setWorkerStatusManager();
-    }
-    */
     PlanSegmentTreeUniqPtr plan_segment_tree = std::make_unique<PlanSegmentTree>();
     ClusterInfoContext cluster_info_context{.query_plan = *query_plan, .context = context, .plan_segment_tree = plan_segment_tree};
     PlanSegmentContext plan_segment_context = ClusterInfoFinder::find(*query_plan, cluster_info_context);
@@ -153,8 +139,7 @@ std::pair<PlanSegmentTreeUniqPtr, std::set<StorageID>> InterpreterSelectQueryUse
 
     resetFinalSampleSize(plan_segment_tree);
     setPlanSegmentInfoForExplainAnalyze(plan_segment_tree, context);
-    //todo:need GraphvizPrinter
-    //GraphvizPrinter::printPlanSegment(plan_segment_tree, context);
+    GraphvizPrinter::printPlanSegment(plan_segment_tree, context);
     context->getOptimizerContext()->logOptimizerProfile(log, "Optimizer total run time: ", "Optimizer Total {} ms", total_watch.elapsedMilliseconds());
 
     if (context->getOptimizerContext()->getSettingsRef().log_segment_profiles)
@@ -213,17 +198,14 @@ void InterpreterSelectQueryUseOptimizer::resetFinalSampleSize(PlanSegmentTreeUni
     {
         if (plan_segment.getPlanSegment())
         {
-            //todo: need getQueryPlan in plan_segment
-            /*
             for (auto & node : plan_segment.getPlanSegment()->getQueryPlan().getNodes())
             {
-                if (auto * sample = dynamic_cast<FinalSampleStep *>(node.step.get()))
+                if (auto * sample = dynamic_cast<FinalSampleStepExt *>(node.step.get()))
                 {
                     size_t sample_size = (sample->getSampleSize() + 1) / plan_segment.getPlanSegment()->getParallelSize();
                     sample->setSampleSize(sample_size);
                 }
             }
-            */
         }
     }
 }
@@ -293,36 +275,30 @@ void InterpreterSelectQueryUseOptimizer::fillQueryPlan(ContextPtr context, Query
 void InterpreterSelectQueryUseOptimizer::buildQueryPlan(QueryPlanExtPtr & query_plan, AnalysisPtr & analysis, bool skip_optimize)
 {
     context->getOptimizerContext()->createPlanNodeIdAllocator();
-    //todo: QueryPlan/SymbolAllocator
-    //context->createSymbolAllocator();
-    //todo:need Optimizer/OptimizerMetrics
-    //context->createOptimizerMetrics();
+    context->getOptimizerContext()->createSymbolAllocator();
+    context->getOptimizerContext()->createOptimizerMetrics();
 
     Stopwatch stage_watch;
     stage_watch.start();
-    //todo: need QueryRewriter
-    //query_ptr = QueryRewriter().rewrite(query_ptr, context);
+    query_ptr = QueryRewriter().rewrite(query_ptr, context);
     context->getOptimizerContext()->logOptimizerProfile(log, "Optimizer stage run time: ", "Rewrite {} ms", stage_watch.elapsedMilliseconds());
     ProfileEvents::increment(ProfileEvents::QueryRewriterTime, stage_watch.elapsedMilliseconds());
 
     stage_watch.restart();
-    //todo: need add QueryAnalyzer
-    //analysis = QueryAnalyzer::analyze(query_ptr, context);
+    analysis = QueryAnalyzer::analyze(query_ptr, context);
     fillContextQueryAccessInfo(context, analysis);
     context->getOptimizerContext()->logOptimizerProfile(log, "Optimizer stage run time: ", "Analyzer {} ms", stage_watch.elapsedMilliseconds());
     ProfileEvents::increment(ProfileEvents::QueryAnalyzerTime, stage_watch.elapsedMilliseconds());
 
     stage_watch.restart();
-    //todo: need add QueryPlanner
-    //query_plan = QueryPlanner().plan(query_ptr, *analysis, context);
+    query_plan = QueryPlanner().plan(query_ptr, *analysis, context);
     context->getOptimizerContext()->logOptimizerProfile(log, "Optimizer stage run time: ", "Planning {} ms", stage_watch.elapsedMilliseconds());
     ProfileEvents::increment(ProfileEvents::QueryPlannerTime, stage_watch.elapsedMilliseconds());
 
     if (!skip_optimize)
     {
         stage_watch.restart();
-        //todo: need add Optimizer
-        //PlanOptimizer::optimize(*query_plan, context);
+        PlanOptimizer::optimize(*query_plan, context);
         if (context->getOptimizerContext()->getSettingsRef().log_query_plan)
         {
             fillQueryPlan(context, *query_plan);
@@ -348,9 +324,10 @@ QueryPlanExt PlanNodeToNodeVisitor::convert(QueryPlanExt & query_plan)
 
 QueryPlanExt::Node * PlanNodeToNodeVisitor::visitPlanNode(PlanNodeBase & node, Void & c)
 {
-    //todo: need add node id
     if (node.getChildren().empty())
     {
+        //todo: need add node id
+        //auto res = QueryPlanExt::Node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = {}, .id = node.getId()};
         auto res = QueryPlanExt::Node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = {}};
         node.setStep(res.step);
         plan.addNode(std::move(res));
@@ -365,6 +342,7 @@ QueryPlanExt::Node * PlanNodeToNodeVisitor::visitPlanNode(PlanNodeBase & node, V
     }
 
     //todo: need add node id
+    //QueryPlan::Node query_plan_node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = children, .id = node.getId()};
     QueryPlan::Node query_plan_node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = children};
     node.setStep(query_plan_node.step);
     plan.addNode(std::move(query_plan_node));
@@ -407,22 +385,19 @@ std::optional<PlanSegmentContext> ClusterInfoFinder::visitPlanNode(PlanNodeBase 
 std::optional<PlanSegmentContext> ClusterInfoFinder::visitTableScanNode(TableScanStepExtNode & node, ClusterInfoContext & cluster_info_context)
 {
     auto source_step = node.getStep();
-    const auto * cnch_table = dynamic_cast<StorageReplicatedMergeTree *>(source_step->getStorage().get());
-    if (cnch_table)
+    const auto * table = dynamic_cast<StorageReplicatedMergeTree *>(source_step->getStorage().get());
+    if (table)
     {
-        //todo: need getCurrentWorkerGroup
-        /*
-        const auto & worker_group = cluster_info_context.context->getCurrentWorkerGroup();
         PlanSegmentContext plan_segment_context{
             .context = cluster_info_context.context,
             .query_plan = cluster_info_context.query_plan,
             .query_id = cluster_info_context.context->getCurrentQueryId(),
-            .shard_number = worker_group->getShardsInfo().size(),
-            .cluster_name = worker_group->getID(),
+            //todo: need modify shard_number,cluster name
+            .shard_number = 1,
+            .cluster_name = "test",
             .plan_segment_tree = cluster_info_context.plan_segment_tree.get()};
 
         return plan_segment_context;
-        */
     }
     return std::nullopt;
 }
