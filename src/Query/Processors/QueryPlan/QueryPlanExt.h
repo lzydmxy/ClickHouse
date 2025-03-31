@@ -28,8 +28,8 @@ class QueryPlanExt;
 class QueryPlanExt : public QueryPlan
 {
 public:
-    QueryPlanExt();
-    ~QueryPlanExt();
+    QueryPlanExt() {}
+    ~QueryPlanExt() {}
     QueryPlanExt(QueryPlanExt &&) noexcept;
     QueryPlanExt(PlanNodePtr root_, PlanNodeIdAllocatorPtr id_allocator_);
     QueryPlanExt(PlanNodePtr root_, CTEInfo cte_info, PlanNodeIdAllocatorPtr id_allocator_);
@@ -45,7 +45,7 @@ public:
     void addStep(QueryPlanStepPtr step, PlanNodes children = {});
 
     QueryPipelineBuilderPtr buildQueryPipeline(
-        const QueryPlanOptimizationSettings & optimization_settings, const BuildQueryPipelineSettings & build_pipeline_settings);
+        const QueryPlanOptimizationSettings & optimization_settings, const BuildQueryPipelineSettings & build_pipeline_settings) { return nullptr;}
 
     /// add step_id for processors
     static void updatePipelineStepInfo(QueryPipelineBuilderPtr & pipeline_ptr, QueryPlanStepPtr & step, size_t step_id);
@@ -59,7 +59,7 @@ public:
     void setShortCircuit(bool short_circuit_) { short_circuit = short_circuit_; }
     bool isShortCircuit() const { return short_circuit; }
 
-    void addInterpreterContext(std::shared_ptr<Context> context);
+    void addInterpreterContext(std::shared_ptr<Context> context) {}
 
     std::unordered_map<const Node *, size_t> node_id_map;
     size_t getNodeId(const Node * node);
