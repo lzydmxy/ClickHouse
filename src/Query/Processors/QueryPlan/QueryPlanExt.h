@@ -32,13 +32,13 @@ class QueryPlanExt : public QueryPlan
 public:
     QueryPlanExt() {}
     ~QueryPlanExt() {}
-    QueryPlanExt(QueryPlanExt &&) noexcept;
-    QueryPlanExt(PlanNodePtr root_, PlanNodeIdAllocatorPtr id_allocator_);
-    QueryPlanExt(PlanNodePtr root_, CTEInfo cte_info, PlanNodeIdAllocatorPtr id_allocator_);
+    QueryPlanExt(QueryPlanExt &&) noexcept {}
+    QueryPlanExt(PlanNodePtr root_, PlanNodeIdAllocatorPtr id_allocator_) {}
+    QueryPlanExt(PlanNodePtr root_, CTEInfo cte_info, PlanNodeIdAllocatorPtr id_allocator_) {}
 
     QueryPlanExt & operator=(QueryPlanExt &&) noexcept;
 
-    std::set<StorageID> allocateLocalTable(ContextPtr context);
+    std::set<StorageID> allocateLocalTable(ContextPtr context) { std::set<StorageID> res; return res;}
     PlanNodeIdAllocatorPtr & getIdAllocator() { return id_allocator; }
     void createIdAllocator() { id_allocator = std::make_shared<PlanNodeIdAllocator>(); }
     void update(PlanNodePtr plan) { plan_node = std::move(plan); }
@@ -85,7 +85,7 @@ public:
     CTEInfo & getCTEInfo() { return cte_info; }
     const CTEInfo & getCTEInfo() const { return cte_info; }
     PlanNodePtr getPlanNodeById(PlanNodeId node_id) const;
-    static UInt32 getPlanNodeCount(PlanNodePtr node);
+    static UInt32 getPlanNodeCount(PlanNodePtr node) { return 0; }
 
     QueryPlanExt getSubPlan(QueryPlan::Node * node_);
 
