@@ -3,7 +3,6 @@
 #include <Query/Parsers/ASTAutoStatsQueryExt.h>
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTSetQuery.h>
-// #include <Query/Parsers/ASTStatsQueryExt.h>
 #include <Parsers/CommonParsers.h>
 #include <Parsers/ExpressionElementParsers.h>
 #include <Parsers/ExpressionListParsers.h>
@@ -68,9 +67,11 @@ private:
             bool all_db = s_all_databases.ignore(pos, expected);
             if (!all_db)
             {
-                if (!parseDatabaseAndTableNameOrAsterisks(
-                        pos, expected, query->database, query->any_database, query->table, query->any_table))
-                    return false;
+                //TODO: fix parseDatabaseAndTableNameOrAsterisks params database type
+                // if (!parseDatabaseAndTableNameOrAsterisks(
+                //         pos, expected, query->database, query->any_database, query->table, query->any_table))
+                //     return false;
+                return true;
             }
             else
             {
