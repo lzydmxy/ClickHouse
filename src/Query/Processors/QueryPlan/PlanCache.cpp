@@ -175,7 +175,7 @@ QueryPlanExtPtr PlanCacheManager::getPlanFromCache(UInt128 query_hash, ContextMu
         }
 
         context->getOptimizerContext()->createPlanNodeIdAllocator(max_id+1);
-        return  std::make_shared<QueryPlanExt>(root, cte_info, context->getOptimizerContext()->getPlanNodeIdAllocator());
+        return  std::make_unique<QueryPlanExt>(root, cte_info, context->getOptimizerContext()->getPlanNodeIdAllocator());
     }
     catch (...)
     {

@@ -11,7 +11,7 @@ namespace DB
 class ReadBuffer;
 
 class QueryPlanExt;
-using QueryPlanExtPtr = std::shared_ptr<QueryPlanExt>;
+using QueryPlanExtPtr = std::unique_ptr<QueryPlanExt>;
 
 class PlanNodeBase;
 using PlanNodePtr = std::shared_ptr<PlanNodeBase>;
@@ -41,10 +41,12 @@ public:
     void createIdAllocator() { id_allocator = std::make_shared<PlanNodeIdAllocator>(); }
     void update(PlanNodePtr plan) { plan_node = std::move(plan); }
 
-    void unitePlans(QueryPlanStepPtr step, std::vector<std::unique_ptr<QueryPlanExt>> plans);
+    void unitePlans(QueryPlanStepPtr step, std::vector<QueryPlanExtPtr> plans);
     void addStep(QueryPlanStepPtr step, PlanNodes children = {});
 
-    QueryPipelineBuilderPtr buildQueryPipeline( const QueryPlanOptimizationSettings & optimization_settings, const BuildQueryPipelineSettings & build_pipeline_settings);
+
+    QueryPipelineBuilderPtr buildQueryPipeline(
+        const QueryPlanOptimizationSettings & optimization_settings, const BuildQueryPipelineSettings & build_pipeline_settings);
 
     /// add step_id for processors
     static void updatePipelineStepInfo(QueryPipelineBuilderPtr & pipeline_ptr, QueryPlanStepPtr & step, size_t step_id);

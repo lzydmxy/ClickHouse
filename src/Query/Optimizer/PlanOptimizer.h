@@ -10,7 +10,7 @@ namespace DB
 class PlanOptimizer
 {
 public:
-    //todo: need impl the optimize, now just a empty impl
+    //todo: need impl the optimize and other getXXX, now just a fake impl
     static void optimize(QueryPlan & plan, ContextMutablePtr context) {}
     //static void optimize(QueryPlan & plan, ContextMutablePtr context, const Rewriters & rewriters);
     //static const Rewriters & getSimpleRewriters();

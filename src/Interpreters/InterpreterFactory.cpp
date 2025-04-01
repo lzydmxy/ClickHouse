@@ -117,7 +117,7 @@ InterpreterFactory::InterpreterPtr InterpreterFactory::get(ASTPtr & query, Conte
 
     if (query->as<ASTSelectQuery>())
     {
-        //use new optimizer
+        //use jd optimizer
         if (context->getOptimizerContext()->getSettingsRef().enable_optimizer)
             interpreter_name = "InterpreterSelectQueryUseOptimizer";
         else if (context->getSettingsRef().allow_experimental_analyzer)
@@ -131,7 +131,7 @@ InterpreterFactory::InterpreterPtr InterpreterFactory::get(ASTPtr & query, Conte
     {
         ProfileEvents::increment(ProfileEvents::SelectQuery);
 
-        //use new optimizer
+        //use jd optimizer
         if (context->getOptimizerContext()->getSettingsRef().enable_optimizer)
             interpreter_name = "InterpreterSelectQueryUseOptimizer";
         else if (context->getSettingsRef().allow_experimental_analyzer)
