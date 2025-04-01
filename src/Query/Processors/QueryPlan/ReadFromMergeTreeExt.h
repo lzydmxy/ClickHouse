@@ -35,8 +35,16 @@ struct MergeTreeDataSelectAnalysisResult
 {
     std::variant<std::exception_ptr, ReadFromMergeTree::AnalysisResult> result;
 
-    bool error() const;
-    size_t marks() const;
+    bool error() const
+    {
+        //todo: now just a fake impl for build
+        return false;
+    }
+    size_t marks() const
+    {
+        //todo: now just a fake impl for build
+        return 0;
+    }
 };
 
 using MergeTreeDataSelectAnalysisResultPtr = std::shared_ptr<MergeTreeDataSelectAnalysisResult>;

@@ -177,7 +177,8 @@ PlanSegmentResult PlanSegmentVisitor::visitExchangeNode(QueryPlanExt::Node * nod
     //todo: need add id in QueryPlanExt::Node
     //QueryPlanExt::Node remote_node{.step = std::move(remote_step), .children = {}, .id = node->id};
     QueryPlanExt::Node remote_node{.step = std::move(remote_step), .children = {}};
-    plan_segment_context.query_plan.addNode(std::move(remote_node));
+    size_t node_id = 0;
+    plan_segment_context.query_plan.addNode(std::move(remote_node), node_id);
     split_context.scalable &= step->isScalable();
     return plan_segment_context.query_plan.getLastNode();
 }
@@ -229,7 +230,8 @@ PlanSegmentResult PlanSegmentVisitor::visitCTERefNode(QueryPlanExt::Node * node,
     //todo: need add id in QueryPlanExt::Node
     //QueryPlanExt::Node remote_node{.step = std::move(remote_step), .children = {}, .id = node->id};
     QueryPlanExt::Node remote_node{.step = std::move(remote_step), .children = {}};
-    plan_segment_context.query_plan.addNode(std::move(remote_node));
+    size_t node_id = 0;
+    plan_segment_context.query_plan.addNode(std::move(remote_node), node_id);
     
     if (!plan_segment_context.context->getOptimizerContext()->getPlanNodeIdAllocator())
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Can't get PlanNodeIdAllocator");
@@ -241,7 +243,7 @@ PlanSegmentResult PlanSegmentVisitor::visitCTERefNode(QueryPlanExt::Node * node,
         //todo: neee dadd id in QueryPlanExt::Node
         //.id = plan_segment_context.context->getPlanNodeIdAllocator()->nextId()};
        };
-    plan_segment_context.query_plan.addNode(std::move(projection_node));
+    plan_segment_context.query_plan.addNode(std::move(projection_node), node_id);
 
     return plan_segment_context.query_plan.getLastNode();
 }

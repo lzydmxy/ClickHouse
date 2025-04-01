@@ -486,12 +486,18 @@ struct Analysis
     void addUsedFunctionArgument(const String & func_name, ColumnsWithTypeAndName & processed_arguments);
 
     std::map<String, Block> executed_scalar_subqueries;
-    // TODO: need InterpreterSelectQueryUseOptimizer
-    const Block & getScalarSubqueryResult(const ASTPtr & subquery, ContextPtr context);
+    const Block & getScalarSubqueryResult(const ASTPtr & subquery, ContextPtr context)
+    {
+        //todo: now just a fake impl for build
+         return executed_scalar_subqueries["test"];
+    }
 
     std::map<String, SetPtr> executed_in_subqueries;
-    // TODO: need InterpreterSelectQueryUseOptimizer
-    SetPtr getInSubqueryResult(const ASTPtr & subquery, ContextPtr context);
+    SetPtr getInSubqueryResult(const ASTPtr & subquery, ContextPtr context)
+    { 
+        //todo: now just a fake impl for build
+        return nullptr;
+    }
 };
 
 }

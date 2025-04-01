@@ -44,7 +44,11 @@ public:
     // TODO: implement
     // NameToType getOutputNamesToTypes() const { return getCurrentDataStream().header.getNamesToTypes(); }
     Names getOutputNames() const { return getCurrentDataStream().header.getNames(); }
-    PlanNodePtr getNodeById(PlanNodeId node_id) const;
+    PlanNodePtr getNodeById(PlanNodeId node_id) const
+    {
+        //todo: now just a fake impl for build
+        return nullptr;
+    }
 
     static PlanNodePtr createPlanNode(
         [[maybe_unused]] PlanNodeId id_, [[maybe_unused]] QueryPlanStepPtr step_, [[maybe_unused]] const PlanNodes & children_ = {}
