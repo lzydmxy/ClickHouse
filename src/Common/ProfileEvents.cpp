@@ -727,6 +727,12 @@ The server successfully detected this situation and will download merged part fr
     M(AddressesDiscovered, "Total count of new addresses in dns resolve results for http connections") \
     M(AddressesExpired, "Total count of expired addresses which is no longer presented in dns resolve results for http connections") \
     M(AddressesMarkedAsFailed, "Total count of addresses which has been marked as faulty due to connection errors for http connections") \
+    M(QueryRewriterTime, "Total elapsed time spent on QueryRewriter in milliseconds") \
+    M(QueryAnalyzerTime, "Total elapsed time spent on QueryAnalyzer in milliseconds") \
+    M(QueryPlannerTime, "Total elapsed time spent on QueryPlanner in milliseconds") \
+    M(QueryOptimizerTime, "Total elapsed time spent on QueryOptimizer in milliseconds") \
+    M(PlanSegmentSplitterTime, "Total elapsed time spent on PlanSegmentSplitter in milliseconds") \
+    M(ScheduleTimeMilliseconds, "Total time spent to schedule plan segment") \
 
 
 #ifdef APPLY_FOR_EXTERNAL_EVENTS

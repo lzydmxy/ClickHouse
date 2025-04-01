@@ -9,6 +9,7 @@
 #include <Query/Analyzer/QueryAnalyzer.h>
 #include <Query/Processors/QueryPlan/FinalSampleStepExt.h>
 #include <Query/Processors/QueryPlan/GraphvizPrinter.h>
+#include <Interpreters/InterpreterFactory.h>
 
 
 namespace ProfileEvents
@@ -440,6 +441,15 @@ void ExplainAnalyzeVisitor::visitNode(QueryPlanExt::Node * node, PlanSegmentTree
 {
     for (const auto & child : node->children)
         VisitorUtil::accept(child, *this, nodes);
+}
+
+void registerInterpreterSelectQueryUseOptimizer(InterpreterFactory & factory)
+{
+    auto create_fn = [] (const InterpreterFactory::Arguments & args)
+    {
+        return std::make_unique<InterpreterSelectQueryUseOptimizer>(args.query, args.context, SelectQueryOptions());
+    };
+    factory.registerInterpreter("InterpreterSelectQueryUseOptimizer", create_fn);
 }
 
 }
