@@ -28,8 +28,9 @@ bool parseDatabaseAndTableName(IParser::Pos & pos, Expected & expected, String &
             database_str = "";
             return false;
         }
-        if (rewrite_db)
-            tryRewriteCnchDatabaseName(database, pos.getContext());
+        
+        //if (rewrite_db)
+        //    tryRewriteCnchDatabaseName(database, pos.getContext());
 
         tryGetIdentifierNameInto(database, database_str);
         tryGetIdentifierNameInto(table, table_str);
@@ -84,7 +85,7 @@ bool parseDatabaseAndTableNameOrAsterisks(IParser::Pos & pos, Expected & expecte
                 if (ParserToken{TokenType::Asterisk}.ignore(pos, expected))
                 {
                     /// db.*
-                    tryRewriteCnchDatabaseName(ast_db, pos.getContext());
+                    //tryRewriteCnchDatabaseName(ast_db, pos.getContext());
 
                     any_database = false;
                     database = getIdentifierName(ast_db);
@@ -101,8 +102,8 @@ bool parseDatabaseAndTableNameOrAsterisks(IParser::Pos & pos, Expected & expecte
                         {
                             ast_catalog = ast_db;
                             ast_db = ast_tb;
-                            tryAppendCatalogName(ast_catalog,ast_db);
-                            tryRewriteCnchDatabaseName(ast_db, pos.getContext());
+                            //tryAppendCatalogName(ast_catalog,ast_db);
+                            //tryRewriteCnchDatabaseName(ast_db, pos.getContext());
                             any_database =false;
                             database = getIdentifierName(ast_db);
                             any_table = true;
@@ -116,8 +117,8 @@ bool parseDatabaseAndTableNameOrAsterisks(IParser::Pos & pos, Expected & expecte
                             ast_tb = ast_tmp;
                             any_database = false;
                             any_table = false;
-                            tryAppendCatalogName(ast_catalog,ast_db);
-                            tryRewriteCnchDatabaseName(ast_db, pos.getContext());
+                            //tryAppendCatalogName(ast_catalog,ast_db);
+                            //tryRewriteCnchDatabaseName(ast_db, pos.getContext());
                             database = getIdentifierName(ast_db); 
                             table = getIdentifierName(ast_tb);
                             return true; 
@@ -125,7 +126,7 @@ bool parseDatabaseAndTableNameOrAsterisks(IParser::Pos & pos, Expected & expecte
                     }
 
                     /// db.table
-                    tryRewriteCnchDatabaseName(ast_db, pos.getContext());
+                    //tryRewriteCnchDatabaseName(ast_db, pos.getContext());
 
                     any_database = false;
                     database = getIdentifierName(ast_db);
@@ -160,7 +161,7 @@ bool parseDatabase(IParser::Pos & pos, Expected & expected, String & database_st
     if (!identifier_parser.parse(pos, database, expected))
         return false;
 
-    tryRewriteCnchDatabaseName(database, pos.getContext());
+    //tryRewriteCnchDatabaseName(database, pos.getContext());
     tryGetIdentifierNameInto(database, database_str);
     return true;
 }

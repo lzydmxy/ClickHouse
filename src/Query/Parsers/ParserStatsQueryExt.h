@@ -62,10 +62,10 @@ protected:
             query->any_database = false;
             query->any_table = true;
         }
-        else if (!parseDatabaseAndTableNameOrAsterisks(pos, expected, query->database, query->any_database, query->table, query->any_table))
-        {
-            return false;
-        }
+        //else if (!parseDatabaseAndTableNameOrAsterisks(pos, expected, query->database, query->any_database, query->table, query->any_table))
+        //{
+        //    return false;
+        //}
 
         if (!query->any_table)
         {
@@ -149,7 +149,7 @@ struct DropStatsParserName
 using ParserShowStatsQueryExt = ParserStatsQueryBaseExt<ShowStatsParserName, ASTShowStatsQueryExt, ShowStatsQueryInfoExt>;
 using ParserDropStatsQueryExt = ParserStatsQueryBaseExt<DropStatsParserName, ASTDropStatsQueryExt, DropStatsQueryInfoExt>;
 
-class ParserCreateStatsQueryExt : public ParserStatsQueryBaseExt<CreateStatsParserName, ASTCreateStatsQueryExt, CreateStatsQueryInfo>
+class ParserCreateStatsQueryExt : public ParserStatsQueryBaseExt<CreateStatsParserName, ASTCreateStatsQueryExt, CreateStatsQueryInfoExt>
 {
 protected:
     bool parseSuffix(Pos & pos, QueryAst & node, Expected & expected) override;

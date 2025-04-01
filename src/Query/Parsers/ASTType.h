@@ -2,6 +2,7 @@
 
 #include <Core/Settings.h>
 
+/*
 #include <Functions/JSONPath/ASTs/ASTJSONPath.h>
 #include <Functions/JSONPath/ASTs/ASTJSONPathMemberAccess.h>
 #include <Functions/JSONPath/ASTs/ASTJSONPathQuery.h>
@@ -49,68 +50,100 @@
 #include <Query/Parsers/ASTSelectQueryExt.h>
 #include <Query/Parsers/ASTTableColumnReference.h>
 #include <Query/Parsers/ASTQuantifiedComparisonExt.h>
-#include <Query/Parsers/ASTType.h>
 #include <Query/Parsers/ASTStatsQueryExt.h>
+*/
 
 namespace DB
 {
 
+template <typename StatsQueryInfo> class ASTStatsQueryBaseExt;
+
+struct ShowStatsQueryInfoExt;
+using ASTShowStatsQueryExt = ASTStatsQueryBaseExt<ShowStatsQueryInfoExt>;
+struct DropStatsQueryInfoExt;
+using ASTDropStatsQueryExt = ASTStatsQueryBaseExt<DropStatsQueryInfoExt>;
+
+/*
 using DB::IAST;
 using DB::ASTPtr;
 using DB::ASTs;
 using ConstASTPtr = std::shared_ptr<const IAST>;
 using ConstASTs = std::vector<ConstASTPtr>;
 using ASTFunctionPtr = std::shared_ptr<ASTFunction>;
+*/
 
-struct ShowStatsQueryInfoExt;
-using ASTShowStatsQueryExt = ASTStatsQueryBaseExt<ShowStatsQueryInfoExt>;
-class ASTCreateStatsQueryExt;
-struct DropStatsQueryInfoExt;
-using ASTDropStatsQueryExt = ASTStatsQueryBaseExt<DropStatsQueryInfoExt>;
+#define APPLY_AST_TYPES(M) \
+    M(ASTArrayJoin) \
+    M(ASTAsterisk) \
+    M(ASTAutoStatsQueryExt) \
+    M(ASTShowStatsQueryExt) \
+    M(ASTDropStatsQueryExt) \
+    M(ASTCreateStatsQueryExt) \
+    M(ASTColumnsApplyTransformer) \
+    M(ASTColumnsExceptTransformer) \
+    M(ASTColumnsListMatcher) \
+    M(ASTColumnsRegexpMatcher) \
+    M(ASTColumnsReplaceTransformer) \
+    M(ASTConstraintDeclaration) \
+    M(ASTDataTypeExt) \
+    M(ASTDictionaryAttributeDeclaration) \
+    M(ASTDictionaryExt) \
+    M(ASTDictionaryLayout) \
+    M(ASTDictionaryLifetime) \
+    M(ASTDictionaryRange) \
+    M(ASTDictionarySettings) \
+    M(ASTExplainQueryExt) \
+    M(ASTExpressionListExt) \
+    M(ASTFieldReferenceExt) \
+    M(ASTFunction) \
+    M(ASTFunctionWithKeyValueArguments) \
+    M(ASTIdentifier) \
+    M(ASTIndexDeclaration) \
+    M(ASTJSONPath) \
+    M(ASTJSONPathMemberAccess) \
+    M(ASTJSONPathQuery) \
+    M(ASTJSONPathRange) \
+    M(ASTJSONPathRoot) \
+    M(ASTJSONPathStar) \
+    M(ASTLiteral) \
+    M(ASTNameTypePair) \
+    M(ASTOrderByElement) \
+    M(ASTPair) \
+    M(ASTPartitionExt) \
+    M(ASTProjectionDeclaration) \
+    M(ASTProjectionSelectQuery) \
+    M(ASTQualifiedAsterisk) \
+    M(ASTQueryParameter) \
+    M(ASTQueryWithOutput) \
+    M(ASTRowPolicyName) \
+    M(ASTRowPolicyNames) \
+    M(ASTSampleRatio) \
+    M(ASTSelectIntersectExceptQuery) \
+    M(ASTSelectQueryExt) \
+    M(ASTSelectWithUnionQuery) \
+    M(ASTSetQuery) \
+    M(ASTSettingsProfileElement) \
+    M(ASTSettingsProfileElements) \
+    M(ASTSubquery) \
+    M(ASTTTLElement) \
+    M(ASTTableExpression) \
+    M(ASTTableIdentifier) \
+    M(ASTTableJoin) \
+    M(ASTTablesInSelectQuery) \
+    M(ASTTablesInSelectQueryElement) \
+    M(ASTUseQuery) \
+    M(ASTWindowDefinition) \
+    M(ASTWindowListElement) \
+    M(ASTWithElement) \
+    M(ASTTableColumnReference) \
+    M(ASTQuantifiedComparisonExt)
 
-
-//class ASTAutoStatsQueryExt;
-//class ASTShowStatsQueryExt;
-
-inline String toString(ASTType type)
+#define ENUM_AST_TYPE(ITEM) ITEM,
+enum class ASTType : UInt8
 {
-    switch (type)
-    {
-#define ENUM_AST_TYPE(ITEM) \
-    case ASTType::ITEM: \
-        return #ITEM;
-        APPLY_AST_TYPES(ENUM_AST_TYPE)
+    APPLY_AST_TYPES(ENUM_AST_TYPE) UNDEFINED,
+};
 #undef ENUM_AST_TYPE
-        default:
-            return "UNDEFINED";
-    }
-}
-
-#define CHECK_AND_RETURN_AST_TYPE(type) \
-if (auto * casted_ast = ast->as<type>()) \
-{ \
-    return ASTType::type; \
-}
-
-inline ASTType getAstType(const ASTPtr & ast)
-{
-    APPLY_AST_TYPES(CHECK_AND_RETURN_AST_TYPE)
-    return ASTType::UNDEFINED;
-}
-
-inline ASTType getAstType(const ConstASTPtr & ast)
-{
-    APPLY_AST_TYPES(CHECK_AND_RETURN_AST_TYPE)
-    return ASTType::UNDEFINED;
-}
-#undef CHECK_AND_RETURN_AST_TYPE
-
-void astToLowerCase(const ASTPtr & ast);
-void astToUpperCase(const ASTPtr & ast);
-
-void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_child);
-
-ASTFunctionPtr makeASTFunctionWithVectorArgs(ASTFunctionPtr & ast, const String &name, ASTs &&args);
 
 }
 

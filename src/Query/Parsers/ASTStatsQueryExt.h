@@ -7,6 +7,8 @@
 #include <Query/Parsers/ASTHelper.h>
 #include <Common/quoteString.h>
 #include <Common/SettingsChanges.h>
+#include <Query/Parsers/ASTType.h>
+
 
 namespace DB
 {
@@ -31,7 +33,7 @@ enum class StatisticsCachePolicy
 };
 
 String formatStatsQueryKind(StatsQueryKind kind);
-struct CreateStatsQueryInfo;
+struct CreateStatsQueryInfoExt;
 
 template <typename StatsQueryInfo>
 class ASTStatsQueryBaseExt : public ASTQueryWithTableAndOutput, public ASTQueryWithOnCluster
@@ -93,7 +95,7 @@ protected:
             }
             else
             {
-                s.ostr << (s.hilite ? hilite_identifier : "") << backQuoteIfNeed(database) << (s.hilite ? hilite_none : "");
+              //  s.ostr << (s.hilite ? hilite_identifier : "") << backQuoteIfNeed(database) << (s.hilite ? hilite_none : "");
                 s.ostr << ".*";
             }
         }
@@ -102,8 +104,8 @@ protected:
             assert(!any_database);
             assert(!any_table);
 
-            s.ostr << (s.hilite ? hilite_identifier : "") << (database ? backQuoteIfNeed(database) + "." : "")
-                   << backQuoteIfNeed(table) << (s.hilite ? hilite_none : "");
+            //s.ostr << (s.hilite ? hilite_identifier : "") << (database ? backQuoteIfNeed(database) + "." : "")
+            //       << backQuoteIfNeed(table) << (s.hilite ? hilite_none : "");
 
             if (!columns.empty())
             {
@@ -183,7 +185,7 @@ public:
     std::optional<Int64> sample_rows = std::nullopt;
     std::optional<double> sample_ratio = std::nullopt;
 
-    ASTPtr clone() const;
+    ASTPtr clone() const override;
 
 protected:
 void formatQueryImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override;
