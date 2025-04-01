@@ -91,7 +91,7 @@ public:
     PlanNode & operator=(const PlanNode &) = delete;
     PlanNode & operator=(PlanNode &&) = delete;
 
-    QueryPlanStepType getType() const override { return step->getType(); }
+    QueryPlanStepType getType() const override { return getQueryPlanStepType(step); }
     StepPtr & getStep() { return step; }
 
     void setStep(StepPtr & step_) { step = step_; }
@@ -109,7 +109,7 @@ public:
 
     PlanNodePtr copy(PlanNodeId new_id, ContextPtr context) override
     {
-        auto new_step = dynamic_pointer_cast<Step>(step->copy(context));
+        auto new_step = dynamic_pointer_cast<Step>(QueryPlanStepHelper::copyQueryPlanStep(step, context));
         if (!new_step)
             throw Exception(ErrorCodes::LOGICAL_ERROR, "Failed to copy step with type mismatch");
         // return createPlanNode(new_id, std::move(new_step), children, statistics);
@@ -146,7 +146,7 @@ private:
         for (const auto & child : children)
             inputs.emplace_back(child->getCurrentDataStream());
 
-        getStep()->setInputStreams(inputs);
+        getStep()->updateInputStreams(inputs);
     }
 
     void setStepImpl(QueryPlanStepPtr & step_) override

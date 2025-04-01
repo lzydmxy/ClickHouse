@@ -19,18 +19,6 @@ using String = std::string;
 using UInt32 = uint32_t;
 using PlanNodeId = UInt32;
 
-//todo:need impl PlanNodeBase, now it's just a mock
-class PlanNodeBase : public std::enable_shared_from_this<PlanNodeBase>
-{
-public:
-    virtual ~PlanNodeBase() = default;
-    PlanNodeId getId() const { return 0; }
-    PlanNodes & getChildren() { return children; }
-
-    PlanNodes children;
-};
-
-
 class SymbolTransformMap
 {
 public:
