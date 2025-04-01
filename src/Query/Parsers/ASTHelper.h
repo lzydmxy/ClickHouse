@@ -50,7 +50,6 @@
 #include <Query/Parsers/ASTTableColumnReference.h>
 #include <Query/Parsers/ASTQuantifiedComparisonExt.h>
 
-
 namespace DB
 {
 
@@ -61,10 +60,18 @@ using ConstASTPtr = std::shared_ptr<const IAST>;
 using ConstASTs = std::vector<ConstASTPtr>;
 using ASTFunctionPtr = std::shared_ptr<ASTFunction>;
 
+class ASTAutoStatsQueryExt;
+class ASTShowStatsQueryExt;
+class ASTDropStatsQueryExt;
+class ASTCreateStatsQueryExt;
+
 #define APPLY_AST_TYPES(M) \
     M(ASTArrayJoin) \
     M(ASTAsterisk) \
     M(ASTAutoStatsQueryExt) \
+    M(ASTShowStatsQueryExt) \
+    M(ASTDropStatsQueryExt) \
+    M(ASTCreateStatsQueryExt) \
     M(ASTColumnsApplyTransformer) \
     M(ASTColumnsExceptTransformer) \
     M(ASTColumnsListMatcher) \
