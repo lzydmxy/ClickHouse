@@ -19,6 +19,7 @@
 #include <Processors/QueryPlan/SortingStep.h>
 #include <Processors/QueryPlan/WindowStep.h>
 
+#include <Query/Processors/QueryPlan/TableScanStepExt.h>
 #include <Query/Processors/QueryPlan/AnyStepExt.h>
 #include <Query/Processors/QueryPlan/ApplyStepExt.h>
 #include <Query/Processors/QueryPlan/AssignUniqueIdStepExt.h>
@@ -74,6 +75,7 @@ class TableScanStepExt;
     M(JoinStepExt) \
     M(LimitByStep) \
     M(LimitStep) \
+    M(TableScanStepExt) \
     M(LocalExchangeStepExt) \
     M(MarkDistinctStepExt) \
     M(MergingAggregatedStep) \
