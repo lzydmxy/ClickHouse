@@ -51,6 +51,10 @@ public:
         map.add("max_chunk_size", max_chunk_size);
     }
 
+    //todo: need ipml proto
+    //void toProto(Protos::FinalSampleStep & proto, bool for_hash_equals = false) const;
+    //static std::shared_ptr<FinalSampleStep> fromProto(const Protos::FinalSampleStep & proto, ContextPtr context);
+
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const
     {
         return std::make_shared<FinalSampleStepExt>(input_streams[0], sample_size, max_chunk_size);
@@ -60,6 +64,7 @@ public:
     {
         return ITransformingStep::Traits{
             {
+                //todo: need preserves_distinct_columns in ITransformingStep.DataStreamTraits
                 //.preserves_distinct_columns = true,
                 .returns_single_stream = false,
                 .preserves_number_of_streams = true,

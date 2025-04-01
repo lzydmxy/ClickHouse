@@ -29,6 +29,7 @@
 #include <Query/Processors/QueryPlan/ExpandStepExt.h>
 #include <Query/Processors/QueryPlan/ExplainAnalyzeStepExt.h>
 #include <Query/Processors/QueryPlan/FilterStepExt.h>
+#include <Query/Processors/QueryPlan/FinalSampleStepExt.h>
 #include <Query/Processors/QueryPlan/IntermediateResultCacheStepExt.h>
 #include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <Query/Processors/QueryPlan/LocalExchangeStepExt.h>
@@ -69,6 +70,7 @@ class TableScanStepExt;
     M(FilledJoinStep) \
     M(FillingStep) \
     M(FilterStepExt) \
+    M(FinalSampleStepExt) \
     M(IntermediateResultCacheStepExt) \
     M(IntersectOrExceptStep) \
     M(JoinStepExt) \
@@ -311,6 +313,7 @@ public:
     M(ExpandStepExt) \
     M(ExplainAnalyzeStepExt) \
     M(FilterStepExt) \
+    M(FinalSampleStepExt) \
     M(IntermediateResultCacheStepExt) \
     M(JoinStepExt) \
     M(LocalExchangeStepExt) \

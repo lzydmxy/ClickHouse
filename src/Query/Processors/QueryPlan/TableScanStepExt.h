@@ -42,7 +42,6 @@ using DataTypePtr = std::shared_ptr<const IDataType>;
 using NameToType = std::map<String, DataTypePtr>;
 using ASTSelectQueryPtr = std::shared_ptr<ASTSelectQuery>;
 using RuntimeFilterId = UInt32;
-using QueryPlanStepSharedPtr = std::shared_ptr<IQueryPlanStep>;
 
 StreamLocalLimits getLimitsForStorage(const Settings & settings, const SelectQueryOptions & options);
 
