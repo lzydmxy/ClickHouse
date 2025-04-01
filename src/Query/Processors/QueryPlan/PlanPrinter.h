@@ -225,7 +225,11 @@ struct PlanSegmentDescription
     NodeDescriptionPtr node_description;
 
     Poco::JSON::Object::Ptr jsonPlanSegmentDescription(const StepProfiles & profiles, bool is_pipeline = false);
-    String jsonPlanSegmentDescriptionAsString(const StepProfiles & profiles);
+    String jsonPlanSegmentDescriptionAsString(const StepProfiles & profiles)
+    {
+        //todo: now just a fake impl for build
+        return "";
+    }
     static PlanSegmentDescriptionPtr getPlanSegmentDescription(PlanSegmentPtr & segment, bool record_plan_detail = false) { auto plan_segment_desc = std::make_shared<PlanSegmentDescription>(); return plan_segment_desc;}
 };
 

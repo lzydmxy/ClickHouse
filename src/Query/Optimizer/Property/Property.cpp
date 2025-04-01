@@ -1,12 +1,12 @@
 #include <Query/Optimizer/Property/Property.h>
 
-#include <Functions/FunctionsHashing.h>
+//#include <Functions/FunctionsHashing.h>
 #include <IO/ReadHelpers.h>
 #include <IO/WriteHelpers.h>
-#include <Query/Optimizer/ExpressionRewriter.h>
-#include <Query/Optimizer/Property/Constants.h>
-#include <Query/Optimizer/Property/SymbolEquivalencesDeriver.h>
-#include <Query/Optimizer/SymbolsExtractor.h>
+//#include <Query/Optimizer/ExpressionRewriter.h>
+//#include <Query/Optimizer/Property/Constants.h>
+//#include <Query/Optimizer/Property/SymbolEquivalencesDeriver.h>
+//#include <Query/Optimizer/SymbolsExtractor.h>
 #include <Parsers/ASTClusterByElement.h>
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTSerDerHelper.h>

@@ -103,7 +103,11 @@ public:
     std::function<void()> getSendTCPProgress() const;
 
     HostWithPorts getHostWithPorts() const;
-    SegmentSchedulerPtr getSegmentScheduler() const;
+    SegmentSchedulerPtr getSegmentScheduler() const
+    {
+        //todo: now just a fake impl for build
+        return nullptr;
+    }
 
     ServiceType getServiceType() const;
 

@@ -82,7 +82,9 @@ PlanNodePtr PlanCacheManager::getNewPlanNode(PlanNodePtr node, ContextMutablePtr
             table_step->cleanStorage();
         else
             table_step->setStorage(context);
-        return PlanNodeBase::createPlanNode(node->getId(), step, {});
+        //todo: need to hadle PlanNode link
+        //return PlanNodeBase::createPlanNode(node->getId(), step, {});
+        return nullptr;
     }
 
     PlanNodes children;
@@ -94,7 +96,9 @@ PlanNodePtr PlanCacheManager::getNewPlanNode(PlanNodePtr node, ContextMutablePtr
     }
 
     auto step = QueryPlanStepHelper::copyQueryPlanStep(node->getStep(), context);
-    return PlanNodeBase::createPlanNode(node->getId(), step, children);
+    return nullptr;
+    //todo: need to hadle PlanNode link
+    //return PlanNodeBase::createPlanNode(node->getId(), step, children);
 }
 
 void PlanCacheManager::invalidate(ContextMutablePtr)

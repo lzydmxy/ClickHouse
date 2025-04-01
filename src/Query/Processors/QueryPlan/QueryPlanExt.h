@@ -28,24 +28,23 @@ class QueryPlanExt;
 class QueryPlanExt : public QueryPlan
 {
 public:
-    QueryPlanExt() {}
-    ~QueryPlanExt() {}
-    QueryPlanExt(QueryPlanExt &&) noexcept {}
-    QueryPlanExt(PlanNodePtr root_, PlanNodeIdAllocatorPtr id_allocator_) {}
-    QueryPlanExt(PlanNodePtr root_, CTEInfo cte_info, PlanNodeIdAllocatorPtr id_allocator_) {}
+    QueryPlanExt();
+    ~QueryPlanExt();
+    QueryPlanExt(QueryPlanExt &&) noexcept;
+    QueryPlanExt(PlanNodePtr root_, PlanNodeIdAllocatorPtr id_allocator_);
+    QueryPlanExt(PlanNodePtr root_, CTEInfo cte_info, PlanNodeIdAllocatorPtr id_allocator_);
 
     QueryPlanExt & operator=(QueryPlanExt &&) noexcept;
 
-    std::set<StorageID> allocateLocalTable(ContextPtr context) { std::set<StorageID> res; return res;}
+    std::set<StorageID> allocateLocalTable(ContextPtr context);
     PlanNodeIdAllocatorPtr & getIdAllocator() { return id_allocator; }
     void createIdAllocator() { id_allocator = std::make_shared<PlanNodeIdAllocator>(); }
     void update(PlanNodePtr plan) { plan_node = std::move(plan); }
 
-    void unitePlans(QueryPlanStepPtr step, std::vector<QueryPlanExtPtr> plans);
+    void unitePlans(QueryPlanStepPtr step, std::vector<std::unique_ptr<QueryPlanExt>> plans);
     void addStep(QueryPlanStepPtr step, PlanNodes children = {});
 
-    QueryPipelineBuilderPtr buildQueryPipeline(
-        const QueryPlanOptimizationSettings & optimization_settings, const BuildQueryPipelineSettings & build_pipeline_settings) { return nullptr;}
+    QueryPipelineBuilderPtr buildQueryPipeline( const QueryPlanOptimizationSettings & optimization_settings, const BuildQueryPipelineSettings & build_pipeline_settings);
 
     /// add step_id for processors
     static void updatePipelineStepInfo(QueryPipelineBuilderPtr & pipeline_ptr, QueryPlanStepPtr & step, size_t step_id);
@@ -59,7 +58,7 @@ public:
     void setShortCircuit(bool short_circuit_) { short_circuit = short_circuit_; }
     bool isShortCircuit() const { return short_circuit; }
 
-    void addInterpreterContext(std::shared_ptr<Context> context) {}
+    void addInterpreterContext(std::shared_ptr<Context> context);
 
     std::unordered_map<const Node *, size_t> node_id_map;
     size_t getNodeId(const Node * node);
@@ -87,7 +86,7 @@ public:
     CTEInfo & getCTEInfo() { return cte_info; }
     const CTEInfo & getCTEInfo() const { return cte_info; }
     PlanNodePtr getPlanNodeById(PlanNodeId node_id) const;
-    static UInt32 getPlanNodeCount(PlanNodePtr node) { return 0; }
+    static UInt32 getPlanNodeCount(PlanNodePtr node);
 
     QueryPlanExt getSubPlan(QueryPlan::Node * node_);
 

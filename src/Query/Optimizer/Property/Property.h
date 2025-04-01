@@ -146,8 +146,16 @@ public:
 
     ASTPtr getShuffleExpr() const;
 
-    String getHashFunc(String default_func) const;
-    Array getParams() const;
+    String getHashFunc(String default_func) const
+    {
+        //todo: now just a fake impl for build
+        return "";
+    }
+    Array getParams() const
+    {
+        //todo: now just a fake impl for build
+        return {};
+    }
 
     void resetIfPartitionHandle()
     {

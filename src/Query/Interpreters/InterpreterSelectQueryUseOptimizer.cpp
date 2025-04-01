@@ -329,9 +329,10 @@ QueryPlanExt::Node * PlanNodeToNodeVisitor::visitPlanNode(PlanNodeBase & node, V
     {
         //todo: need add node id
         //auto res = QueryPlanExt::Node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = {}, .id = node.getId()};
+        size_t node_id = 0;
         auto res = QueryPlanExt::Node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = {}};
         node.setStep(res.step);
-        plan.addNode(std::move(res));
+        plan.addNode(std::move(res), node_id);
         return plan.getLastNode();
     }
 
@@ -344,9 +345,10 @@ QueryPlanExt::Node * PlanNodeToNodeVisitor::visitPlanNode(PlanNodeBase & node, V
 
     //todo: need add node id
     //QueryPlan::Node query_plan_node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = children, .id = node.getId()};
+    size_t node_id = 0;
     QueryPlan::Node query_plan_node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = children};
     node.setStep(query_plan_node.step);
-    plan.addNode(std::move(query_plan_node));
+    plan.addNode(std::move(query_plan_node), node_id);
     return plan.getLastNode();
 }
 

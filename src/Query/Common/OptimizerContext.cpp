@@ -179,4 +179,18 @@ PlanCacheManager* OptimizerContext::getPlanCacheManager()
     return plan_cache_manager ? plan_cache_manager.get() : nullptr;
 }
 
+HostWithPorts OptimizerContext::getHostWithPorts() const
+{
+    //tood: need impl, now just a fake impl
+    HostWithPorts hp;
+    return hp;
+}
+
+std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> OptimizerContext::getProcessorProfileElementConsumer() const
+{
+    //tood: need impl, now just a fake impl
+    std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> processor_log_element_consumer;
+    return processor_log_element_consumer;
+}
+
 }
