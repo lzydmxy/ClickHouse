@@ -14,40 +14,29 @@ IExchangeSink::IExchangeSink(Block header_) : ISink(std::move(header_))
 {
 }
 
-void IExchangeSink::finish()
-{
-    is_finished.store(true, std::memory_order_relaxed);
-}
-
 IExchangeSink::Status IExchangeSink::prepare()
 {
+    LOG_TRACE(getLogger("IExchangeSink"), "IExchangeSink::prepare, was_on_start_called {}, was_on_finish_called {}, is_finished {}, has_input {}",
+        was_on_start_called, was_on_finish_called, is_finished.load(std::memory_order_relaxed), has_input);
+
     if (is_finished.load(std::memory_order_relaxed))
     {
         onFinish();
         input.close();
         return Status::Finished;
     }
+    return ISink::prepare();
+}
 
-    if (has_input)
-        return Status::Ready;
+void IExchangeSink::onStart()
+{
+    ISink::onStart();
+}
 
-    if (input.isFinished())
-    {
-        if (!is_finished.load(std::memory_order_relaxed))
-        {
-            return Status::Ready;
-        }
-        onFinish();
-        return Status::Finished;
-    }
-
-    input.setNeeded();
-    if (!input.hasData())
-        return Status::NeedData;
-
-    current_chunk = input.pull(true);
-    has_input = true;
-    return Status::Ready;
+void IExchangeSink::onFinish()
+{
+    is_finished.store(true, std::memory_order_relaxed);
+    ISink::onFinish();
 }
 
 }

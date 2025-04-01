@@ -23,7 +23,6 @@ MultiPartitionExchangeSink::MultiPartitionExchangeSink(
     , repartition_keys(std::move(repartition_keys_))
     , options(options_)
     , logger(getLogger("MultiPartitionExchangeSink"))
-
 {
     bool has_null_shuffle_key = false;
     for (size_t key_idx : repartition_keys)
@@ -50,23 +49,11 @@ MultiPartitionExchangeSink::MultiPartitionExchangeSink(
 
 void MultiPartitionExchangeSink::consume(Chunk chunk)
 {
-
     if (partition_num == 1)
     {
-        if (!has_input) {
-            finish();
-            return;
-        }
         auto status = buffered_senders[0].sendThrough(std::move(chunk));
         if (status.code != BroadcastStatusCode::RUNNING)
-            finish();
-        return;
-    }
-
-    if (!has_input) {
-        for(size_t i = 0; i < partition_num ; ++i)
-            buffered_senders[i].flush(true, current_chunk_info);
-        finish();
+            onFinish();
         return;
     }
 
@@ -112,12 +99,13 @@ void MultiPartitionExchangeSink::consume(Chunk chunk)
             has_active_sender = true;
     }
     if (!has_active_sender)
-        finish();
+        onFinish();
 }
 
 void MultiPartitionExchangeSink::onFinish()
 {
     LOG_TRACE(logger, "MultiPartitionExchangeSink finish");
+    IExchangeSink::onFinish();
 }
 
 void MultiPartitionExchangeSink::onCancel()

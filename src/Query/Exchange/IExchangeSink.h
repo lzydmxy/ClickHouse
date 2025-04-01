@@ -13,9 +13,8 @@ public:
     Status prepare() override;
 
 protected:
-    void finish();
-
-private:
+    void onStart() override;
+    void onFinish() override;
     std::atomic_bool is_finished{false};
 };
 

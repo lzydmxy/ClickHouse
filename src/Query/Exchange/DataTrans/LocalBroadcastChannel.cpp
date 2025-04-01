@@ -50,10 +50,12 @@ RecvDataPacket LocalBroadcastChannel::recv(TimePoint timeout_tp)
         {
             Chunk & recv_chunk = std::get<DataPacket>(data_packet).chunk;
             addToMetricsMaybe(s.elapsedMilliseconds(), 0, 1, recv_chunk);
+            LOG_DEBUG(log, "{} pop DataPacket", name);
             return RecvDataPacket(std::move(recv_chunk));
         }
         else if (std::holds_alternative<SendDoneMark>(data_packet))
         {
+            LOG_DEBUG(log, "{} pop SendDoneMark", name);
             return RecvDataPacket(*broadcast_status.load(std::memory_order_acquire));
         }
     }
@@ -78,7 +80,12 @@ BroadcastStatus LocalBroadcastChannel::sendImpl(Chunk chunk)
         chunk_info->receiver = shared_from_this();
     }
     if (receive_queue->tryEmplaceUntil(options.max_timeout_ts, MultiPathDataPacket(DataPacket{std::move(chunk)})))
+    {
+        LOG_TRACE(log, "{} emplace success", name);
         return *broadcast_status.load(std::memory_order_acquire);
+    }
+
+    LOG_DEBUG(log, "{} emplace faild", name);
 
     // finished in other thread, receive_queue is closed.
     if(receive_queue->closed())
@@ -110,7 +117,7 @@ BroadcastStatus LocalBroadcastChannel::finish(BroadcastStatusCode status_code, S
             // close queue immediately
             receive_queue->close();
         else
-            receive_queue->tryEmplaceUntil(options.max_timeout_ts, getName());
+            receive_queue->tryEmplaceUntil(options.max_timeout_ts, SendDoneMark(getName()));
         auto res = *new_status_ptr;
         res.is_modified_by_operator = true;
         sender_metrics.finish_code = new_status_ptr->code;

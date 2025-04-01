@@ -49,22 +49,13 @@ public:
     static String generateName(
         size_t exchange_id, size_t write_segment_id, size_t read_segment_id, size_t parallel_index, String& co_host_port)
     {
-        return fmt::format(
-            "Local[{}_{}_{}_{}_{}]",
-            write_segment_id,
-            read_segment_id,
-            parallel_index,
-            exchange_id,
-            co_host_port
-        );
+        return fmt::format("Local[{}_{}_{}_{}_{}]",
+            write_segment_id, read_segment_id, parallel_index, exchange_id,co_host_port);
     }
-
-    static String generateNameForTest()
+    static String generateNameForTest(size_t id)
     {
-        return fmt::format(
-            "Local[{}_{}_{}_{}_{}]",
-            "test-Local", -1, -1, -1, -1
-        );
+        String port{"test"};
+        return generateName(id, id, id , id, port);
     }
 
 private:

@@ -22,11 +22,11 @@ void RepartitionTransform::transform(Chunk & chunk)
 {
     IColumn::Selector partition_selector;
     RepartitionTransform::PartitionStartPoints partition_start_points;
-
     std::tie(partition_selector, partition_start_points)
         = doRepartition(partition_num, chunk, getInputPort().getHeader(), repartition_keys, repartition_func, REPARTITION_FUNC_RESULT_TYPE);
     ChunkInfoPtr repartion_info = std::make_shared<RepartitionChunkInfo>(
         std::move(partition_selector), std::move(partition_start_points), std::move(chunk.getChunkInfo()));
+    LOG_TRACE(logger, "RepartitionTransform transform");
     chunk.setChunkInfo(std::move(repartion_info));
 }
 
@@ -41,7 +41,6 @@ std::pair<IColumn::Selector, RepartitionTransform::PartitionStartPoints> Reparti
     size_t input_rows_count = chunk.getNumRows();
     auto selector_column = ColumnUInt64::create(input_rows_count);
     const Columns & columns = chunk.getColumns();
-
 
     ColumnsWithTypeAndName arguments;
     arguments.reserve(repartition_keys.size());

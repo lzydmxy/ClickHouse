@@ -71,15 +71,18 @@ String ExchangeSourceExt::getClassName() const
 IProcessor::Status ExchangeSourceExt::prepare()
 {
     const auto & status = ISource::prepare();
+    LOG_TRACE(logger, "ExchangeSourceExt {} prepare, status is {}", getName(), ISource::statusToName(status));
     if (status == Status::Finished)
     {
-        receiver->finish(BroadcastStatusCode::RECV_REACH_LIMIT, "ExchangeSource finished");
+        receiver->finish(BroadcastStatusCode::RECV_REACH_LIMIT, "ExchangeSourceExt finished");
     }
     return status;
 }
 
 std::optional<Chunk> ExchangeSourceExt::tryGenerate()
 {
+    LOG_TRACE(logger, "{} begin tryGenerate", getName());
+
     if (was_query_canceled || was_receiver_finished)
         return std::nullopt;
 
@@ -88,9 +91,9 @@ std::optional<Chunk> ExchangeSourceExt::tryGenerate()
     if (std::holds_alternative<Chunk>(packet))
     {
         Chunk chunk = std::move(std::get<Chunk>(packet));
-#ifndef NDEBUG
+// #ifndef NDEBUG
         LOG_TRACE(logger, "{} receive chunk with rows: {}", getName(), chunk.getNumRows());
-#endif
+// #endif
         if (chunk && chunk.getChunkInfo() &&  getChunkType(chunk.getChunkInfo()) == ChunkType::Totals && totals_source)
         {
             totals_source->setTotals(std::move(chunk)); // assuming only one totals chunk, so it should be safe to do so.
@@ -104,6 +107,7 @@ std::optional<Chunk> ExchangeSourceExt::tryGenerate()
         return std::make_optional(std::move(chunk));
     }
     const auto & status = std::get<BroadcastStatus>(packet);
+    LOG_TRACE(logger, "ExchangeSourceExt tryGenerate, broadcast status is {}", toString(status.code));
     checkBroadcastStatus(status);
     was_receiver_finished = true;
     return std::nullopt;

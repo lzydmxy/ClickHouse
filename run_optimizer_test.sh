@@ -5,3 +5,5 @@
 ./build/src/unit_tests_dbms trace --gtest_filter="ExchangeQueueTest*"
 ./build/src/unit_tests_dbms trace --gtest_filter="RPCchannelPoolTest*"
 ./build/src/unit_tests_dbms trace --gtest_filter="ExchangeSourceTest*"
+./build/src/unit_tests_dbms trace --gtest_filter="ExchangeLocalBroadcastTest*"
+./build/src/unit_tests_dbms trace --gtest_filter="ExchangeSinkTest*"
