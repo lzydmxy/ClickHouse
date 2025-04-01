@@ -23,6 +23,7 @@
 #include <Query/Processors/QueryPlan/ApplyStepExt.h>
 #include <Query/Processors/QueryPlan/AssignUniqueIdStepExt.h>
 #include <Query/Processors/QueryPlan/BufferStepExt.h>
+#include "Query/Processors/QueryPlan/CTERefStepExt.h"
 #include <Query/Processors/QueryPlan/EnforceSingleRowStepExt.h>
 #include <Query/Processors/QueryPlan/ExchangeStepExt.h>
 #include <Query/Processors/QueryPlan/ExpandStepExt.h>
@@ -56,6 +57,7 @@ namespace DB
     M(BufferStepExt) \
     M(CreatingSetStep) \
     M(CreatingSetsStep) \
+    M(CTERefStepExt) \
     M(CubeStep) \
     M(EnforceSingleRowStepExt) \
     M(ExchangeStepExt) \
@@ -94,6 +96,9 @@ namespace DB
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) ITEM,
 enum class QueryPlanStepType : UInt8
 {
+    Any = 0,
+    // change this when order is changed to avoid conflicts
+    StepBegin = 100,
     APPLY_QUERY_PLAN_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE) UNDEFINED,
 };
 #undef ENUM_QUERY_PLAN_STEP_TYPE
