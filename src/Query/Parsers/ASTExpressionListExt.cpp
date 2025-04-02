@@ -8,17 +8,15 @@ void ASTExpressionListExt::appendColumnName(WriteBuffer & ostr) const
 {
     writeChar('(', ostr);
     if (!children.empty()) {
-        for (const auto *it = children.begin(); it != children.end(); ++it)
-        {
-            if (it != children.begin())
+        for (const auto &child : children) {
+            if (&child != &children.front())
                 writeCString(", ", ostr);
-    
-            if (*it) {
-                (*it)->appendColumnName(ostr);
+            
+            if (child) {
+                child->appendColumnName(ostr);
             }
         }
     }
     writeChar(')', ostr);
 }
-
 }
