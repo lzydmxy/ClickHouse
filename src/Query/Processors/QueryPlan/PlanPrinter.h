@@ -4,8 +4,8 @@
 
 #include <Poco/JSON/Object.h>
 
-#include <Query/Processors/QueryPlan/PlanVisitor.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
 //#include <Optimizer/CostModel/PlanNodeCost.h>
 #include <Query/Executor/PlanSegment.h>
 #include <Query/Common/ProcessorProfile.h>

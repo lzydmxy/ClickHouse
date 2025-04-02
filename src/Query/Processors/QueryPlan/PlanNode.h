@@ -44,11 +44,7 @@ public:
     // TODO: implement
     // NameToType getOutputNamesToTypes() const { return getCurrentDataStream().header.getNamesToTypes(); }
     Names getOutputNames() const { return getCurrentDataStream().header.getNames(); }
-    PlanNodePtr getNodeById(PlanNodeId node_id) const
-    {
-        //todo: now just a fake impl for build
-        return nullptr;
-    }
+    PlanNodePtr getNodeById(PlanNodeId node_id) const;
 
     static PlanNodePtr createPlanNode(
         [[maybe_unused]] PlanNodeId id_, [[maybe_unused]] QueryPlanStepPtr step_, [[maybe_unused]] const PlanNodes & children_ = {}
@@ -59,19 +55,6 @@ public:
         //if (step_->getType() == IQueryPlanStep::Type::TYPE)
 
         PlanNodePtr plan_node;
-#define CREATE_PLAN_NODE(TYPE) \
-    if (getQueryPlanStepType(step_) == QueryPlanStepType::TYPE) \
-    { \
-        auto spec_step = std::dynamic_pointer_cast<TYPE>(step_); \
-        if (!spec_step) \
-            throw Exception(ErrorCodes::LOGICAL_ERROR, "Type cast failed for {}", #TYPE); \
-        plan_node = std::dynamic_pointer_cast<PlanNodeBase>(std::make_shared<PlanNode<TYPE>>(id_, std::move(spec_step), children_)); \
-    }
-
-        APPLY_QUERY_PLAN_STEP_TYPES(CREATE_PLAN_NODE)
-        // CREATE_PLAN_NODE(Any)
-        // CREATE_PLAN_NODE(MultiJoin)
-#undef CREATE_PLAN_NODE
         //todo: need optimizer Statistics
         //plan_node->setStatistics(statistics_);
         return plan_node;

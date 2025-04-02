@@ -22,12 +22,6 @@ public:
     const std::unordered_map<CTEId, PlanNodePtr> & getCTEs() const { return common_table_expressions; }
     std::unordered_map<CTEId, PlanNodePtr> & getCTEs() { return common_table_expressions; }
 
-    void add(CTEId id, PlanNodePtr plan)
-    {
-        //todo: now just a fake impl for build
-        return;
-    }
-
     void update(CTEId id, PlanNodePtr plan);
 
     bool empty() const { return common_table_expressions.empty(); }
@@ -38,14 +32,9 @@ public:
 
     std::unordered_map<CTEId, UInt64> collectCTEReferenceCounts(PlanNodePtr & root);
 
-    std::set<CTEId> getCTEIds() const
-    {
-        //todo: now just a fake impl for build
-        std::set<CTEId> cte_ids;
-        return cte_ids;
-    }
-
     CTEId nextCTEId() { return ++next_cte_id; }
+    std::set<CTEId> getCTEIds() const;
+    void add(CTEId id, PlanNodePtr plan);
 
 private:
     std::unordered_map<CTEId, PlanNodePtr> common_table_expressions;

@@ -19,7 +19,9 @@ template <typename R>
 class SimpleCTEVisitHelper
 {
 public:
-    explicit SimpleCTEVisitHelper(CTEInfo & cte_info_) : cte_info(cte_info_) { }
+    explicit SimpleCTEVisitHelper(CTEInfo & cte_info_) : cte_info(cte_info_)
+    {
+    }
 
     template <typename C>
     R accept(CTEId id, PlanNodeVisitor<R, C> & visitor, C & context)
@@ -57,7 +59,10 @@ public:
     }
 
     CTEInfo & getCTEInfo() { return cte_info; }
-    bool hasVisited(CTEId cte_id) { return visit_results.contains(cte_id); }
+    bool hasVisited(CTEId cte_id)
+    {
+        return visit_results.contains(cte_id);
+    }
 
 private:
     CTEInfo & cte_info;
@@ -71,7 +76,9 @@ template <>
 class SimpleCTEVisitHelper<void>
 {
 public:
-    explicit SimpleCTEVisitHelper(CTEInfo & cte_info_) : cte_info(cte_info_) { }
+    explicit SimpleCTEVisitHelper(CTEInfo & cte_info_) : cte_info(cte_info_)
+    {
+    }
 
     template <typename R, typename C>
     void accept(CTEId id, PlanNodeVisitor<R, C> & visitor, C & context)
@@ -81,8 +88,14 @@ public:
         VisitorUtil::accept(cte_info.getCTEDef(id), visitor, context);
     }
 
-    CTEInfo & getCTEInfo() { return cte_info; }
-    bool hasVisited(CTEId cte_id) { return visit_flags.contains(cte_id); }
+    CTEInfo & getCTEInfo()
+    {
+        return cte_info;
+    }
+    bool hasVisited(CTEId cte_id)
+    {
+        return visit_flags.contains(cte_id);
+    }
 
 private:
     CTEInfo & cte_info;
@@ -121,7 +134,10 @@ public:
         return cte_def;
     }
 
-    CTEInfo & getCTEInfo() { return cte_info; }
+    CTEInfo & getCTEInfo()
+    {
+        return cte_info;
+    }
 
 private:
     CTEInfo & cte_info;

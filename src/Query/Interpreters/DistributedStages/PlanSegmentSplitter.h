@@ -72,11 +72,11 @@ public:
     {
     }
 
-    PlanSegmentResult visitNode(QueryPlanExt::Node *, PlanSegmentVisitorContext & split_context);
-    PlanSegmentResult visitExchangeNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & split_context);
-    PlanSegmentResult visitCTERefNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & context);
-    PlanSegmentResult visitTotalsHavingNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & context);
-    PlanSegmentResult visitExtremesNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & context);
+    PlanSegmentResult visitNode(QueryPlanExt::Node *, PlanSegmentVisitorContext & split_context) override;
+    PlanSegmentResult visitExchangeNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & split_context) override;
+    PlanSegmentResult visitCTERefNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & context) override;
+    PlanSegmentResult visitTotalsHavingNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & context) override;
+    PlanSegmentResult visitExtremesNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & context) override;
 
     PlanSegment * createPlanSegment(QueryPlanExt::Node * node, PlanSegmentVisitorContext & split_context);
     PlanSegment * createPlanSegment(QueryPlanExt::Node * node, size_t segment_id, PlanSegmentVisitorContext & split_context);
@@ -98,13 +98,13 @@ public:
     static std::vector<PartitioningHandle> find(QueryPlanExt::Node * node, CTENodes & cte_nodes, const Context & context);
 
     std::vector<std::optional<PartitioningHandle>> visitNode(QueryPlanExt::Node * node, const Context & context) override;
-    std::vector<std::optional<PartitioningHandle>> visitValuesNode(QueryPlanExt::Node * node, const Context & context);
-    std::vector<std::optional<PartitioningHandle>> visitReadNothingNode(QueryPlanExt::Node * node, const Context & context);
-    std::vector<std::optional<PartitioningHandle>> visitTableScanNode(QueryPlanExt::Node * node, const Context & context);
-    std::vector<std::optional<PartitioningHandle>> visitRemoteExchangeSourceNode(QueryPlanExt::Node * node, const Context & context);
-    std::vector<std::optional<PartitioningHandle>> visitExchangeNode(QueryPlanExt::Node * node, const Context & context);
-    std::vector<std::optional<PartitioningHandle>> visitCTERefNode(QueryPlanExt::Node * node, const Context & context);
-    std::vector<std::optional<PartitioningHandle>> visitReadStorageRowCountNode(QueryPlanExt::Node * node, const Context & context);
+    std::vector<std::optional<PartitioningHandle>> visitValuesNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<std::optional<PartitioningHandle>> visitReadNothingNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<std::optional<PartitioningHandle>> visitTableScanNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<std::optional<PartitioningHandle>> visitRemoteExchangeSourceNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<std::optional<PartitioningHandle>> visitExchangeNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<std::optional<PartitioningHandle>> visitCTERefNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<std::optional<PartitioningHandle>> visitReadStorageRowCountNode(QueryPlanExt::Node * node, const Context & context) override;
 
 private:
     CTENodes & cte_nodes;
@@ -118,8 +118,8 @@ public:
     static void setScalable(QueryPlanExt::Node * node, CTENodes & cte_nodes, const Context & context);
 
     Void visitNode(QueryPlanExt::Node * node, const Context & context) override;
-    Void visitExchangeNode(QueryPlanExt::Node * node, const Context & context);
-    Void visitCTERefNode(QueryPlanExt::Node * node, const Context & context);
+    Void visitExchangeNode(QueryPlanExt::Node * node, const Context & context) override;
+    Void visitCTERefNode(QueryPlanExt::Node * node, const Context & context) override;
 
 private:
     bool scalable;
@@ -130,11 +130,11 @@ class ParallelSizeChecker: public NodeVisitor<std::vector<size_t>, const Context
 {
 public:
     std::vector<size_t> visitNode(QueryPlanExt::Node * node, const Context & context) override;
-    std::vector<size_t> visitValuesNode(QueryPlanExt::Node * node, const Context & context);
-    std::vector<size_t> visitReadNothingNode(QueryPlanExt::Node * node, const Context & context);
-    std::vector<size_t> visitTableScanNode(QueryPlanExt::Node * node, const Context & context);
-    std::vector<size_t> visitRemoteExchangeSourceNode(QueryPlanExt::Node * node, const Context & context);
-    std::vector<size_t> visitReadStorageRowCountNode(QueryPlanExt::Node * node, const Context & context);
+    std::vector<size_t> visitValuesNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<size_t> visitReadNothingNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<size_t> visitTableScanNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<size_t> visitRemoteExchangeSourceNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<size_t> visitReadStorageRowCountNode(QueryPlanExt::Node * node, const Context & context) override;
 
     PlanSegment * segment;
     std::vector<PlanSegment *> children_segments;

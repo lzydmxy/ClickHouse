@@ -14,6 +14,7 @@ namespace DB
 struct Analysis;
 using AnalysisPtr = std::shared_ptr<Analysis>;
 using CTEId = UInt32;
+using QueryPlanExtPtr = std::unique_ptr<QueryPlanExt>;
 
 namespace PlanCacheConfig
 {

@@ -3,6 +3,7 @@
 #include <Query/Processors/QueryPlan/PlanVisitor.h>
 #include <Query/Processors/QueryPlan/Void.h>
 #include <Common/Exception.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
 
 namespace DB
 {
@@ -19,12 +20,15 @@ public:
 
     Void visitPlanNode(PlanNodeBase & node, std::unordered_map<CTEId, UInt64> & c) override
     {
+        //todo: need to build
         for (auto & child : node.getChildren())
             VisitorUtil::accept(*child, *this, c);
         return Void{};
     }
 
-    Void visitCTERefStepExtNode(CTERefStepExtNode & node, std::unordered_map<CTEId, UInt64> & reference_counts) override
+    //todo: need to modify visitor
+    /*
+    Void visitCTERefStepExtNode(CTERefStepExtNode & node, std::unordered_map<CTEId, UInt64> & reference_counts)
     {
         const auto * cte_step = dynamic_cast<const CTERefStepExtNode *>(node.getStep().get());
         auto cte_id = cte_step->getId();
@@ -32,6 +36,7 @@ public:
         cte_helper.accept(cte_id, *this, reference_counts);
         return Void{};
     }
+    */
 
 private:
     SimpleCTEVisitHelper<void> cte_helper;
