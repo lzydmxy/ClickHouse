@@ -11,6 +11,7 @@
 #include <Interpreters/Context.h>
 #include <Poco/Util/AbstractConfiguration.h>
 #include <Query/Executor/PlanSegmentInstance.h>
+#include <Query/Executor/SegmentScheduler.h>
 
 namespace DB
 {
@@ -161,8 +162,8 @@ void OptimizerContext::logOptimizerProfile(LoggerPtr log, String prefix, String 
     if (optimizer_settings.log_optimizer_run_time && log)
         LOG_DEBUG(log, "{} {} {}", prefix, name, time);
 
-//    if (optimizer_profile)
-//        optimizer_profile->setTime(name, time, is_rule);
+    if (optimizer_profile)
+        optimizer_profile->setTime(name,  std::to_string(time), is_rule);
 }
 
 void OptimizerContext::setPlanCacheManager(std::unique_ptr<PlanCacheManager> && manager)
@@ -191,6 +192,13 @@ std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> OptimizerCon
     //tood: need impl, now just a fake impl
     std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> processor_log_element_consumer;
     return processor_log_element_consumer;
+}
+
+
+SegmentSchedulerPtr OptimizerContext::getSegmentScheduler() const
+{
+    //todo: need a part shared lock
+    return segment_scheduler;
 }
 
 }

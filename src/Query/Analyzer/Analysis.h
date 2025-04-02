@@ -61,7 +61,7 @@ struct JoinUsingAnalysis
     DataTypes left_coercions;
     std::vector<size_t> right_join_fields;
     DataTypes right_coercions;
-    /// field index of scope -> join key index of using list
+    // field index of scope -> join key index of using list
     std::unordered_map<size_t, size_t> left_join_field_reverse_map;
     std::unordered_map<size_t, size_t> right_join_field_reverse_map;
     std::vector<bool> require_right_keys;
@@ -277,7 +277,7 @@ struct Analysis
     void setQueryWithoutFromScope(ASTSelectQueryExt &, ScopePtr);
     ScopePtr getQueryWithoutFromScope(ASTSelectQueryExt &);
 
-    /// table storage scopes doesn't contain alias columns
+    // table storage scopes doesn't contain alias columns
     std::unordered_map<ASTIdentifier *, ScopePtr> table_storage_scopes;
     void setTableStorageScope(ASTIdentifier &, ScopePtr);
     ScopePtr getTableStorageScope(ASTIdentifier &);
@@ -299,7 +299,7 @@ struct Analysis
     }
     DataTypePtr getExpressionType(const ASTPtr & expression);
 
-    /// ASTIdentifier, ASTFieldReference
+    // ASTIdentifier, ASTFieldReference
     std::unordered_map<ASTPtr, ResolvedField> column_references;
     void setColumnReference(const ASTPtr & ast, const ResolvedField & resolved);
     std::optional<ResolvedField> tryGetColumnReference(const ASTPtr & ast);
@@ -309,7 +309,7 @@ struct Analysis
      * alias columns are used.
      */
 
-    /// ASTTableIdentifier -> index of table storage scope
+    // ASTTableIdentifier -> index of table storage scope
     std::unordered_map<const IAST *, std::set<size_t>> read_columns;
     void addReadColumn(const IAST * table_ast, size_t field_index);
     void addReadColumn(const ResolvedField & resolved_field, bool add_used);

@@ -9,6 +9,7 @@
 #include <Query/Processors/QueryPlan/SymbolAllocator.h>
 #include <Query/Optimizer/OptimizerMetrics.h>
 #include <Query/Processors/QueryPlan/PlanCache.h>
+#include <Query/Optimizer/OptimizerProfile.h>
 
 namespace DB
 {
@@ -42,6 +43,9 @@ using QueryExchangeLogPtr = std::shared_ptr<QueryExchangeLog>;
 
 class OptimizerMetrics;
 using OptimizerMetricsPtr = std::shared_ptr<OptimizerMetrics>;
+
+class SegmentScheduler;
+using SegmentSchedulerPtr = std::shared_ptr<SegmentScheduler>;
 
 class PlanCacheManager;
 
@@ -103,12 +107,7 @@ public:
     std::function<void()> getSendTCPProgress() const;
 
     HostWithPorts getHostWithPorts() const;
-    SegmentSchedulerPtr getSegmentScheduler() const
-    {
-        //todo: now just a fake impl for build
-        return nullptr;
-    }
-
+    SegmentSchedulerPtr getSegmentScheduler() const;
     ServiceType getServiceType() const;
 
     void setIsExplainQuery(const bool & is_explain_query_);
@@ -141,6 +140,7 @@ public:
     OptimizerMetricsPtr & getOptimizerMetrics() { return optimizer_metrics; }
     void createOptimizerMetrics() { optimizer_metrics = std::make_shared<OptimizerMetrics>(); }
     void setPlanCacheManager(std::unique_ptr<PlanCacheManager> && manager);
+    void initOptimizerProfile() { optimizer_profile = std::make_unique<OptimizerProfile>(); }
     PlanCacheManager* getPlanCacheManager();
 
 private:
@@ -165,7 +165,9 @@ private:
     String query_plan;
     std::shared_ptr<SymbolAllocator> symbol_allocator = nullptr;
     std::shared_ptr<OptimizerMetrics> optimizer_metrics = nullptr;
-    std::unique_ptr<PlanCacheManager> plan_cache_manager;
+    std::unique_ptr<PlanCacheManager> plan_cache_manager = nullptr;
+    std::shared_ptr<SegmentScheduler> segment_scheduler = nullptr;
+    std::shared_ptr<OptimizerProfile> optimizer_profile = nullptr;
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;

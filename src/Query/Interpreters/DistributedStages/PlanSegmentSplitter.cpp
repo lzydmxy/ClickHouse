@@ -358,13 +358,8 @@ PlanSegmentInputs PlanSegmentVisitor::findInputs(QueryPlanExt::Node * node)
         PlanSegmentInputs inputs;
         for (auto & child : node->children)
         {
-            //            if (child->step->getType() == IQueryPlanStep::Type::RemoteExchangeSource)
-            //            {
             auto child_input = findInputs(child);
-            //            if (child_input.size() != 1)
-            //                throw Exception("Join step should contain one input in each child", ErrorCodes::LOGICAL_ERROR);
             inputs.insert(inputs.end(), child_input.begin(), child_input.end());
-            //            }
         }
         return inputs;
     }
@@ -420,8 +415,6 @@ PlanSegmentInputs PlanSegmentVisitor::findInputs(QueryPlanExt::Node * node)
 
 std::pair<String, size_t> PlanSegmentVisitor::findClusterAndParallelSize(QueryPlanExt::Node * node, PlanSegmentVisitorContext & split_context)
 {
-    // if (split_context.coordinator)
-    //     return {"", 1}; // dispatch to coordinator if server is empty
     bool input_has_table = false;
     for (auto & input : split_context.inputs)
     {
@@ -437,7 +430,6 @@ std::pair<String, size_t> PlanSegmentVisitor::findClusterAndParallelSize(QueryPl
 
     switch (partitionings[0])
     {
-        //todo: check COORDINATOR
         case PartitioningHandle::Partitioning_Handle_HCOORDINATOR:
             return {"", 1}; // dispatch to coordinator if server is empty
         case PartitioningHandle::Partitioning_Handle_SINGLE:
@@ -519,7 +511,6 @@ std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitReadNothin
 
 std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitReadStorageRowCountNode(QueryPlanExt::Node *, const Context &)
 {
-    //todo: check COORDINATOR
     return {{PartitioningHandle::Partitioning_Handle_HCOORDINATOR}};
 }
 

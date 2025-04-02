@@ -1,12 +1,7 @@
 #include <Query/Optimizer/Property/Property.h>
 
-//#include <Functions/FunctionsHashing.h>
 #include <IO/ReadHelpers.h>
 #include <IO/WriteHelpers.h>
-//#include <Query/Optimizer/ExpressionRewriter.h>
-//#include <Query/Optimizer/Property/Constants.h>
-//#include <Query/Optimizer/Property/SymbolEquivalencesDeriver.h>
-//#include <Query/Optimizer/SymbolsExtractor.h>
 #include <Parsers/ASTClusterByElement.h>
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTSerDerHelper.h>
@@ -258,11 +253,6 @@ Partitioning Partitioning::normalize(const SymbolEquivalences & symbol_equivalen
         if (!mapping.contains(item))
         {
             mapping[item] = item;
-
-            // if (!output_symbols.contains(item))
-            // {
-            //     return Partitioning{};
-            // }
         }
     }
     return translate(mapping);
@@ -471,11 +461,6 @@ Sorting Sorting::normalize(const SymbolEquivalences & symbol_equivalences) const
         if (!mapping.contains(item.getName()))
         {
             mapping[item.getName()] = item.getName();
-
-            // if (!output_symbols.contains(item.getName()))
-            // {
-            //     return Sorting{};
-            // }
         }
     }
     return translate(mapping);

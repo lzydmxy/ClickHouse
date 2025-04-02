@@ -19,7 +19,7 @@ struct BuildQueryPipelineSettings
     ExpressionActionsSettings actions_settings;
     QueryStatusPtr process_list_element;
     ProgressCallback progress_callback = nullptr;
-    //todo: now just a fake impl for build
+    //todo: need set this pro
     BuildQueryPipelineSettingsExt settings_ext;
 
     const ExpressionActionsSettings & getActionsSettings() const { return actions_settings; }
@@ -28,7 +28,6 @@ struct BuildQueryPipelineSettings
     void initializeBuildQueryPipelineSettingsExt() const;
     const BuildQueryPipelineSettingsExt & getBuildQueryPipelineSettingsExt() const
     {
-        //todo: now just a fake impl for build
         return settings_ext;
     }
 };

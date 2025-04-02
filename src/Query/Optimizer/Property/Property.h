@@ -15,8 +15,6 @@
 #include <Parsers/queryToString.h>
 #include <Query/Optimizer/ConstHashAST.h>
 
-//#include <Functions/FunctionsHashing.h>
-
 /**
  * A partition operation divides a relation into disjoint subsets, called partitions.
  * A partition function defines which rows belong to which partitions. Partitioning
@@ -31,7 +29,6 @@ using SymbolEquivalencesPtr = std::shared_ptr<SymbolEquivalences>;
 using PartitioningHandle = RPartitioningHandle;
 using Component = RPartitioningComponent;
 using ConstASTPtr = std::shared_ptr<const IAST>;
-//using ConstASTMap = EqualityASTMap<ConstASTPtr>;
 
 struct FieldWithType
 {
@@ -64,7 +61,6 @@ public:
     }
 
     Constants translate(const std::unordered_map<String, String> & identities) const;
-    //Constants normalize(const SymbolEquivalences & symbol_equivalences) const;
     String toString() const;
 
 private:
@@ -76,6 +72,7 @@ using ConstantsSet = std::vector<Constants>;
 class Partitioning
 {
 public:
+//todo: need to use as proto
 /*
     ENUM_WITH_PROTO_CONVERTER(
         PartitioningHandle,

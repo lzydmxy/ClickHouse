@@ -82,9 +82,7 @@ PlanNodePtr PlanCacheManager::getNewPlanNode(PlanNodePtr node, ContextMutablePtr
             table_step->cleanStorage();
         else
             table_step->setStorage(context);
-        //todo: need to hadle PlanNode link
-        //return PlanNodeBase::createPlanNode(node->getId(), step, {});
-        return nullptr;
+        return PlanNodeBase::createPlanNode(node->getId(), step, {});
     }
 
     PlanNodes children;
@@ -96,25 +94,12 @@ PlanNodePtr PlanCacheManager::getNewPlanNode(PlanNodePtr node, ContextMutablePtr
     }
 
     auto step = QueryPlanStepHelper::copyQueryPlanStep(node->getStep(), context);
-    return nullptr;
-    //todo: need to hadle PlanNode link
-    //return PlanNodeBase::createPlanNode(node->getId(), step, children);
+    return PlanNodeBase::createPlanNode(node->getId(), step, children);
 }
 
 void PlanCacheManager::invalidate(ContextMutablePtr)
 {
-//     if (!cache)
-//         throw Exception("CacheManager not initialized", ErrorCodes::LOGICAL_ERROR);
-
-//     auto catalog = createConstCatalogAdaptor(context);
-//     auto columns = catalog->getCollectableColumns(table);
-//     cache->remove(std::make_pair(table.getUniqueKey(), ""));
-//     for (auto & pr : columns)
-//     {
-//         auto & col_name = pr.name;
-//         auto key = std::make_pair(table.getUniqueKey(), col_name);
-//         cache->remove(key);
-//     }
+    //todo: need to impl
 }
 
 QueryPlanExtPtr PlanCacheManager::getPlanFromCache(UInt128 query_hash, ContextMutablePtr & context)

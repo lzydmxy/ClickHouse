@@ -1,5 +1,6 @@
 #include <Query/Processors/QueryPlan/CTERefStepExt.h>
 #include <Parsers/ASTIdentifier.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
 
 namespace DB
 {
@@ -35,13 +36,15 @@ std::shared_ptr<ProjectionStepExt> CTERefStepExt::toProjectionStep() const
         }
     }
 
-    //todo: need convert from inputs to DataStream
-    //return std::make_shared<ProjectionStepExt>(DataStream{inputs}, assignments, name_to_type);
-    return std::make_shared<ProjectionStepExt>(DataStream{}, assignments, name_to_type);
+    ColumnsWithTypeAndName data;
+    for (const auto & item : inputs)
+    {
+        data.emplace_back(item.type, item.name);
+    }
+
+    return std::make_shared<ProjectionStepExt>(DataStream{data}, assignments, name_to_type);
 }
 
-//need to add CTEInfo
-/*
 PlanNodePtr CTERefStepExt::toInlinedPlanNode(CTEInfo & cte_info, ContextMutablePtr & context) const
 {
     auto rewrite = PlanSymbolReallocator::reallocate(cte_info.getCTEDef(id), context);
@@ -49,6 +52,7 @@ PlanNodePtr CTERefStepExt::toInlinedPlanNode(CTEInfo & cte_info, ContextMutableP
     NamesAndTypes inputs;
     Assignments assignments;
     NameToType name_to_type;
+
     for (const auto & item : output_stream.value().header)
     {
         auto it = output_columns.find(item.name);
@@ -56,16 +60,21 @@ PlanNodePtr CTERefStepExt::toInlinedPlanNode(CTEInfo & cte_info, ContextMutableP
         {
             auto new_symbol = rewrite.mappings.find(it->second);
             if (new_symbol == rewrite.mappings.end())
-                throw Exception(ErrorCodes::LOGICAL_ERROR, "output_stream symbol not found in cte def: " + it->second);
+                throw Exception(ErrorCodes::LOGICAL_ERROR, "output_stream symbol not found in cte def: {}", it->second);
             assignments.emplace_back(item.name, std::make_shared<ASTIdentifier>(new_symbol->second));
             name_to_type.emplace(item.name, item.type);
             inputs.emplace_back(NameAndTypePair{it->second, item.type});
         }
     }
-    return PlanNodeBase::createPlanNode(
-        context->nextNodeId(), std::make_shared<ProjectionStep>(DataStream{inputs}, assignments, name_to_type), {rewrite.plan_node});
+
+    ColumnsWithTypeAndName data;
+    for (const auto & item : inputs)
+    {
+        data.emplace_back(item.type, item.name);
+    }
+
+    return PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::make_shared<ProjectionStepExt>(DataStream{data}, assignments, name_to_type), {rewrite.plan_node});
 }
-*/
 
 std::unordered_map<String, String> CTERefStepExt::getReverseOutputColumns() const
 {

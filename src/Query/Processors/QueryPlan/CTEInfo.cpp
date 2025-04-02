@@ -20,14 +20,11 @@ public:
 
     Void visitPlanNode(PlanNodeBase & node, std::unordered_map<CTEId, UInt64> & c) override
     {
-        //todo: need to build
         for (auto & child : node.getChildren())
             VisitorUtil::accept(*child, *this, c);
         return Void{};
     }
 
-    //todo: need to modify visitor
-    /*
     Void visitCTERefStepExtNode(CTERefStepExtNode & node, std::unordered_map<CTEId, UInt64> & reference_counts)
     {
         const auto * cte_step = dynamic_cast<const CTERefStepExtNode *>(node.getStep().get());
@@ -36,7 +33,6 @@ public:
         cte_helper.accept(cte_id, *this, reference_counts);
         return Void{};
     }
-    */
 
 private:
     SimpleCTEVisitHelper<void> cte_helper;

@@ -37,13 +37,17 @@ struct MergeTreeDataSelectAnalysisResult
 
     bool error() const
     {
-        //todo: now just a fake impl for build
-        return false;
+        return std::holds_alternative<std::exception_ptr>(result);
     }
     size_t marks() const
     {
-        //todo: now just a fake impl for build
-        return 0;
+        if (std::holds_alternative<std::exception_ptr>(result))
+            std::rethrow_exception(std::get<std::exception_ptr>(result));
+
+        const auto & index_stats = std::get<ReadFromMergeTree::AnalysisResult>(result).index_stats;
+        if (index_stats.empty())
+            return 0;
+        return index_stats.back().num_granules_after;
     }
 };
 
