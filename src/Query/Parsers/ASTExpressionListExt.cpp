@@ -7,12 +7,14 @@ namespace DB
 void ASTExpressionListExt::appendColumnName(WriteBuffer & ostr) const
 {
     writeChar('(', ostr);
-    for (const auto *it = children.begin(); it != children.end(); ++it)
-    {
-        if (it != children.begin())
-            writeCString(", ", ostr);
+    if (!children.empty()) {
+        for (const auto *it = children.begin(); it != children.end(); ++it)
+        {
+            if (it != children.begin())
+                writeCString(", ", ostr);
 
-        (*it)->appendColumnName(ostr);
+            (*it)->appendColumnName(ostr);
+        }
     }
     writeChar(')', ostr);
 }
