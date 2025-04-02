@@ -52,8 +52,6 @@ public:
     )
     {
 
-        //if (step_->getType() == IQueryPlanStep::Type::TYPE)
-
         PlanNodePtr plan_node;
         //todo: need optimizer Statistics
         //plan_node->setStatistics(statistics_);
@@ -151,23 +149,6 @@ private:
 
     StepPtr step;
 };
-
-/*
-class TableScan;
-class TableWrite;
-class CTERef
-{
-
-};
-extern template class PlanNode<TableScan>;
-using TableScanNode = PlanNode<TableScan>;
-
-extern template class PlanNode<TableWrite>;
-using TableWriteNode = PlanNode<TableWrite>;
-
-extern template class PlanNode<CTERef>;
-using CTERefNode = PlanNode<CTERef>;
-*/
 
 #define PLAN_NODE_DEF(TYPE) \
     extern template class PlanNode<TYPE>; \
