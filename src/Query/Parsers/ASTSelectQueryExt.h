@@ -9,7 +9,13 @@ namespace DB
   */
 class ASTSelectQueryExt : public ASTSelectQuery
 {
-public:
+  public:
+  explicit ASTSelectQueryExt()
+        : ASTSelectQuery() {}
+
+    explicit ASTSelectQueryExt(const ASTSelectQuery& original)
+        : ASTSelectQuery(original) {}
+  
     static void collectAllTables(const IAST * ast, std::vector<ASTPtr> &, bool &);
 
     ASTPtr & refGroupBy() { return getExpression(Expression::GROUP_BY); }

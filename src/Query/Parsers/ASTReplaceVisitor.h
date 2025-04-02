@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Parsers/IAST.h>
-#include <array>
 #include <memory>
 #include <unordered_map>
 #include <Query/Parsers/ASTSelectQueryExt.h>
@@ -9,6 +8,11 @@
 
 namespace DB {
 
+namespace ErrorCodes {
+    extern const int AST_TYPE_MISMATCH;
+}
+
+/// Visitor pattern implementation to replace specific AST nodes with their extended versions.
 class ASTReplaceVisitor {
 public:
     static void replace(ASTPtr & node) {
@@ -17,32 +21,32 @@ public:
 
 private:
     using ReplacerFunc = ASTPtr (*)(const IAST &);
+
+    inline static const std::unordered_map<std::string_view, ReplacerFunc> rule_map = {
+        {"ExpressionList", &replacerExpressionList},
+        {"SelectQuery",    &replacerSelectQuery}
+    };
+
+    static ASTPtr replacerExpressionList(const IAST & ast) {
+        const auto * p_original = dynamic_cast<const ASTExpressionList*>(&ast);
+        if (!p_original) {
+            throw Exception(ErrorCodes::AST_TYPE_MISMATCH, "Expected ASTExpressionList node");
+        }
+        return std::make_shared<ASTExpressionListExt>(*p_original);
+    }
+
+    static ASTPtr replacerSelectQuery(const IAST & ast) {
+        const auto * p_original = dynamic_cast<const ASTSelectQuery*>(&ast);
+        if (!p_original) {
+            throw Exception(ErrorCodes::AST_TYPE_MISMATCH, "Expected ASTSelectQuery node");
+        }
+        return std::make_shared<ASTSelectQueryExt>(*p_original);
+    }
     
-    static constexpr std::array<std::pair<const char*, ReplacerFunc>, 2> rules = {{
-        {typeid(ASTExpressionList).name(), &replacerExpressionList},
-        {typeid(ASTSelectQuery).name(),     &replacerSelectQuery}
-    }};
-
-    static ASTPtr replacerExpressionList([[maybe_unused]] const IAST & ast) {
-        return std::make_shared<ASTExpressionListExt>();
-    }
-
-    static ASTPtr replacerSelectQuery([[maybe_unused]] const IAST & ast) {
-        return std::make_shared<ASTSelectQueryExt>();
-    }
-
     static void replaceInternal(ASTPtr & node) {
         if (!node) return;
 
-        static const auto rule_map = []{
-            std::unordered_map<std::string_view, ReplacerFunc> map;
-            for (const auto& [id, func] : rules) {
-                map.emplace(id, func);
-            }
-            return map;
-        }();
-
-        const auto it = rule_map.find(typeid(*node).name());
+        const auto it = rule_map.find(node->getID());
         if (it != rule_map.end()) {
             if (auto new_node = it->second(*node)) {
                 node = std::move(new_node);
@@ -57,4 +61,4 @@ private:
     }
 };
 
-} // namespace DB
+}
