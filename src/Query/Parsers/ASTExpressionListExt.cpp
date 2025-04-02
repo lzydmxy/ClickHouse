@@ -12,9 +12,10 @@ void ASTExpressionListExt::appendColumnName(WriteBuffer & ostr) const
             if (&child != &children.front())
                 writeCString(", ", ostr);
             
-            if (child) {
-                child->appendColumnName(ostr);
+            if (!child) {
+                throw Exception(ErrorCodes::BAD_ARGUMENTS, "Child node is null");
             }
+            child->appendColumnName(ostr);
         }
     }
     writeChar(')', ostr);
