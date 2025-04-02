@@ -63,7 +63,10 @@ void ExchangeBufferedSender::appendSelective(
     partition_buffer[column_idx] = std::move(target);
 }
 
-
+void ExchangeBufferedSender::appendSelective(size_t column_idx, const IColumn & source)
+{
+    partition_buffer[column_idx]->insertManyFrom(source, 0, source.size());
+}
 
 size_t ExchangeBufferedSender::bufferBytes() const
 {

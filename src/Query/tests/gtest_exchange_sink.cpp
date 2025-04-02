@@ -159,230 +159,229 @@ TEST(ExchangeSinkTest, LoadBalancedExchangeSinkTest)
     }
 }
 
-// TEST(ExchangeSinkTest, MultiPartitionExchangeSinkTest)
-// {
-//     auto context = getInitContext();
-//     const size_t ROW_NUM = 100;
-//     Block block = createUInt64Block(ROW_NUM, 10, 88);
-//     Block header = block.cloneEmpty();
-//     auto tp = getDeltaTimePoint(1000);
-//     ExchangeOptions exchange_options {.exchange_timeout_ts = tp};
-//     LocalChannelOptions options{10, exchange_options.exchange_timeout_ts, false};
+TEST(ExchangeSinkTest, MultiPartitionExchangeSinkTest)
+{
+    auto context = getInitContext();
+    const size_t ROW_NUM = 100;
+    Block block = createUInt64Block(ROW_NUM, 10, 88);
+    Block header = block.cloneEmpty();
+    auto tp = getDeltaTimePoint(1000);
+    ExchangeOptions exchange_options {.exchange_timeout_ts = tp};
+    LocalChannelOptions options{10, exchange_options.exchange_timeout_ts, false};
 
-//     auto source_key = std::make_shared<ExchangeDataKey>(1, 1, 1);
-//     auto source_channel = std::make_shared<LocalBroadcastChannel>(source_key, options, LocalBroadcastChannel::generateNameForTest(1));
-//     BroadcastSenderProxyPtr source_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(source_key);
-//     source_sender->accept(context, header);
-//     source_channel->registerToSenders(1000);
-//     BroadcastReceiverPtr source_receiver = std::dynamic_pointer_cast<IBroadcastReceiver>(source_channel);
-//     auto exchange_source = std::make_shared<ExchangeSourceExt>(header, source_receiver, exchange_options);
+    auto source_key = std::make_shared<ExchangeDataKey>(1, 1, 1);
+    auto source_channel = std::make_shared<LocalBroadcastChannel>(source_key, options, LocalBroadcastChannel::generateNameForTest(1));
+    BroadcastSenderProxyPtr source_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(source_key);
+    source_sender->accept(context, header);
+    source_channel->registerToSenders(1000);
+    BroadcastReceiverPtr source_receiver = std::dynamic_pointer_cast<IBroadcastReceiver>(source_channel);
+    auto exchange_source = std::make_shared<ExchangeSourceExt>(header, source_receiver, exchange_options);
 
-//     auto sink_key = std::make_shared<ExchangeDataKey>(1, 2, 2);
-//     auto sink_channel = std::make_shared<LocalBroadcastChannel>(sink_key, options, LocalBroadcastChannel::generateNameForTest(2));
-//     BroadcastSenderProxyPtr sink_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(sink_key);
-//     sink_sender->accept(context, header);
-//     sink_channel->registerToSenders(1000);
-//     BroadcastReceiverPtr sink_receiver = std::dynamic_pointer_cast<IBroadcastReceiver>(sink_channel);
+    auto sink_key = std::make_shared<ExchangeDataKey>(1, 2, 2);
+    auto sink_channel = std::make_shared<LocalBroadcastChannel>(sink_key, options, LocalBroadcastChannel::generateNameForTest(2));
+    BroadcastSenderProxyPtr sink_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(sink_key);
+    sink_sender->accept(context, header);
+    sink_channel->registerToSenders(1000);
+    BroadcastReceiverPtr sink_receiver = std::dynamic_pointer_cast<IBroadcastReceiver>(sink_channel);
 
-//     ColumnsWithTypeAndName arguments;
-//     arguments.push_back(header.getByPosition(1));
-//     arguments.push_back(header.getByPosition(2));
-//     auto func = createRepartitionFunction(getContext().context, arguments);
+    ColumnsWithTypeAndName arguments;
+    arguments.push_back(header.getByPosition(1));
+    arguments.push_back(header.getByPosition(2));
+    auto func = createRepartitionFunction(getContext().context, arguments);
 
-//     auto exchange_sink = std::make_shared<MultiPartitionExchangeSink>(
-//         header,
-//         std::vector<BroadcastSenderPtr>{sink_sender},
-//         func,
-//         ColumnNumbers{1, 2},
-//         ExchangeOptions{tp, 100000000, ROW_NUM},
-//         MultiPartitionExchangeSink::generateNameForTest());
+    auto exchange_sink = std::make_shared<MultiPartitionExchangeSink>(
+        header,
+        std::vector<BroadcastSenderPtr>{sink_sender},
+        func,
+        ColumnNumbers{1, 2},
+        ExchangeOptions{tp, 100000000, ROW_NUM},
+        MultiPartitionExchangeSink::generateNameForTest());
 
-//     connect(exchange_source->getPort(), exchange_sink->getPort());
+    connect(exchange_source->getPort(), exchange_sink->getPort());
 
-//     setQueryDuration(context);
+    setQueryDuration(context);
 
-//     Chunk chunk(block.mutateColumns(), ROW_NUM);
-//     auto total_bytes = chunk.bytes();
-//     for (int i = 0; i < CHUNK_NUM; i++)
-//     {
-//         BroadcastStatus status = source_sender->send(chunk.clone());
-//         ASSERT_TRUE(status.code == BroadcastStatusCode::RUNNING);
-//     }
-//     source_sender->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "sink test");
+    Chunk chunk(block.mutateColumns(), ROW_NUM);
+    auto total_bytes = chunk.bytes();
+    for (int i = 0; i < CHUNK_NUM; i++)
+    {
+        BroadcastStatus status = source_sender->send(chunk.clone());
+        ASSERT_TRUE(status.code == BroadcastStatusCode::RUNNING);
+    }
+    source_sender->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "sink test");
 
-//     auto processors = std::make_shared<Processors>();
-//     processors->emplace_back(std::move(exchange_source));
-//     processors->emplace_back(std::move(exchange_sink));
-//     QueryStatusPtr element;
-//     PipelineExecutor executor(processors, element);
-//     executor.execute(2, false);
+    auto processors = std::make_shared<Processors>();
+    processors->emplace_back(std::move(exchange_source));
+    processors->emplace_back(std::move(exchange_sink));
+    QueryStatusPtr element;
+    PipelineExecutor executor(processors, element);
+    executor.execute(2, false);
 
-//     for (int i = 0; i < CHUNK_NUM; i++)
-//     {
-//         RecvDataPacket recv_res = sink_receiver->recv(2000);
-//         ASSERT_TRUE(std::holds_alternative<Chunk>(recv_res));
-//         Chunk & recv_chunk = std::get<Chunk>(recv_res);
-//         ASSERT_TRUE(recv_chunk.getNumRows() == ROW_NUM);
-//         ASSERT_TRUE(recv_chunk.bytes() == total_bytes);
-//     }
-// }
+    for (int i = 0; i < CHUNK_NUM; i++)
+    {
+        RecvDataPacket recv_res = sink_receiver->recv(2000);
+        ASSERT_TRUE(std::holds_alternative<Chunk>(recv_res));
+        Chunk & recv_chunk = std::get<Chunk>(recv_res);
+        ASSERT_TRUE(recv_chunk.getNumRows() == ROW_NUM);
+        ASSERT_TRUE(recv_chunk.bytes() == total_bytes);
+    }
+}
 
-// TEST(ExchangeSinkTest, SinglePartitionExchangeSinkNormalTest)
-// {
-//     auto log = getLogger("ExchangeSinkTest");
-//     auto context = getInitContext();
-//     const size_t ROW_NUM = 100;
-//     Block block = createUInt64Block(ROW_NUM, 10, 88);
-//     Block header = block.cloneEmpty();
-//     auto tp = getDeltaTimePoint(1000);
-//     ExchangeOptions exchange_options {.exchange_timeout_ts = tp};
-//     LocalChannelOptions options{10, exchange_options.exchange_timeout_ts, false};
+TEST(ExchangeSinkTest, SinglePartitionExchangeSinkNormalTest)
+{
+    auto log = getLogger("ExchangeSinkTest");
+    auto context = getInitContext();
+    const size_t ROW_NUM = 100;
+    Block block = createUInt64Block(ROW_NUM, 10, 88);
+    Block header = block.cloneEmpty();
+    auto tp = getDeltaTimePoint(1000);
+    ExchangeOptions exchange_options {.exchange_timeout_ts = tp};
+    LocalChannelOptions options{10, exchange_options.exchange_timeout_ts, false};
 
-//     auto source_key = std::make_shared<ExchangeDataKey>(1, 1, 1);
-//     auto source_channel = std::make_shared<LocalBroadcastChannel>(source_key, options, LocalBroadcastChannel::generateNameForTest(1));
-//     BroadcastSenderProxyPtr source_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(source_key);
-//     source_sender->accept(context, header);
-//     source_channel->registerToSenders(1000);
-//     BroadcastReceiverPtr source_receiver = std::dynamic_pointer_cast<IBroadcastReceiver>(source_channel);
-//     auto exchange_source = std::make_shared<ExchangeSourceExt>(header, source_receiver, exchange_options);
+    auto source_key = std::make_shared<ExchangeDataKey>(1, 1, 1);
+    auto source_channel = std::make_shared<LocalBroadcastChannel>(source_key, options, LocalBroadcastChannel::generateNameForTest(1));
+    BroadcastSenderProxyPtr source_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(source_key);
+    source_sender->accept(context, header);
+    source_channel->registerToSenders(1000);
+    BroadcastReceiverPtr source_receiver = std::dynamic_pointer_cast<IBroadcastReceiver>(source_channel);
+    auto exchange_source = std::make_shared<ExchangeSourceExt>(header, source_receiver, exchange_options);
 
-//     ColumnsWithTypeAndName arguments;
-//     arguments.push_back(header.getByPosition(1));
-//     arguments.push_back(header.getByPosition(2));
-//     auto func = createRepartitionFunction(getContext().context, arguments);
-//     auto repartition_transform = std::make_shared<RepartitionTransform>(header, 1, ColumnNumbers{1, 2}, func);
+    ColumnsWithTypeAndName arguments;
+    arguments.push_back(header.getByPosition(1));
+    arguments.push_back(header.getByPosition(2));
+    auto func = createRepartitionFunction(getContext().context, arguments);
+    auto repartition_transform = std::make_shared<RepartitionTransform>(header, 1, ColumnNumbers{1, 2}, func);
 
-//     auto sink_key = std::make_shared<ExchangeDataKey>(1, 2, 2);
-//     auto sink_channel = std::make_shared<LocalBroadcastChannel>(sink_key, options, LocalBroadcastChannel::generateNameForTest(2));
-//     BroadcastSenderProxyPtr sink_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(sink_key);
-//     sink_sender->accept(context, header);
-//     sink_channel->registerToSenders(1000);
-//     BroadcastReceiverPtr sink_receiver = std::dynamic_pointer_cast<IBroadcastReceiver>(sink_channel);
-//     auto exchange_sink = std::make_shared<SinglePartitionExchangeSink>(
-//         header, sink_sender, 0, ExchangeOptions{tp, 0, 0}, SinglePartitionExchangeSink::generateNameForTest());
+    auto sink_key = std::make_shared<ExchangeDataKey>(1, 2, 2);
+    auto sink_channel = std::make_shared<LocalBroadcastChannel>(sink_key, options, LocalBroadcastChannel::generateNameForTest(2));
+    BroadcastSenderProxyPtr sink_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(sink_key);
+    sink_sender->accept(context, header);
+    sink_channel->registerToSenders(1000);
+    BroadcastReceiverPtr sink_receiver = std::dynamic_pointer_cast<IBroadcastReceiver>(sink_channel);
+    auto exchange_sink = std::make_shared<SinglePartitionExchangeSink>(
+        header, sink_sender, 0, ExchangeOptions{tp, 0, 0}, SinglePartitionExchangeSink::generateNameForTest());
 
-//     connect(exchange_source->getPort(), repartition_transform->getInputPort());
-//     connect(repartition_transform->getOutputPort(), exchange_sink->getPort());
+    connect(exchange_source->getPort(), repartition_transform->getInputPort());
+    connect(repartition_transform->getOutputPort(), exchange_sink->getPort());
 
-//     setQueryDuration(context);
+    setQueryDuration(context);
 
-//     LOG_TRACE(log, "Send data");
-//     Chunk chunk(block.mutateColumns(), ROW_NUM);
-//     auto total_bytes = chunk.bytes();
-//     for (int i = 0; i < CHUNK_NUM; i++)
-//     {
-//         BroadcastStatus status = source_sender->send(chunk.clone());
-//         ASSERT_TRUE(status.code == BroadcastStatusCode::RUNNING);
-//     }
-//     source_sender->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "sink test");
+    LOG_TRACE(log, "Send data");
+    Chunk chunk(block.mutateColumns(), ROW_NUM);
+    auto total_bytes = chunk.bytes();
+    for (int i = 0; i < CHUNK_NUM; i++)
+    {
+        BroadcastStatus status = source_sender->send(chunk.clone());
+        ASSERT_TRUE(status.code == BroadcastStatusCode::RUNNING);
+    }
+    source_sender->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "sink test");
 
-//     auto processors = std::make_shared<Processors>();
-//     processors->emplace_back(std::move(exchange_source));
-//     processors->emplace_back(std::move(repartition_transform));
-//     processors->emplace_back(std::move(exchange_sink));
-//     QueryStatusPtr element;
-//     PipelineExecutor executor(processors, element);
-//     executor.execute(1, false);
+    auto processors = std::make_shared<Processors>();
+    processors->emplace_back(std::move(exchange_source));
+    processors->emplace_back(std::move(repartition_transform));
+    processors->emplace_back(std::move(exchange_sink));
+    QueryStatusPtr element;
+    PipelineExecutor executor(processors, element);
+    executor.execute(1, false);
 
-//     LOG_TRACE(log, "Recv data");
-//     for (int i = 0; i < CHUNK_NUM; i++)
-//     {
-//         LOG_TRACE(log, "Recv {}", i);
-//         RecvDataPacket recv_res = sink_receiver->recv(2000);
-//         ASSERT_TRUE(std::holds_alternative<Chunk>(recv_res));
-//         Chunk & recv_chunk = std::get<Chunk>(recv_res);
-//         ASSERT_TRUE(recv_chunk.getNumRows() == ROW_NUM);
-//         ASSERT_TRUE(recv_chunk.bytes() == total_bytes);
-//     }
-// }
+    LOG_TRACE(log, "Recv data");
+    for (int i = 0; i < CHUNK_NUM; i++)
+    {
+        LOG_TRACE(log, "Recv {}", i);
+        RecvDataPacket recv_res = sink_receiver->recv(2000);
+        ASSERT_TRUE(std::holds_alternative<Chunk>(recv_res));
+        Chunk & recv_chunk = std::get<Chunk>(recv_res);
+        ASSERT_TRUE(recv_chunk.getNumRows() == ROW_NUM);
+        ASSERT_TRUE(recv_chunk.bytes() == total_bytes);
+    }
+}
 
-// TEST(ExchangeSinkTest, SinglePartitionExchangeSinkPipelineTest)
-// {
-//     auto context = getInitContext();
-//     const size_t ROW_NUM = 100;
-//     Block block = createUInt64Block(ROW_NUM, 10, 88);
-//     Block header = block.cloneEmpty();
+TEST(ExchangeSinkTest, SinglePartitionExchangeSinkPipelineTest)
+{
+    auto context = getInitContext();
+    const size_t ROW_NUM = 100;
+    Block block = createUInt64Block(ROW_NUM, 10, 88);
+    Block header = block.cloneEmpty();
 
-//     auto tp = getDeltaTimePoint(1000);
-//     ExchangeOptions exchange_options {.exchange_timeout_ts = tp};
-//     LocalChannelOptions options{10, exchange_options.exchange_timeout_ts, false};
-//     auto source_key = std::make_shared<ExchangeDataKey>(1, 1, 1);
-//     auto source_channel = std::make_shared<LocalBroadcastChannel>(source_key, options, LocalBroadcastChannel::generateNameForTest());
-//     BroadcastSenderProxyPtr source_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(source_key);
-//     source_sender->accept(context, header);
-//     source_channel->registerToSenders(1000);
-//     BroadcastReceiverPtr source_receiver = std::dynamic_pointer_cast<IBroadcastReceiver>(source_channel);
+    auto tp = getDeltaTimePoint(1000);
+    ExchangeOptions exchange_options {.exchange_timeout_ts = tp};
+    LocalChannelOptions options{10, exchange_options.exchange_timeout_ts, false};
+    auto source_key = std::make_shared<ExchangeDataKey>(1, 1, 1);
+    auto source_channel = std::make_shared<LocalBroadcastChannel>(source_key, options, LocalBroadcastChannel::generateNameForTest(1));
+    BroadcastSenderProxyPtr source_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(source_key);
+    source_sender->accept(context, header);
+    source_channel->registerToSenders(1000);
+    BroadcastReceiverPtr source_receiver = std::dynamic_pointer_cast<IBroadcastReceiver>(source_channel);
 
-//     auto sink_key_1 = std::make_shared<ExchangeDataKey>(1, 2, 2);
-//     auto sink_channel_1 = std::make_shared<LocalBroadcastChannel>(sink_key_1, options, LocalBroadcastChannel::generateNameForTest());
-//     BroadcastSenderProxyPtr sink_sender_1 = BroadcastSenderProxyRegistry::instance().getOrCreate(sink_key_1);
-//     sink_sender_1->accept(context, header);
-//     sink_channel_1->registerToSenders(1000);
-//     BroadcastReceiverPtr sink_receiver_1 = std::dynamic_pointer_cast<IBroadcastReceiver>(sink_channel_1);
+    auto sink_key_1 = std::make_shared<ExchangeDataKey>(1, 2, 2);
+    auto sink_channel_1 = std::make_shared<LocalBroadcastChannel>(sink_key_1, options, LocalBroadcastChannel::generateNameForTest(2));
+    BroadcastSenderProxyPtr sink_sender_1 = BroadcastSenderProxyRegistry::instance().getOrCreate(sink_key_1);
+    sink_sender_1->accept(context, header);
+    sink_channel_1->registerToSenders(1000);
+    BroadcastReceiverPtr sink_receiver_1 = std::dynamic_pointer_cast<IBroadcastReceiver>(sink_channel_1);
 
-//     auto sink_key_2 = std::make_shared<ExchangeDataKey>(1, 3, 3);
-//     auto sink_channel_2 = std::make_shared<LocalBroadcastChannel>(sink_key_2, options, LocalBroadcastChannel::generateNameForTest());
-//     BroadcastSenderProxyPtr sink_sender_2 = BroadcastSenderProxyRegistry::instance().getOrCreate(sink_key_2);
-//     sink_sender_2->accept(context, header);
-//     sink_channel_2->registerToSenders(1000);
-//     BroadcastReceiverPtr sink_receiver_2 = std::dynamic_pointer_cast<IBroadcastReceiver>(sink_channel_2);
+    auto sink_key_2 = std::make_shared<ExchangeDataKey>(1, 3, 3);
+    auto sink_channel_2 = std::make_shared<LocalBroadcastChannel>(sink_key_2, options, LocalBroadcastChannel::generateNameForTest(3));
+    BroadcastSenderProxyPtr sink_sender_2 = BroadcastSenderProxyRegistry::instance().getOrCreate(sink_key_2);
+    sink_sender_2->accept(context, header);
+    sink_channel_2->registerToSenders(1000);
+    BroadcastReceiverPtr sink_receiver_2 = std::dynamic_pointer_cast<IBroadcastReceiver>(sink_channel_2);
 
-//     Chunk chunk(block.mutateColumns(), ROW_NUM);
-//     ColumnsWithTypeAndName arguments;
-//     arguments.push_back(header.getByPosition(1));
-//     arguments.push_back(header.getByPosition(2));
-//     auto func = createRepartitionFunction(getContext().context, arguments);
-//     auto chunk_bytes = chunk.bytes();
+    Chunk chunk(block.mutateColumns(), ROW_NUM);
+    ColumnsWithTypeAndName arguments;
+    arguments.push_back(header.getByPosition(1));
+    arguments.push_back(header.getByPosition(2));
+    auto func = createRepartitionFunction(getContext().context, arguments);
+    auto chunk_bytes = chunk.bytes();
 
-//     setQueryDuration(context);
-//     for (int i = 0; i < CHUNK_NUM; i++)
-//     {
-//         BroadcastStatus status = source_sender->send(chunk.clone());
-//         ASSERT_TRUE(status.code == BroadcastStatusCode::RUNNING);
-//     }
-//     source_sender->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "sink test");
+    setQueryDuration(context);
+    for (int i = 0; i < CHUNK_NUM; i++)
+    {
+        BroadcastStatus status = source_sender->send(chunk.clone());
+        ASSERT_TRUE(status.code == BroadcastStatusCode::RUNNING);
+    }
+    source_sender->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "sink test");
 
-//     auto exchange_source = std::make_shared<ExchangeSourceExt>(header, source_receiver, exchange_options);
-//     auto repartition_transform = std::make_shared<RepartitionTransform>(header, 2, ColumnNumbers{1, 2}, func);
-//     auto buffer_copy_transform = std::make_shared<BufferedCopyTransform>(header, 2, 10);
+    auto exchange_source = std::make_shared<ExchangeSourceExt>(header, source_receiver, exchange_options);
+    auto repartition_transform = std::make_shared<RepartitionTransform>(header, 2, ColumnNumbers{1, 2}, func);
+    auto buffer_copy_transform = std::make_shared<BufferedCopyTransform>(header, 2, 10);
 
-//     auto exchange_sink_1 = std::make_shared<SinglePartitionExchangeSink>(
-//         header, sink_sender_1, 0, ExchangeOptions{tp, 0, 0}, SinglePartitionExchangeSink::generateNameForTest());
-//     auto exchange_sink_2 = std::make_shared<SinglePartitionExchangeSink>(
-//         header, sink_sender_2, 1, ExchangeOptions{tp, 0, 0}, SinglePartitionExchangeSink::generateNameForTest());
+    auto exchange_sink_1 = std::make_shared<SinglePartitionExchangeSink>(
+        header, sink_sender_1, 0, ExchangeOptions{tp, 0, 0}, SinglePartitionExchangeSink::generateNameForTest());
+    auto exchange_sink_2 = std::make_shared<SinglePartitionExchangeSink>(
+        header, sink_sender_2, 1, ExchangeOptions{tp, 0, 0}, SinglePartitionExchangeSink::generateNameForTest());
 
-//     connect(exchange_source->getPort(), repartition_transform->getInputPort());
-//     connect(repartition_transform->getOutputPort(), buffer_copy_transform->getInputPort());
-//     connect(buffer_copy_transform->getOutputs().front(), exchange_sink_1->getPort());
-//     connect(buffer_copy_transform->getOutputs().back(), exchange_sink_2->getPort());
+    connect(exchange_source->getPort(), repartition_transform->getInputPort());
+    connect(repartition_transform->getOutputPort(), buffer_copy_transform->getInputPort());
+    connect(buffer_copy_transform->getOutputs().front(), exchange_sink_1->getPort());
+    connect(buffer_copy_transform->getOutputs().back(), exchange_sink_2->getPort());
 
-//     auto processors = std::make_shared<Processors>();
-//     processors->emplace_back(std::move(exchange_source));
-//     processors->emplace_back(std::move(repartition_transform));
-//     processors->emplace_back(std::move(buffer_copy_transform));
-//     processors->emplace_back(std::move(exchange_sink_1));
-//     processors->emplace_back(std::move(exchange_sink_2));
+    auto processors = std::make_shared<Processors>();
+    processors->emplace_back(std::move(exchange_source));
+    processors->emplace_back(std::move(repartition_transform));
+    processors->emplace_back(std::move(buffer_copy_transform));
+    processors->emplace_back(std::move(exchange_sink_1));
+    processors->emplace_back(std::move(exchange_sink_2));
 
-//     QueryStatusPtr element;
-//     PipelineExecutor executor(processors, element);
-//     executor.execute(2, false);
+    QueryStatusPtr element;
+    PipelineExecutor executor(processors, element);
+    executor.execute(2, false);
 
-//     sink_sender_1->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "sink1 finish");
-//     sink_sender_2->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "sink2 finish");
+    sink_sender_1->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "sink1 finish");
+    sink_sender_2->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "sink2 finish");
 
-//     size_t total_bytes = 0;
+    size_t total_bytes = 0;
 
-//     for (int i = 0; i < CHUNK_NUM; i++)
-//     {
-//         RecvDataPacket recv_res = sink_receiver_1->recv(2000);
-//         if (std::holds_alternative<Chunk>(recv_res))
-//         {
-//             Chunk & recv_chunk = std::get<Chunk>(recv_res);
-//             total_bytes += recv_chunk.bytes();
-//         }
-//     }
-
-//     ASSERT_TRUE(total_bytes == chunk_bytes * 5);
-// }
+    for (int i = 0; i < CHUNK_NUM; i++)
+    {
+        RecvDataPacket recv_res = sink_receiver_1->recv(2000);
+        if (std::holds_alternative<Chunk>(recv_res))
+        {
+            Chunk & recv_chunk = std::get<Chunk>(recv_res);
+            total_bytes += recv_chunk.bytes();
+        }
+    }
+    ASSERT_TRUE(total_bytes == chunk_bytes * 5);
+}
 
 }

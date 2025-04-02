@@ -15,6 +15,8 @@ extern DB::Chunk createUInt8Chunk(size_t row_num, size_t column_num, UInt8 value
 
 extern DB::Block createUInt64Block(size_t row_num, size_t column_num, UInt8 value);
 
+extern DB::Block createUInt64PartitionBlock(size_t row_num, size_t column_num, size_t partition_num);
+
 extern DB::ExecutableFunctionPtr createRepartitionFunction(DB::ContextPtr context, const DB::ColumnsWithTypeAndName & arguments);
 
 void setQueryDuration(DB::ContextMutablePtr context);

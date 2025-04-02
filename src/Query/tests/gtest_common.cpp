@@ -37,6 +37,22 @@ Block createUInt64Block(size_t row_num, size_t column_num, UInt8 value)
     return Block(cols);
 }
 
+Block createUInt64PartitionBlock(size_t row_num, size_t column_num, size_t partition_num)
+{
+    ColumnsWithTypeAndName cols;
+    size_t range = row_num / partition_num + 1;
+    for (size_t i = 0; i < column_num; i++)
+    {
+        auto column = ColumnUInt64::create();
+        for(size_t j = 0; j < row_num; j ++)
+        {
+            column->insertValue((j+1) / range);
+        }
+        cols.emplace_back(std::move(column), std::make_shared<DataTypeUInt64>(), "column" + std::to_string(i));
+    }
+    return Block(cols);
+}
+
 ExecutableFunctionPtr createRepartitionFunction(ContextPtr context, const ColumnsWithTypeAndName & arguments)
 {
     tryRegisterFunctions();

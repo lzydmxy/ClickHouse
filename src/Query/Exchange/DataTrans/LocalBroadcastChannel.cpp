@@ -50,12 +50,12 @@ RecvDataPacket LocalBroadcastChannel::recv(TimePoint timeout_tp)
         {
             Chunk & recv_chunk = std::get<DataPacket>(data_packet).chunk;
             addToMetricsMaybe(s.elapsedMilliseconds(), 0, 1, recv_chunk);
-            LOG_DEBUG(log, "{} pop DataPacket", name);
+            LOG_TRACE(log, "{} pop DataPacket", name);
             return RecvDataPacket(std::move(recv_chunk));
         }
         else if (std::holds_alternative<SendDoneMark>(data_packet))
         {
-            LOG_DEBUG(log, "{} pop SendDoneMark", name);
+            LOG_TRACE(log, "{} pop SendDoneMark", name);
             return RecvDataPacket(*broadcast_status.load(std::memory_order_acquire));
         }
     }
@@ -111,7 +111,7 @@ BroadcastStatus LocalBroadcastChannel::finish(BroadcastStatusCode status_code, S
 
     if (broadcast_status.compare_exchange_strong(current_status_ptr, new_status_ptr, std::memory_order_release, std::memory_order_acquire))
     {
-        LOG_DEBUG(log, "{} BroadcastStatus from {} to {} with message: {}",
+        LOG_TRACE(log, "{} BroadcastStatus from {} to {} with message: {}",
             name, toString(current_status_ptr->code), toString(new_status_ptr->code), new_status_ptr->message);
         if (new_status_ptr->code > 0)
             // close queue immediately
