@@ -12,8 +12,10 @@ void ASTExpressionListExt::appendColumnName(WriteBuffer & ostr) const
         {
             if (it != children.begin())
                 writeCString(", ", ostr);
-
-            (*it)->appendColumnName(ostr);
+    
+            if (*it) {
+                (*it)->appendColumnName(ostr);
+            }
         }
     }
     writeChar(')', ostr);
