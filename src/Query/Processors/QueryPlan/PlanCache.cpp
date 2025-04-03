@@ -9,7 +9,7 @@
 #include <Query/Processors/QueryPlan/TableScanStepExt.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/QueryPlan/CTEInfo.h>
-#include <Query/Processors/QueryPlan/QueryPlanner.h>
+//#include <Query/Processors/QueryPlan/QueryPlanner.h>
 
 namespace DB
 {

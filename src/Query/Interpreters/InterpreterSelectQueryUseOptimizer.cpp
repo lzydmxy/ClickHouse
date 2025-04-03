@@ -5,7 +5,7 @@
 #include <Query/Optimizer/PlanOptimizer.h>
 #include <Query/Optimizer/JoinOrderUtils.h>
 #include <Query/Analyzer/QueryRewriter.h>
-#include <Query/Processors/QueryPlan/QueryPlanner.h>
+//#include <Query/Processors/QueryPlan/QueryPlanner.h>
 #include <Query/Analyzer/QueryAnalyzer.h>
 #include <Query/Processors/QueryPlan/FinalSampleStepExt.h>
 #include <Query/Processors/QueryPlan/GraphvizPrinter.h>
@@ -292,7 +292,8 @@ void InterpreterSelectQueryUseOptimizer::buildQueryPlan(QueryPlanExtPtr & query_
     ProfileEvents::increment(ProfileEvents::QueryAnalyzerTime, stage_watch.elapsedMilliseconds());
 
     stage_watch.restart();
-    query_plan = QueryPlanner().plan(query_ptr, *analysis, context);
+    //todo: need new QueryPlanner
+    //query_plan = QueryPlanner().plan(query_ptr, *analysis, context);
     context->getOptimizerContext()->logOptimizerProfile(log, "Optimizer stage run time: ", "Planning {} ms", stage_watch.elapsedMilliseconds());
     ProfileEvents::increment(ProfileEvents::QueryPlannerTime, stage_watch.elapsedMilliseconds());
 
