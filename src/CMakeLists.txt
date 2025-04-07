@@ -263,6 +263,8 @@ add_object_library(clickhouse_query_Transforms Query/Transforms)
 add_object_library(clickhouse_query_analyzer Query/Analyzer)
 add_object_library(clickhouse_query_storages Query/Storages)
 add_object_library(clickhouse_query_pipeline Query/Pipeline)
+add_object_library(clickhouse_query_planner Query/Planner)
+
 
 #add_object_library(clickhouse_query_optimizer_cardinalityestimate Query/Optimizer/CardinalityEstimate)
 #add_object_library(clickhouse_query_optimizer_cardinalityestimate_bncardestimator Query/Optimizer/CardinalityEstimate/BNCardEstimator)

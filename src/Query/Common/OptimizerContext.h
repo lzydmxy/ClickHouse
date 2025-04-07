@@ -6,7 +6,7 @@
 #include <Query/Common/ExceptionHandler.h>
 #include <Query/Common/OptimizerSettings.h>
 #include <Query/Processors/QueryPlan/PlanNodeIdAllocator.h>
-#include <Query/Processors/QueryPlan/SymbolAllocator.h>
+#include <Query/Planner/SymbolAllocator.h>
 #include <Query/Optimizer/OptimizerMetrics.h>
 #include <Query/Processors/QueryPlan/PlanCache.h>
 #include <Query/Optimizer/OptimizerProfile.h>

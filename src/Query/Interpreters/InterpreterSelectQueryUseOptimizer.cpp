@@ -8,7 +8,7 @@
 //#include <Query/Processors/QueryPlan/QueryPlanner.h>
 #include <Query/Analyzer/QueryAnalyzer.h>
 #include <Query/Processors/QueryPlan/FinalSampleStepExt.h>
-#include <Query/Processors/QueryPlan/GraphvizPrinter.h>
+#include <Query/Planner/GraphvizPrinter.h>
 #include <Interpreters/InterpreterFactory.h>
 
 

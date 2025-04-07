@@ -24,6 +24,7 @@
 #include <Query/Processors/QueryPlan/AssignUniqueIdStepExt.h>
 #include <Query/Processors/QueryPlan/BufferStepExt.h>
 #include <Query/Processors/QueryPlan/CTERefStepExt.h>
+#include <Query/Processors/QueryPlan/DistinctStepExt.h>
 #include <Query/Processors/QueryPlan/EnforceSingleRowStepExt.h>
 #include <Query/Processors/QueryPlan/ExchangeStepExt.h>
 #include <Query/Processors/QueryPlan/ExpandStepExt.h>
@@ -42,6 +43,7 @@
 #include <Query/Processors/QueryPlan/SettingQuotaAndLimitsStepExt.h>
 #include <Query/Processors/QueryPlan/TableScanStepExt.h>
 #include <Query/Processors/QueryPlan/TopNFilteringStepExt.h>
+#include <Query/Processors/QueryPlan/TotalsHavingStepExt.h>
 #include <Query/Processors/QueryPlan/UnionStepExt.h>
 #include <Query/Processors/QueryPlan/ValuesStepExt.h>
 
@@ -61,6 +63,7 @@ class TableScanStepExt;
     M(CreatingSetsStep) \
     M(CubeStep) \
     M(CTERefStepExt) \
+    M(DistinctStepExt) \
     M(EnforceSingleRowStepExt) \
     M(ExchangeStepExt) \
     M(ExpandStepExt) \
@@ -92,6 +95,7 @@ class TableScanStepExt;
     M(SortingStep) \
     M(TableScanStepExt) \
     M(TopNFilteringStepExt) \
+    M(TotalsHavingStepExt) \
     M(UnionStepExt) \
     M(ValuesStepExt) \
     M(WindowStep)

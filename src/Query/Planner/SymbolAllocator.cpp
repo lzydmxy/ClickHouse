@@ -1,6 +1,6 @@
+#include <Query/Planner/SymbolAllocator.h>
 
 #include <Poco/NumberParser.h>
-#include <Query/Processors/QueryPlan/SymbolAllocator.h>
 
 namespace DB
 {
