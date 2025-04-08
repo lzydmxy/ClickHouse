@@ -37,6 +37,7 @@
 
 #include <Common/logger_useful.h>
 #include "Core/SettingsEnums.h"
+#include <IO/WriteHelpers.h>
 
 namespace DB
 {
@@ -171,13 +172,13 @@ namespace
     {
         RewriteFusionMerge data{context};
         RewriteFusionMergeVisitor(data).visit(query);
-        GraphvizPrinter::printAST(query, context, std::to_string(static_cast<int>(graphviz_index++)) + "-AST-rewrite-fusionMerge");
+        GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-rewrite-fusionMerge");
     }
 
     void expandCte(ASTPtr & query, ContextMutablePtr context, int & graphviz_index)
     {
         ApplyWithSubqueryVisitor::visit(query);
-        GraphvizPrinter::printAST(query, context, std::to_string(graphviz_index++) + "-AST-expand-cte");
+        GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-expand-cte");
     }
 
     void simpleFunctions(ASTPtr & query, ContextMutablePtr context)
@@ -190,7 +191,7 @@ namespace
     {
         ReplaceViewWithSubquery data{context};
         ReplaceViewWithSubqueryVisitor(data).visit(query);
-        GraphvizPrinter::printAST(query, context, std::to_string(graphviz_index++) + "-AST-expand-view");
+        GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-expand-view");
     }
 
     void normalizeUnion(ASTPtr & query, ContextMutablePtr context)
@@ -249,14 +250,14 @@ namespace
         if (settings.normalize_function_names)
             FunctionNameNormalizer().visit(query.get());
 
-        GraphvizPrinter::printAST(query, context, std::to_string(graphviz_index++) + "-AST-normal-functions");
+        GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-normal-functions");
     }
 
     void implementFunctions(ASTPtr & query, ContextMutablePtr context, int & graphviz_index)
     {
         ImplementFunction data{context};
         ImplementFunctionVisitor(data).visit(query);
-        GraphvizPrinter::printAST(query, context, std::to_string(graphviz_index++) + "-AST-implement-functions");
+        GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-implement-functions");
     }
 
     struct MarkTableIdentifiersRecursively
@@ -351,7 +352,7 @@ namespace
         if (context->getSettingsRef().enable_global_with_statement)
         {
             ApplyWithAliasVisitor().visit(query);
-            GraphvizPrinter::printAST(query, context, std::to_string(graphviz_index++) + "-AST-apply-with-alias");
+            GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-apply-with-alias");
         }
     }
 
@@ -372,7 +373,7 @@ namespace
         QueryNormalizer::Data normalizer_data(aliases, source_columns_set, false, settings, true, context, nullptr, metadata_snapshot);
         QueryNormalizer(normalizer_data).visit(query);
 
-        GraphvizPrinter::printAST(query, context, std::to_string(graphviz_index++) + "-AST-normalize-name-and-alias");
+        GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-normalize-name-and-alias");
     }
 
     void rewriteMultipleJoins(ASTPtr & query, const TablesWithColumns & tables, const String & database, const Settings & settings)
@@ -412,7 +413,7 @@ namespace
             joined_tables.reset(node->as<ASTSelectQuery &>());
             joined_tables.resolveTables();
 
-            GraphvizPrinter::printAST(node, context, std::to_string(graphviz_index++) + "-AST-multi-join-to-subquery");
+            GraphvizPrinter::printAST(node, context, toString(graphviz_index++) + "-AST-multi-join-to-subquery");
         }
 
         /// TreeRewriter logics:
@@ -547,7 +548,7 @@ ASTPtr QueryRewriter::rewrite(ASTPtr query, ContextMutablePtr context, bool enab
 
     (void) enable_materialized_view;
     graphviz_index = GraphvizPrinter::PRINT_AST_INDEX;
-    GraphvizPrinter::printAST(query, context, std::to_string(graphviz_index++) + "-AST-init");
+    GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-init");
 
     if (context->getSettingsRef().dialect_type != DialectType::CLICKHOUSE)
     {
@@ -582,7 +583,7 @@ ASTPtr QueryRewriter::rewrite(ASTPtr query, ContextMutablePtr context, bool enab
             if (ast->as<ASTSelectQuery>())
             {
                 rewriteSelectQuery(ast, rewrite_context, context, graphviz_index);
-                GraphvizPrinter::printAST(ast, context, std::to_string(graphviz_index++) + "-AST");
+                GraphvizPrinter::printAST(ast, context, toString(graphviz_index++) + "-AST");
             }
 
             // top down rewrite
@@ -593,7 +594,7 @@ ASTPtr QueryRewriter::rewrite(ASTPtr query, ContextMutablePtr context, bool enab
             if (ast->as<ASTSelectQuery>())
             {
                 postRewriteSelectQuery(ast, rewrite_context, context, graphviz_index);
-                GraphvizPrinter::printAST(ast, context, std::to_string(graphviz_index++) + "-AST-post");
+                GraphvizPrinter::printAST(ast, context, toString(graphviz_index++) + "-AST-post");
             }
         };
 
@@ -681,7 +682,7 @@ ASTPtr QueryRewriter::rewrite(ASTPtr query, ContextMutablePtr context, bool enab
         }
     }
 
-    GraphvizPrinter::printAST(query, context, std::to_string(graphviz_index++) + "-AST-done");
+    GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-done");
 
     LOG_DEBUG(logger, "rewritten query: {}", query->formatForErrorMessageWithoutAlias());
     LOG_TRACE(logger, "rewritten ast tree: {}", query->dumpTree());
