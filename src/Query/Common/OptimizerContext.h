@@ -68,6 +68,7 @@ public:
     OptimizerContext(const Settings & settings_, OptimizerSettings & optimizer_settings_);
 
     const OptimizerSettings & getSettingsRef() const { return optimizer_settings; }
+    OptimizerSettings & getSettingsRef() { return optimizer_settings; }
     const OptimizerSettings getSettings() const { return optimizer_settings; }
 
     /// milliseconds

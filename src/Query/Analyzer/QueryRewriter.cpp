@@ -110,7 +110,7 @@ namespace
             const auto & instance = AggregateFunctionFactory::instance();
             if (instance.isAggregateFunctionName(func.name) && !endsWith(func.name, customized_func_suffix))
             {
-                auto properties = instance.tryGetProperties(func.name);
+                auto properties = instance.tryGetProperties(func.name, NullsAction::EMPTY);
                 if (properties && !properties->returns_default_when_only_null)
                 {
                     func.name += customized_func_suffix;
@@ -154,7 +154,7 @@ namespace
             {
                 if (endsWith(func.name, customized_func_suffix))
                 {
-                    auto properties = instance.tryGetProperties(func.name);
+                    auto properties = instance.tryGetProperties(func.name, NullsAction::EMPTY);
                     if (properties && !properties->returns_default_when_only_null)
                     {
                         func.name = moveSuffixAhead(func.name);
@@ -171,7 +171,7 @@ namespace
     {
         RewriteFusionMerge data{context};
         RewriteFusionMergeVisitor(data).visit(query);
-        GraphvizPrinter::printAST(query, context, std::to_string(graphviz_index++) + "-AST-rewrite-fusionMerge");
+        GraphvizPrinter::printAST(query, context, std::to_string(static_cast<int>(graphviz_index++)) + "-AST-rewrite-fusionMerge");
     }
 
     void expandCte(ASTPtr & query, ContextMutablePtr context, int & graphviz_index)
@@ -182,7 +182,7 @@ namespace
 
     void simpleFunctions(ASTPtr & query, ContextMutablePtr context)
     {
-        if (context->getSettingsRef().rewrite_like_function)
+        if (context->getOptimizerContext()->getSettingsRef().rewrite_like_function)
             SimpleFunctionVisitor().visit(query);
     }
 
