@@ -10,6 +10,7 @@
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/ASTSubquery.h>
 #include <Query/Common/OptimizerContext.h>
+#include <Processors/Executors/PullingAsyncPipelineExecutor.h>
 
 #include <memory>
 
@@ -83,19 +84,22 @@ void ExecutePrewhereSubquery::rewriteSubqueryToScalarLiteral(ASTSubquery & subqu
     ASTPtr subquery_select = subquery.children.at(0);
     auto interpreter = InterpreterFactory::instance().get(subquery_select, subquery_context,
                                                SelectQueryOptions(QueryProcessingStage::Complete).setInternal(true));
-    auto stream = interpreter->execute().getInputStream();
+    auto io = interpreter->execute();
+    PullingAsyncPipelineExecutor executor(io.pipeline);
+    io.pipeline.setProgressCallback(context->getProgressCallback());
+    io.pipeline.setProcessListElement(context->getProcessListElement());
+
 
     Block block;
     try
     {
-        do
+        while (block.rows() == 0 && executor.pull(block))
         {
-            block = stream->read();
-        } while (block && block.rows() == 0);
+        }
 
         if (!block)
         {
-            auto types = stream->getHeader().getDataTypes();
+            auto types = executor.getHeader().getDataTypes();
             if (types.size() != 1)
                 types = {std::make_shared<DataTypeTuple>(types)};
 
@@ -123,10 +127,15 @@ void ExecutePrewhereSubquery::rewriteSubqueryToScalarLiteral(ASTSubquery & subqu
             throw Exception(
             ErrorCodes::INCORRECT_RESULT_OF_SCALAR_SUBQUERY,
                 "Scalar subquery expected 1 row, got " + std::to_string(block.rows()) + " rows");
-        while (Block rest = stream->read())
-            if (rest.rows() > 0)
-                throw Exception(
-                    ErrorCodes::INCORRECT_RESULT_OF_SCALAR_SUBQUERY, "Scalar subquery returned more than one non-empty block");
+
+        Block rest;
+        while (rest.rows() == 0 && executor.pull(rest))
+        {
+        }
+
+        if (rest.rows() > 0)
+            throw Exception(
+                ErrorCodes::INCORRECT_RESULT_OF_SCALAR_SUBQUERY, "Scalar subquery returned more than one non-empty block");
     }
     catch (const Exception & e)
     {
@@ -175,8 +184,11 @@ bool ExecutePrewhereSubquery::rewriteSubqueryToSet(ASTSubquery & subquery, ASTPt
     ASTPtr subquery_select = subquery.children.at(0);
     auto interpreter = InterpreterFactory::instance().get(subquery_select, subquery_context,
                                                SelectQueryOptions(QueryProcessingStage::Complete).setInternal(true));
-    auto stream = interpreter->execute().getInputStream();
-    size_t columns = stream->getHeader().columns();
+    auto io = interpreter->execute();
+    PullingAsyncPipelineExecutor executor(io.pipeline);
+    io.pipeline.setProgressCallback(context->getProgressCallback());
+    io.pipeline.setProcessListElement(context->getProcessListElement());
+    size_t columns = executor.getHeader().columns();
 
     auto array = std::make_shared<ASTFunction>();
     array->name = "array";
@@ -187,7 +199,10 @@ bool ExecutePrewhereSubquery::rewriteSubqueryToSet(ASTSubquery & subquery, ASTPt
     Block block;
     while (true)
     {
-        block = stream->read();
+         while (block.rows() == 0 && executor.pull(block))
+         {
+         }
+
         if (!block || !block.rows())
             break;
         if (columns == 1)
