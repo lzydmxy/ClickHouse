@@ -370,7 +370,7 @@ namespace
         rewriteInTableExpression(query);
 
         /// Common subexpression elimination. Rewrite rules.
-        QueryNormalizer::Data normalizer_data(aliases, source_columns_set, false, settings, true, context, nullptr, metadata_snapshot);
+        QueryNormalizer::Data normalizer_data(aliases, source_columns_set, false, settings, true);
         QueryNormalizer(normalizer_data).visit(query);
 
         GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-normalize-name-and-alias");
@@ -448,22 +448,22 @@ namespace
             /// query can use materialized or aliased columns from right joined table,
             /// we want to request it for right table
             cols_from_joined.insert(cols_from_joined.end(), right_table.hidden_columns.begin(), right_table.hidden_columns.end());
-            result.analyzed_join->setColumnsFromJoinedTable(cols_from_joined);
+            result.analyzed_join->setColumnsFromJoinedTable(std::move(cols_from_joined), result.source_columns_set, right_table.table.getQualifiedNamePrefix());
 
             result.analyzed_join->deduplicateAndQualifyColumnNames(
-                result.source_columns_set, right_table.table.getQualifiedNamePrefix(), settings.check_identifier_begin_valid);
+                result.source_columns_set, right_table.table.getQualifiedNamePrefix());
         }
 
         // 2. Rewrite qualified names
         {
             TranslateQualifiedNamesVisitor::Data visitor_data(
-                result.source_columns_set, tables_with_columns, true, {}, false, settings.check_identifier_begin_valid);
+                result.source_columns_set, tables_with_columns, true);
             TranslateQualifiedNamesVisitor visitor(visitor_data);
             visitor.visit(node);
         }
 
         // 3. Optimizes logical expressions.
-        LogicalExpressionsOptimizer(&select_query, settings.optimize_min_equality_disjunction_chain_length.value).perform();
+        LogicalExpressionsOptimizer(&select_query, tables_with_columns, settings.optimize_min_equality_disjunction_chain_length.value).perform();
 
         // 6. Execute subquery in prewhere
         if (select_query.prewhere())
