@@ -10,8 +10,7 @@ class QueryRewriter
 {
 public:
     int graphviz_index;
-    //todo: need impl
-    ASTPtr rewrite(ASTPtr query, ContextMutablePtr context, bool enable_materialized_view = true) { return nullptr;}
+    ASTPtr rewrite(ASTPtr query, ContextMutablePtr context, bool enable_materialized_view = true);
 };
 
 }
