@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Query/Common/OptimizerSettings.h>
+
 namespace DB
 {
 
@@ -11,7 +13,7 @@ struct ParserSettingsImpl
     mutable bool apply_adaptive_type_cast;
 
     /// update mutable items with the settings of current context
-    void changeMutableSettings(const Settings & s) const
+    void changeMutableSettings(const OptimizerSettings & s) const
     {
         apply_adaptive_type_cast = s.adaptive_type_cast;
         parse_literal_as_decimal = s.parse_literal_as_decimal;
@@ -75,7 +77,7 @@ struct ParserSettings
         }
     }
 
-    static ParserSettingsImpl valueOf(const Settings & s)
+    static ParserSettingsImpl valueOf(const OptimizerSettings & s)
     {
         const auto setting_impl = [&]() -> ParserSettingsImpl {
             switch (s.dialect_type) {
