@@ -19,6 +19,7 @@
 #include <IO/WriteHelpers.h>
 #include <Core/Defines.h>
 #include <Query/Parsers/ParserSettings.h>
+#include <re2/re2.h>
 
 
 namespace DB
@@ -30,6 +31,7 @@ namespace ErrorCodes
     extern const int AMBIGUOUS_COLUMN_NAME;
     extern const int NOT_IMPLEMENTED;
     extern const int UNKNOWN_IDENTIFIER;
+    extern const int CANNOT_COMPILE_REGEXP;
 }
 
 namespace
@@ -37,9 +39,9 @@ namespace
 
 /// @note we use `--` prefix for unique short names and `--.` for subqueries.
 /// It expects that user do not use names starting with `--` and column names starting with dot.
-ASTPtr makeSubqueryTemplate(const String & table_alias, ParserSettingsImpl dt)
+ASTPtr makeSubqueryTemplate(const String & table_alias, ParserSettingsImpl)
 {
-    ParserTablesInSelectQueryElement parser(true, dt);
+    ParserTablesInSelectQueryElement parser(true);  // todo added by @wujianchao, will support dialect in the next version
     String query_template = "(select * from _t)";
     if (!table_alias.empty())
         query_template += " as " + table_alias;
@@ -155,7 +157,13 @@ private:
                 has_asterisks = true;
 
                 for (auto & table_name : data.tables_order)
-                    data.addTableColumns(table_name, [&](const String & column_name) { return columns_matcher->isColumnMatching(column_name); });
+                    data.addTableColumns(table_name, [&](const String & column_name)
+                    {
+                        auto regex_matcher = std::make_shared<RE2>(columns_matcher->getPattern(), RE2::Quiet);
+                        if (!regex_matcher->ok())
+                            throw DB::Exception(ErrorCodes::CANNOT_COMPILE_REGEXP, "COLUMNS pattern " + columns_matcher->getPattern() + " cannot be compiled: " + regex_matcher->error());
+                        return RE2::PartialMatch(column_name, *regex_matcher);
+                    });
             }
             else
                 data.new_select_expression_list->children.push_back(child);
