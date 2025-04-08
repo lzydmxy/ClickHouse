@@ -512,9 +512,9 @@ namespace
             && (!select_query.group_by_with_cube && !select_query.group_by_with_rollup && !select_query.group_by_with_grouping_sets
                 && !select_query.group_by_with_totals))
             PredicateExpressionsOptimizer(context, tables_with_columns, settings).tryMovePredicatesFromHavingToWhere(select_query);
-        TreeOptimizer::apply(node, result, tables_with_columns, context, false);
+        TreeOptimizer::apply(node, result, tables_with_columns, context);
 
-        result.collectUsedColumns(context, node, true, settings.rewrite_unknown_left_join_identifier);
+        result.collectUsedColumns(node, true);
     }
 
     class MarkTupleLiteralsAsLegacyData
@@ -550,7 +550,7 @@ ASTPtr QueryRewriter::rewrite(ASTPtr query, ContextMutablePtr context, bool enab
     graphviz_index = GraphvizPrinter::PRINT_AST_INDEX;
     GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-init");
 
-    if (context->getSettingsRef().dialect_type != DialectType::CLICKHOUSE)
+    if (context->getOptimizerContext()->getSettingsRef().dialect_type != DialectType::CLICKHOUSE)
     {
         /// Statement rewriting
         rewriteFusionMerge(query, context, graphviz_index);
@@ -612,7 +612,7 @@ ASTPtr QueryRewriter::rewrite(ASTPtr query, ContextMutablePtr context, bool enab
         auto settings = context->getSettingsRef();
         bool settings_sorting_limit_offset_needed = false;
         size_t num_children = select_with_union_query->list_of_selects->children.size();
-        if (settings.limit > 0 || settings.offset > 0 || settings.final_order_by_all_direction != 0)
+        if (settings.limit > 0 || settings.offset > 0 || context->getOptimizerContext()->getSettingsRef().final_order_by_all_direction != 0)
             settings_sorting_limit_offset_needed = true;
 
         if (num_children == 1 && settings_sorting_limit_offset_needed)
@@ -624,9 +624,9 @@ ASTPtr QueryRewriter::rewrite(ASTPtr query, ContextMutablePtr context, bool enab
 
             if (!select_query->withFill() && !select_query->limit_with_ties)
             {
-                if (settings.final_order_by_all_direction != 0)
+                if (context->getOptimizerContext()->getSettingsRef().final_order_by_all_direction != 0)
                 {
-                    int direction = context->getSettingsRef().final_order_by_all_direction > 0 ? 1 : -1;
+                    int direction = context->getOptimizerContext()->getSettingsRef().final_order_by_all_direction > 0 ? 1 : -1;
                     auto order_expression_list = std::make_shared<ASTExpressionList>();
                     for (const auto & expr : select_query->select()->children)
                     {
