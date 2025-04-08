@@ -312,10 +312,10 @@ namespace
 
         static ASTPtr makeSubqueryTemplate()
         {
-            ParserSubquery parser(ParserSettings::CLICKHOUSE);
-            ASTPtr subquery_template = parseQuery(parser, "(select * from t)", 0, DBMS_DEFAULT_MAX_PARSER_DEPTH);
+            ParserSubquery parser;
+            ASTPtr subquery_template = parseQuery(parser, "(select * from t)", 0, DBMS_DEFAULT_MAX_PARSER_DEPTH, DBMS_DEFAULT_MAX_PARSER_BACKTRACKS);
             if (!subquery_template)
-                throw Exception("Cannot parse subquery template", ErrorCodes::LOGICAL_ERROR);
+                throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot parse subquery template");
 
             return subquery_template;
         }
