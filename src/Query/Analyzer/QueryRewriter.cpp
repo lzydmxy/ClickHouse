@@ -14,7 +14,7 @@
 #include <Interpreters/CrossToInnerJoinVisitor.h>
 #include <Interpreters/DatabaseAndTableWithAlias.h>
 #include <Interpreters/FunctionNameNormalizer.h>
-#include <Interpreters/JoinToSubqueryTransformVisitor.h>
+#include <Query/Interpreters/JoinToSubqueryTransformVisitorExt.h>
 #include <Interpreters/JoinedTables.h>
 #include <Interpreters/LogicalExpressionsOptimizer.h>
 #include <Interpreters/MarkTableIdentifiersVisitor.h>
@@ -376,7 +376,7 @@ namespace
         GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-normalize-name-and-alias");
     }
 
-    void rewriteMultipleJoins(ASTPtr & query, const TablesWithColumns & tables, const String & database, const Settings & settings)
+    void rewriteMultipleJoins(ASTPtr & query, const TablesWithColumns & tables, const String & database, const ContextMutablePtr & context)
     {
         ASTSelectQuery & select = query->as<ASTSelectQuery &>();
 
@@ -389,8 +389,8 @@ namespace
         cross_to_inner.cross_to_inner_join_rewrite = false;
         CrossToInnerJoinVisitor(cross_to_inner).visit(query);
 
-        JoinToSubqueryTransformVisitor::Data join_to_subs_data{tables, settings.dialect_type, aliases};
-        JoinToSubqueryTransformVisitor(join_to_subs_data).visit(query);
+        JoinToSubqueryTransformVisitorExt::Data join_to_subs_data{tables, context->getOptimizerContext()->getSettingsRef().dialect_type, aliases};
+        JoinToSubqueryTransformVisitorExt(join_to_subs_data).visit(query);
     }
 
     struct SelectQueryRewriteContext
@@ -408,7 +408,7 @@ namespace
         // 1. Rewrite join
         if (joined_tables.resolveTables() && joined_tables.tablesCount() > 1)
         {
-            rewriteMultipleJoins(node, joined_tables.tablesWithColumns(), context->getCurrentDatabase(), context->getSettingsRef());
+            rewriteMultipleJoins(node, joined_tables.tablesWithColumns(), context->getCurrentDatabase(), context);
 
             joined_tables.reset(node->as<ASTSelectQuery &>());
             joined_tables.resolveTables();
@@ -684,7 +684,7 @@ ASTPtr QueryRewriter::rewrite(ASTPtr query, ContextMutablePtr context, bool enab
 
     GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-done");
 
-    LOG_DEBUG(logger, "rewritten query: {}", query->formatForErrorMessageWithoutAlias());
+    LOG_DEBUG(logger, "rewritten query: {}", query->formatForErrorMessage());
     LOG_TRACE(logger, "rewritten ast tree: {}", query->dumpTree());
     return query;
 }
