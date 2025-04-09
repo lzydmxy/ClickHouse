@@ -10,11 +10,13 @@ namespace DB
 class ASTSelectQueryExt : public ASTSelectQuery
 {
   public:
-  explicit ASTSelectQueryExt()
-        : ASTSelectQuery() {}
+    explicit ASTSelectQueryExt()
+          : ASTSelectQuery() {}
 
     explicit ASTSelectQueryExt(const ASTSelectQuery& original)
-        : ASTSelectQuery(original) {}
+          : ASTSelectQuery(original) {}
+
+    String getID(char) const override { return "ASTSelectQueryExt"; }
   
     static void collectAllTables(const IAST * ast, std::vector<ASTPtr> &, bool &);
 

@@ -12,7 +12,7 @@ private:
     const char * end;
     bool allow_settings_after_format_in_insert;
 
-    const char * getName() const override { return "Query"; }
+    const char * getName() const override { return "ParserQueryExt"; }
     bool parseImpl(Pos & pos, ASTPtr & node, Expected & expected) override;
 
 public:
