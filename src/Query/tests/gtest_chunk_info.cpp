@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include <Query/Exchange/ChunkInfo.h>
 #include <Processors/Transforms/AggregatingTransform.h>
+#include <Query/Exchange/RepartitionTransform.h>
+#include <Processors/Transforms/MergingAggregatedMemoryEfficientTransform.h>
 
 using namespace DB;
 
@@ -9,6 +11,12 @@ TEST(ChunkInfoTest, getChunkTypeTest)
 {
     auto aggregated_chunk_info = std::make_shared<AggregatedChunkInfo>();
     EXPECT_EQ(getChunkType(aggregated_chunk_info), ChunkType::AggregatedChunkInfo);
+
+    auto missing_values_chunk_info = std::make_shared<ChunkMissingValues>();
+    EXPECT_EQ(getChunkType(missing_values_chunk_info), ChunkType::ChunkMissingValues);
+
+    auto chunks_to_merge_info = std::make_shared<ChunksToMerge>();
+    EXPECT_EQ(getChunkType(chunks_to_merge_info), ChunkType::ChunksToMerge);
 
     auto totals_chunk_info = std::make_shared<ChunkInfoTotals>();
     EXPECT_EQ(getChunkType(totals_chunk_info), ChunkType::Totals);
