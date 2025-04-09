@@ -24,7 +24,7 @@ void BrpcProxy::clearStreamStatus(StreamId stream_id)
     if (it != stream_status.end())
         stream_status.erase(it);
     else
-        LOG_WARNING(log, "Cant find {} status", stream_id);
+        LOG_WARNING(log, "Cant find stream {} status", stream_id);
 }
 
 int32_t BrpcProxy::getStreamStatus(StreamId stream_id)
@@ -37,7 +37,7 @@ int32_t BrpcProxy::getStreamStatus(StreamId stream_id)
     }
     else
     {
-        LOG_WARNING(log, "Cant find {} status", stream_id);
+        LOG_WARNING(log, "Cant find stream {} status", stream_id);
         return 0;
     }
 }
@@ -87,8 +87,8 @@ int BrpcProxy::StreamFinish(StreamId stream_id, int32_t &actual_fin_code, int32_
     }
     if (!setStreamStatus(stream_id, expected_fin_code)) 
     {
-      actual_fin_code = getStreamStatus(stream_id);
-      return -1;
+        actual_fin_code = getStreamStatus(stream_id);
+        return -1;
     }
     if (finish_remote_stream && !ptr->Failed()) {
         // TODO: Write expected_fin_code to stream

@@ -37,7 +37,7 @@ BroadcastSenderProxyPtr BroadcastSenderProxyRegistry::getOrCreate(ExchangeDataKe
             return channel_ptr;
     }
 
-    LOG_TRACE(log, "Register sender proxy with key {}", *data_key);
+    LOG_TRACE(log, "Register sender exchange with key {}", *data_key);
     auto channel_ptr = std::shared_ptr<BroadcastSenderProxy>(new BroadcastSenderProxy(std::move(data_key), std::move(options)));
     proxies.emplace(*channel_ptr->getDataKey(), BroadcastSenderProxyEntry(channel_ptr));
     return channel_ptr;
@@ -46,8 +46,14 @@ BroadcastSenderProxyPtr BroadcastSenderProxyRegistry::getOrCreate(ExchangeDataKe
 void BroadcastSenderProxyRegistry::remove(ExchangeDataKeyPtr data_key)
 {
     std::lock_guard lock(mutex);
-    auto result = proxies.erase(*data_key);
-    LOG_TRACE(log, "Remove proxy {} with result: {} ", *data_key, result);
+    auto it = proxies.find(*data_key);
+    if (it != proxies.end())
+    {
+        auto result = proxies.erase(*data_key);
+        LOG_TRACE(log, "Remove exchange {} with result {} ", *data_key, result);
+    }
+    else
+        LOG_WARNING(log, "Remove but can not find exchange {} ", *data_key);
 }
 
 size_t BroadcastSenderProxyRegistry::countProxies()

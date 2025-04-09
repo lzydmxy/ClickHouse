@@ -9,3 +9,4 @@
 ./build/src/unit_tests_dbms debug --gtest_filter="RepartitionTransformTest*"
 ./build/src/unit_tests_dbms debug --gtest_filter="ExchangeLocalBroadcastTest*"
 ./build/src/unit_tests_dbms debug --gtest_filter="ExchangeSinkTest*"
+./build/src/unit_tests_dbms trace --gtest_filter="ExchangeRemoteTest*"

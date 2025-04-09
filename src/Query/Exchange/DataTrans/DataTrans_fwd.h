@@ -72,3 +72,22 @@ struct BroadcastStatus
 };
 
 }
+
+template <>
+struct fmt::formatter<DB::BroadcastStatusCode>
+{
+    constexpr auto parse(format_parse_context & ctx)
+    {
+        const auto * it = ctx.begin();
+        const auto * end = ctx.end();
+        if (it != end && *it != '}')
+            throw format_error("Invalid format for struct BroadcastStatusCode");
+        return it;
+    }
+
+    template <typename FormatContext>
+    auto format(const DB::BroadcastStatusCode & code, FormatContext & ctx)
+    {
+        return format_to(ctx.out(), "{}", toString(code));
+    }
+};

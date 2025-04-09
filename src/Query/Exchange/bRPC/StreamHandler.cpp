@@ -18,7 +18,7 @@ int StreamHandler::on_received_messages([[maybe_unused]] brpc::StreamId stream_i
     BrpcRemoteBroadcastReceiverShardPtr receiver_ptr = receiver.lock();
     if (!receiver_ptr)
     {
-        LOG_WARNING(log, "on_received_messages receiver is expired.");
+        LOG_WARNING(log, "on_received_messages receiver is expired, stream {}", stream_id);
         return 0;
     }
     try
@@ -29,11 +29,8 @@ int StreamHandler::on_received_messages([[maybe_unused]] brpc::StreamId stream_i
             {
                 butil::IOBuf * msg = messages[index];
 #ifndef NDEBUG
-                LOG_TRACE(
-                    log,
-                    "on_received_messages: StreamId-{} received exchange data successfully, io-buffer size:{}",
-                    stream_id,
-                    msg->size());
+                LOG_TRACE(log, "on_received_messages stream {} received exchange data size {}",
+                    stream_id, msg->size());
 #endif
                 Chunk chunk;
                 if (optimizer_context->getSettingsRef().log_query_exchange)
@@ -72,12 +69,8 @@ int StreamHandler::on_received_messages([[maybe_unused]] brpc::StreamId stream_i
             }
             receiver_ptr->addToMetricsMaybe(0, s.elapsedMilliseconds(), 0, msg);
 #ifndef NDEBUG
-            LOG_TRACE(
-                log,
-                "on_received_messages: StreamId-{} received exchange data successfully, io-buffer size:{}, chunk rows:{}",
-                stream_id,
-                msg.size(),
-                chunk.getNumRows());
+            LOG_TRACE(log, "on_received_messages, stream {} received exchange data size {}, chunk rows {}",
+                stream_id, msg.size(), chunk.getNumRows());
 #endif
             receiver_ptr->pushReceiveQueue(MultiPathDataPacket(DataPacket{std::move(chunk)}));
         }
@@ -89,11 +82,11 @@ int StreamHandler::on_received_messages([[maybe_unused]] brpc::StreamId stream_i
             String exception_str = getCurrentExceptionMessage(true);
             auto current_status = receiver_ptr->finish(BroadcastStatusCode::RECV_TIMEOUT, exception_str);
             if (current_status.is_modified_by_operator)
-                LOG_ERROR(log, "on_received_messages:pushReceiveQueue exception happen-{}", exception_str);
+                LOG_WARNING(log, "on_received_messages pushReceiveQueue exception: {}", exception_str);
         }
         catch (...)
         {
-            LOG_WARNING(log, "on_received_messages finish receiver exception happen-{}", getCurrentExceptionMessage(true));
+            LOG_WARNING(log, "on_received_messages finish receiver exception: {}", getCurrentExceptionMessage(true));
         }
     }
     return 0;
@@ -103,11 +96,11 @@ void StreamHandler::on_idle_timeout(brpc::StreamId id)
 {
     try
     {
-        LOG_WARNING(log, "StreamId-{} idle timeout.", id);
+        LOG_WARNING(log, "on_idle_timeout stream {}", id);
     }
     catch (...)
     {
-        LOG_WARNING(log, "on_received_messages:on_idle_timeout exception happen-{}", getCurrentExceptionMessage(true));
+        LOG_WARNING(log, "on_idle_timeout stream {} exception: {}", id, getCurrentExceptionMessage(true));
     }
 }
 
@@ -118,15 +111,14 @@ void StreamHandler::on_closed(brpc::StreamId stream_id)
         BrpcRemoteBroadcastReceiverShardPtr receiver_ptr = receiver.lock();
         if (!receiver_ptr)
         {
-            LOG_WARNING(log, "on_closed receiver is expired.");
+            LOG_WARNING(log, "on_closed receiver is expired, stream {}", stream_id);
         }
         else
         {
-            LOG_DEBUG(log, "Close StreamId: {} , datakey: {} ", stream_id, receiver_ptr->getName());
+            LOG_DEBUG(log, "on_closed stream {}, receiver {}", stream_id, receiver_ptr->getName());
             auto status = receiver_ptr->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "Try close receiver grafully");
             if (status.is_modified_by_operator && status.code == BroadcastStatusCode::ALL_SENDERS_DONE)
             {
-                LOG_DEBUG(log, "{} will close gracefully ", receiver_ptr->getName());
                 // Push an empty as finish to close receiver gracefully
                 receiver_ptr->pushReceiveQueue(MultiPathDataPacket(receiver_ptr->getName()));
             }
@@ -134,7 +126,7 @@ void StreamHandler::on_closed(brpc::StreamId stream_id)
     }
     catch (...)
     {
-        LOG_WARNING(log, "on_closed exception happen-{}", getCurrentExceptionMessage(true));
+        LOG_WARNING(log, "on_closed exception: {}", getCurrentExceptionMessage(true));
     }
 }
 
@@ -145,12 +137,12 @@ void StreamHandler::on_failed(brpc::StreamId id, int32_t error_code, const std::
         BrpcRemoteBroadcastReceiverShardPtr receiver_ptr = receiver.lock();
         if (!receiver_ptr)
         {
-            LOG_WARNING(log, "on_finished receiver is expired.");
+            LOG_WARNING(log, "on_failed stream {}, receiver is expired.", id);
         }
         else
         {
             ///Only care about finish status which need close receiver immediately
-            LOG_INFO(log, "on_finished: StreamId-{}, data-key {}, finish code:{}", id, receiver_ptr->getName(), error_code);
+            LOG_INFO(log, "on_failed stream {}, receiver {}, code {}", id, receiver_ptr->getName(), error_code);
             if (error_code > 0)
                 receiver_ptr->finish(static_cast<BroadcastStatusCode>(error_code), "StreamHandler::on_finished called:" + error_text);
             else
@@ -159,7 +151,7 @@ void StreamHandler::on_failed(brpc::StreamId id, int32_t error_code, const std::
     }
     catch (...)
     {
-        LOG_WARNING(log, "on_finished exception happen-{}", getCurrentExceptionMessage(true));
+        LOG_WARNING(log, "on_failed stream {}, exception: {}", id, getCurrentExceptionMessage(true));
     }
 }
 

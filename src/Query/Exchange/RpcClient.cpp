@@ -42,7 +42,7 @@ void RpcClient::assertController(const brpc::Controller & cntl, int error_code)
             setOk(false);
         else if (err == EHOSTDOWN || err == ENETUNREACH || err == ENOTCONN)
             reportError();
-        throw Exception(error_code, "Fail to call {}, error code: {}, msg: {}", cntl.method()->full_name(), err, cntl.ErrorText());
+        throw Exception(error_code, "Fail to call {}, error code {}, msg: {}", cntl.method()->full_name(), err, cntl.ErrorText());
     }
     else
     {
@@ -55,7 +55,7 @@ void RpcClient::initChannel(brpc::Channel & channel_, const String host_port_, b
     if (0 != channel_.Init(host_port_.c_str(), options))
         throw Exception(ErrorCodes::BRPC_CANNOT_INIT_CHANNEL, "Failed to initialize RPC channel to {}", host_port_);
 
-    LOG_TRACE(log, "Create rpc channel listening on : {}", host_port_);
+    LOG_TRACE(log, "Create rpc channel listening on {}", host_port_);
 }
 
 }

@@ -17,7 +17,7 @@ class WriteBufferFromBrpc : public WriteBuffer
 public:
     WriteBufferFromBrpc() : WriteBuffer(nullptr, 0)
     {
-        createBufferBlock(initial_size);
+        resizeBufferBlock(initial_size);
     }
 
     ~WriteBufferFromBrpc() override { finish(); }
@@ -26,7 +26,7 @@ public:
     {
         if (is_finished)
             throw Exception(ErrorCodes::CANNOT_WRITE_AFTER_END_OF_BUFFER, "WriteBufferFromBrpc is finished");
-        createBufferBlock(buf.size());
+        resizeBufferBlock(buf.size() * size_multiplier);
     }
 
     void finish()
@@ -34,7 +34,6 @@ public:
         if (is_finished)
             return;
         is_finished = true;
-
         buf.resize(buf.size() - available());
         /// Prevent further writes.
         set(nullptr, 0);
@@ -48,23 +47,28 @@ public:
         return buf;
     }
 private:
-    void createBufferBlock(size_t size)
+    void resizeBufferBlock(size_t size)
     {
-        auto area = buf.reserve(size);
-        if(area != butil::IOBuf::INVALID_AREA)
-        {
+        auto prev_size = buf.size();
+        auto ret = buf.resize(size);
+        if(ret < 0)
             throw Exception(ErrorCodes::CANNOT_CREATE_IO_BUFFER, "Cannot resize butil::IOBuf to {}", initial_size);
-        }
         auto block_num = buf.backing_block_num();
         if(block_num != 1)
-        {
             throw Exception(ErrorCodes::CANNOT_CREATE_IO_BUFFER, "Invalid block number {} in butil::IOBuf", block_num);
-        }
         auto block_view = buf.backing_block(block_num - 1);
-        set(const_cast<Position>(block_view.data()), block_view.size());
+        set(const_cast<Position>(block_view.data() + offset()), block_view.size() - prev_size);
+#ifndef NDEBUG
+        // auto curr_size = buf.size();
+        // LOG_TRACE(getLogger("WriteBufferFromBrpc"), "WriteBufferFromBrpc initial_size {} multiplier {} block_num {}, resize {} to {} total {}, new block size {}",
+        //     initial_size, size_multiplier, block_num,
+        //     prev_size, size, curr_size, block_view.size() - prev_size);
+#endif
     }
     static constexpr size_t initial_size = 32;
+    static constexpr size_t size_multiplier = 2;
     butil::IOBuf buf;
     bool is_finished = false;
 };
+
 }
