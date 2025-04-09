@@ -2,6 +2,7 @@
 
 #include <Interpreters/Context.h>
 #include <Parsers/IAST_fwd.h>
+#include <Query/Planner/GraphvizPrinter.h>
 
 namespace DB
 {

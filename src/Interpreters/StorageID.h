@@ -143,3 +143,19 @@ namespace fmt
         }
     };
 }
+
+namespace std
+{
+
+    template <>
+    struct hash<DB::StorageID>
+    {
+        using argument_type = DB::StorageID;
+        using result_type = size_t;
+
+        result_type operator()(const argument_type & storage_id) const
+        {
+            return storage_id.getQualifiedName().hash();
+        }
+    };
+}

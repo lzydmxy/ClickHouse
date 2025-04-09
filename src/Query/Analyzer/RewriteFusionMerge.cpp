@@ -43,18 +43,18 @@ namespace
     Range convertToServeTimeRange(String str_server_time)
     {
         if (str_server_time.empty())
-            throw Exception(ErrorCodes::UNRECOGNIZED_ARGUMENTS, "Error when parse server time range: " + str_server_time);
+            throw Exception(ErrorCodes::UNRECOGNIZED_ARGUMENTS, "Error when parse server time range: {}", str_server_time);
 
         str_server_time.erase(std::remove(str_server_time.begin(), str_server_time.end(), ' '), str_server_time.end());
         size_t len = str_server_time.size();
         if (len < 2)
-            throw Exception(ErrorCodes::UNRECOGNIZED_ARGUMENTS, "Error when parse server time range: " + str_server_time);
+            throw Exception(ErrorCodes::UNRECOGNIZED_ARGUMENTS, "Error when parse server time range: {}", str_server_time);
 
         if (str_server_time[0] != '[' && str_server_time[0] != '(')
-            throw Exception(ErrorCodes::UNRECOGNIZED_ARGUMENTS, "Error when parse server time range: " + str_server_time);
+            throw Exception(ErrorCodes::UNRECOGNIZED_ARGUMENTS, "Error when parse server time range: {}", str_server_time);
 
         if (str_server_time[len - 1] != ']' && str_server_time[len - 1] != ')')
-            throw Exception(ErrorCodes::UNRECOGNIZED_ARGUMENTS, "Error when parse server time range: " + str_server_time);
+            throw Exception(ErrorCodes::UNRECOGNIZED_ARGUMENTS, "Error when parse server time range: {}", str_server_time);
 
         Range range = Range::createWholeUniverseWithoutNull();
         if (len == 2)
@@ -62,7 +62,7 @@ namespace
 
         size_t spliter_pos = str_server_time.find(',');
         if (spliter_pos == String::npos)
-            throw Exception(ErrorCodes::UNRECOGNIZED_ARGUMENTS, "Error when parse server time range: " + str_server_time);
+            throw Exception(ErrorCodes::UNRECOGNIZED_ARGUMENTS, "Error when parse server time range: {}", str_server_time);
 
         if (spliter_pos != 1)
         {

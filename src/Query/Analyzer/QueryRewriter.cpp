@@ -1,20 +1,19 @@
 #include <Query/Analyzer/QueryRewriter.h>
 
-#include <AggregateFunctions/AggregateFunctionFactory.h>
 #include <Query/Analyzer/analyze_common.h>
+#include <AggregateFunctions/AggregateFunctionFactory.h>
 #include <Query/Analyzer/ExecutePrewhereSubqueryVisitor.h>
 #include <Query/Analyzer/ImplementFunctionVisitor.h>
 #include <Query/Analyzer/ReplaceViewWithSubqueryVisitor.h>
 #include <Query/Analyzer/RewriteFusionMerge.h>
 #include <Query/Analyzer/SimpleFunctionVisitor.h>
-#include <Query/Planner/GraphvizPrinter.h>
 #include <Interpreters/ApplyWithAliasVisitor.h>
 #include <Interpreters/ApplyWithSubqueryVisitor.h>
 #include <Interpreters/CollectJoinOnKeysVisitor.h>
 #include <Interpreters/CrossToInnerJoinVisitor.h>
 #include <Interpreters/DatabaseAndTableWithAlias.h>
 #include <Interpreters/FunctionNameNormalizer.h>
-#include <Query/Interpreters/JoinToSubqueryTransformVisitorExt.h>
+#include <Interpreters/JoinToSubqueryTransformVisitor.h>
 #include <Interpreters/JoinedTables.h>
 #include <Interpreters/LogicalExpressionsOptimizer.h>
 #include <Interpreters/MarkTableIdentifiersVisitor.h>
@@ -253,37 +252,39 @@ namespace
         GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-normal-functions");
     }
 
-    void implementFunctions(ASTPtr & query, ContextMutablePtr context, int & graphviz_index)
-    {
-        ImplementFunction data{context};
-        ImplementFunctionVisitor(data).visit(query);
-        GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-implement-functions");
-    }
+    // todo: zhangwanyun1, open when support dialect_type
+    // void implementFunctions(ASTPtr & query, ContextMutablePtr context, int & graphviz_index)
+    // {
+    //     ImplementFunction data{context};
+    //     ImplementFunctionVisitor(data).visit(query);
+    //     GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-implement-functions");
+    // }
 
-    struct MarkTableIdentifiersRecursively
-    {
-        using TypeToVisit = ASTSelectQuery;
-
-        void visit(ASTSelectQuery &, ASTPtr & ast)
-        {
-            Aliases aliases;
-            /// Mark table ASTIdentifiers with not a column marker
-            MarkTableIdentifiersVisitor::Data identifiers_data{aliases};
-            MarkTableIdentifiersVisitor(identifiers_data).visit(ast);
-        }
-    };
-
-    using MarkTableIdentifiersRecursivelyMatcher = OneTypeMatcher<MarkTableIdentifiersRecursively>;
-    using MarkTableIdentifiersRecursivelyVisitor = InDepthNodeVisitor<MarkTableIdentifiersRecursivelyMatcher, true>;
+    // struct MarkTableIdentifiersRecursively
+    // {
+    //     using TypeToVisit = ASTSelectQuery;
+    //
+    //     void visit(ASTSelectQuery &, ASTPtr & ast)
+    //     {
+    //         Aliases aliases;
+    //         /// Mark table ASTIdentifiers with not a column marker
+    //         MarkTableIdentifiersVisitor::Data identifiers_data{aliases};
+    //         MarkTableIdentifiersVisitor(identifiers_data).visit(ast);
+    //     }
+    // };
+    //
+    // using MarkTableIdentifiersRecursivelyMatcher = OneTypeMatcher<MarkTableIdentifiersRecursively>;
+    // using MarkTableIdentifiersRecursivelyVisitor = InDepthNodeVisitor<MarkTableIdentifiersRecursivelyMatcher, true>;
 
     // mark 2-nd argument of IN predicate as ASTTableIdentifier
     // mark 1-st argument of joinGet/dictGet as ASTTableIdentifier
     // this logic is included `normalizeNameAndAliases` for CLICKHOUSE-semantic rewriting
-    void markTableIdentifiers(ASTPtr & query)
-    {
-        MarkTableIdentifiersRecursivelyVisitor::Data data;
-        MarkTableIdentifiersRecursivelyVisitor(data).visit(query);
-    }
+    // todo: zhangwanyun1, open when support dialect_type
+    // void markTableIdentifiers(ASTPtr & query)
+    // {
+    //     MarkTableIdentifiersRecursivelyVisitor::Data data;
+    //     MarkTableIdentifiersRecursivelyVisitor(data).visit(query);
+    // }
 
     struct ReplaceTable
     {
@@ -389,8 +390,8 @@ namespace
         cross_to_inner.cross_to_inner_join_rewrite = false;
         CrossToInnerJoinVisitor(cross_to_inner).visit(query);
 
-        JoinToSubqueryTransformVisitorExt::Data join_to_subs_data{tables, context->getOptimizerContext()->getSettingsRef().dialect_type, aliases};
-        JoinToSubqueryTransformVisitorExt(join_to_subs_data).visit(query);
+        JoinToSubqueryTransformVisitor::Data join_to_subs_data{tables, aliases};
+        JoinToSubqueryTransformVisitor(join_to_subs_data).visit(query);
     }
 
     struct SelectQueryRewriteContext
@@ -550,56 +551,40 @@ ASTPtr QueryRewriter::rewrite(ASTPtr query, ContextMutablePtr context, bool enab
     graphviz_index = GraphvizPrinter::PRINT_AST_INDEX;
     GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-init");
 
-    if (context->getOptimizerContext()->getSettingsRef().dialect_type != DialectType::CLICKHOUSE)
-    {
-        /// Statement rewriting
-        rewriteFusionMerge(query, context, graphviz_index);
-        expandCte(query, context, graphviz_index);
-        expandView(query, context, graphviz_index);
-        normalizeUnion(query, context); // queries in union may not be normalized, hence normalize them here
-        simpleFunctions(query, context);
+    // todo: zhangwanyun1, if support dialect_type, then add other codes
 
-        /// Expression rewriting
-        markTupleLiteralsAsLegacy(query, context);
-        markTableIdentifiers(query);
-        rewriteInTableExpression(query);
-        normalizeFunctions(query, context, graphviz_index);
-        implementFunctions(query, context, graphviz_index);
-    }
-    else
-    {
-        applyWithAlias(query, context, graphviz_index);
-        rewriteFusionMerge(query, context, graphviz_index);
-        expandCte(query, context, graphviz_index);
-        expandView(query, context, graphviz_index);
-        normalizeUnion(query, context);
-        simpleFunctions(query, context);
+    applyWithAlias(query, context, graphviz_index);
+    rewriteFusionMerge(query, context, graphviz_index);
+    expandCte(query, context, graphviz_index);
+    expandView(query, context, graphviz_index);
+    normalizeUnion(query, context);
+    simpleFunctions(query, context);
 
-        markTupleLiteralsAsLegacy(query, context);
+    markTupleLiteralsAsLegacy(query, context);
 
-        // select query level rewriter, top down rewrite each subquery.
-        std::function<void(ASTPtr &)> rewrite_query = [&](ASTPtr & ast) {
-            SelectQueryRewriteContext rewrite_context;
-            if (ast->as<ASTSelectQuery>())
-            {
-                rewriteSelectQuery(ast, rewrite_context, context, graphviz_index);
-                GraphvizPrinter::printAST(ast, context, toString(graphviz_index++) + "-AST");
-            }
+    // select query level rewriter, top down rewrite each subquery.
+    std::function<void(ASTPtr &)> rewrite_query = [&](ASTPtr & ast) {
+        SelectQueryRewriteContext rewrite_context;
+        if (ast->as<ASTSelectQuery>())
+        {
+            rewriteSelectQuery(ast, rewrite_context, context, graphviz_index);
+            GraphvizPrinter::printAST(ast, context, toString(graphviz_index++) + "-AST");
+        }
 
-            // top down rewrite
-            for (ASTPtr item : ast->children)
-                rewrite_query(item);
+        // top down rewrite
+        for (ASTPtr item : ast->children)
+            rewrite_query(item);
 
-            // do some bottom-up rewrite
-            if (ast->as<ASTSelectQuery>())
-            {
-                postRewriteSelectQuery(ast, rewrite_context, context, graphviz_index);
-                GraphvizPrinter::printAST(ast, context, toString(graphviz_index++) + "-AST-post");
-            }
-        };
+        // do some bottom-up rewrite
+        if (ast->as<ASTSelectQuery>())
+        {
+            postRewriteSelectQuery(ast, rewrite_context, context, graphviz_index);
+            GraphvizPrinter::printAST(ast, context, toString(graphviz_index++) + "-AST-post");
+        }
+    };
 
-        rewrite_query(query);
-    }
+    rewrite_query(query);
+
 
     // if (query->as<ASTExplainQuery>())
     // {

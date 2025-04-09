@@ -9,6 +9,7 @@
 #include <string>
 #include <filesystem>
 #include <iostream>
+#include <fstream>
 
 
 namespace DB
@@ -364,7 +365,7 @@ void GraphvizPrinter::appendPlanSegmentNode(std::stringstream & out, const PlanS
     out << "inputs:";
     for (const auto & input : segment_ptr->getPlanSegmentInputs())
     {
-        out << input->getExchangeId() << "mode(" << std::to_string(static_cast<int>(input->getExchangeMode())) << "): ";
+        out << input->getExchangeId() << "mode(" << toString(static_cast<int>(input->getExchangeMode())) << "): ";
         for (const auto & col : input->getHeader())
         {
             out << col.name << " ";
@@ -387,7 +388,7 @@ void GraphvizPrinter::appendPlanSegmentNode(std::stringstream & out, const PlanS
     out << "output:";
     for (const auto & input : segment_ptr->getPlanSegmentOutputs())
     {
-        out << input->getExchangeId() << "mode(" << std::to_string(static_cast<int>(input->getExchangeMode())) << "): ";
+        out << input->getExchangeId() << "mode(" << toString(static_cast<int>(input->getExchangeMode())) << "): ";
         for (const auto & col : input->getHeader())
         {
             out << col.name << " ";
@@ -446,6 +447,27 @@ String GraphvizPrinter::getColor(QueryPlanStepType step)
         return NODE_COLORS.at(step);
     auto step_id = static_cast<typename std::underlying_type<QueryPlanStepType>::type>(step);
     return fmt::format("\"#{:06x}\"", intHash64(step_id) & ((1U << 24) - 1));
+}
+
+void GraphvizPrinter::printAST(const ASTPtr & astPtr, ContextMutablePtr & context, const String & visitor)
+{
+    if (context->getOptimizerContext()->getSettingsRef().print_graphviz
+        && context->getOptimizerContext()->getSettingsRef().print_graphviz_ast)
+    {
+        auto const graphviz = GraphvizPrinter::printAST(astPtr);
+
+        std::stringstream path;
+        path << context->getOptimizerContext()->getSettingsRef().graphviz_path.toString();
+        path << visitor << "-" << context->getInitialQueryId() << ".dot";
+        std::ofstream out(path.str());
+        out << graphviz;
+        out.close();
+
+        // todo: zhangwanyun1, need addGraphviz from QueryStatus
+        // QueryStatusPtr process_list_elem = context->getProcessListElement();
+        // if (process_list_elem)
+        //     process_list_elem->addGraphviz(visitor, graphviz);
+    }
 }
 
 }

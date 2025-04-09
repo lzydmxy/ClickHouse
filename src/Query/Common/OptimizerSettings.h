@@ -42,15 +42,6 @@ enum class CTEMode
 
 DECLARE_SETTING_ENUM(CTEMode)
 
-enum class DialectType {
-    CLICKHOUSE,
-    ANSI,
-    MYSQL,
-};
-
-DECLARE_SETTING_ENUM(DialectType)
-
-
 constexpr UInt64 RUNTIME_FILTER_BLOOM_BUILD_THRESHOLD = 2048000; // Default threshold of right table to build bloom filter
 constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold of right table to build value set filter
 
@@ -75,10 +66,12 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(Bool, exchange_enable_force_remote_mode, false, "Force exchange data transfer through network", 0) \
     M(Bool, exchange_force_use_buffer, false, "Force exchange use buffer as possible", 0) \
     M(Bool, enable_prune_source_plan_segment, false, "Whether prune source plan segment", 0) \
-    M(DialectType, dialect_type, DialectType::CLICKHOUSE, "Dialect type, e.g. CLICKHOUSE, ANSI, MYSQL", 0) \
     M(Bool, adaptive_type_cast, true, "Performs type cast operations adaptively, according to the value", 0) \
     M(Bool, parse_literal_as_decimal, false, "Parse numeric literal as decimal instead of float", 0) \
     M(Int64, final_order_by_all_direction, 0, "Sorting the most 'end' result for select query, default 0 means no sorting, > 1 for ASC, < -1 for DESC", 0) \
+    M(Bool, print_graphviz, false, "Whether print graphviz", 0) \
+    M(String, graphviz_path, "/tmp/plan/", "The path of graphviz plan", 0) \
+    M(Bool, print_graphviz_ast, false, "Whether print graphviz", 0) \
     /** Exchange settings */ \
     M(UInt64, exchange_timeout_ms, 1000000, "Exchange request timeout ms",0) \
     M(UInt64, exchange_queue_bytes, 209715200, "Queue size(bytes) for exchange queue, 0 means disable", 0) \

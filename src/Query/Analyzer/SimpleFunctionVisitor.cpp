@@ -3,7 +3,6 @@
 #include <Parsers/ASTLiteral.h>
 #include <DataTypes/DataTypeString.h>
 #include <Interpreters/convertFieldToType.h>
-#include "common/types.h"
 
 
 namespace DB

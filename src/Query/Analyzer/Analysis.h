@@ -26,21 +26,6 @@
 #include <vector>
 #include <unordered_map>
 
-namespace std
-{
-
-template <>
-struct hash<DB::StorageID>
-{
-    using argument_type = DB::StorageID;
-    using result_type = size_t;
-
-    result_type operator()(const argument_type & storage_id) const
-    {
-        return storage_id.getQualifiedName().hash();
-    }
-};
-}
 
 namespace DB
 {
@@ -462,14 +447,9 @@ struct Analysis
      * A difference with read_columns is, columns used in alias columns are not included.
      */
     std::unordered_map<StorageID, LinkedHashSet<String>> used_columns;
-    void addUsedColumn(const StorageID & storage_id, const String & column)
-    {
-        used_columns[storage_id].emplace(column);
-    }
-    const std::unordered_map<StorageID, LinkedHashSet<String>> & getUsedColumns() const
-    {
-        return used_columns;
-    }
+    void addUsedColumn(const StorageID & storage_id, const String & column);
+
+    const std::unordered_map<StorageID, LinkedHashSet<String>> & getUsedColumns() const;
 
     /// Which functions are used in query.
     std::set<String> used_functions;

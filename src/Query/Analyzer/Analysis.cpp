@@ -202,6 +202,16 @@ const std::set<size_t> & Analysis::getReadColumns(const IAST & table_ast)
     return read_columns[&table_ast];
 }
 
+void Analysis::addUsedColumn(const StorageID & storage_id, const String & column)
+{
+    used_columns[storage_id].emplace(column);
+}
+
+const std::unordered_map<StorageID, LinkedHashSet<String>> & Analysis::getUsedColumns() const
+{
+    return used_columns;
+}
+
 void Analysis::setLambdaArgumentReference(const ASTPtr & ast, const ResolvedField & resolved)
 {
     lambda_argument_references[ast] = resolved;

@@ -126,7 +126,8 @@ void ExecutePrewhereSubquery::rewriteSubqueryToScalarLiteral(ASTSubquery & subqu
         if (block.rows() > 1)
             throw Exception(
             ErrorCodes::INCORRECT_RESULT_OF_SCALAR_SUBQUERY,
-                "Scalar subquery expected 1 row, got " + std::to_string(block.rows()) + " rows");
+            "Scalar subquery expected 1 row, got {} rows",
+            std::to_string(block.rows()));
 
         Block rest;
         while (rest.rows() == 0 && executor.pull(rest))
