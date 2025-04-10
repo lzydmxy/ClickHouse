@@ -40,7 +40,14 @@ enum class CTEMode
     ENFORCED,
 };
 
+enum class DialectType {
+    CLICKHOUSE,
+    ANSI,
+    MYSQL,
+};
+
 DECLARE_SETTING_ENUM(CTEMode)
+DECLARE_SETTING_ENUM(DialectType)
 
 constexpr UInt64 RUNTIME_FILTER_BLOOM_BUILD_THRESHOLD = 2048000; // Default threshold of right table to build bloom filter
 constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold of right table to build value set filter
@@ -115,6 +122,8 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(Bool, convert_to_right_type_for_in_subquery, true, "For IN subquery, whether convert arguments to the right type", 0) \
     /** Optimizer relative settings, Plan build and RBO */ \
     M(Bool, enable_implicit_type_conversion, true, "Whether enable implicit type conversion for JOIN, Set operation, IN subquery", 0) \
+    M(Bool, enable_implicit_arg_type_convert, false, "Eable implicit type conversion for functions", 0) \
+    M(Bool, allow_extended_type_conversion, false, "When enabled, implicit type conversion is allowed for more input types(e.g. UInt64 & Ints, Decimal & Float, Float & Int64)", 0) \
     M(Bool, enable_subcolumn_optimization_through_union, true, "Whether enable sub column optimization through set operation.", 0) \
     M(Bool, optimize_json_function_to_subcolumn, false, "Whether to optimize json extract functions to subcolumn read", 0) \
     /** Optimizer relative settings, CBO, CTE, MagicSet, MV */ \
@@ -153,6 +162,9 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(LogExplainAnalyzeType, log_explain_analyze_type, LogExplainAnalyzeType::NONE, "Log explain analyze result. Type: NONE|QUERY_PIPELINE|AGGREGATED_QUERY_PIPELINE.", 0) \
     M(UInt64, max_plannode_count, 200, "The max plannode count", 0) \
     M(Bool, enable_plan_cache, false, "Whether enable plan cache", 0) \
+    M(DialectType, dialect_type, DialectType::CLICKHOUSE, "Dialect type, e.g. CLICKHOUSE, ANSI, MYSQL", 0) \
+    M(Bool, only_full_group_by, true, "If the ONLY_FULL_GROUP_BY is enabled (which it is by default), rejects queries for which the select list, HAVING condition, or ORDER BY list refer to nonaggregated columns that are neither named in the GROUP BY clause nor are functionally dependent on them.", 0) \
+    M(Bool, enable_final_sample, false, "Sample from result rows if it is true", 0) \
 
 #define MAKE_OPTIMIZER_OBSOLETE(M, TYPE, NAME, DEFAULT) \
     M(TYPE, NAME, DEFAULT, "Obsolete setting, does nothing.", BaseSettingsHelpers::Flags::OBSOLETE)

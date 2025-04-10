@@ -1161,7 +1161,7 @@ static std::pair<Field, std::optional<IntervalKind>> getWithFillStep(const ASTPt
                     "Illegal type {} of WITH FILL expression, must be numeric type", type->getName());
 }
 
-static FillColumnDescription getWithFillDescription(const ASTOrderByElement & order_by_elem, const ContextPtr & context)
+FillColumnDescription getWithFillDescription(const ASTOrderByElement & order_by_elem, const ContextPtr & context)
 {
     FillColumnDescription descr;
 

@@ -1,7 +1,7 @@
 #include <Query/Processors/QueryPlan/CTEInfo.h>
 #include <Query/Processors/QueryPlan/CTEVisitHelper.h>
 #include <Query/Processors/QueryPlan/PlanVisitor.h>
-#include <Query/Processors/QueryPlan/Void.h>
+#include <Query/Common/Void.h>
 #include <Common/Exception.h>
 #include <Query/Processors/QueryPlan/PlanNode.h>
 
@@ -25,7 +25,7 @@ public:
         return Void{};
     }
 
-    Void visitCTERefStepExtNode(CTERefStepExtNode & node, std::unordered_map<CTEId, UInt64> & reference_counts)
+    Void visitCTERefStepExtNode(CTERefStepExtNode & node, std::unordered_map<CTEId, UInt64> & reference_counts) override
     {
         const auto * cte_step = dynamic_cast<const CTERefStepExtNode *>(node.getStep().get());
         auto cte_id = cte_step->getId();

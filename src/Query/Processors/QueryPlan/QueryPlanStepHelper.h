@@ -18,6 +18,7 @@
 #include <Processors/QueryPlan/RollupStep.h>
 #include <Processors/QueryPlan/SortingStep.h>
 #include <Processors/QueryPlan/WindowStep.h>
+#include <Processors/QueryPlan/ReadNothingStep.h>
 
 #include <Query/Processors/QueryPlan/AnyStepExt.h>
 #include <Query/Processors/QueryPlan/ApplyStepExt.h>
@@ -46,11 +47,14 @@
 #include <Query/Processors/QueryPlan/TotalsHavingStepExt.h>
 #include <Query/Processors/QueryPlan/UnionStepExt.h>
 #include <Query/Processors/QueryPlan/ValuesStepExt.h>
+#include <Query/Processors/QueryPlan/LimitStepExt.h>
+#include <Query/Processors/QueryPlan/ReadStorageRowCountStepExt.h>
 
 namespace DB
 {
 class TableScanStepExt;
 
+// Use for Optimizer
 #define APPLY_QUERY_PLAN_STEP_TYPES(M) \
     M(AggregatingProjectionStep) \
     M(AggregatingStep) \
@@ -59,18 +63,13 @@ class TableScanStepExt;
     M(ArrayJoinStep) \
     M(AssignUniqueIdStepExt) \
     M(BufferStepExt) \
-    M(CreatingSetStep) \
-    M(CreatingSetsStep) \
-    M(CubeStep) \
     M(CTERefStepExt) \
     M(DistinctStepExt) \
     M(EnforceSingleRowStepExt) \
     M(ExchangeStepExt) \
     M(ExpandStepExt) \
     M(ExplainAnalyzeStepExt) \
-    M(ExpressionStep) \
     M(ExtremesStep) \
-    M(FilledJoinStep) \
     M(FillingStep) \
     M(FilterStepExt) \
     M(FinalSampleStepExt) \
@@ -78,27 +77,41 @@ class TableScanStepExt;
     M(IntersectOrExceptStep) \
     M(JoinStepExt) \
     M(LimitByStep) \
-    M(LimitStep) \
     M(LocalExchangeStepExt) \
     M(MarkDistinctStepExt) \
     M(MergingAggregatedStep) \
     M(MultiJoinStepExt) \
     M(OffsetStep) \
     M(PartitionTopNStepExt) \
-    M(PlanSegmentSourceStepExt) \
     M(ProjectionStepExt) \
-    M(ReadFromPreparedSource) \
-    M(ReadFromStorageStep) \
     M(RemoteExchangeSourceStepExt) \
-    M(RollupStep) \
-    M(SettingQuotaAndLimitsStepExt) \
+    M(ReadNothingStep) \
     M(SortingStep) \
     M(TableScanStepExt) \
     M(TopNFilteringStepExt) \
     M(TotalsHavingStepExt) \
     M(UnionStepExt) \
     M(ValuesStepExt) \
-    M(WindowStep)
+    M(WindowStep) \
+    M(LimitStepExt) \
+    M(ReadStorageRowCountStepExt) \
+
+// All Steps
+#define APPLY_ALL_QUERY_PLAN_STEP_TYPES(M) \
+    APPLY_QUERY_PLAN_STEP_TYPES(M) \
+    M(ReadFromMergeTree) \
+    M(ReadFromPreparedSource) \
+    M(CreatingSetStep) \
+    M(CreatingSetsStep) \
+    M(CubeStep) \
+    M(ExpressionStep) \
+    M(FilledJoinStep) \
+    M(PlanSegmentSourceStepExt) \
+    M(SettingQuotaAndLimitsStepExt) \
+    M(ReadFromStorageStep) \
+    M(RollupStep) \
+
+
 
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) ITEM,
 enum class QueryPlanStepType : UInt8
@@ -106,7 +119,7 @@ enum class QueryPlanStepType : UInt8
     Any = 0,
     // change this when order is changed to avoid conflicts
     StepBegin = 100,
-    APPLY_QUERY_PLAN_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE) UNDEFINED,
+    APPLY_ALL_QUERY_PLAN_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE) UNDEFINED,
 };
 #undef ENUM_QUERY_PLAN_STEP_TYPE
 
@@ -117,7 +130,7 @@ inline String toString(QueryPlanStepType type)
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) \
     case QueryPlanStepType::ITEM: \
         return #ITEM;
-        APPLY_QUERY_PLAN_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE)
+        APPLY_ALL_QUERY_PLAN_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE)
 #undef ENUM_QUERY_PLAN_STEP_TYPE
         default:
             return "UNDEFINED";
@@ -132,10 +145,24 @@ inline String toString(QueryPlanStepType type)
 
 inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStepPtr & query_plan_step)
 {
-    APPLY_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE)
+    APPLY_ALL_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE)
     return QueryPlanStepType::UNDEFINED;
 }
 #undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE
+
+#define CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF(type) \
+if (typeInfo == typeid(type)) \
+{ \
+return QueryPlanStepType::type; \
+}
+
+inline QueryPlanStepType getQueryPlanStepType(const IQueryPlanStep & query_plan_step)
+{
+    const std::type_info& typeInfo = typeid(query_plan_step);
+    APPLY_ALL_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF)
+    return QueryPlanStepType::UNDEFINED;
+}
+#undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF
 
 
 class QueryPlanStepHelper
@@ -327,7 +354,6 @@ public:
     M(PlanSegmentSourceStepExt) \
     M(ProjectionStepExt) \
     M(RemoteExchangeSourceStepExt) \
-    M(SettingQuotaAndLimitsStepExt) \
     M(TopNFilteringStepExt) \
     M(UnionStepExt) \
     M(ValuesStepExt)
@@ -338,6 +364,18 @@ public:
 
         return nullptr;
     }
+
+    static const Names & getLimitByStepColumns(const LimitByStep & limit) { return limit.columns; }
+    static size_t getLimitByStepGroupLength(const LimitByStep & limit) { return limit.group_length; }
+    static size_t getLimitByStepGroupOffset(const LimitByStep & limit) { return limit.group_offset; }
+
+    static size_t getOffsetStepOffset(const OffsetStep & offset) {return offset.offset;}
+
+    static const std::vector<WindowFunctionDescription> & getWindowStepFunctions(const WindowStep & window) {return window.window_functions;}
+    static bool getWindowStepStreamsFanOut(const WindowStep & window) {return window.streams_fan_out;}
+
+    static const ASTSelectIntersectExceptQuery::Operator & getIntersectOrExceptStepOperator(const IntersectOrExceptStep & intersect_or_except) {return intersect_or_except.current_operator;}
+    static size_t getIntersectOrExceptStepMaxThreads(const IntersectOrExceptStep & intersect_or_except) {return intersect_or_except.max_threads;}
 };
 
 }

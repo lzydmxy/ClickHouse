@@ -3,9 +3,7 @@
 #include <unordered_set>
 #include <Interpreters/Context.h>
 #include <Query/Common/OptimizerContext.h>
-#include <Query/Processors/QueryPlan/PlanVisitor.h>
 #include <Poco/ExpireLRUCache.h>
-#include <Common/HashTable/Hash.h>
 #include <Interpreters/StorageID.h>
 #include <Query/Processors/QueryPlan/QueryPlanExt.h>
 

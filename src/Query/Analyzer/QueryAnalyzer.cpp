@@ -1,6 +1,6 @@
 #include <Query/Analyzer/QueryAnalyzer.h>
 
-
+#include <Core/Joins.h>
 #include <Access/ContextAccess.h>
 #include <Access/ContextAccess.h>
 #include <DataTypes/DataTypeArray.h>
@@ -41,7 +41,7 @@
 #include <Query/Parsers/ASTFieldReferenceExt.h>
 #include <Query/Parsers/ASTSelectQueryExt.h>
 #include <Query/Parsers/ASTVisitor.h>
-#include <Query/Processors/QueryPlan/Void.h>
+#include <Query/Common/Void.h>
 #include <Query/Storages/StorageHelper.h>
 #include <Storages/IStorage.h>
 #include <Storages/MergeTree/MergeTreeData.h>
@@ -1172,7 +1172,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeJoinOn(
 
                 using namespace ASOF;
 
-                auto add_join_exprs = [&](const ASTPtr & left_ast, const ASTPtr & right_ast, Inequality inequality) {
+                auto add_join_exprs = [&](const ASTPtr & left_ast, const ASTPtr & right_ast, ASOFJoinInequality inequality) {
                     DataTypePtr left_coercion = nullptr;
                     DataTypePtr right_coercion = nullptr;
 
@@ -1229,12 +1229,12 @@ ScopePtr QueryAnalyzerVisitor::analyzeJoinOn(
                     case table_deps(1, -1):
                     case table_deps(-1, 2):
                     case table_deps(-1, -1):
-                        add_join_exprs(left_arg, right_arg, getInequality(func->name));
+                        add_join_exprs(left_arg, right_arg, getASOFJoinInequality(func->name));
                         break;
                     case table_deps(2, 1):
                     case table_deps(2, -1):
                     case table_deps(-1, 1):
-                        add_join_exprs(right_arg, left_arg, reverseInequality(getInequality(func->name)));
+                        add_join_exprs(right_arg, left_arg, reverseASOFJoinInequality(getASOFJoinInequality(func->name)));
                         break;
                 }
             }
@@ -1551,7 +1551,7 @@ ASTs QueryAnalyzerVisitor::analyzeSelect(ASTSelectQueryExt & select_query, Scope
 void QueryAnalyzerVisitor::analyzeGroupBy(ASTSelectQueryExt & select_query, ASTs & select_expressions, ScopePtr source_scope)
 {
     std::vector<ASTPtr> grouping_expressions;
-    std::vector<std::vector<ASTPtr>> grouping_sets;
+    std::vector<ASTs> grouping_sets;
 
     // expand GROUP BY ALL
     if (select_query.group_by_all)
@@ -1563,7 +1563,7 @@ void QueryAnalyzerVisitor::analyzeGroupBy(ASTSelectQueryExt & select_query, ASTs
             && !select_query.group_by_with_cube && !select_query.group_by_with_grouping_sets;
 
         auto analyze_grouping_set = [&](ASTs & grouping_expr_list) {
-            std::vector<ASTPtr> analyzed_grouping_set;
+            ASTs analyzed_grouping_set;
 
             for (ASTPtr grouping_expr : grouping_expr_list)
             {
@@ -1619,6 +1619,7 @@ void QueryAnalyzerVisitor::analyzeGroupBy(ASTSelectQueryExt & select_query, ASTs
             }
         }
     }
+
 
     analysis.group_by_results[&select_query] = GroupByAnalysis{std::move(grouping_expressions), std::move(grouping_sets)};
 }

@@ -24,10 +24,7 @@ struct SymbolVisitorContext
     std::unordered_map<std::string, UInt64> exclude_symbols;
 };
 
-
-class Void
-{
-};
+class Void;
 
 class SymbolVisitor : public ConstASTVisitor<Void, SymbolVisitorContext>
 {

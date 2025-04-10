@@ -79,14 +79,14 @@ struct JoinInequalityCondition
 {
     ASTPtr left_ast;
     ASTPtr right_ast;
-    ASOF::Inequality inequality;
+    ASOFJoinInequality inequality;
     DataTypePtr left_coercion;
     DataTypePtr right_coercion;
 
     JoinInequalityCondition(
         ASTPtr left_ast_,
         ASTPtr right_ast_,
-        ASOF::Inequality inequality_,
+        ASOFJoinInequality inequality_,
         DataTypePtr left_coercion_,
         DataTypePtr right_coercion_)
         : left_ast(std::move(left_ast_)),
@@ -111,7 +111,7 @@ struct JoinOnAnalysis
     std::vector<JoinInequalityCondition> inequality_conditions;
     std::vector<ASTPtr> complex_expressions;
 
-    ASOF::Inequality getAsofInequality()
+    ASOFJoinInequality getAsofInequality()
     {
         return inequality_conditions.front().inequality;
     }
@@ -131,7 +131,7 @@ struct JoinOnAnalysis
 struct GroupByAnalysis
 {
     std::vector<ASTPtr> grouping_expressions;
-    std::vector<std::vector<ASTPtr>> grouping_sets;
+    std::vector<ASTs> grouping_sets;
 };
 
 struct AggregateAnalysis

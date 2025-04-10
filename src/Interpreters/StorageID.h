@@ -146,16 +146,15 @@ namespace fmt
 
 namespace std
 {
+template <>
+struct hash<DB::StorageID>
+{
+    using argument_type = DB::StorageID;
+    using result_type = size_t;
 
-    template <>
-    struct hash<DB::StorageID>
+    result_type operator()(const argument_type & storage_id) const
     {
-        using argument_type = DB::StorageID;
-        using result_type = size_t;
-
-        result_type operator()(const argument_type & storage_id) const
-        {
-            return storage_id.getQualifiedName().hash();
-        }
-    };
+        return storage_id.getQualifiedName().hash();
+    }
+};
 }

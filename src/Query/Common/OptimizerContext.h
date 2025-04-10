@@ -143,6 +143,7 @@ public:
     void setPlanCacheManager(std::unique_ptr<PlanCacheManager> && manager);
     void initOptimizerProfile() { optimizer_profile = std::make_unique<OptimizerProfile>(); }
     PlanCacheManager* getPlanCacheManager();
+    const SymbolAllocatorPtr & getSymbolAllocator() { return symbol_allocator; }
 
 private:
     OptimizerSettings optimizer_settings;

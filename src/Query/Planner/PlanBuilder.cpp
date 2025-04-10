@@ -1,0 +1,159 @@
+#include <Query/Planner/PlanBuilder.h>
+#include <Query/Planner/PlannerCommon.h>
+#include <Query/Processors/QueryPlan/ProjectionStepExt.h>
+
+
+namespace DB
+{
+void PlanBuilder::addStep(QueryPlanStepPtr step, PlanNodes children)
+{
+    plan = plan->addStep(id_allocator->nextId(), std::move(step), std::move(children));
+}
+
+Names PlanBuilder::translateToSymbols(ASTs & expressions) const
+{
+    Names symbols;
+    symbols.reserve(expressions.size());
+    for (auto & expr : expressions)
+        symbols.push_back(translateToSymbol(expr));
+    return symbols;
+}
+
+Names PlanBuilder::translateToUniqueSymbols(ASTs & expressions) const
+{
+    Names symbols;
+    NameSet exists;
+    for (auto & expr : expressions)
+    {
+        auto symbol = translateToSymbol(expr);
+        if (exists.emplace(symbol).second)
+            symbols.push_back(symbol);
+    }
+    return symbols;
+}
+
+Names PlanBuilder::applyArrayJoinProjection(const ArrayJoinDescriptions & array_join_descs)
+{
+    Names output_symbols;
+    Assignments assignments;
+    NameToType types;
+    putIdentities(getOutputNamesAndTypes(), assignments, types);
+
+    for (const auto & desc : array_join_descs)
+    {
+        ASTPtr expression;
+        String symbol;
+        DataTypePtr type;
+
+        if (std::holds_alternative<size_t>(desc.source))
+        {
+            size_t source_field_index = std::get<size_t>(desc.source);
+            String field_symbol = getFieldSymbol(source_field_index);
+            expression = toSymbolRef(field_symbol);
+            symbol = symbol_allocator->newSymbol(field_symbol);
+            type = translation->scope->at(source_field_index).type;
+        }
+        else
+        {
+            ASTPtr source_ast = std::get<ASTPtr>(desc.source);
+            expression = translate(source_ast);
+            symbol = symbol_allocator->newSymbol(source_ast);
+            type = analysis.getExpressionType(source_ast);
+        }
+
+        assignments.emplace_back(symbol, std::move(expression));
+        types[symbol] = type;
+        output_symbols.push_back(symbol);
+    }
+
+    auto project = std::make_shared<ProjectionStepExt>(getCurrentDataStream(), assignments, types);
+    addStep(std::move(project));
+    return output_symbols;
+}
+
+template <typename T>
+void PlanBuilder::appendProjection(const T & expressions)
+{
+    if constexpr (std::is_same_v<T, ASTPtr>)
+    {
+        appendProjection(ASTs{expressions});
+        return;
+    }
+    else
+    {
+        Assignments assignments;
+        NameToType types;
+        putIdentities(getOutputNamesAndTypes(), assignments, types);
+        bool has_new_projection = false;
+        AstToSymbol expression_to_symbols = createScopeAwaredASTMap<String>(analysis, translation->scope);
+
+        for (auto & expr : expressions)
+        {
+            if (expression_to_symbols.find(expr) == expression_to_symbols.end() && !canTranslateToSymbol(expr))
+            {
+                String symbol = symbol_allocator->newSymbol(expr);
+                assignments.emplace_back(symbol, translate(expr));
+                types[symbol] = analysis.getExpressionType(expr);
+                expression_to_symbols[expr] = symbol;
+                has_new_projection = true;
+            }
+        }
+
+        if (has_new_projection)
+        {
+            auto project = std::make_shared<ProjectionStepExt>(getCurrentDataStream(), assignments, types);
+            addStep(std::move(project));
+            withAdditionalMappings(expression_to_symbols);
+        }
+        return;
+    }
+    __builtin_unreachable();
+}
+
+Names PlanBuilder::projectExpressionsWithCoercion(const ExpressionsAndTypes & expression_and_types)
+{
+    Assignments assignments;
+    NameToType output_types;
+    Names output_symbols;
+    bool do_project = false;
+
+    putIdentities(getCurrentDataStream().header, assignments, output_types);
+
+    for (const auto & [expr, cast_type]: expression_and_types)
+    {
+        auto rewritten_expr = translation->translate(expr);
+
+        // if an expression has been translated and no type coercion happens, just skip it
+        if (!cast_type && rewritten_expr->as<ASTIdentifier>())
+        {
+            output_symbols.push_back(rewritten_expr->as<ASTIdentifier>()->name());
+            continue;
+        }
+
+        if (cast_type)
+        {
+            // todo lizhuoyu5, need Optimizer/makeCastFunction.h
+            // rewritten_expr = makeCastFunction(rewritten_expr, cast_type);
+        }
+
+        auto output_symbol = symbol_allocator->newSymbol(rewritten_expr);
+
+        assignments.emplace_back(output_symbol, rewritten_expr);
+        output_types[output_symbol] = cast_type ? cast_type : analysis.getExpressionType(expr);
+        output_symbols.push_back(output_symbol);
+        do_project = true;
+    }
+
+    if (do_project)
+    {
+        auto casting_step = std::make_shared<ProjectionStepExt>(getCurrentDataStream(), assignments, output_types);
+        addStep(std::move(casting_step));
+    }
+
+    return output_symbols;
+}
+
+template void PlanBuilder::appendProjection(const ASTPtr & expressions);
+template void PlanBuilder::appendProjection(const ASTs & expressions);
+template void PlanBuilder::appendProjection(const std::vector<ASTPtr> & expressions);
+}

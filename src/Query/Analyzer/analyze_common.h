@@ -17,11 +17,11 @@ namespace DB
     bool isCrossJoin(const ASTTableJoin & join);
     bool isSemiOrAntiJoin(const ASTTableJoin & join);
     bool isAsofJoin(const ASTTableJoin & join);
-    String getFunctionForInequality(ASOF::Inequality inequality);
+    String getFunctionForInequality(ASOFJoinInequality inequality);
 
     /// expressions
     std::vector<ASTPtr> expressionToCnf(const ASTPtr & node);
-    ASTPtr cnfToExpression(const std::vector<ASTPtr> & cnf);
+    ASTPtr cnfToExpression(const ASTs & cnf);
 
     std::vector<ASTPtr> extractExpressions(ContextPtr context, Analysis & analysis, ASTPtr root, bool include_subquery = false,
         const std::function<bool(const ASTPtr &)> & filter = [](const auto &) {return true;});

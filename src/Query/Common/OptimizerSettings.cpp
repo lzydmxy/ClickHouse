@@ -36,6 +36,11 @@ IMPLEMENT_SETTING_ENUM(CTEMode, ErrorCodes::BAD_ARGUMENTS,
      {"AUTO", CTEMode::AUTO},
      {"ENFORCED", CTEMode::ENFORCED}})
 
+IMPLEMENT_SETTING_ENUM(DialectType, ErrorCodes::BAD_ARGUMENTS,
+    {{"CLICKHOUSE", DialectType::CLICKHOUSE},
+     {"ANSI",       DialectType::ANSI},
+     {"MYSQL",      DialectType::MYSQL}})
+
 void OptimizerSettings::loadFromConfig(const String & config_elem, const Poco::Util::AbstractConfiguration & config)
 {
     if (!config.has(config_elem))

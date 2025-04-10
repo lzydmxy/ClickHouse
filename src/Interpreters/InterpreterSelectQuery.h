@@ -40,6 +40,8 @@ using TreeRewriterResultPtr = std::shared_ptr<const TreeRewriterResult>;
 struct RowPolicy;
 using RowPolicyPtr = std::shared_ptr<const RowPolicy>;
 
+class ASTOrderByElement;
+FillColumnDescription getWithFillDescription(const ASTOrderByElement & order_by_elem, const ContextPtr & context);
 
 /** Interprets the SELECT query. Returns the stream of blocks with the results of the query before `to_stage` stage.
   */

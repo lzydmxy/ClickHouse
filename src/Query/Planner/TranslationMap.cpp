@@ -1,0 +1,296 @@
+#include <Query/Planner/TranslationMap.h>
+
+#include <Query/Analyzer/function_utils.h>
+#include <Interpreters/misc.h>
+#include <Parsers/ASTFunction.h>
+#include <Parsers/ASTIdentifier.h>
+#include <Parsers/ASTLiteral.h>
+#include <Query/Parsers/ASTVisitor.h>
+#include <Query/Planner/PlannerCommon.h>
+#include <Query/Common/Void.h>
+
+
+namespace DB
+{
+
+TranslationMap::TranslationMap(
+    TranslationMapPtr outer_context_, ScopePtr scope_, FieldSymbolInfos field_symbol_infos_, Analysis & analysis_, ContextPtr context_)
+    : analysis(analysis_)
+    , context(std::move(context_))
+    , outer_context(std::move(outer_context_))
+    , scope(scope_)
+    , field_symbol_infos(std::move(field_symbol_infos_))
+    , expression_symbols(createScopeAwaredASTMap<String>(analysis, scope))
+{
+    checkSymbols();
+}
+
+TranslationMap & TranslationMap::withScope(ScopePtr scope_, FieldSymbolInfos field_symbol_infos_, bool remove_mappings)
+{
+    scope = scope_;
+    field_symbol_infos = std::move(field_symbol_infos_);
+
+    checkSymbols();
+
+    if (remove_mappings)
+        expression_symbols.clear();
+
+    auto new_expression_symbols = createScopeAwaredASTMapVariadic<String>(
+        analysis, scope, expression_symbols.begin(), expression_symbols.end(), expression_symbols.bucket_count());
+    new_expression_symbols.swap(expression_symbols);
+
+    return *this;
+}
+
+TranslationMap & TranslationMap::withNewMappings(const FieldSymbolInfos & field_symbol_infos_, const AstToSymbol & expression_symbols_)
+{
+    field_symbol_infos = field_symbol_infos_;
+    expression_symbols = expression_symbols_;
+
+    checkSymbols();
+
+    return *this;
+}
+
+void TranslationMap::checkSymbols() const
+{
+    if (scope->getHierarchySize() != field_symbol_infos.size())
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "TranslationMap Error: incorrect symbol size.");
+}
+
+void TranslationMap::checkFieldIndex(size_t field_index) const
+{
+    if (field_index >= field_symbol_infos.size())
+        throw Exception(ErrorCodes::LOGICAL_ERROR,"Field index is out of range.");
+}
+
+const FieldSymbolInfo & TranslationMap::getGlobalFieldSymbolInfo(const ResolvedField & resolved_field) const
+{
+    if (scope->isLocalScope(resolved_field.scope))
+        return getFieldSymbolInfo(resolved_field.hierarchy_index);
+    else if (outer_context)
+        return outer_context->getGlobalFieldSymbolInfo(resolved_field);
+    else
+        throw Exception(ErrorCodes::LOGICAL_ERROR,"Can not get global field symbol info");
+}
+
+const FieldSymbolInfo & TranslationMap::getFieldSymbolInfo(size_t field_index) const
+{
+    checkFieldIndex(field_index);
+    return field_symbol_infos.at(field_index);
+}
+
+String TranslationMap::getFieldSymbol(size_t field_index) const
+{
+    checkFieldIndex(field_index);
+    return field_symbol_infos.at(field_index).getPrimarySymbol();
+}
+
+// TODO: support type coercion
+class TranslationMapVisitor : public ASTVisitor<ASTPtr, const Void>
+{
+public:
+    ASTPtr visitASTLiteral(ASTPtr & node, const Void &) override;
+    ASTPtr visitASTIdentifier(ASTPtr & node, const Void &) override;
+    ASTPtr visitASTFunction(ASTPtr & node, const Void &) override;
+    ASTPtr visitASTSubquery(ASTPtr & node, const Void &) override;
+
+    TranslationMapVisitor(Analysis & analysis_, const TranslationMap & translation_map_)
+        : analysis(analysis_),
+        translation_map(translation_map_),
+        use_legacy_column_name_of_tuple(translation_map.context->getSettingsRef().legacy_column_name_of_tuple_literal)
+    {}
+
+    ASTPtr process(ASTPtr & node) { return ASTVisitorUtil::accept(node, *this, {}); }
+
+    ASTs process(ASTs & nodes)
+    {
+        ASTs result;
+
+        for (auto & node: nodes)
+        {
+            result.push_back(process(node));
+        }
+
+        return result;
+    }
+
+private:
+    Analysis & analysis;
+    const TranslationMap & translation_map;
+    const bool use_legacy_column_name_of_tuple;
+    int is_in_value_list = 0;
+
+    template<typename F>
+    ASTPtr preferToUseMapped(ASTPtr & node, F && translate_func)
+    {
+        const auto & expression_symbols = translation_map.expression_symbols;
+
+        // don't translate expressions in IN value list, as it does not support variables yet.
+        if (expression_symbols.find(node) != expression_symbols.end() && !is_in_value_list)
+            return toSymbolRef(expression_symbols.at(node));
+
+        return translate_func(node);
+    }
+
+    ASTPtr handleColumnReference(const ResolvedField & column_reference, const ASTPtr & node);
+    ASTPtr tryHandleSubColumnReference(const SubColumnReference & sub_column_reference, const ASTPtr & node);
+};
+
+ASTPtr TranslationMap::translate(ASTPtr expression) const
+{
+    TranslationMapVisitor visitor {analysis, *this};
+    return visitor.process(expression);
+}
+
+String TranslationMap::translateToSymbol(const ASTPtr & expression) const
+{
+    if (canTranslateToSymbol(expression))
+    {
+        auto translated = translate(expression);
+
+        if (auto * iden = translated->as<ASTIdentifier>())
+            return iden->name();
+
+        // since literals won't be translated
+        if (auto it = expression_symbols.find(expression); it != expression_symbols.end())
+            return it->second;
+    }
+
+    throw Exception(ErrorCodes::LOGICAL_ERROR, "Expression {} can not be translated to symbol", expression->getColumnName());
+}
+
+bool TranslationMap::canTranslateToSymbol(const ASTPtr & expression) const
+{
+    if (expression_symbols.find(expression) != expression_symbols.end())
+        return true;
+
+    if (auto column_ref = analysis.tryGetColumnReference(expression))
+        return scope->isLocalScope(column_ref->scope) || (outer_context && outer_context->canTranslateToSymbol(expression));
+
+    if (auto sub_column_ref = analysis.tryGetSubColumnReference(expression))
+    {
+        if (scope->isLocalScope(sub_column_ref->getScope()))
+        {
+            auto field_index = sub_column_ref->getFieldHierarchyIndex();
+            auto sub_column_id = sub_column_ref->getColumnID();
+            return getFieldSymbolInfo(field_index).tryGetSubColumnSymbol(sub_column_id).has_value();
+        }
+        else
+        {
+            return outer_context && outer_context->canTranslateToSymbol(expression);
+        }
+    }
+
+    return false;
+}
+
+ASTPtr TranslationMapVisitor::visitASTLiteral(ASTPtr & node, const Void &)
+{
+    // don't translate literals into calculated expressions, a counter example is: SELECT round(100, 0) GROUP BY 0
+    // translating round(100, 0) to round(100, expr#0) will cause exception: Argument at index 1 for function round must be constant
+    auto & field = node->as<ASTLiteral &>().value;
+    auto rewritten_lit = std::make_shared<ASTLiteral>(field);
+
+    if (use_legacy_column_name_of_tuple && field.getType() == Field::Types::Tuple)
+        rewritten_lit->use_legacy_column_name_of_tuple = true;
+
+    return rewritten_lit;
+}
+
+ASTPtr TranslationMapVisitor::visitASTIdentifier(ASTPtr & node, const Void &)
+{
+    return preferToUseMapped(node, [&](ASTPtr & iden) -> ASTPtr {
+        if (auto column_refer = analysis.tryGetColumnReference(iden))
+            return handleColumnReference(*column_refer, iden);
+
+        // lambda argument reference
+        return std::make_shared<ASTIdentifier>(iden->as<ASTIdentifier &>().name());
+    });
+}
+
+ASTPtr TranslationMapVisitor::visitASTSubquery(ASTPtr & node, const Void &)
+{
+    return preferToUseMapped(node, [](auto &) -> ASTPtr {
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Subqueries should be planned to symbols before translating");
+    });
+}
+
+ASTPtr TranslationMapVisitor::visitASTFunction(ASTPtr & node, const Void &)
+{
+    return preferToUseMapped(node, [&](ASTPtr & func) -> ASTPtr {
+        if (auto sub_col_ref = analysis.tryGetSubColumnReference(node))
+        {
+            if (auto rewritten_sub_col = tryHandleSubColumnReference(*sub_col_ref, node))
+            {
+                return rewritten_sub_col;
+            }
+        }
+
+        auto & function = func->as<ASTFunction &>();
+        auto & function_args = function.arguments->children;
+
+        auto function_type = getFunctionType(function, translation_map.context);
+
+        if (function_type == FunctionType::FUNCTION)
+        {
+            ASTs translated_args;
+            size_t num_arguments = function_args.size();
+
+            for (size_t arg_idx = 0; arg_idx < num_arguments; ++arg_idx)
+            {
+                auto & arg = function_args.at(arg_idx);
+
+                if (functionIsInOperator(function.name) && arg_idx == 1)
+                {
+                    ++is_in_value_list;
+                    translated_args.push_back(process(arg));
+                    --is_in_value_list;
+                }
+                else
+                    translated_args.push_back(process(arg));
+            }
+            return makeASTFunction(function.name, std::move(translated_args));
+        }
+        else if (function_type == FunctionType::LAMBDA_EXPRESSION)
+        {
+            return makeASTFunction("lambda", function_args.at(0), process(function_args.at(1)));
+        }
+
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Ast should be planned to symbols before translating");
+    });
+}
+
+ASTPtr TranslationMapVisitor::handleColumnReference(const ResolvedField & column_reference, const ASTPtr & node)
+{
+    if (translation_map.scope->isLocalScope(column_reference.scope))
+    {
+        auto field_symbol = translation_map.getFieldSymbol(column_reference.hierarchy_index);
+        assert(!field_symbol.empty());
+        return toSymbolRef(field_symbol);
+    }
+    else if (translation_map.outer_context)
+        return translation_map.outer_context->translate(node);
+    else
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Can not translate a column reference.");
+}
+
+ASTPtr TranslationMapVisitor::tryHandleSubColumnReference(const SubColumnReference & sub_column_reference, const ASTPtr & node)
+{
+    if (translation_map.scope->isLocalScope(sub_column_reference.getScope()))
+    {
+        const auto & field_symbol_info = translation_map.getFieldSymbolInfo(sub_column_reference.getFieldHierarchyIndex());
+        auto sub_column_symbol = field_symbol_info.tryGetSubColumnSymbol(sub_column_reference.getColumnID());
+
+        if (sub_column_symbol)
+            return toSymbolRef(*sub_column_symbol);
+        else
+            return nullptr; // Note: sub column symbol may be invalidated by aggregate/join using/set operations.
+    }
+    else if (translation_map.outer_context)
+        return translation_map.outer_context->translate(node);
+    else
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Can not translate a sub column reference.");
+}
+
+}

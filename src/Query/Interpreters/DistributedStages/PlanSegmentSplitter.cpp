@@ -134,7 +134,7 @@ PlanSegmentResult PlanSegmentVisitor::visitChild(QueryPlanExt::Node * node, Plan
     return VisitorUtil::accept(node, *this, split_context);
 }
 
-PlanSegmentResult PlanSegmentVisitor::visitExchangeNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & split_context)
+PlanSegmentResult PlanSegmentVisitor::visitExchangeStepExtNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & split_context)
 {
     ExchangeStepExt * step = dynamic_cast<ExchangeStepExt *>(node->step.get());
 
@@ -183,7 +183,7 @@ PlanSegmentResult PlanSegmentVisitor::visitExchangeNode(QueryPlanExt::Node * nod
     return plan_segment_context.query_plan.getLastNode();
 }
 
-PlanSegmentResult PlanSegmentVisitor::visitCTERefNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & split_context)
+PlanSegmentResult PlanSegmentVisitor::visitCTERefStepExtNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & split_context)
 {
     auto * step = dynamic_cast<CTERefStepExt *>(node->step.get());
     auto * cte_node = cte_nodes.at(step->getId());
@@ -248,17 +248,17 @@ PlanSegmentResult PlanSegmentVisitor::visitCTERefNode(QueryPlanExt::Node * node,
     return plan_segment_context.query_plan.getLastNode();
 }
 
-PlanSegmentResult PlanSegmentVisitor::visitTotalsHavingNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & context)
+PlanSegmentResult PlanSegmentVisitor::visitTotalsHavingStepExtNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & context)
 {
     context.is_add_totals = true;
     return visitNode(node, context);
 }
 
-PlanSegmentResult PlanSegmentVisitor::visitExtremesNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & context)
-{
-    context.is_add_extremes = true;
-    return visitNode(node, context);
-}
+// PlanSegmentResult PlanSegmentVisitor::visitExtremesStepExtNode(QueryPlanExt::Node * node, PlanSegmentVisitorContext & context)
+// {
+//     context.is_add_extremes = true;
+//     return visitNode(node, context);
+// }
 
 PlanSegment * PlanSegmentVisitor::createPlanSegment(QueryPlanExt::Node * node, size_t segment_id, PlanSegmentVisitorContext & split_context)
 {
@@ -499,22 +499,22 @@ std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitNode(Query
     return result;
 }
 
-std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitValuesNode(QueryPlanExt::Node *, const Context &)
+std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitValuesStepExtNode(QueryPlanExt::Node *, const Context &)
 {
     return {{PartitioningHandle::Partitioning_Handle_SINGLE}};
 }
 
-std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitReadNothingNode(QueryPlanExt::Node *, const Context &)
+std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitReadNothingStepNode(QueryPlanExt::Node *, const Context &)
 {
     return {{PartitioningHandle::Partitioning_Handle_SINGLE}};
 }
 
-std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitReadStorageRowCountNode(QueryPlanExt::Node *, const Context &)
+std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitReadStorageRowCountStepExtNode(QueryPlanExt::Node *, const Context &)
 {
     return {{PartitioningHandle::Partitioning_Handle_HCOORDINATOR}};
 }
 
-std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitTableScanNode(QueryPlanExt::Node * node, const Context &)
+std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitTableScanStepExtNode(QueryPlanExt::Node * node, const Context &)
 {
     //todo: need supportsDistributedRead in storage
     //auto * source_step = dynamic_cast<TableScanStepExt *>(node->step.get());
@@ -523,7 +523,7 @@ std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitTableScanN
     return {{PartitioningHandle::Partitioning_Handle_HCOORDINATOR}};
 }
 
-std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitRemoteExchangeSourceNode(QueryPlanExt::Node * node, const Context &)
+std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitRemoteExchangeSourceStepExtNode(QueryPlanExt::Node * node, const Context &)
 {
     const auto * source_step = dynamic_cast<RemoteExchangeSourceStepExt *>(node->step.get());
     switch (source_step->getInput()[0]->getExchangeMode())
@@ -546,7 +546,7 @@ std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitRemoteExch
     }
 }
 
-std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitExchangeNode(QueryPlanExt::Node * node, const Context & context)
+std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitExchangeStepExtNode(QueryPlanExt::Node * node, const Context & context)
 {
     const auto * source_step = dynamic_cast<ExchangeStepExt *>(node->step.get());
     switch (source_step->getExchangeMode())
@@ -565,7 +565,7 @@ std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitExchangeNo
 }
 
 
-std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitCTERefNode(QueryPlanExt::Node * node, const Context & context)
+std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitCTERefStepExtNode(QueryPlanExt::Node * node, const Context & context)
 {
     auto * step = dynamic_cast<CTERefStepExt *>(node->step.get());
     auto * cte_node = cte_nodes.at(step->getId());
@@ -600,7 +600,7 @@ Void SetScalable::visitNode(QueryPlanExt::Node * node, const Context & context)
 }
 
 
-Void SetScalable::visitExchangeNode(QueryPlanExt::Node * node, const Context & context)
+Void SetScalable::visitExchangeStepExtNode(QueryPlanExt::Node * node, const Context & context)
 {
     auto * source_step = dynamic_cast<ExchangeStepExt *>(node->step.get());
     source_step->setScalable(scalable);
@@ -608,7 +608,7 @@ Void SetScalable::visitExchangeNode(QueryPlanExt::Node * node, const Context & c
     return {};
 }
 
-Void SetScalable::visitCTERefNode(QueryPlanExt::Node * node, const Context & context)
+Void SetScalable::visitCTERefStepExtNode(QueryPlanExt::Node * node, const Context & context)
 {
     auto * step = dynamic_cast<CTERefStepExt *>(node->step.get());
     auto * cte_node = cte_nodes.at(step->getId());
@@ -626,17 +626,17 @@ std::vector<size_t> ParallelSizeChecker::visitNode(QueryPlanExt::Node * node, co
     return result;
 }
 
-std::vector<size_t> ParallelSizeChecker::visitValuesNode(QueryPlanExt::Node *, const Context &)
+std::vector<size_t> ParallelSizeChecker::visitValuesStepExtNode(QueryPlanExt::Node *, const Context &)
 {
     return {1};
 }
 
-std::vector<size_t> ParallelSizeChecker::visitReadNothingNode(QueryPlanExt::Node *, const Context &)
+std::vector<size_t> ParallelSizeChecker::visitReadNothingStepNode(QueryPlanExt::Node *, const Context &)
 {
     return {1};
 }
 
-std::vector<size_t> ParallelSizeChecker::visitTableScanNode(QueryPlanExt::Node * node, const Context & context)
+std::vector<size_t> ParallelSizeChecker::visitTableScanStepExtNode(QueryPlanExt::Node * node, const Context & context)
 {
     auto * source_step = dynamic_cast<TableScanStepExt *>(node->step.get());
     //todo: need supportsDistributedRead in storage
@@ -651,12 +651,12 @@ std::vector<size_t> ParallelSizeChecker::visitTableScanNode(QueryPlanExt::Node *
     return {1};
 }
 
-std::vector<size_t> ParallelSizeChecker::visitReadStorageRowCountNode(QueryPlanExt::Node *, const Context &)
+std::vector<size_t> ParallelSizeChecker::visitReadStorageRowCountStepExtNode(QueryPlanExt::Node *, const Context &)
 {
     return {1};
 }
 
-std::vector<size_t> ParallelSizeChecker::visitRemoteExchangeSourceNode(QueryPlanExt::Node * node, const Context &)
+std::vector<size_t> ParallelSizeChecker::visitRemoteExchangeSourceStepExtNode(QueryPlanExt::Node * node, const Context &)
 {
     const auto * source_step = dynamic_cast<RemoteExchangeSourceStepExt *>(node->step.get());
     for (const auto & input : source_step->getInput())

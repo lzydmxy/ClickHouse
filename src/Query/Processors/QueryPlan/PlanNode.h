@@ -2,7 +2,6 @@
 
 #include <Core/Types.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
-//#include <Query/Optimizer/CardinalityEstimate/PlanNodeStatisticsEstimate.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/IQueryPlanStepExt.h>
 
@@ -18,6 +17,8 @@ using PlanNodes = std::vector<PlanNodePtr>;
 
 using QueryPlanStepPtr = std::shared_ptr<IQueryPlanStep>;
 using PlanNodeId = UInt32;
+
+using NameToType = std::map<String, DataTypePtr>;
 
 class PlanNodeBase : public std::enable_shared_from_this<PlanNodeBase>
 {
@@ -42,8 +43,14 @@ public:
     virtual const DataStream & getCurrentDataStream() const = 0;
 
     NamesAndTypes getOutputNamesAndTypes() const { return getCurrentDataStream().header.getNamesAndTypes(); }
-    // TODO: implement
-    // NameToType getOutputNamesToTypes() const { return getCurrentDataStream().header.getNamesToTypes(); }
+    NameToType getOutputNamesToTypes() const
+    {
+        NameToType res;
+        for (const auto & elem : getCurrentDataStream().header.getNamesAndTypes())
+            res.emplace(elem.name, elem.type);
+        return res;
+    }
+
     Names getOutputNames() const { return getCurrentDataStream().header.getNames(); }
     PlanNodePtr getNodeById(PlanNodeId node_id) const;
 
