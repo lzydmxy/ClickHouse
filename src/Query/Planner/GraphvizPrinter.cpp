@@ -26,7 +26,7 @@ static std::unordered_map<QueryPlanStepType, std::string> NODE_COLORS = {
     {QueryPlanStepType::FilterStepExt, "yellow"},
     {QueryPlanStepType::JoinStepExt, "orange"},
     {QueryPlanStepType::ArrayJoinStep, "orange"},
-    {QueryPlanStepType::AggregatingStep, "chartreuse3"},
+    {QueryPlanStepType::AggregatingStepExt, "chartreuse3"},
     {QueryPlanStepType::MergingAggregatedStep, "chartreuse3"},
     {QueryPlanStepType::WindowStep, "darkolivegreen4"},
     {QueryPlanStepType::PartitionTopNStepExt, "darkolivegreen4"},

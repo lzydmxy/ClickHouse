@@ -36,6 +36,10 @@ IMPLEMENT_SETTING_ENUM(CTEMode, ErrorCodes::BAD_ARGUMENTS,
      {"AUTO", CTEMode::AUTO},
      {"ENFORCED", CTEMode::ENFORCED}})
 
+IMPLEMENT_SETTING_ENUM(SpillMode, ErrorCodes::BAD_ARGUMENTS,
+    {{"manual", SpillMode::MANUAL},
+     {"auto", SpillMode::AUTO}})
+
 IMPLEMENT_SETTING_ENUM(DialectType, ErrorCodes::BAD_ARGUMENTS,
     {{"CLICKHOUSE", DialectType::CLICKHOUSE},
      {"ANSI",       DialectType::ANSI},
