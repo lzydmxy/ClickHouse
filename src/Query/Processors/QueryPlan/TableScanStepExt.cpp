@@ -262,10 +262,10 @@ TableScanExecutor::TableScanExecutor(TableScanStepExt & step, const MergeTreeDat
         //tood:need getNamesToTypes func in Block
         //column_types_before_agg = query_aggregate->getInputStreams()[0].header.getNamesToTypes();
 
-        for (const auto & origin_grouping_key: query_aggregate->getParams().keys)
+        for (const auto & origin_grouping_key: query_aggregate->getKeys())
             aggregate_keys.emplace_back(NameWithAST{origin_grouping_key, query_lineage->inlineReferences(origin_grouping_key)});
 
-        for (const auto & query_aggregate_desc: query_aggregate->getParams().aggregates)
+        for (const auto & query_aggregate_desc: query_aggregate->getAggregates())
             aggregate_descs.emplace_back(NameWithAST{query_aggregate_desc.column_name,
                                                      query_lineage->inlineReferences(query_aggregate_desc.column_name)});
     }
@@ -654,7 +654,7 @@ TableScanStepExt::TableScanStepExt(
     String alias_,
     bool bucket_scan_,
     Assignments inline_expressions_,
-    std::shared_ptr<AggregatingStep> aggregation_,
+    std::shared_ptr<AggregatingStepExt> aggregation_,
     std::shared_ptr<ProjectionStepExt> projection_,
     std::shared_ptr<FilterStepExt> filter_)
     : ISourceStep(DataStream{})
@@ -754,7 +754,7 @@ TableScanStepExt::TableScanStepExt(
     size_t max_block_size_,
     String alias_,
     Assignments inline_expressions_,
-    std::shared_ptr<AggregatingStep> aggregation_,
+    std::shared_ptr<AggregatingStepExt> aggregation_,
     std::shared_ptr<ProjectionStepExt> projection_,
     std::shared_ptr<FilterStepExt> filter_,
     DataStream table_output_stream_)
@@ -1368,10 +1368,9 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
 
             const auto & header_before_aggregation = pipe.getHeader();
 
-            auto params = aggregate_step.getParams();
-            ColumnNumbers keys_positions(params.keys_size);
-            for (size_t i = 0; i < params.keys_size; ++i)
-                keys_positions[i] = header_before_aggregation.getPositionByName(params.keys[i]);
+            ColumnNumbers keys;
+            for (const auto & key : aggregate_step.getKeys())
+                keys.push_back(header_before_aggregation.getPositionByName(key));
 
             AggregateDescriptions aggregates = aggregate_step.getParams().aggregates;
             AggregatingTransformParamsPtr transform_params;

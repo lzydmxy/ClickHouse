@@ -395,7 +395,7 @@ std::map<Int32, Names> SymbolMapper::map(const std::map<Int32, Names> & group_id
     return res;
 }
 
-std::shared_ptr<AggregatingStep> SymbolMapper::map(const AggregatingStep & agg)
+std::shared_ptr<AggregatingStepExt> SymbolMapper::map(const AggregatingStepExt & agg)
 {
     throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Need Imp AggregatingStep first");
 }
@@ -482,7 +482,7 @@ std::shared_ptr<TableScanStepExt> SymbolMapper::map(const TableScanStepExt & sca
     // order matters as symbol mapper should traverse plan nodes bottom-up
     std::shared_ptr<FilterStepExt> mapped_filter = scan.getPushdownFilterCast() ? map(*scan.getPushdownFilterCast()) : nullptr;
     std::shared_ptr<ProjectionStepExt> mapped_projection = scan.getPushdownProjectionCast() ? map(*scan.getPushdownProjectionCast()) : nullptr;
-    std::shared_ptr<AggregatingStep> mapped_aggregation
+    std::shared_ptr<AggregatingStepExt> mapped_aggregation
         = scan.getPushdownAggregationCast() ? map(*scan.getPushdownAggregationCast()) : nullptr;
 
     auto mapped_scan = std::make_shared<TableScanStepExt>(

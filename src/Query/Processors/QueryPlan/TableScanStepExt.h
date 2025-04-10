@@ -11,7 +11,7 @@
 #include <Interpreters/getTableExpressions.h>
 #include <Parsers/ASTSelectQuery.h>
 #include <Parsers/queryToString.h>
-#include <Processors/QueryPlan/AggregatingStep.h>
+#include <Query/Processors/QueryPlan/AggregatingStepExt.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
 #include <Processors/QueryPlan/ISourceStep.h>
 #include <Processors/QueryPlan/QueryPlan.h>
@@ -71,7 +71,7 @@ public:
         String alias_ = "",
         bool bucket_scan_ = false,
         Assignments inline_expressions_ = {},
-        std::shared_ptr<AggregatingStep> aggregation_ = nullptr,
+        std::shared_ptr<AggregatingStepExt> aggregation_ = nullptr,
         std::shared_ptr<ProjectionStepExt> projection_ = nullptr,
         std::shared_ptr<FilterStepExt> filter_ = nullptr);
 
@@ -85,7 +85,7 @@ public:
         size_t max_block_size_,
         String alias_,
         Assignments inline_expressions_,
-        std::shared_ptr<AggregatingStep> aggregation_,
+        std::shared_ptr<AggregatingStepExt> aggregation_,
         std::shared_ptr<ProjectionStepExt> projection_,
         std::shared_ptr<FilterStepExt> filter_,
         DataStream table_output_stream_);
@@ -105,7 +105,7 @@ public:
         String alias_,
         bool bucket_scan_,
         Assignments inline_expressions_,
-        std::shared_ptr<AggregatingStep> aggregation_,
+        std::shared_ptr<AggregatingStepExt> aggregation_,
         std::shared_ptr<ProjectionStepExt> projection_,
         std::shared_ptr<FilterStepExt> filter_,
         DataStream table_output_stream_)
@@ -148,7 +148,7 @@ public:
 
     void setPushdownAggregation(QueryPlanStepPtr aggregation_)
     {
-        pushdown_aggregation = std::dynamic_pointer_cast<AggregatingStep>(aggregation_);
+        pushdown_aggregation = std::dynamic_pointer_cast<AggregatingStepExt>(aggregation_);
     }
     void setPushdownProjection(QueryPlanStepPtr projection_)
     {
@@ -158,13 +158,13 @@ public:
     {
         pushdown_filter = std::dynamic_pointer_cast<FilterStepExt>(filter_);
     }
-    std::shared_ptr<AggregatingStep> getPushdownAggregation() const { return pushdown_aggregation; }
+    std::shared_ptr<AggregatingStepExt> getPushdownAggregation() const { return pushdown_aggregation; }
     std::shared_ptr<ProjectionStepExt> getPushdownProjection() const { return pushdown_projection; }
     std::shared_ptr<FilterStepExt> getPushdownFilter() const { return pushdown_filter; }
-    const AggregatingStep * getPushdownAggregationCast() const { return dynamic_cast<AggregatingStep *>(pushdown_aggregation.get()); }
+    const AggregatingStepExt * getPushdownAggregationCast() const { return dynamic_cast<AggregatingStepExt *>(pushdown_aggregation.get()); }
     const ProjectionStepExt * getPushdownProjectionCast() const { return dynamic_cast<ProjectionStepExt *>(pushdown_projection.get()); }
     const FilterStepExt * getPushdownFilterCast() const { return dynamic_cast<FilterStepExt *>(pushdown_filter.get()); }
-    AggregatingStep * getPushdownAggregationCast() { return dynamic_cast<AggregatingStep *>(pushdown_aggregation.get()); }
+    AggregatingStepExt * getPushdownAggregationCast() { return dynamic_cast<AggregatingStepExt *>(pushdown_aggregation.get()); }
     ProjectionStepExt * getPushdownProjectionCast() { return dynamic_cast<ProjectionStepExt *>(pushdown_projection.get()); }
     FilterStepExt * getPushdownFilterCast() { return dynamic_cast<FilterStepExt *>(pushdown_filter.get()); }
 
@@ -257,7 +257,7 @@ private:
     // with structure `Partial Aggregate->Projection->Filter->ReadTable`. And we are able to use
     // **clickhouse projection** to optimize its execution.
     // TODO: better to use a new kind of IQueryPlanStep
-    std::shared_ptr<AggregatingStep> pushdown_aggregation;
+    std::shared_ptr<AggregatingStepExt> pushdown_aggregation;
     std::shared_ptr<ProjectionStepExt> pushdown_projection;
     std::shared_ptr<FilterStepExt> pushdown_filter;
     DataStream table_output_stream;
