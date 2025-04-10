@@ -1,11 +1,7 @@
 #pragma once
 
-#include <Core/Settings.h>
-//#include <DataStreams/BlockIO.h>
 #include <Interpreters/Context_fwd.h>
 #include <Query/Interpreters/InterpreterSelectQueryUseOptimizer.h>
-#include <Interpreters/SelectQueryOptions.h>
-#include <Common/SettingsChanges.h>
 #include <Query/Common/Utils.h>
 
 namespace DB
