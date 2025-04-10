@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Core/Names.h>
-#include <Interpreters/Aggregator.h>
+#include <Query/Interpreters/AggregatorExt.h>
 #include <Processors/QueryPlan/BuildQueryPipelineSettings.h>
 #include <Processors/QueryPlan/ITransformingStep.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
@@ -78,7 +78,7 @@ class AggregatingStepExt : public ITransformingStep
 public:
     AggregatingStepExt(
         const DataStream & input_stream_,
-        Aggregator::Params params_,
+        AggregatorExt::Params params_,
         const NameSet & keys_not_hashed_,
         GroupingSetsParamsExtList grouping_sets_params_,
         bool final_,
@@ -153,7 +153,7 @@ public:
         const DataStream & input_stream_,
         Names keys_,
         const NameSet & keys_not_hashed_,
-        Aggregator::Params params_,
+        AggregatorExt::Params params_,
         GroupingSetsParamsExtList grouping_sets_params_,
         bool final_,
         AggregateStagePolicy stage_policy_,
@@ -180,7 +180,7 @@ public:
     void describeActions(FormatSettings &) const override;
     void describePipeline(FormatSettings & settings) const override;
 
-    const Aggregator::Params & getParams() const { return params; }
+    const AggregatorExt::Params & getParams() const { return params; }
     const AggregateDescriptions & getAggregates() const { return params.aggregates; }
     const Names & getKeys() const { return keys; }
     const NameSet & getKeysNotHashed() const { return keys_not_hashed; }
@@ -213,7 +213,7 @@ public:
     // static std::shared_ptr<AggregatingStep> fromProto(const Protos::AggregatingStep & proto, ContextPtr context);
 
     void updateOutputStream() override;
-    static Aggregator::Params
+    static AggregatorExt::Params
     createParams(Block header_before_aggregation, AggregateDescriptions aggregates, Names group_by_keys, bool overflow_row);
     GroupingSetsParamsExtList prepareGroupingSetsParams() const;
 
@@ -223,7 +223,7 @@ private:
 
     NameSet keys_not_hashed; // keys which can be output directly, same as function `any`, but no type loss.
 
-    Aggregator::Params params;
+    AggregatorExt::Params params;
     GroupingSetsParamsExtList grouping_sets_params;
     bool final;
 

@@ -5,6 +5,7 @@
 #include <Processors/Transforms/ExpressionTransform.h>
 #include <Query/Processors/QueryPlan/AggregatingStepExt.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <Query/Processors/Transforms/AggregatingTransformExt.h>
 
 namespace DB
 {
@@ -151,7 +152,7 @@ Block AggregatingStepExt::appendGroupingColumn(Block block, bool has_grouping)
     return generateOutputHeader(block, {}, false);
 }
 
-Aggregator::Params
+AggregatorExt::Params
 AggregatingStepExt::createParams(Block header_before_aggregation, AggregateDescriptions aggregates, Names group_by_keys, bool overflow_row)
 {
     ColumnNumbers keys;
@@ -194,26 +195,8 @@ AggregatingStepExt::createParams(Block header_before_aggregation, AggregateDescr
             descr.function->getName(), NullsAction::EMPTY, argument_types, descr.parameters, properties);
     }
 
-    // todo: hongzhigao1, implement
-    // return Aggregator::Params(
-    //     header_before_aggregation,
-    //     keys,
-    //     aggregates,
-    //     overflow_row,
-    //     0,
-    //     OverflowMode::THROW,
-    //     0,
-    //     0,
-    //     0,
-    //     false,
-    //     10485760,
-    //     false,
-    //     nullptr,
-    //     0,
-    //     0,
-    //     false,
-    //     0);
-    return {};
+    return AggregatorExt::Params(
+        header_before_aggregation, keys, aggregates, overflow_row, 0, OverflowMode::THROW, 0, 0, 0, false, 10485760, false, 0, 0, false, 0);
 }
 
 GroupingSetsParamsExtList AggregatingStepExt::prepareGroupingSetsParams() const
@@ -258,7 +241,7 @@ AggregatingStepExt::AggregatingStepExt(
     const DataStream & input_stream_,
     Names keys_,
     const NameSet & keys_not_hashed_,
-    Aggregator::Params params_,
+    AggregatorExt::Params params_,
     GroupingSetsParamsExtList grouping_sets_params_,
     bool final_,
     AggregateStagePolicy stage_policy_,
@@ -275,7 +258,7 @@ AggregatingStepExt::AggregatingStepExt(
     bool streaming_for_cache_)
     : ITransformingStep(
           input_stream_,
-          appendGroupingColumns(params_.getHeader(input_streams.front().header, final_), grouping_sets_params_, groupings_, final_),
+          appendGroupingColumns(params_.getHeader(final_), grouping_sets_params_, groupings_, final_),
           getTraits(should_produce_results_in_order_of_bucket_number_),
           false)
     , keys(std::move(keys_))
@@ -312,8 +295,7 @@ AggregatingStepExt::AggregatingStepExt(
 void AggregatingStepExt::updateOutputStream()
 {
     // TODO: what if input_streams and params->getHeader() are inconsistent?
-    output_stream->header
-        = appendGroupingColumns(params.getHeader(input_streams.front().header, final), grouping_sets_params, groupings, final);
+    output_stream->header = appendGroupingColumns(params.getHeader(final), grouping_sets_params, groupings, final);
 }
 
 // ! todo
@@ -326,6 +308,7 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
 
     QueryPipelineProcessorsCollector collector(pipeline, this);
     const auto & settings = build_settings.getBuildQueryPipelineSettingsExt().context->getSettingsRef();
+    const auto & optimizer_settings = build_settings.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef();
     this->max_block_size = settings.max_block_size;
     this->temporary_data_merge_threads = settings.aggregation_memory_efficient_merge_threads
         ? static_cast<size_t>(settings.aggregation_memory_efficient_merge_threads)
@@ -392,7 +375,7 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
             descr.arguments.push_back(before_agg_header.getPositionByName(name));
     }
 
-    auto new_params = Aggregator::Params(
+    auto new_params = AggregatorExt::Params(
         before_agg_header,
         key_index,
         new_aggregates,
@@ -402,16 +385,15 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
         settings.group_by_two_level_threshold,
         settings.group_by_two_level_threshold_bytes,
         settings.max_bytes_before_external_group_by,
-        settings.spill_mode == SpillMode::AUTO,
-        settings.spill_buffer_bytes_before_external_group_by,
+        optimizer_settings.spill_mode == SpillMode::AUTO,
+        optimizer_settings.spill_buffer_bytes_before_external_group_by,
         params.empty_result_for_aggregation_by_empty_set || settings.empty_result_for_aggregation_by_empty_set,
-        build_settings.context->getTemporaryVolume(),
         settings.max_threads,
         settings.min_free_disk_space_for_temporary_data,
         settings.compile_aggregate_expressions,
         settings.min_count_to_compile_aggregate_expression,
         {},
-        settings.enable_lc_group_by_opt);
+        optimizer_settings.enable_lc_group_by_opt);
 
     /// Forget about current totals and extremes. They will be calculated again after aggregation if needed.
     pipeline.dropTotalsAndExtremes();
@@ -428,7 +410,7 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
        * 1. Parallel aggregation is done, and the results should be merged in parallel.
        * 2. An aggregation is done with store of temporary data on the disk, and they need to be merged in a memory efficient way.
        */
-    auto transform_params = std::make_shared<AggregatingTransformParams>(std::move(new_params), agg_final);
+    auto transform_params = std::make_shared<AggregatingTransformParamsExt>(std::move(new_params), agg_final);
 
     if (!grouping_sets_params.empty())
     {
@@ -465,7 +447,7 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                 Processors processors;
                 for (size_t i = 0; i < grouping_sets_size; ++i)
                 {
-                    Aggregator::Params params_for_set{
+                    AggregatorExt::Params params_for_set{
                         transform_params->params.src_header,
                         prepared_sets_params[i].used_keys,
                         transform_params->params.aggregates,
@@ -478,19 +460,17 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                         transform_params->params.enable_adaptive_spill,
                         transform_params->params.spill_buffer_bytes_before_external_group_by,
                         /// Return empty result when aggregating without keys on empty set, if ansi
-                        settings.dialect_type != DialectType::CLICKHOUSE
-                            ? true
-                            : transform_params->params.empty_result_for_aggregation_by_empty_set,
-                        transform_params->params.tmp_volume,
+                        transform_params->params.empty_result_for_aggregation_by_empty_set,
                         transform_params->params.max_threads,
                         transform_params->params.min_free_disk_space,
                         transform_params->params.compile_aggregate_expressions,
                         transform_params->params.min_count_to_compile_aggregate_expression,
                         {},
                         transform_params->params.enable_lc_group_by_opt};
-                    using TwoLevelMode = Aggregator::Params::TwoLevelMode;
-                    params_for_set.two_level_mode = settings.group_by_two_level_for_grouping_set ? TwoLevelMode::ENFORCE_TWO_LEVEL
-                                                                                                 : TwoLevelMode::ENFORCE_SINGLE_LEVEL;
+                    using TwoLevelMode = AggregatorExt::Params::TwoLevelMode;
+                    params_for_set.two_level_mode = optimizer_settings.group_by_two_level_for_grouping_set
+                        ? TwoLevelMode::ENFORCE_TWO_LEVEL
+                        : TwoLevelMode::ENFORCE_SINGLE_LEVEL;
                     auto transform_params_for_set
                         = std::make_shared<AggregatingTransformParams>(input_header, std::move(params_for_set), final);
 
