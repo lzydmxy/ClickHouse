@@ -341,7 +341,7 @@ JoinTreeQueryPlan buildQueryPlanForTableExpression(QueryTreeNodePtr table_expres
                     {
                         planner_context->getMutableQueryContext()->setSetting(
                             "allow_experimental_parallel_reading_from_replicas", Field(0));
-                        planner_context->getMutableQueryContext()->setSetting("max_parallel_replicas", UInt64{0});
+                        planner_context->getMutableQueryContext()->setSetting("max_parallel_replicas", Field(0));
                         LOG_DEBUG(getLogger("Planner"), "Disabling parallel replicas because there aren't enough rows to read");
                     }
                     else if (number_of_replicas_to_use < settings.max_parallel_replicas)
