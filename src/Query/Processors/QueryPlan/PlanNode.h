@@ -2,8 +2,8 @@
 
 #include <Core/Types.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
-#include <Query/Optimizer/CardinalityEstimate/PlanNodeStatisticsEstimate.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <Query/Processors/IQueryPlanStepExt.h>
 
 namespace DB
 {
@@ -15,8 +15,10 @@ class PlanNodeBase;
 using PlanNodePtr = std::shared_ptr<PlanNodeBase>;
 using PlanNodes = std::vector<PlanNodePtr>;
 
-using QueryPlanStepSharedPtr = std::shared_ptr<IQueryPlanStep>;
+using QueryPlanStepPtr = std::shared_ptr<IQueryPlanStep>;
 using PlanNodeId = UInt32;
+
+using NameToType = std::map<String, DataTypePtr>;
 
 class PlanNodeBase : public std::enable_shared_from_this<PlanNodeBase>
 {
@@ -28,29 +30,36 @@ public:
     PlanNodes & getChildren() { return children; }
     const PlanNodes & getChildren() const { return children; }
     void replaceChildren(const PlanNodes & children_) { replaceChildrenImpl(children_); }
-    void setStatistics(const PlanNodeStatisticsEstimate & statistics_) { statistics = statistics_; }
-    const PlanNodeStatisticsEstimate & getStatistics() const { return statistics; }
-    QueryPlanStepSharedPtr getStep() const { return getStepImpl(); }
-    void setStep(QueryPlanStepSharedPtr & step_) { setStepImpl(step_); }
+    //todo: need optimizer Statistics
+    // void setStatistics(const PlanNodeStatisticsEstimate & statistics_) { statistics = statistics_; }
+    // const PlanNodeStatisticsEstimate & getStatistics() const { return statistics; }
+    QueryPlanStepPtr getStep() const { return getStepImpl(); }
+    void setStep(QueryPlanStepPtr & step_) { setStepImpl(step_); }
 
 
-    virtual PlanNodePtr addStep(PlanNodeId new_id, QueryPlanStepSharedPtr new_step, PlanNodes new_children) = 0;
+    virtual PlanNodePtr addStep(PlanNodeId new_id, QueryPlanStepPtr new_step, PlanNodes new_children) = 0;
     virtual PlanNodePtr copy(PlanNodeId new_id, ContextPtr context) = 0;
     virtual QueryPlanStepType getType() const = 0;
     virtual const DataStream & getCurrentDataStream() const = 0;
 
     NamesAndTypes getOutputNamesAndTypes() const { return getCurrentDataStream().header.getNamesAndTypes(); }
-    // TODO: implement
-    // NameToType getOutputNamesToTypes() const { return getCurrentDataStream().header.getNamesToTypes(); }
+    NameToType getOutputNamesToTypes() const
+    {
+        NameToType res;
+        for (const auto & elem : getCurrentDataStream().header.getNamesAndTypes())
+            res.emplace(elem.name, elem.type);
+        return res;
+    }
+
     Names getOutputNames() const { return getCurrentDataStream().header.getNames(); }
     PlanNodePtr getNodeById(PlanNodeId node_id) const;
 
     static PlanNodePtr createPlanNode(
-        [[maybe_unused]] PlanNodeId id_,
-        [[maybe_unused]] QueryPlanStepSharedPtr step_,
-        [[maybe_unused]] const PlanNodes & children_ = {},
-        [[maybe_unused]] const PlanNodeStatisticsEstimate & statistics_ = {})
+        [[maybe_unused]] PlanNodeId id_, [[maybe_unused]] QueryPlanStepPtr step_, [[maybe_unused]] const PlanNodes & children_ = {}
+        // [[maybe_unused]] const PlanNodeStatisticsEstimate & statistics_ = {}
+    )
     {
+
         PlanNodePtr plan_node;
 #define CREATE_PLAN_NODE(TYPE) \
     if (getQueryPlanStepType(step_) == QueryPlanStepType::TYPE) \
@@ -60,23 +69,26 @@ public:
             throw Exception(ErrorCodes::LOGICAL_ERROR, "Type cast failed for {}", #TYPE); \
         plan_node = std::dynamic_pointer_cast<PlanNodeBase>(std::make_shared<PlanNode<TYPE>>(id_, std::move(spec_step), children_)); \
     }
-
         APPLY_QUERY_PLAN_STEP_TYPES(CREATE_PLAN_NODE)
         // CREATE_PLAN_NODE(Any)
         // CREATE_PLAN_NODE(MultiJoin)
 #undef CREATE_PLAN_NODE
-        plan_node->setStatistics(statistics_);
+
+        //PlanNodePtr plan_node;
+        //todo: need optimizer Statistics
+        //plan_node->setStatistics(statistics_);
         return plan_node;
     }
 
 protected:
     PlanNodeId id;
     PlanNodes children;
-    PlanNodeStatisticsEstimate statistics;
+    //todo: need optimizer Statistics
+    //PlanNodeStatisticsEstimate statistics;
 
 private:
-    virtual QueryPlanStepSharedPtr getStepImpl() const = 0;
-    virtual void setStepImpl(QueryPlanStepSharedPtr & step_) = 0;
+    virtual QueryPlanStepPtr getStepImpl() const = 0;
+    virtual void setStepImpl(QueryPlanStepPtr & step_) = 0;
     virtual void replaceChildrenImpl(const PlanNodes & children_) = 0;
 };
 
@@ -91,30 +103,33 @@ public:
     PlanNode & operator=(const PlanNode &) = delete;
     PlanNode & operator=(PlanNode &&) = delete;
 
-    QueryPlanStepType getType() const override { return step->getType(); }
+    QueryPlanStepType getType() const override { return getQueryPlanStepType(step); }
     StepPtr & getStep() { return step; }
 
     void setStep(StepPtr & step_) { step = step_; }
     const DataStream & getCurrentDataStream() const override { return step->getOutputStream(); }
 
-    static PlanNodePtr
-    createPlanNode(PlanNodeId id_, StepPtr step_, const PlanNodes & children_ = {}, const PlanNodeStatisticsEstimate & statistics_ = {})
+    //todo: need optimizer Statistics
+    //static PlanNodePtr createPlanNode(PlanNodeId id_, StepPtr step_, const PlanNodes & children_ = {}, const PlanNodeStatisticsEstimate & statistics_ = {})
+    static PlanNodePtr createPlanNode(PlanNodeId id_, StepPtr step_, const PlanNodes & children_ = {})
     {
         PlanNodePtr plan_node = std::make_shared<PlanNode<Step>>(id_, std::move(step_), children_);
-        plan_node->setStatistics(statistics_);
+        ////todo: need optimizer Statistics
+        //plan_node->setStatistics(statistics_);
         return plan_node;
     }
 
 
     PlanNodePtr copy(PlanNodeId new_id, ContextPtr context) override
     {
-        auto new_step = dynamic_pointer_cast<Step>(step->copy(context));
+        auto new_step = dynamic_pointer_cast<Step>(QueryPlanStepHelper::copyQueryPlanStep(step, context));
         if (!new_step)
             throw Exception(ErrorCodes::LOGICAL_ERROR, "Failed to copy step with type mismatch");
-        return createPlanNode(new_id, std::move(new_step), children, statistics);
+        //return createPlanNode(new_id, std::move(new_step), children, statistics);
+        return createPlanNode(new_id, std::move(new_step), children);
     }
 
-    PlanNodePtr addStep(PlanNodeId new_id, QueryPlanStepSharedPtr new_step, PlanNodes new_children) override
+    PlanNodePtr addStep(PlanNodeId new_id, QueryPlanStepPtr new_step, PlanNodes new_children) override
     {
         if (new_children.empty() && new_step->getInputStreams().size() == 1)
         {
@@ -134,7 +149,7 @@ public:
     PlanNode(PlanNodeId id_, StepPtr step_, PlanNodes children_ = {}) : PlanNodeBase(id_, children_), step(std::move(step_)) { }
 
 private:
-    QueryPlanStepSharedPtr getStepImpl() const override { return step; }
+    QueryPlanStepPtr getStepImpl() const override { return step; }
 
     void replaceChildrenImpl(const PlanNodes & children_) override
     {
@@ -144,10 +159,10 @@ private:
         for (const auto & child : children)
             inputs.emplace_back(child->getCurrentDataStream());
 
-        getStep()->setInputStreams(inputs);
+        getStep()->updateInputStreams(inputs);
     }
 
-    void setStepImpl(QueryPlanStepSharedPtr & step_) override
+    void setStepImpl(QueryPlanStepPtr & step_) override
     {
         auto new_step = std::dynamic_pointer_cast<Step>(step_);
         if (new_step)

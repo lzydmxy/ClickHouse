@@ -19,12 +19,17 @@ struct BuildQueryPipelineSettings
     ExpressionActionsSettings actions_settings;
     QueryStatusPtr process_list_element;
     ProgressCallback progress_callback = nullptr;
+    //todo: need set this pro
+    BuildQueryPipelineSettingsExt settings_ext;
 
     const ExpressionActionsSettings & getActionsSettings() const { return actions_settings; }
     static BuildQueryPipelineSettings fromContext(ContextPtr from);
 
     void initializeBuildQueryPipelineSettingsExt() const;
-    const BuildQueryPipelineSettingsExt & getBuildQueryPipelineSettingsExt() const;
+    const BuildQueryPipelineSettingsExt & getBuildQueryPipelineSettingsExt() const
+    {
+        return settings_ext;
+    }
 };
 
 }

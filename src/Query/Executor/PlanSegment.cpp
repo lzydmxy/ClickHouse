@@ -15,7 +15,6 @@
 #include <Parsers/IAST.h>
 #include <Parsers/queryToString.h>
 #include <Query/ProtosHelper/PlanSerDerHelper.h>
-#include <Processors/QueryPlan/QueryPlan.h>
 #include <Query/ProtosHelper/QueryProto.h>
 #include <Query/ProtosHelper/ExchangeMode.h>
 #include <Query/ProtosHelper/RPCHelpers.h>
@@ -252,7 +251,7 @@ String PlanSegmentOutput::toString(size_t indent) const
 }
 
 
-void PlanSegment::setPlanSegmentToQueryPlan(QueryPlan::Node * node, ContextPtr & /*context*/)
+void PlanSegment::setPlanSegmentToQueryPlan(QueryPlanExt::Node * node, ContextPtr & /*context*/)
 {
     if (!node)
         return;
@@ -440,7 +439,7 @@ String PlanSegment::toString()
     ostr << "parallel_index: " << parallel_index << "\n";
 
     WriteBufferFromOwnString plan_str;
-    query_plan.explainPlan(plan_str, QueryPlan::ExplainPlanOptions{true, true, true, true});
+    query_plan.explainPlan(plan_str, QueryPlanExt::ExplainPlanOptions{true, true, true, true});
     ostr << plan_str.str() << "\n";
 
     ostr << "inputs: " << "\n";
@@ -457,7 +456,7 @@ String PlanSegment::toString()
     return ostr.str();
 }
 
-void PlanSegment::getRemoteSegmentId(const QueryPlan::Node * node, std::unordered_map<PlanNodeId, size_t> & exchange_to_segment)
+void PlanSegment::getRemoteSegmentId(const QueryPlanExt::Node * node, std::unordered_map<PlanNodeId, size_t> & exchange_to_segment)
 {
     // TODO:Need Step
     // auto * step = dynamic_cast<RemoteExchangeSourceStep *>(node->step.get());

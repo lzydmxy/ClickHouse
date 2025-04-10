@@ -16,5 +16,4 @@ void ASTExpressionListExt::appendColumnName(WriteBuffer & ostr) const
     }
     writeChar(')', ostr);
 }
-
 }

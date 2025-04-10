@@ -11,6 +11,7 @@
 #include <Interpreters/Context.h>
 #include <Poco/Util/AbstractConfiguration.h>
 #include <Query/Executor/PlanSegmentInstance.h>
+#include <Query/Executor/SegmentScheduler.h>
 
 namespace DB
 {
@@ -154,6 +155,50 @@ void OptimizerContext::setIsExplainQuery(const bool & is_explain_query_)
 bool OptimizerContext::isExplainQuery() const
 {
     return is_explain_query;
+}
+
+void OptimizerContext::logOptimizerProfile(LoggerPtr log, String prefix, String name, UInt64 time, bool is_rule)
+{
+    if (optimizer_settings.log_optimizer_run_time && log)
+        LOG_DEBUG(log, "{} {} {}", prefix, name, time);
+
+    if (optimizer_profile)
+        optimizer_profile->setTime(name,  std::to_string(time), is_rule);
+}
+
+void OptimizerContext::setPlanCacheManager(std::unique_ptr<PlanCacheManager> && manager)
+{
+    //todo: need a part shared lock
+    //auto lock = getLock(); // checked
+    plan_cache_manager = std::move(manager);
+}
+
+PlanCacheManager* OptimizerContext::getPlanCacheManager()
+{
+    //todo: need a part shared lock
+    //auto lock = getLock(); // checked
+    return plan_cache_manager ? plan_cache_manager.get() : nullptr;
+}
+
+HostWithPorts OptimizerContext::getHostWithPorts() const
+{
+    //tood: need impl, now just a fake impl
+    HostWithPorts hp;
+    return hp;
+}
+
+std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> OptimizerContext::getProcessorProfileElementConsumer() const
+{
+    //tood: need impl, now just a fake impl
+    std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> processor_log_element_consumer;
+    return processor_log_element_consumer;
+}
+
+
+SegmentSchedulerPtr OptimizerContext::getSegmentScheduler() const
+{
+    //todo: need a part shared lock
+    return segment_scheduler;
 }
 
 }

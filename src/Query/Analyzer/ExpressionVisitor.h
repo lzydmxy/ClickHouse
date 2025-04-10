@@ -3,7 +3,7 @@
 #include <Query/Parsers/ASTVisitor.h>
 #include <Query/Analyzer/function_utils.h>
 #include <Query/Analyzer/Analysis.h>
-#include <Query/Processors/QueryPlan/Void.h>
+#include <Query/Common/Void.h>
 
 namespace DB
 {

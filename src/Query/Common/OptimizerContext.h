@@ -1,8 +1,15 @@
 #pragma once
+
+#include <Common/Logger.h>
 #include <Poco/Util/AbstractConfiguration.h>
 #include <Query/Common/QueryCommon.h>
 #include <Query/Common/ExceptionHandler.h>
 #include <Query/Common/OptimizerSettings.h>
+#include <Query/Processors/QueryPlan/PlanNodeIdAllocator.h>
+#include <Query/Planner/SymbolAllocator.h>
+#include <Query/Optimizer/OptimizerMetrics.h>
+#include <Query/Processors/QueryPlan/PlanCache.h>
+#include <Query/Optimizer/OptimizerProfile.h>
 
 namespace DB
 {
@@ -34,6 +41,14 @@ class ProfileElementConsumer;
 class QueryExchangeLog;
 using QueryExchangeLogPtr = std::shared_ptr<QueryExchangeLog>;
 
+class OptimizerMetrics;
+using OptimizerMetricsPtr = std::shared_ptr<OptimizerMetrics>;
+
+class SegmentScheduler;
+using SegmentSchedulerPtr = std::shared_ptr<SegmentScheduler>;
+
+class PlanCacheManager;
+
 struct Settings;
 struct PlanSegmentInstanceID;
 
@@ -53,6 +68,7 @@ public:
     OptimizerContext(const Settings & settings_, OptimizerSettings & optimizer_settings_);
 
     const OptimizerSettings & getSettingsRef() const { return optimizer_settings; }
+    OptimizerSettings & getSettingsRef() { return optimizer_settings; }
     const OptimizerSettings getSettings() const { return optimizer_settings; }
 
     /// milliseconds
@@ -93,7 +109,6 @@ public:
 
     HostWithPorts getHostWithPorts() const;
     SegmentSchedulerPtr getSegmentScheduler() const;
-
     ServiceType getServiceType() const;
 
     void setIsExplainQuery(const bool & is_explain_query_);
@@ -116,6 +131,20 @@ public:
         return nondeterministic_functions_out_of_query_scope.contains(fun_name);
     }
 
+    PlanNodeIdAllocatorPtr & getPlanNodeIdAllocator() { return id_allocator; }
+    UInt32 nextNodeId() { return id_allocator->nextId(); }
+    void logOptimizerProfile(LoggerPtr log, String prefix, String name, UInt64 time, bool is_rule = false);
+    void addQueryPlanInfo(String & query_plan_) { this->query_plan = query_plan_; }
+    String getQueryPlan() { return query_plan; }
+    void createPlanNodeIdAllocator(int max_id = 1) { id_allocator = std::make_shared<PlanNodeIdAllocator>(max_id); }
+    void createSymbolAllocator() { symbol_allocator = std::make_shared<SymbolAllocator>(); }
+    OptimizerMetricsPtr & getOptimizerMetrics() { return optimizer_metrics; }
+    void createOptimizerMetrics() { optimizer_metrics = std::make_shared<OptimizerMetrics>(); }
+    void setPlanCacheManager(std::unique_ptr<PlanCacheManager> && manager);
+    void initOptimizerProfile() { optimizer_profile = std::make_unique<OptimizerProfile>(); }
+    PlanCacheManager* getPlanCacheManager();
+    const SymbolAllocatorPtr & getSymbolAllocator() { return symbol_allocator; }
+
 private:
     OptimizerSettings optimizer_settings;
     UInt32 query_max_execution_time;
@@ -134,6 +163,13 @@ private:
     // make sure a context not be passed to ExprAnalyzer::analyze concurrently
     mutable std::unordered_set<std::string> nondeterministic_functions_within_query_scope;
     mutable std::unordered_set<std::string> nondeterministic_functions_out_of_query_scope;
+    PlanNodeIdAllocatorPtr id_allocator = nullptr;
+    String query_plan;
+    std::shared_ptr<SymbolAllocator> symbol_allocator = nullptr;
+    std::shared_ptr<OptimizerMetrics> optimizer_metrics = nullptr;
+    std::unique_ptr<PlanCacheManager> plan_cache_manager = nullptr;
+    std::shared_ptr<SegmentScheduler> segment_scheduler = nullptr;
+    std::shared_ptr<OptimizerProfile> optimizer_profile = nullptr;
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;

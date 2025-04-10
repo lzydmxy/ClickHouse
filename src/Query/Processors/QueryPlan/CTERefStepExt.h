@@ -2,14 +2,15 @@
 
 #include <Processors/QueryPlan/ISourceStep.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
+#include <Query/Processors/QueryPlan/ProjectionStepExt.h>
+#include <Query/Processors/QueryPlan/CTEInfo.h>
+#include <Query/Processors/QueryPlan/PlanSymbolReallocator.h>
 
 #include <memory>
 
 namespace DB
 {
 using CTEId = UInt32;
-// todo: need to add CTEInfo
-//class CTEInfo;
 class SymbolMapper;
 
 /**
@@ -36,10 +37,8 @@ public:
     bool hasFilter() const { return has_filter; }
     void setFilter(bool has_filter_) { has_filter = has_filter_;}
 
-    // todo: need to implement ProjectionStep
-    //std::shared_ptr<ProjectionStep> toProjectionStep() const;
-    // todo: need to add CTEInfo
-    //PlanNodePtr toInlinedPlanNode(CTEInfo & cte_info, ContextMutablePtr & context) const;
+    std::shared_ptr<ProjectionStepExt> toProjectionStep() const;
+    PlanNodePtr toInlinedPlanNode(CTEInfo & cte_info, ContextMutablePtr & context) const;
 
 private:
     /**

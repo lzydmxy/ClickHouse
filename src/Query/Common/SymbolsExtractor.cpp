@@ -1,5 +1,7 @@
 #include <Query/Common/SymbolsExtractor.h>
 
+#include <Query/Common/Void.h>
+
 #include <Interpreters/RequiredSourceColumnsVisitor.h>
 #include <Parsers/ASTIdentifier.h>
 

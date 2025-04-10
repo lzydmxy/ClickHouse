@@ -27,7 +27,6 @@
 #include <Query/Processors/QueryPlan/ExecutePlanElement.h>
 #include <Query/Processors/QueryPlan/FilterStepExt.h>
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
-#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/QueryPlan/ReadFromMergeTreeExt.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Storages/IStorage.h>
@@ -147,15 +146,15 @@ public:
     QueryProcessingStage::Enum getProcessedStage() const;
     size_t getMaxBlockSize() const;
 
-    void setPushdownAggregation(QueryPlanStepSharedPtr aggregation_)
+    void setPushdownAggregation(QueryPlanStepPtr aggregation_)
     {
         pushdown_aggregation = std::dynamic_pointer_cast<AggregatingStep>(aggregation_);
     }
-    void setPushdownProjection(QueryPlanStepSharedPtr projection_)
+    void setPushdownProjection(QueryPlanStepPtr projection_)
     {
         pushdown_projection = std::dynamic_pointer_cast<ProjectionStepExt>(projection_);
     }
-    void setPushdownFilter(QueryPlanStepSharedPtr filter_)
+    void setPushdownFilter(QueryPlanStepPtr filter_)
     {
         pushdown_filter = std::dynamic_pointer_cast<FilterStepExt>(filter_);
     }

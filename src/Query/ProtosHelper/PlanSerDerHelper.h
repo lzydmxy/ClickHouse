@@ -24,9 +24,6 @@ namespace Protos
 
 class DataStream;
 
-class IQueryPlanStep;
-using QueryPlanStepSharedPtr = std::shared_ptr<IQueryPlanStep>;
-
 class Context;
 using ContextPtr = std::shared_ptr<const Context>;
 

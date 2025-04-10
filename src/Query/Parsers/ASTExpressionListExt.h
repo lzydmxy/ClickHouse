@@ -7,7 +7,11 @@ namespace DB
 
 class ASTExpressionListExt : public ASTExpressionList
 {
-public:
+    public:
+    explicit ASTExpressionListExt(char separator_ = ',')
+        : ASTExpressionList(separator_)
+    {
+    }
     void appendColumnName(WriteBuffer &) const override;
 };
 

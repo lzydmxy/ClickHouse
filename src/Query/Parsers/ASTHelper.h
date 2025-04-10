@@ -49,7 +49,8 @@
 #include <Query/Parsers/ASTSelectQueryExt.h>
 #include <Query/Parsers/ASTTableColumnReference.h>
 #include <Query/Parsers/ASTQuantifiedComparisonExt.h>
-
+#include <Query/Parsers/ASTType.h>
+#include <Query/Parsers/ASTStatsQueryExt.h>
 
 namespace DB
 {
@@ -61,75 +62,15 @@ using ConstASTPtr = std::shared_ptr<const IAST>;
 using ConstASTs = std::vector<ConstASTPtr>;
 using ASTFunctionPtr = std::shared_ptr<ASTFunction>;
 
-#define APPLY_AST_TYPES(M) \
-    M(ASTArrayJoin) \
-    M(ASTAsterisk) \
-    M(ASTAutoStatsQueryExt) \
-    M(ASTColumnsApplyTransformer) \
-    M(ASTColumnsExceptTransformer) \
-    M(ASTColumnsListMatcher) \
-    M(ASTColumnsRegexpMatcher) \
-    M(ASTColumnsReplaceTransformer) \
-    M(ASTConstraintDeclaration) \
-    M(ASTDataTypeExt) \
-    M(ASTDictionaryAttributeDeclaration) \
-    M(ASTDictionaryExt) \
-    M(ASTDictionaryLayout) \
-    M(ASTDictionaryLifetime) \
-    M(ASTDictionaryRange) \
-    M(ASTDictionarySettings) \
-    M(ASTExplainQueryExt) \
-    M(ASTExpressionListExt) \
-    M(ASTFieldReferenceExt) \
-    M(ASTFunction) \
-    M(ASTFunctionWithKeyValueArguments) \
-    M(ASTIdentifier) \
-    M(ASTIndexDeclaration) \
-    M(ASTJSONPath) \
-    M(ASTJSONPathMemberAccess) \
-    M(ASTJSONPathQuery) \
-    M(ASTJSONPathRange) \
-    M(ASTJSONPathRoot) \
-    M(ASTJSONPathStar) \
-    M(ASTLiteral) \
-    M(ASTNameTypePair) \
-    M(ASTOrderByElement) \
-    M(ASTPair) \
-    M(ASTPartitionExt) \
-    M(ASTProjectionDeclaration) \
-    M(ASTProjectionSelectQuery) \
-    M(ASTQualifiedAsterisk) \
-    M(ASTQueryParameter) \
-    M(ASTQueryWithOutput) \
-    M(ASTRowPolicyName) \
-    M(ASTRowPolicyNames) \
-    M(ASTSampleRatio) \
-    M(ASTSelectIntersectExceptQuery) \
-    M(ASTSelectQueryExt) \
-    M(ASTSelectWithUnionQuery) \
-    M(ASTSetQuery) \
-    M(ASTSettingsProfileElement) \
-    M(ASTSettingsProfileElements) \
-    M(ASTSubquery) \
-    M(ASTTTLElement) \
-    M(ASTTableExpression) \
-    M(ASTTableIdentifier) \
-    M(ASTTableJoin) \
-    M(ASTTablesInSelectQuery) \
-    M(ASTTablesInSelectQueryElement) \
-    M(ASTUseQuery) \
-    M(ASTWindowDefinition) \
-    M(ASTWindowListElement) \
-    M(ASTWithElement) \
-    M(ASTTableColumnReference) \
-    M(ASTQuantifiedComparisonExt)
+struct ShowStatsQueryInfoExt;
+using ASTShowStatsQueryExt = ASTStatsQueryBaseExt<ShowStatsQueryInfoExt>;
+class ASTCreateStatsQueryExt;
+struct DropStatsQueryInfoExt;
+using ASTDropStatsQueryExt = ASTStatsQueryBaseExt<DropStatsQueryInfoExt>;
 
-#define ENUM_AST_TYPE(ITEM) ITEM,
-enum class ASTType : UInt8
-{
-    APPLY_AST_TYPES(ENUM_AST_TYPE) UNDEFINED,
-};
-#undef ENUM_AST_TYPE
+
+//class ASTAutoStatsQueryExt;
+//class ASTShowStatsQueryExt;
 
 inline String toString(ASTType type)
 {

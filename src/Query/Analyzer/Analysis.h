@@ -26,21 +26,6 @@
 #include <vector>
 #include <unordered_map>
 
-namespace std
-{
-
-template <>
-struct hash<DB::StorageID>
-{
-    using argument_type = DB::StorageID;
-    using result_type = size_t;
-
-    result_type operator()(const argument_type & storage_id) const
-    {
-        return storage_id.getQualifiedName().hash();
-    }
-};
-}
 
 namespace DB
 {
@@ -61,7 +46,7 @@ struct JoinUsingAnalysis
     DataTypes left_coercions;
     std::vector<size_t> right_join_fields;
     DataTypes right_coercions;
-    /// field index of scope -> join key index of using list
+    // field index of scope -> join key index of using list
     std::unordered_map<size_t, size_t> left_join_field_reverse_map;
     std::unordered_map<size_t, size_t> right_join_field_reverse_map;
     std::vector<bool> require_right_keys;
@@ -94,14 +79,14 @@ struct JoinInequalityCondition
 {
     ASTPtr left_ast;
     ASTPtr right_ast;
-    ASOF::Inequality inequality;
+    ASOFJoinInequality inequality;
     DataTypePtr left_coercion;
     DataTypePtr right_coercion;
 
     JoinInequalityCondition(
         ASTPtr left_ast_,
         ASTPtr right_ast_,
-        ASOF::Inequality inequality_,
+        ASOFJoinInequality inequality_,
         DataTypePtr left_coercion_,
         DataTypePtr right_coercion_)
         : left_ast(std::move(left_ast_)),
@@ -126,7 +111,7 @@ struct JoinOnAnalysis
     std::vector<JoinInequalityCondition> inequality_conditions;
     std::vector<ASTPtr> complex_expressions;
 
-    ASOF::Inequality getAsofInequality()
+    ASOFJoinInequality getAsofInequality()
     {
         return inequality_conditions.front().inequality;
     }
@@ -146,7 +131,7 @@ struct JoinOnAnalysis
 struct GroupByAnalysis
 {
     std::vector<ASTPtr> grouping_expressions;
-    std::vector<std::vector<ASTPtr>> grouping_sets;
+    std::vector<ASTs> grouping_sets;
 };
 
 struct AggregateAnalysis
@@ -277,7 +262,7 @@ struct Analysis
     void setQueryWithoutFromScope(ASTSelectQueryExt &, ScopePtr);
     ScopePtr getQueryWithoutFromScope(ASTSelectQueryExt &);
 
-    /// table storage scopes doesn't contain alias columns
+    // table storage scopes doesn't contain alias columns
     std::unordered_map<ASTIdentifier *, ScopePtr> table_storage_scopes;
     void setTableStorageScope(ASTIdentifier &, ScopePtr);
     ScopePtr getTableStorageScope(ASTIdentifier &);
@@ -299,7 +284,7 @@ struct Analysis
     }
     DataTypePtr getExpressionType(const ASTPtr & expression);
 
-    /// ASTIdentifier, ASTFieldReference
+    // ASTIdentifier, ASTFieldReference
     std::unordered_map<ASTPtr, ResolvedField> column_references;
     void setColumnReference(const ASTPtr & ast, const ResolvedField & resolved);
     std::optional<ResolvedField> tryGetColumnReference(const ASTPtr & ast);
@@ -309,7 +294,7 @@ struct Analysis
      * alias columns are used.
      */
 
-    /// ASTTableIdentifier -> index of table storage scope
+    // ASTTableIdentifier -> index of table storage scope
     std::unordered_map<const IAST *, std::set<size_t>> read_columns;
     void addReadColumn(const IAST * table_ast, size_t field_index);
     void addReadColumn(const ResolvedField & resolved_field, bool add_used);
@@ -462,14 +447,9 @@ struct Analysis
      * A difference with read_columns is, columns used in alias columns are not included.
      */
     std::unordered_map<StorageID, LinkedHashSet<String>> used_columns;
-    void addUsedColumn(const StorageID & storage_id, const String & column)
-    {
-        used_columns[storage_id].emplace(column);
-    }
-    const std::unordered_map<StorageID, LinkedHashSet<String>> & getUsedColumns() const
-    {
-        return used_columns;
-    }
+    void addUsedColumn(const StorageID & storage_id, const String & column);
+
+    const std::unordered_map<StorageID, LinkedHashSet<String>> & getUsedColumns() const;
 
     /// Which functions are used in query.
     std::set<String> used_functions;
@@ -486,12 +466,18 @@ struct Analysis
     void addUsedFunctionArgument(const String & func_name, ColumnsWithTypeAndName & processed_arguments);
 
     std::map<String, Block> executed_scalar_subqueries;
-    // TODO: need InterpreterSelectQueryUseOptimizer
-    const Block & getScalarSubqueryResult(const ASTPtr & subquery, ContextPtr context);
+    const Block & getScalarSubqueryResult(const ASTPtr & subquery, ContextPtr context)
+    {
+        //todo: now just a fake impl for build
+         return executed_scalar_subqueries["test"];
+    }
 
     std::map<String, SetPtr> executed_in_subqueries;
-    // TODO: need InterpreterSelectQueryUseOptimizer
-    SetPtr getInSubqueryResult(const ASTPtr & subquery, ContextPtr context);
+    SetPtr getInSubqueryResult(const ASTPtr & subquery, ContextPtr context)
+    { 
+        //todo: now just a fake impl for build
+        return nullptr;
+    }
 };
 
 }

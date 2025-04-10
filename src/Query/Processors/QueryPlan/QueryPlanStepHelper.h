@@ -18,16 +18,20 @@
 #include <Processors/QueryPlan/RollupStep.h>
 #include <Processors/QueryPlan/SortingStep.h>
 #include <Processors/QueryPlan/WindowStep.h>
+#include <Processors/QueryPlan/ReadNothingStep.h>
 
 #include <Query/Processors/QueryPlan/AnyStepExt.h>
 #include <Query/Processors/QueryPlan/ApplyStepExt.h>
 #include <Query/Processors/QueryPlan/AssignUniqueIdStepExt.h>
 #include <Query/Processors/QueryPlan/BufferStepExt.h>
+#include <Query/Processors/QueryPlan/CTERefStepExt.h>
+#include <Query/Processors/QueryPlan/DistinctStepExt.h>
 #include <Query/Processors/QueryPlan/EnforceSingleRowStepExt.h>
 #include <Query/Processors/QueryPlan/ExchangeStepExt.h>
 #include <Query/Processors/QueryPlan/ExpandStepExt.h>
 #include <Query/Processors/QueryPlan/ExplainAnalyzeStepExt.h>
 #include <Query/Processors/QueryPlan/FilterStepExt.h>
+#include <Query/Processors/QueryPlan/FinalSampleStepExt.h>
 #include <Query/Processors/QueryPlan/IntermediateResultCacheStepExt.h>
 #include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <Query/Processors/QueryPlan/LocalExchangeStepExt.h>
@@ -38,15 +42,19 @@
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
 #include <Query/Processors/QueryPlan/RemoteExchangeSourceStepExt.h>
 #include <Query/Processors/QueryPlan/SettingQuotaAndLimitsStepExt.h>
+#include <Query/Processors/QueryPlan/TableScanStepExt.h>
 #include <Query/Processors/QueryPlan/TopNFilteringStepExt.h>
+#include <Query/Processors/QueryPlan/TotalsHavingStepExt.h>
 #include <Query/Processors/QueryPlan/UnionStepExt.h>
 #include <Query/Processors/QueryPlan/ValuesStepExt.h>
+#include <Query/Processors/QueryPlan/LimitStepExt.h>
+#include <Query/Processors/QueryPlan/ReadStorageRowCountStepExt.h>
 
 namespace DB
 {
-using QueryPlanStepSharedPtr = std::shared_ptr<IQueryPlanStep>;
+class TableScanStepExt;
 
-
+// Use for Optimizer
 #define APPLY_QUERY_PLAN_STEP_TYPES(M) \
     M(AggregatingProjectionStep) \
     M(AggregatingStep) \
@@ -55,46 +63,63 @@ using QueryPlanStepSharedPtr = std::shared_ptr<IQueryPlanStep>;
     M(ArrayJoinStep) \
     M(AssignUniqueIdStepExt) \
     M(BufferStepExt) \
-    M(CreatingSetStep) \
-    M(CreatingSetsStep) \
-    M(CubeStep) \
+    M(CTERefStepExt) \
+    M(DistinctStepExt) \
     M(EnforceSingleRowStepExt) \
     M(ExchangeStepExt) \
     M(ExpandStepExt) \
     M(ExplainAnalyzeStepExt) \
-    M(ExpressionStep) \
     M(ExtremesStep) \
-    M(FilledJoinStep) \
     M(FillingStep) \
     M(FilterStepExt) \
+    M(FinalSampleStepExt) \
     M(IntermediateResultCacheStepExt) \
     M(IntersectOrExceptStep) \
     M(JoinStepExt) \
     M(LimitByStep) \
-    M(LimitStep) \
     M(LocalExchangeStepExt) \
     M(MarkDistinctStepExt) \
     M(MergingAggregatedStep) \
     M(MultiJoinStepExt) \
     M(OffsetStep) \
     M(PartitionTopNStepExt) \
-    M(PlanSegmentSourceStepExt) \
     M(ProjectionStepExt) \
-    M(ReadFromPreparedSource) \
-    M(ReadFromStorageStep) \
     M(RemoteExchangeSourceStepExt) \
-    M(RollupStep) \
-    M(SettingQuotaAndLimitsStepExt) \
+    M(ReadNothingStep) \
     M(SortingStep) \
+    M(TableScanStepExt) \
     M(TopNFilteringStepExt) \
+    M(TotalsHavingStepExt) \
     M(UnionStepExt) \
     M(ValuesStepExt) \
-    M(WindowStep)
+    M(WindowStep) \
+    M(LimitStepExt) \
+    M(ReadStorageRowCountStepExt) \
+
+// All Steps
+#define APPLY_ALL_QUERY_PLAN_STEP_TYPES(M) \
+    APPLY_QUERY_PLAN_STEP_TYPES(M) \
+    M(ReadFromMergeTree) \
+    M(ReadFromPreparedSource) \
+    M(CreatingSetStep) \
+    M(CreatingSetsStep) \
+    M(CubeStep) \
+    M(ExpressionStep) \
+    M(FilledJoinStep) \
+    M(PlanSegmentSourceStepExt) \
+    M(SettingQuotaAndLimitsStepExt) \
+    M(ReadFromStorageStep) \
+    M(RollupStep) \
+
+
 
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) ITEM,
 enum class QueryPlanStepType : UInt8
 {
-    APPLY_QUERY_PLAN_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE) UNDEFINED,
+    Any = 0,
+    // change this when order is changed to avoid conflicts
+    StepBegin = 100,
+    APPLY_ALL_QUERY_PLAN_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE) UNDEFINED,
 };
 #undef ENUM_QUERY_PLAN_STEP_TYPE
 
@@ -105,7 +130,7 @@ inline String toString(QueryPlanStepType type)
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) \
     case QueryPlanStepType::ITEM: \
         return #ITEM;
-        APPLY_QUERY_PLAN_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE)
+        APPLY_ALL_QUERY_PLAN_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE)
 #undef ENUM_QUERY_PLAN_STEP_TYPE
         default:
             return "UNDEFINED";
@@ -113,17 +138,31 @@ inline String toString(QueryPlanStepType type)
 }
 
 #define CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE(type) \
-if (auto casted_query_plan_step = std::dynamic_pointer_cast<type>(query_plan_step)) \
-{ \
-    return QueryPlanStepType::type; \
-}
+    if (auto casted_query_plan_step = std::dynamic_pointer_cast<type>(query_plan_step)) \
+    { \
+        return QueryPlanStepType::type; \
+    }
 
-inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStepSharedPtr & query_plan_step)
+inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStepPtr & query_plan_step)
 {
-    APPLY_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE)
+    APPLY_ALL_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE)
     return QueryPlanStepType::UNDEFINED;
 }
 #undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE
+
+#define CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF(type) \
+if (typeInfo == typeid(type)) \
+{ \
+return QueryPlanStepType::type; \
+}
+
+inline QueryPlanStepType getQueryPlanStepType(const IQueryPlanStep & query_plan_step)
+{
+    const std::type_info& typeInfo = typeid(query_plan_step);
+    APPLY_ALL_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF)
+    return QueryPlanStepType::UNDEFINED;
+}
+#undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF
 
 
 class QueryPlanStepHelper
@@ -136,9 +175,9 @@ public:
     static ActionsDAGPtr createExpressionActions(ContextPtr context, const NamesAndTypesList & source, const Names & output, const ASTPtr & ast, bool add_project = true);
     static ActionsDAGPtr createExpressionActions(ContextPtr context, const NamesAndTypesList & source, const NamesWithAliases & output, const ASTPtr & ast, bool add_project = true);
     static void projection(QueryPipelineBuilder & pipeline, const Block & target, const BuildQueryPipelineSettings & settings);
-    static bool isLogicalQueryPlanStep(const QueryPlanStepSharedPtr & query_plan_step) { return !isPhysicalQueryPlanStep(query_plan_step); }
+    static bool isLogicalQueryPlanStep(const QueryPlanStepPtr & query_plan_step) { return !isPhysicalQueryPlanStep(query_plan_step); }
 
-    static bool isPhysicalQueryPlanStep(const QueryPlanStepSharedPtr & query_plan_step)
+    static bool isPhysicalQueryPlanStep(const QueryPlanStepPtr & query_plan_step)
     {
         if (auto join_step_ext = std::dynamic_pointer_cast<JoinStepExt>(query_plan_step))
             return join_step_ext->getDistributionType() != DistributionType::UNKNOWN;
@@ -148,7 +187,7 @@ public:
         return true;
     }
 
-    static QueryPlanStepSharedPtr copyQueryPlanStep(const QueryPlanStepSharedPtr & query_plan_step, ContextPtr context)
+    static QueryPlanStepPtr copyQueryPlanStep(const QueryPlanStepPtr & query_plan_step, ContextPtr context)
     {
         if (auto step_ptr = std::dynamic_pointer_cast<OffsetStep>(query_plan_step))
             return std::make_shared<OffsetStep>(step_ptr->input_streams[0], step_ptr->offset);
@@ -187,37 +226,37 @@ public:
         }
         else if (auto step_ptr = std::dynamic_pointer_cast<AggregatingStep>(query_plan_step))
         {
-                return std::make_shared<AggregatingStep>(
-                    step_ptr->input_streams[0],
-                    step_ptr->params,
-                    step_ptr->grouping_sets_params,
-                    step_ptr->final,
-                    step_ptr->max_block_size,
-                    step_ptr->aggregation_in_order_max_block_bytes,
-                    step_ptr->merge_threads,
-                    step_ptr->temporary_data_merge_threads,
-                    step_ptr->storage_has_evenly_distributed_read,
-                    step_ptr->group_by_use_nulls,
-                    step_ptr->sort_description_for_merging,
-                    step_ptr->group_by_sort_description,
-                    step_ptr->should_produce_results_in_order_of_bucket_number,
-                    step_ptr->memory_bound_merging_of_aggregation_results_enabled,
-                    step_ptr->explicit_sorting_required_for_aggregation_in_order);
+            return std::make_shared<AggregatingStep>(
+                step_ptr->input_streams[0],
+                step_ptr->params,
+                step_ptr->grouping_sets_params,
+                step_ptr->final,
+                step_ptr->max_block_size,
+                step_ptr->aggregation_in_order_max_block_bytes,
+                step_ptr->merge_threads,
+                step_ptr->temporary_data_merge_threads,
+                step_ptr->storage_has_evenly_distributed_read,
+                step_ptr->group_by_use_nulls,
+                step_ptr->sort_description_for_merging,
+                step_ptr->group_by_sort_description,
+                step_ptr->should_produce_results_in_order_of_bucket_number,
+                step_ptr->memory_bound_merging_of_aggregation_results_enabled,
+                step_ptr->explicit_sorting_required_for_aggregation_in_order);
         }
         else if (auto step_ptr = std::dynamic_pointer_cast<MergingAggregatedStep>(query_plan_step))
         {
-                return std::make_shared<MergingAggregatedStep>(
-                    step_ptr->input_streams[0],
-                    step_ptr->params,
-                    step_ptr->final,
-                    step_ptr->memory_efficient_aggregation,
-                    step_ptr->max_threads,
-                    step_ptr->memory_efficient_merge_threads,
-                    step_ptr->should_produce_results_in_order_of_bucket_number,
-                    step_ptr->max_block_size,
-                    step_ptr->memory_bound_merging_max_block_bytes,
-                    step_ptr->group_by_sort_description,
-                    step_ptr->memory_bound_merging_of_aggregation_results_enabled);
+            return std::make_shared<MergingAggregatedStep>(
+                step_ptr->input_streams[0],
+                step_ptr->params,
+                step_ptr->final,
+                step_ptr->memory_efficient_aggregation,
+                step_ptr->max_threads,
+                step_ptr->memory_efficient_merge_threads,
+                step_ptr->should_produce_results_in_order_of_bucket_number,
+                step_ptr->max_block_size,
+                step_ptr->memory_bound_merging_max_block_bytes,
+                step_ptr->group_by_sort_description,
+                step_ptr->memory_bound_merging_of_aggregation_results_enabled);
         }
         else if (auto window_step = std::dynamic_pointer_cast<WindowStep>(query_plan_step))
         {
@@ -260,10 +299,10 @@ public:
                     }
                 case SortingStep::Type::MergingSorted:
                     return std::make_shared<SortingStep>(
-                            sorting_step->input_streams[0],
-                            sorting_step->result_description,
-                            sorting_step->sort_settings.max_block_size,
-                            sorting_step->always_read_till_end);
+                        sorting_step->input_streams[0],
+                        sorting_step->result_description,
+                        sorting_step->sort_settings.max_block_size,
+                        sorting_step->always_read_till_end);
             }
         }
         else if (auto filling_step = std::dynamic_pointer_cast<FillingStep>(query_plan_step))
@@ -287,43 +326,56 @@ public:
         else if (auto step_ptr = std::dynamic_pointer_cast<CreatingSetsStep>(query_plan_step))
             return std::make_shared<CreatingSetsStep>(step_ptr->getInputStreams());
 
-        // steps end by Ext use macroc to copy
-        #define CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT(type) \
-        if (auto step_ptr = std::dynamic_pointer_cast<type>(query_plan_step)) \
-        { \
-            return step_ptr->copy(context); \
-        }
+// steps end by Ext use macroc to copy
+#define CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT(type) \
+    if (auto step_ptr = std::dynamic_pointer_cast<type>(query_plan_step)) \
+    { \
+        return step_ptr->copy(context); \
+    }
 
-        #define APPLY_QUERY_PLAN_STEP_TYPES_EXT(M) \
-        M(AnyStepExt) \
-        M(ApplyStepExt) \
-        M(AssignUniqueIdStepExt) \
-        M(BufferStepExt) \
-        M(EnforceSingleRowStepExt) \
-        M(ExchangeStepExt) \
-        M(ExpandStepExt) \
-        M(ExplainAnalyzeStepExt) \
-        M(FilterStepExt) \
-        M(IntermediateResultCacheStepExt) \
-        M(JoinStepExt) \
-        M(LocalExchangeStepExt) \
-        M(MarkDistinctStepExt) \
-        M(MultiJoinStepExt) \
-        M(PartitionTopNStepExt) \
-        M(PlanSegmentSourceStepExt) \
-        M(ProjectionStepExt) \
-        M(RemoteExchangeSourceStepExt) \
-        M(SettingQuotaAndLimitsStepExt) \
-        M(TopNFilteringStepExt) \
-        M(UnionStepExt) \
-        M(ValuesStepExt)
+    #define APPLY_QUERY_PLAN_STEP_TYPES_EXT(M) \
+    M(AnyStepExt) \
+    M(ApplyStepExt) \
+    M(AssignUniqueIdStepExt) \
+    M(BufferStepExt) \
+    M(CTERefStepExt) \
+    M(EnforceSingleRowStepExt) \
+    M(ExchangeStepExt) \
+    M(ExpandStepExt) \
+    M(ExplainAnalyzeStepExt) \
+    M(FilterStepExt) \
+    M(FinalSampleStepExt) \
+    M(IntermediateResultCacheStepExt) \
+    M(JoinStepExt) \
+    M(LocalExchangeStepExt) \
+    M(MarkDistinctStepExt) \
+    M(MultiJoinStepExt) \
+    M(PartitionTopNStepExt) \
+    M(PlanSegmentSourceStepExt) \
+    M(ProjectionStepExt) \
+    M(RemoteExchangeSourceStepExt) \
+    M(TopNFilteringStepExt) \
+    M(UnionStepExt) \
+    M(ValuesStepExt)
 
-        APPLY_QUERY_PLAN_STEP_TYPES_EXT(CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT)
-        #undef CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT
-        #undef APPLY_QUERY_PLAN_STEP_TYPES_EXT
+    APPLY_QUERY_PLAN_STEP_TYPES_EXT(CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT)
+#undef CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT
+#undef APPLY_QUERY_PLAN_STEP_TYPES_EXT
 
         return nullptr;
     }
+
+    static const Names & getLimitByStepColumns(const LimitByStep & limit) { return limit.columns; }
+    static size_t getLimitByStepGroupLength(const LimitByStep & limit) { return limit.group_length; }
+    static size_t getLimitByStepGroupOffset(const LimitByStep & limit) { return limit.group_offset; }
+
+    static size_t getOffsetStepOffset(const OffsetStep & offset) {return offset.offset;}
+
+    static const std::vector<WindowFunctionDescription> & getWindowStepFunctions(const WindowStep & window) {return window.window_functions;}
+    static bool getWindowStepStreamsFanOut(const WindowStep & window) {return window.streams_fan_out;}
+
+    static const ASTSelectIntersectExceptQuery::Operator & getIntersectOrExceptStepOperator(const IntersectOrExceptStep & intersect_or_except) {return intersect_or_except.current_operator;}
+    static size_t getIntersectOrExceptStepMaxThreads(const IntersectOrExceptStep & intersect_or_except) {return intersect_or_except.max_threads;}
 };
 
 }

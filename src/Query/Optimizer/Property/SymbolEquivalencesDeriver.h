@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Query/Optimizer/Property/Equivalences.h>
-#include <QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
 
 #include <utility>
 

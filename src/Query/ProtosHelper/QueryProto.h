@@ -72,6 +72,8 @@ using RProcessorProfileRequest = Protos::ProcessorProfileRequest;
 using RProcessorsProfileRequest = Protos::ProcessorsProfileRequest;
 using RProcessorProfileResponse = Protos::ProcessorProfileResponse;
 
+using RPartitioningHandle  = Protos::Partitioning_Handle;
+using RPartitioningComponent  = Protos::Partitioning_Component;
 
 String planSegmentTypeToString(const RIPlanSegment::Enum & type);
 

@@ -52,6 +52,7 @@ public:
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
     bool isAlwaysReadTillEnd() const { return always_read_till_end; }
+    bool isWithTies() const { return with_ties; }
     const SortDescription & getSortDescription() const { return description; }
     bool isPartial() const { return partial; }
     
