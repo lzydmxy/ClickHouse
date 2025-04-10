@@ -471,8 +471,7 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                     params_for_set.two_level_mode = optimizer_settings.group_by_two_level_for_grouping_set
                         ? TwoLevelMode::ENFORCE_TWO_LEVEL
                         : TwoLevelMode::ENFORCE_SINGLE_LEVEL;
-                    auto transform_params_for_set
-                        = std::make_shared<AggregatingTransformParams>(input_header, std::move(params_for_set), final);
+                    auto transform_params_for_set = std::make_shared<AggregatingTransformParamsExt>(std::move(params_for_set), final);
 
                     if (streams > 1)
                     {

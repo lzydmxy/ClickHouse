@@ -266,8 +266,8 @@ public:
 
 private:
     friend struct AggregatedDataVariants;
-    friend class ConvertingAggregatedToChunksTransform;
-    friend class ConvertingAggregatedToChunksSource;
+    friend class ConvertingAggregatedToChunksTransformExt;
+    friend class ConvertingAggregatedToChunksSourceExt;
     friend class AggregatingInOrderTransform;
     friend class AggregatingStreamingTransform;
     friend class MergingAggregatedStreamingTransform;
