@@ -586,14 +586,15 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
         {
             if (pipeline.getNumStreams() > 1)
             {
-                auto many_data = std::make_shared<ManyAggregatedData>(pipeline.getNumStreams());
-                size_t counter = 0;
-                pipeline.addSimpleTransform(
-                    [&](const Block & header)
-                    {
-                        return std::make_shared<AggregatingInOrderTransform>(
-                            header, transform_params, group_by_sort_description, max_block_size, many_data, counter++);
-                    });
+                // todo: implement
+                // auto many_data = std::make_shared<ManyAggregatedData>(pipeline.getNumStreams());
+                // size_t counter = 0;
+                // pipeline.addSimpleTransform(
+                //     [&](const Block & header)
+                //     {
+                //         return std::make_shared<AggregatingInOrderTransform>(
+                //             header, transform_params, group_by_sort_description, max_block_size, many_data, counter++);
+                //     });
 
                 aggregating_in_order = collector.detachProcessors(0);
 
@@ -601,30 +602,33 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                 {
                     if (!column_description.column_name.empty())
                     {
-                        column_description.column_number = pipeline.getHeader().getPositionByName(column_description.column_name);
+                        // column_description.column_number = pipeline.getHeader().getPositionByName(column_description.column_name);
                         column_description.column_name.clear();
                     }
                 }
 
-                auto transform = std::make_shared<FinishAggregatingInOrderTransform>(
-                    pipeline.getHeader(), pipeline.getNumStreams(), transform_params, group_by_sort_description, max_block_size);
+                // todo: implement
+                // auto transform = std::make_shared<FinishAggregatingInOrderTransform>(
+                //     pipeline.getHeader(), pipeline.getNumStreams(), transform_params, group_by_sort_description, max_block_size);
 
-                pipeline.addTransform(std::move(transform));
-                aggregating_sorted = collector.detachProcessors(1);
+                // pipeline.addTransform(std::move(transform));
+                // aggregating_sorted = collector.detachProcessors(1);
             }
             else
             {
-                pipeline.addSimpleTransform(
-                    [&](const Block & header) {
-                        return std::make_shared<AggregatingInOrderTransform>(
-                            header, transform_params, group_by_sort_description, max_block_size);
-                    });
+                // todo: implement
+                // pipeline.addSimpleTransform(
+                //     [&](const Block & header) {
+                //         return std::make_shared<AggregatingInOrderTransform>(
+                //             header, transform_params, group_by_sort_description, max_block_size);
+                //     });
 
                 aggregating_in_order = collector.detachProcessors(0);
             }
 
-            pipeline.addSimpleTransform([&](const Block & header)
-                                        { return std::make_shared<FinalizingSimpleTransform>(header, transform_params); });
+            // todo: implement
+            // pipeline.addSimpleTransform([&](const Block & header)
+            //                             { return std::make_shared<FinalizingSimpleTransform>(header, transform_params); });
 
             finalizing = collector.detachProcessors(2);
             return;
@@ -640,19 +644,20 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
             pipeline.resize(pipeline.getNumStreams(), true, true);
         if (can_streaming_agg)
         {
-            pipeline.addSimpleTransform(
-                [&](const Block & header)
-                {
-                    return std::make_shared<AggregatingStreamingTransform>(
-                        header,
-                        transform_params,
-                        settings.streaming_agg_local_ratio,
-                        false,
-                        settings.enable_intermediate_result_cache_streaming,
-                        streaming_for_cache,
-                        false,
-                        final);
-                });
+            // todo: implement
+            // pipeline.addSimpleTransform(
+            //     [&](const Block & header)
+            //     {
+            //         return std::make_shared<AggregatingStreamingTransform>(
+            //             header,
+            //             transform_params,
+            //             settings.streaming_agg_local_ratio,
+            //             false,
+            //             settings.enable_intermediate_result_cache_streaming,
+            //             streaming_for_cache,
+            //             false,
+            //             final);
+            //     });
         }
         else
         {
@@ -678,18 +683,19 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
     {
         pipeline.resize(1);
 
-        if (can_streaming_agg)
-            pipeline.addSimpleTransform(
-                [&](const Block & header)
-                {
-                    return std::make_shared<AggregatingStreamingTransform>(
-                        header,
-                        transform_params,
-                        settings.streaming_agg_local_ratio,
-                        false,
-                        settings.enable_intermediate_result_cache_streaming,
-                        streaming_for_cache);
-                });
+        if (can_streaming_agg) {}
+            // todo: implement
+            // pipeline.addSimpleTransform(
+            //     [&](const Block & header)
+            //     {
+            //         return std::make_shared<AggregatingStreamingTransform>(
+            //             header,
+            //             transform_params,
+            //             settings.streaming_agg_local_ratio,
+            //             false,
+            //             settings.enable_intermediate_result_cache_streaming,
+            //             streaming_for_cache);
+            //     });
         else
             pipeline.addSimpleTransform([&](const Block & header)
                                         { return std::make_shared<AggregatingTransformExt>(header, transform_params); });
