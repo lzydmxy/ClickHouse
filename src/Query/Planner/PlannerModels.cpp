@@ -13,6 +13,8 @@ std::optional<String> FieldSymbolInfo::tryGetSubColumnSymbol(const SubColumnID &
 
 const String & RelationPlan::getFirstPrimarySymbol() const
 {
+    if (field_symbol_infos.empty())
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "No field symbols available in RelationPlan.");
     return field_symbol_infos.front().getPrimarySymbol();
 }
 

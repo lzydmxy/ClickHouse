@@ -1,6 +1,8 @@
 #include <Query/Planner/PlanBuilder.h>
+
 #include <Query/Planner/PlannerCommon.h>
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
+#include <Query/Common/makeCastFunction.h>
 
 
 namespace DB
@@ -132,8 +134,7 @@ Names PlanBuilder::projectExpressionsWithCoercion(const ExpressionsAndTypes & ex
 
         if (cast_type)
         {
-            // todo lizhuoyu5, need Optimizer/makeCastFunction.h
-            // rewritten_expr = makeCastFunction(rewritten_expr, cast_type);
+            rewritten_expr = makeCastFunction(rewritten_expr, cast_type);
         }
 
         auto output_symbol = symbol_allocator->newSymbol(rewritten_expr);
