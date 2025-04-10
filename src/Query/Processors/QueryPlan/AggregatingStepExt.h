@@ -76,6 +76,8 @@ void computeGroupingFunctions(
 class AggregatingStepExt : public ITransformingStep
 {
 public:
+    friend class QueryPlanStepHelper;
+
     AggregatingStepExt(
         const DataStream & input_stream_,
         AggregatorExt::Params params_,

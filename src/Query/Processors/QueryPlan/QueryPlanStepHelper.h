@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Processors/QueryPlan/AggregatingStep.h>
 #include <Processors/QueryPlan/ArrayJoinStep.h>
 #include <Processors/QueryPlan/CreatingSetsStep.h>
 #include <Processors/QueryPlan/CubeStep.h>
@@ -20,6 +19,7 @@
 #include <Processors/QueryPlan/WindowStep.h>
 #include <Processors/QueryPlan/ReadNothingStep.h>
 
+#include <Query/Processors/QueryPlan/AggregatingStepExt.h>
 #include <Query/Processors/QueryPlan/AnyStepExt.h>
 #include <Query/Processors/QueryPlan/ApplyStepExt.h>
 #include <Query/Processors/QueryPlan/AssignUniqueIdStepExt.h>
@@ -57,7 +57,7 @@ class TableScanStepExt;
 // Use for Optimizer
 #define APPLY_QUERY_PLAN_STEP_TYPES(M) \
     M(AggregatingProjectionStep) \
-    M(AggregatingStep) \
+    M(AggregatingStepExt) \
     M(AnyStepExt) \
     M(ApplyStepExt) \
     M(ArrayJoinStep) \
@@ -224,24 +224,22 @@ public:
                 step_ptr->network_transfer_limits,
                 step_ptr->context);
         }
-        else if (auto step_ptr = std::dynamic_pointer_cast<AggregatingStep>(query_plan_step))
+        else if (auto step_ptr = std::dynamic_pointer_cast<AggregatingStepExt>(query_plan_step))
         {
-            return std::make_shared<AggregatingStep>(
+            return std::make_shared<AggregatingStepExt>(
                 step_ptr->input_streams[0],
-                step_ptr->params,
+                step_ptr->keys,
+                step_ptr->keys_not_hashed,
+                step_ptr->params.aggregates,
                 step_ptr->grouping_sets_params,
                 step_ptr->final,
-                step_ptr->max_block_size,
-                step_ptr->aggregation_in_order_max_block_bytes,
-                step_ptr->merge_threads,
-                step_ptr->temporary_data_merge_threads,
-                step_ptr->storage_has_evenly_distributed_read,
-                step_ptr->group_by_use_nulls,
-                step_ptr->sort_description_for_merging,
+                step_ptr->stage_policy,
                 step_ptr->group_by_sort_description,
+                step_ptr->groupings,
+                step_ptr->needOverflowRow(),
                 step_ptr->should_produce_results_in_order_of_bucket_number,
-                step_ptr->memory_bound_merging_of_aggregation_results_enabled,
-                step_ptr->explicit_sorting_required_for_aggregation_in_order);
+                step_ptr->no_shuffle,
+                step_ptr->streaming_for_cache);
         }
         else if (auto step_ptr = std::dynamic_pointer_cast<MergingAggregatedStep>(query_plan_step))
         {
@@ -333,7 +331,7 @@ public:
         return step_ptr->copy(context); \
     }
 
-    #define APPLY_QUERY_PLAN_STEP_TYPES_EXT(M) \
+#define APPLY_QUERY_PLAN_STEP_TYPES_EXT(M) \
     M(AnyStepExt) \
     M(ApplyStepExt) \
     M(AssignUniqueIdStepExt) \
@@ -358,7 +356,7 @@ public:
     M(UnionStepExt) \
     M(ValuesStepExt)
 
-    APPLY_QUERY_PLAN_STEP_TYPES_EXT(CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT)
+        APPLY_QUERY_PLAN_STEP_TYPES_EXT(CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT)
 #undef CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT
 #undef APPLY_QUERY_PLAN_STEP_TYPES_EXT
 

@@ -724,26 +724,6 @@ void AggregatingStepExt::describePipeline(FormatSettings & settings) const
     }
 }
 
-// ! todo: implement it and getType in helper
-// std::shared_ptr<IQueryPlanStep> AggregatingStep::copy(ContextPtr) const
-// {
-//     return std::make_shared<AggregatingStep>(
-//         input_streams[0],
-//         keys,
-//         keys_not_hashed,
-//         params.aggregates,
-//         grouping_sets_params,
-//         final,
-//         stage_policy,
-//         group_by_sort_description,
-//         groupings,
-//         needOverflowRow(),
-//         should_produce_results_in_order_of_bucket_number,
-//         no_shuffle,
-//         streaming_for_cache,
-//         hints);
-// }
-
 // todo: hongzhigao1, implement proto
 // void GroupingSetsParams::toProto(Protos::GroupingSetsParams & proto) const
 // {
