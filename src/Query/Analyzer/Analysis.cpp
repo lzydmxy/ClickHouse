@@ -1,6 +1,7 @@
 #include <Query/Analyzer/Analysis.h>
 
 #include <DataTypes/DataTypeNullable.h>
+#include <Query/Interpreters/executeSubQuery.h>
 
 
 namespace DB
@@ -426,6 +427,122 @@ void Analysis::addUsedFunctionArgument(const String & func_name, ColumnsWithType
         if (arg.column && !arg.column->empty())
         function_arguments[func_name].emplace_back(toString((*arg.column)[0]));
     }
+}
+
+const Block & Analysis::getScalarSubqueryResult(const ASTPtr & subquery, ContextPtr context)
+{
+    auto hash = subquery->getTreeHash(true);
+    String hash_str = toString(hash.low64) + "_" + toString(hash.high64);
+
+    if (!executed_scalar_subqueries.count(hash_str))
+    {
+        auto & ast_subquery = subquery->as<ASTSubquery &>();
+        auto & inner_query = ast_subquery.children.front();
+
+        DataTypes types;
+        auto pre_execute
+            = [&types](InterpreterSelectQueryUseOptimizer & interpreter) { types = interpreter.getSampleBlock().getDataTypes(); };
+
+        auto query_context = createContextForSubQuery(context);
+        SettingsChanges changes;
+        changes.emplace_back("max_result_rows", 1);
+        changes.emplace_back("result_overflow_mode", "throw");
+        changes.emplace_back("extremes", false);
+        changes.emplace_back("limit", 0);
+        changes.emplace_back("offset", 0);
+        changes.emplace_back("final_order_by_all_direction", 0);
+        query_context->applySettingsChanges(changes);
+        auto block = executeSubPipelineWithOneRow(inner_query, query_context, pre_execute);
+
+        if (block.rows() > 1)
+            throw Exception(
+                ErrorCodes::INCORRECT_RESULT_OF_SCALAR_SUBQUERY,
+                "Scalar subquery returned more than one row: {}",
+                subquery->formatForErrorMessage());
+
+        if (block.rows() == 0)
+        {
+            if (types.size() != 1)
+                types = {std::make_shared<DataTypeTuple>(types)};
+
+            auto & type = types[0];
+            if (!type->isNullable())
+            {
+                if (!type->canBeInsideNullable())
+                    throw Exception(
+                        ErrorCodes::INCORRECT_RESULT_OF_SCALAR_SUBQUERY,
+                        "Scalar subquery returned empty result of type {} which cannot be Nullable",
+                        type->getName());
+
+                type = makeNullable(type);
+            }
+
+            auto null_column = type->createColumn();
+            null_column->insert(Null{});
+            block.clear();
+            block.insert(ColumnWithTypeAndName{ColumnPtr{std::move(null_column)}, type, ""});
+        }
+        else
+        {
+            block = materializeBlock(block);
+            size_t columns = block.columns();
+
+            if (columns == 1)
+            {
+                auto & column = block.getByPosition(0);
+                /// Here we wrap type to nullable if we can.
+                /// It is needed cause if subquery return no rows, it's result will be Null.
+                /// In case of many columns, do not check it cause tuple can't be nullable.
+                if (!column.type->isNullable() && column.type->canBeInsideNullable())
+                {
+                    column.type = makeNullable(column.type);
+                    column.column = makeNullable(column.column);
+                }
+            }
+            else
+            {
+                ColumnWithTypeAndName ctn;
+                ctn.type = std::make_shared<DataTypeTuple>(block.getDataTypes());
+                ctn.column = ColumnTuple::create(block.getColumns());
+                block = Block{ctn};
+            }
+        }
+
+        executed_scalar_subqueries.emplace(hash_str, std::move(block));
+    }
+
+    return executed_scalar_subqueries.at(hash_str);
+}
+
+
+SetPtr Analysis::getInSubqueryResult(const ASTPtr & subquery, ContextPtr context)
+{
+    auto hash = subquery->getTreeHash(true);
+    String hash_str = toString(hash.low64) + "_" + toString(hash.high64);
+
+    if (!executed_in_subqueries.count(hash_str))
+    {
+        auto & ast_subquery = subquery->as<ASTSubquery &>();
+        auto & inner_query = ast_subquery.children.front();
+
+        SizeLimits limites(context->getSettingsRef().max_rows_in_set, context->getSettingsRef().max_bytes_in_set, OverflowMode::THROW);
+        SetPtr set = std::make_shared<Set>(limites, true, context->getSettingsRef().transform_null_in);
+        auto pre_execute = [&set](InterpreterSelectQueryUseOptimizer & interpreter) { set->setHeader(interpreter.getSampleBlock().getColumnsWithTypeAndName()); };
+        auto proc_block = [&set](Block & block) { set->insertFromBlock(block.getColumnsWithTypeAndName()); };
+
+        auto query_context = createContextForSubQuery(context);
+        SettingsChanges changes;
+        changes.emplace_back("limit", 0);
+        changes.emplace_back("offset", 0);
+        changes.emplace_back("final_order_by_all_direction", 0);
+        query_context->applySettingsChanges(changes);
+        executeSubPipeline(inner_query, query_context, pre_execute, proc_block);
+
+        set->finishInsert();
+        executed_in_subqueries.emplace(hash_str, set);
+    }
+
+    return executed_in_subqueries.at(hash_str);
 }
 
 }

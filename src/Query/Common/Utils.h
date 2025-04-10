@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Storages/IStorage_fwd.h>
+#include <Core/UUID.h>
 
 namespace DB
 {
@@ -17,6 +18,12 @@ namespace Utils
     void checkState(bool expression);
     void checkState(bool expression, const String & msg);
 
+}
+
+namespace UUIDHelpers
+{
+
+    String UUIDToString(const UUID & uuid);
 }
 
 }

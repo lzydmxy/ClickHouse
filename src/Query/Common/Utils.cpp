@@ -1,6 +1,8 @@
 #include <Query/Common/Utils.h>
 
 #include <Common/Exception.h>
+#include <IO/WriteBufferFromString.h>
+#include <IO/WriteHelpers.h>
 
 namespace DB
 {
@@ -46,4 +48,18 @@ void checkState(bool expression, const String & msg)
 }
 
 }
+
+namespace UUIDHelpers
+{
+
+String UUIDToString(const UUID & uuid)
+{
+    String uuid_str;
+    WriteBufferFromString buff(uuid_str);
+    writeUUIDText(uuid, buff);
+    return uuid_str;
+}
+
+}
+
 }

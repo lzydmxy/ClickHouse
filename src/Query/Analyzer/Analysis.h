@@ -466,18 +466,10 @@ struct Analysis
     void addUsedFunctionArgument(const String & func_name, ColumnsWithTypeAndName & processed_arguments);
 
     std::map<String, Block> executed_scalar_subqueries;
-    const Block & getScalarSubqueryResult(const ASTPtr & subquery, ContextPtr context)
-    {
-        //todo: now just a fake impl for build
-         return executed_scalar_subqueries["test"];
-    }
+    const Block & getScalarSubqueryResult(const ASTPtr & subquery, ContextPtr context);
 
     std::map<String, SetPtr> executed_in_subqueries;
-    SetPtr getInSubqueryResult(const ASTPtr & subquery, ContextPtr context)
-    { 
-        //todo: now just a fake impl for build
-        return nullptr;
-    }
+    SetPtr getInSubqueryResult(const ASTPtr & subquery, ContextPtr context);
 };
 
 }
