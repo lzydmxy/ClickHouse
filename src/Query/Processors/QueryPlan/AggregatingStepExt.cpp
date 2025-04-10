@@ -478,7 +478,7 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                         auto many_data = std::make_shared<ManyAggregatedData>(streams);
                         for (size_t j = 0; j < streams; ++j)
                         {
-                            auto aggregation_for_set = std::make_shared<AggregatingTransform>(
+                            auto aggregation_for_set = std::make_shared<AggregatingTransformExt>(
                                 input_header, transform_params_for_set, many_data, j, merge_max_threads, temporary_data_merge_threads);
                             // For each input stream we have `grouping_sets_size` copies, so port index
                             // for transform #j should skip ports of first (j-1) streams.
@@ -489,7 +489,7 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                     }
                     else
                     {
-                        auto aggregation_for_set = std::make_shared<AggregatingTransform>(input_header, transform_params_for_set);
+                        auto aggregation_for_set = std::make_shared<AggregatingTransformExt>(input_header, transform_params_for_set);
                         connect(*ports[i], aggregation_for_set->getInputs().front());
                         ports[i] = &aggregation_for_set->getOutputs().front();
                         processors.push_back(aggregation_for_set);
@@ -662,7 +662,7 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
             pipeline.addSimpleTransform(
                 [&](const Block & header)
                 {
-                    return std::make_shared<AggregatingTransform>(
+                    return std::make_shared<AggregatingTransformExt>(
                         header, transform_params, many_data, counter++, merge_max_threads, temporary_data_merge_threads);
                 });
         }
@@ -692,7 +692,7 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                 });
         else
             pipeline.addSimpleTransform([&](const Block & header)
-                                        { return std::make_shared<AggregatingTransform>(header, transform_params); });
+                                        { return std::make_shared<AggregatingTransformExt>(header, transform_params); });
 
         aggregating = collector.detachProcessors(0);
     }

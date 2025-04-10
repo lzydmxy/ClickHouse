@@ -1,5 +1,6 @@
 #include <Processors/ISource.h>
 #include <Query/Processors/Transforms/AggregatingTransformExt.h>
+#include <Query/Processors/Transforms/MergingAggregatedMemoryEfficientTransformExt.h>
 #include <QueryPipeline/Pipe.h>
 #include <Common/formatReadable.h>
 #include <Common/logger_useful.h>
