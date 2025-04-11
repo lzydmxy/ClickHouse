@@ -196,8 +196,16 @@ DECLARE_SETTINGS_TRAITS(OptimizerSettingsTraits, ALL_OPTIMIZER_SETTINGS)
 struct OptimizerSettings : public BaseSettings<OptimizerSettingsTraits>
 {
     void loadFromConfig(const String & config_elem, const Poco::Util::AbstractConfiguration & config);
-    /// TODO: Need dump to map and send to rpc service
-    std::unordered_map<String, String> dumpToMap() const;
+
+    std::unordered_map<String, String> dumpToMap() const
+    {
+        std::unordered_map<String, String> res;
+        for (const auto & field : *this)
+        {
+            res.emplace(field.getName(), field.getValueString());
+        }
+        return res;
+    }
 };
 
 using OptimizerSettingsPtr = std::shared_ptr<OptimizerSettings>;
