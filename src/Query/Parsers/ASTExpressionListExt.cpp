@@ -16,4 +16,12 @@ void ASTExpressionListExt::appendColumnName(WriteBuffer & ostr) const
     }
     writeChar(')', ostr);
 }
+
+ASTPtr ASTExpressionListExt::clone() const
+{
+    auto clone = std::make_shared<ASTExpressionListExt>(*this);
+    clone->cloneChildren();
+    return clone;
+}
+
 }

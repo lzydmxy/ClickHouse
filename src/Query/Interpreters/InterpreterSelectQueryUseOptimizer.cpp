@@ -64,7 +64,7 @@ InterpreterSelectQueryUseOptimizer::InterpreterSelectQueryUseOptimizer(
     CTEInfo cte_info_,
     ContextMutablePtr & context_,
     const SelectQueryOptions & options_)
-    : query_ptr(query_ptr_ ? query_ptr_->clone() : nullptr)
+    : query_ptr(query_ptr_ ? query_ptr_ : nullptr)
     , sub_plan_ptr(sub_plan_ptr_)
     , cte_info(std::move(cte_info_))
     , context(context_)
@@ -246,7 +246,7 @@ std::optional<std::set<StorageID>> InterpreterSelectQueryUseOptimizer::getUsedSt
 
 void InterpreterSelectQueryUseOptimizer::setUnsupportedSettings(ContextMutablePtr & context)
 {
-    if (!context->getOptimizerContext()->getSettingsRef().enable_optimizer)
+    if (!context->getOptimizerContext()->getSettingsRef().enable_jd_optimizer)
         return;
 
     SettingsChanges setting_changes;

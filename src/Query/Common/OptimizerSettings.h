@@ -65,7 +65,7 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(UInt64, operator_profile_receive_timeout, 3000, "Max waiting time for operator profile in ms", 0) \
     M(UInt64, push_queue_timeout_millseconds, 10, "Timeout millseconds of push profile or others to queue.", 0) \
     /** Query optimizer relative settings */ \
-    M(Bool, enable_optimizer, true, "Whether enable query optimizer", 0) \
+    M(Bool, enable_jd_optimizer, true, "Whether enable jd query optimizer", 0) \
     M(Bool, rewrite_like_function, true, "Rewrite simple pattern like function", 0) \
     M(Bool, enable_legacy_optimizer, false, "Whether enable query optimizer", 0) \
     M(UInt64, exchange_buffer_send_threshold_in_bytes, 1000000, "The minimum bytes when exchange will flush send buffer ", 0) \

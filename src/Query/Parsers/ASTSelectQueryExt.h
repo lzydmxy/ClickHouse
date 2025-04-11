@@ -18,6 +18,7 @@ class ASTSelectQueryExt : public ASTSelectQuery
   
     static void collectAllTables(const IAST * ast, std::vector<ASTPtr> &, bool &);
 
+    String getID(char) const override { return "SelectQueryExt"; }
     ASTPtr & refGroupBy() { return getExpression(Expression::GROUP_BY); }
     ASTPtr & refWindow() { return getExpression(Expression::WINDOW); }
     ASTPtr & refOrderBy() { return getExpression(Expression::ORDER_BY); }
@@ -41,6 +42,7 @@ class ASTSelectQueryExt : public ASTSelectQuery
 
     std::vector<Expression> getExpressionTypes() const;
     void removeSettingsAndOutputFormat();
+    ASTPtr clone() const override;
 };
 
 }

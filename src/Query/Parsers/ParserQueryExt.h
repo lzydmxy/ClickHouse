@@ -6,7 +6,7 @@
 namespace DB
 {
 
-class ParserQueryExt : private ParserQuery
+class ParserQueryExt : public ParserQuery
 {
 private:
     const char * end;

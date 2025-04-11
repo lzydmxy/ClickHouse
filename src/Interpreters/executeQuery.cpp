@@ -73,6 +73,9 @@
 #include <Processors/Formats/IOutputFormat.h>
 #include <Processors/Executors/CompletedPipelineExecutor.h>
 #include <Processors/Sources/WaitForAsyncInsertSource.h>
+#include <Query/Parsers/ParserQueryExt.h>
+#include <Query/Parsers/ASTReplaceVisitor.h>
+#include <Query/Interpreters/InterpreterSelectQueryUseOptimizer.h>
 
 #include <base/EnumReflection.h>
 #include <base/demangle.h>
@@ -755,10 +758,10 @@ static std::tuple<ASTPtr, BlockIO> executeQueryImpl(
         }
         else
         {
-            ParserQuery parser(end, settings.allow_settings_after_format_in_insert);
+            ParserQueryExt parser(end, settings.allow_settings_after_format_in_insert);
             /// TODO: parser should fail early when max_query_size limit is reached.
             ast = parseQuery(parser, begin, end, "", max_query_size, settings.max_parser_depth, settings.max_parser_backtracks);
-
+            DB::ASTReplaceVisitor::replace(ast);
 #ifndef NDEBUG
             /// Verify that AST formatting is consistent:
             /// If you format AST, parse it back, and format it again, you get the same string.
