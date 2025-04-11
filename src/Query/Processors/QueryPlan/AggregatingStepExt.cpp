@@ -7,7 +7,7 @@
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/Transforms/AggregatingTransformExt.h>
 #include <Query/Processors/Transforms/AggregatingInOrderTransformExt.h>
-#include <Processors/Merges/FinishAggregatingInOrderTransform.h>
+#include <Query/Processors/Merges/FinishAggregatingInOrderTransformExt.h>
 
 namespace DB
 {
@@ -625,13 +625,13 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                     }
                 }
 
-                // todo: implement
 
                 const auto src_header = pipeline.getHeader();
 
-                Aggregator::Params merge_params
+                AggregatorExt::Params merge_params
                 {
-                    keys,
+                    src_header,
+                    key_index,
                     transform_params->params.aggregates,
                     transform_params->params.overflow_row,
                     transform_params->params.max_rows_to_group_by,
@@ -639,6 +639,8 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                     transform_params->params.group_by_two_level_threshold,
                     transform_params->params.group_by_two_level_threshold_bytes,
                     transform_params->params.max_bytes_before_external_group_by,
+                    transform_params->params.enable_adaptive_spill,
+                    transform_params->params.spill_buffer_bytes_before_external_group_by,
                     transform_params->params.empty_result_for_aggregation_by_empty_set,
                     transform_params->params.tmp_data_scope,
                     transform_params->params.max_threads,
@@ -650,12 +652,13 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                     /* only_merge */ false,
                     transform_params->params.optimize_group_by_constant_keys,
                     transform_params->params.min_hit_rate_to_use_consecutive_keys_optimization,
+                    transform_params->params.stats_collecting_params,
                     {},
                 };
 
-                auto merge_transform_params = std::make_shared<AggregatingTransformParams>(src_header, std::move(merge_params), final);
-                auto transform = std::make_shared<FinishAggregatingInOrderTransform>(
-                    pipeline.getHeader(), pipeline.getNumStreams(), merge_transform_params, group_by_sort_description, 0, max_block_size);
+                auto merge_transform_params = std::make_shared<AggregatingTransformParamsExt>(std::move(merge_params), final);
+                auto transform = std::make_shared<FinishAggregatingInOrderTransformExt>(
+                    pipeline.getHeader(), pipeline.getNumStreams(), merge_transform_params, group_by_sort_description, max_block_size);
 
                 pipeline.addTransform(std::move(transform));
                 aggregating_sorted = collector.detachProcessors(1);
