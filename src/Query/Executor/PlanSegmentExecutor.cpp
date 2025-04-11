@@ -36,6 +36,7 @@
 #include <Query/Executor/PlanSegmentReport.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
 #include <Query/Processors/IQueryPlanStepExt.h>
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsHelper.h>
 
 namespace ProfileEvents
 {
@@ -430,8 +431,7 @@ QueryPipelinePtr PlanSegmentExecutor::buildPipeline()
     //TODO: Maybe we need QueryPlanOptimizationSettingsExt and BuildQueryPipelineSettingsExt
     auto builder = plan_segment->getQueryPlan().buildQueryPipeline(
         buildOptimizationSettingsWithCheck(logger, context),
-        BuildQueryPipelineSettings::fromContext(context));
-        // BuildQueryPipelineSettings::fromPlanSegment(plan_segment, plan_segment_instance->info, context));
+        BuildQueryPipelineSettingsHelper::fromPlanSegmentExt(plan_segment, plan_segment_instance->info, context, false));
 
     auto pipeline = QueryPipelineBuilder::getPipeline(std::move(*builder));
     registerAllExchangeReceivers(logger, pipeline, optimizer_context->getSettingsRef().exchange_wait_accept_max_timeout_ms);
