@@ -6,6 +6,8 @@
 #include <Query/Processors/QueryPlan/AggregatingStepExt.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/Transforms/AggregatingTransformExt.h>
+#include <Query/Processors/Transforms/FinalizingSimpleTransformExt.h>
+
 
 namespace DB
 {
@@ -626,9 +628,8 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                 aggregating_in_order = collector.detachProcessors(0);
             }
 
-            // todo: implement
-            // pipeline.addSimpleTransform([&](const Block & header)
-            //                             { return std::make_shared<FinalizingSimpleTransform>(header, transform_params); });
+            pipeline.addSimpleTransform([&](const Block & header)
+                                        { return std::make_shared<FinalizingSimpleTransformExt>(header, transform_params); });
 
             finalizing = collector.detachProcessors(2);
             return;
