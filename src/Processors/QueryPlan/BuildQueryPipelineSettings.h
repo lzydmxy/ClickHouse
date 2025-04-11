@@ -19,13 +19,23 @@ struct BuildQueryPipelineSettings
     ExpressionActionsSettings actions_settings;
     QueryStatusPtr process_list_element;
     ProgressCallback progress_callback = nullptr;
-    //todo: need set this pro
-    BuildQueryPipelineSettingsExt settings_ext;
 
     const ExpressionActionsSettings & getActionsSettings() const { return actions_settings; }
     static BuildQueryPipelineSettings fromContext(ContextPtr from);
 
-    void initializeBuildQueryPipelineSettingsExt() const;
+    /// only for jd optimizer
+    BuildQueryPipelineSettingsExt settings_ext;
+
+    void initBuildQueryPipelineSettingsExt(ContextPtr context)
+    {
+        settings_ext.fromContext(context);
+    }
+
+    void initBuildQueryPipelineSettingsExt(PlanSegment * plan_segment, const PlanSegmentExecutionInfo & info, ContextPtr context, bool is_explain)
+    {
+        settings_ext.fromPlanSegment(plan_segment, info, context, is_explain);
+    }
+
     const BuildQueryPipelineSettingsExt & getBuildQueryPipelineSettingsExt() const
     {
         return settings_ext;
