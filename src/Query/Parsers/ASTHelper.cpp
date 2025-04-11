@@ -36,7 +36,7 @@ void astToLowerCase(const ASTPtr & ast)
         boost::to_lower(casted_ast->comparator);
     }
 
-    // TODO add more types
+    // TODO wujianchao add more types
 }
 
 void astToUpperCase(const ASTPtr & ast)
@@ -63,7 +63,7 @@ void astToUpperCase(const ASTPtr & ast)
         boost::to_upper(casted_ast->comparator);
     }
 
-    // TODO add more types
+    // TODO wujianchao add more types
 }
 
 void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_child)
