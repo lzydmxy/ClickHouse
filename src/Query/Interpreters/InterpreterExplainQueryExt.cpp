@@ -599,12 +599,12 @@ QueryPipeline InterpreterExplainQueryExt::executeImpl()
         }
         case ASTExplainQueryExt::OptimizerPlan:
         {
-            // TODO implement need InterpreterSelectQueryUseOptimizer
+            // todo wujianchao, need rewrite base on bc
             break;
         }
         case ASTExplainQueryExt::PlanSegment:
         {
-            // TODO implement need InterpreterSelectQueryUseOptimizer
+            // todo wujianchao, need rewrite base on bc
             break;
         }
         default:
