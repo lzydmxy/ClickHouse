@@ -16,11 +16,11 @@ class AggregatingInOrderTransformExt : public IProcessor
 
 public:
     AggregatingInOrderTransformExt(Block header, AggregatingTransformParamsExtPtr params,
-                                const SortColumnDescription & group_by_description, size_t res_block_size,
+                                const SortDescriptionWithPositions & group_by_description, size_t res_block_size,
                                 ManyAggregatedDataPtr many_data, size_t current_variant);
 
     AggregatingInOrderTransformExt(Block header, AggregatingTransformParamsExtPtr params,
-                                const SortColumnDescription & group_by_description, size_t res_block_size);
+                                const SortDescriptionWithPositions & group_by_description, size_t res_block_size);
 
     ~AggregatingInOrderTransformExt() override;
 
@@ -42,7 +42,7 @@ private:
     MutableColumns res_aggregate_columns;
 
     AggregatingTransformParamsExtPtr params;
-    SortColumnDescription group_by_description;
+    SortDescriptionWithPositions group_by_description;
 
     Aggregator::AggregateColumns aggregate_columns;
 

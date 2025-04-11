@@ -254,7 +254,7 @@ AggregatingStepExt::AggregatingStepExt(
     size_t temporary_data_merge_threads_,
     bool storage_has_evenly_distributed_read_,
     InputOrderInfoPtr group_by_info_,
-    SortDescription group_by_sort_description_,
+    SortDescriptionWithPositions group_by_sort_description_,
     GroupingDescriptions groupings_,
     bool,
     bool should_produce_results_in_order_of_bucket_number_,
@@ -618,10 +618,10 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
 
                 for (auto & column_description : group_by_sort_description)
                 {
-                    if (!column_description.column_name.empty())
+                    if (!column_description.base.column_name.empty())
                     {
                         // column_description.column_number = pipeline.getHeader().getPositionByName(column_description.column_name);
-                        column_description.column_name.clear();
+                        column_description.base.column_name.clear();
                     }
                 }
 

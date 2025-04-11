@@ -6,6 +6,7 @@
 #include <Processors/QueryPlan/ITransformingStep.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Storages/SelectQueryInfo.h>
+#include <Core/SortDescription.h>
 
 namespace DB
 {
@@ -90,7 +91,7 @@ public:
         size_t temporary_data_merge_threads_,
         bool storage_has_evenly_distributed_read_,
         InputOrderInfoPtr group_by_info_,
-        SortDescription group_by_sort_description_,
+        SortDescriptionWithPositions group_by_sort_description_,
         bool should_produce_results_in_order_of_bucket_number_,
         bool no_shuffle_ = false)
         : AggregatingStepExt(
@@ -123,7 +124,7 @@ public:
         GroupingSetsParamsExtList grouping_sets_params_,
         bool final_,
         AggregateStagePolicy stage_policy_ = AggregateStagePolicy::DEFAULT,
-        SortDescription group_by_sort_description_ = {},
+        SortDescriptionWithPositions group_by_sort_description_ = {},
         GroupingDescriptions groupings_ = {},
         bool overflow_row_ = false,
         bool should_produce_results_in_order_of_bucket_number_ = false,
@@ -164,7 +165,7 @@ public:
         size_t temporary_data_merge_threads_,
         bool storage_has_evenly_distributed_read_,
         InputOrderInfoPtr group_by_info_,
-        SortDescription group_by_sort_description_,
+        SortDescriptionWithPositions group_by_sort_description_,
         GroupingDescriptions groupings_ = {},
         bool totals_ = false,
         bool should_produce_results_in_order_of_bucket_number = true,
@@ -187,8 +188,8 @@ public:
     const Names & getKeys() const { return keys; }
     const NameSet & getKeysNotHashed() const { return keys_not_hashed; }
     const GroupingSetsParamsExtList & getGroupingSetsParams() const { return grouping_sets_params; }
-    const SortDescription & getGroupBySortDescription() const { return group_by_sort_description; }
-    void setGroupBySortDescription(const SortDescription & group_by_sort_description_)
+    const SortDescriptionWithPositions & getGroupBySortDescription() const { return group_by_sort_description; }
+    void setGroupBySortDescription(const SortDescriptionWithPositions & group_by_sort_description_)
     {
         group_by_sort_description = group_by_sort_description_;
     }
@@ -239,7 +240,7 @@ private:
     bool storage_has_evenly_distributed_read;
 
     InputOrderInfoPtr group_by_info;
-    SortDescription group_by_sort_description;
+    SortDescriptionWithPositions group_by_sort_description;
 
     GroupingDescriptions groupings;
     /// It determines if we should resize pipeline to 1 at the end.

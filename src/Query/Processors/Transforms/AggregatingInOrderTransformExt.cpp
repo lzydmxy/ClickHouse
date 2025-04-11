@@ -16,7 +16,7 @@ namespace ErrorCodes
 
 AggregatingInOrderTransformExt::AggregatingInOrderTransformExt(
     Block header, AggregatingTransformParamsExtPtr params_,
-    const SortColumnDescription & group_by_description_, size_t res_block_size_)
+    const SortDescriptionWithPositions & group_by_description_, size_t res_block_size_)
     : AggregatingInOrderTransformExt(std::move(header), std::move(params_)
     , group_by_description_, res_block_size_, std::make_unique<ManyAggregatedData>(1), 0)
 {
@@ -24,7 +24,7 @@ AggregatingInOrderTransformExt::AggregatingInOrderTransformExt(
 
 AggregatingInOrderTransformExt::AggregatingInOrderTransformExt(
     Block header, AggregatingTransformParamsExtPtr params_,
-    const SortColumnDescription & group_by_description_, size_t res_block_size_,
+    const SortDescriptionWithPositions & group_by_description_, size_t res_block_size_,
     ManyAggregatedDataPtr many_data_, size_t current_variant)
     : IProcessor({std::move(header)}, {params_->getCustomHeader(false)})
     , res_block_size(res_block_size_)
@@ -40,10 +40,10 @@ AggregatingInOrderTransformExt::AggregatingInOrderTransformExt(
     /// Replace column names to column position in description_sorted.
     for (auto & column_description : group_by_description)
     {
-        if (!column_description.column_name.empty())
+        if (!column_description.base.column_name.empty())
         {
-            column_description.column_number = res_header.getPositionByName(column_description.column_name);
-            column_description.column_name.clear();
+            column_description.column_number = res_header.getPositionByName(column_description.base.column_name);
+            column_description.base.column_name.clear();
         }
     }
 }
