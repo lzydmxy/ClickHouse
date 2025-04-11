@@ -36,6 +36,8 @@ class AggregatorExt final
 public:
     struct Params
     {
+        using StatsCollectingParams = Aggregator::Params::StatsCollectingParams;
+
         enum class TwoLevelMode
         {
             ADAPTIVE,
@@ -79,6 +81,8 @@ public:
         /// Return empty result when aggregating without keys on empty set.
         bool empty_result_for_aggregation_by_empty_set;
 
+        TemporaryDataOnDiskScopePtr tmp_data_scope;
+
         /// Settings is used to determine cache size. No threads are created.
         size_t max_threads;
 
@@ -86,6 +90,17 @@ public:
 
         bool compile_aggregate_expressions;
         size_t min_count_to_compile_aggregate_expression;
+
+        size_t max_block_size;
+        bool only_merge;
+
+        bool enable_prefetch;
+
+        bool optimize_group_by_constant_keys;
+
+        const double min_hit_rate_to_use_consecutive_keys_optimization;
+
+        StatsCollectingParams stats_collecting_params;
 
         // this field is determined when build pipeline, thus it doesn't need to be serialized.
         TwoLevelMode two_level_mode = TwoLevelMode::ADAPTIVE;
@@ -105,10 +120,17 @@ public:
             bool enable_adaptive_spill_,
             size_t spill_buffer_bytes_before_external_group_by_,
             bool empty_result_for_aggregation_by_empty_set_,
+            TemporaryDataOnDiskScopePtr tmp_data_scope_,
             size_t max_threads_,
             size_t min_free_disk_space_,
             bool compile_aggregate_expressions_,
             size_t min_count_to_compile_aggregate_expression_,
+            size_t max_block_size_,
+            bool enable_prefetch_,
+            bool only_merge_, // true for projections
+            bool optimize_group_by_constant_keys_,
+            double min_hit_rate_to_use_consecutive_keys_optimization_,
+            const StatsCollectingParams & stats_collecting_params_,
             const Block & intermediate_header_ = {},
             bool enable_lc_group_by_opt_ = false)
             : src_header(src_header_)
@@ -126,10 +148,17 @@ public:
             , enable_adaptive_spill(enable_adaptive_spill_)
             , spill_buffer_bytes_before_external_group_by(spill_buffer_bytes_before_external_group_by_)
             , empty_result_for_aggregation_by_empty_set(empty_result_for_aggregation_by_empty_set_)
+            , tmp_data_scope(std::move(tmp_data_scope_))
             , max_threads(max_threads_)
             , min_free_disk_space(min_free_disk_space_)
             , compile_aggregate_expressions(compile_aggregate_expressions_)
             , min_count_to_compile_aggregate_expression(min_count_to_compile_aggregate_expression_)
+            , max_block_size(max_block_size_)
+            , only_merge(only_merge_)
+            , enable_prefetch(enable_prefetch_)
+            , optimize_group_by_constant_keys(optimize_group_by_constant_keys_)
+            , min_hit_rate_to_use_consecutive_keys_optimization(min_hit_rate_to_use_consecutive_keys_optimization_)
+            , stats_collecting_params(stats_collecting_params_)
             , enable_lc_group_by_opt(enable_lc_group_by_opt_)
         {
         }
@@ -140,7 +169,8 @@ public:
             const ColumnNumbers & keys_,
             const AggregateDescriptions & aggregates_,
             bool overflow_row_,
-            size_t max_threads_)
+            size_t max_threads_,
+            bool min_hit_rate_to_use_consecutive_keys_optimization_)
             : Params(
                   Block(),
                   keys_,
@@ -154,10 +184,19 @@ public:
                   false,
                   10485760,
                   false,
+                  nullptr,
                   max_threads_,
                   0,
                   false,
-                  0)
+                  0,
+                  0,
+                  false,
+                  true,
+                  false,
+                  min_hit_rate_to_use_consecutive_keys_optimization_,
+                  {},
+                  {},
+                  false)
         {
             intermediate_header = intermediate_header_;
         }

@@ -6,6 +6,7 @@
 #include <Query/Processors/QueryPlan/AggregatingStepExt.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/Transforms/AggregatingTransformExt.h>
+#include <Processors/Merges/FinishAggregatingInOrderTransform.h>
 #include <Query/Processors/Transforms/FinalizingSimpleTransformExt.h>
 
 
@@ -198,7 +199,9 @@ AggregatingStepExt::createParams(Block header_before_aggregation, AggregateDescr
     }
 
     return AggregatorExt::Params(
-        header_before_aggregation, keys, aggregates, overflow_row, 0, OverflowMode::THROW, 0, 0, 0, false, 10485760, false, 0, 0, false, 0);
+        header_before_aggregation, keys, aggregates, overflow_row, 0, OverflowMode::THROW, 0, 0, 0, false, 10485760, false, nullptr,
+        0, 0, false, 0, 0, false, false, true
+        , 0.5, {});
 }
 
 GroupingSetsParamsExtList AggregatingStepExt::prepareGroupingSetsParams() const
@@ -390,10 +393,17 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
         optimizer_settings.spill_mode == SpillMode::AUTO,
         optimizer_settings.spill_buffer_bytes_before_external_group_by,
         params.empty_result_for_aggregation_by_empty_set || settings.empty_result_for_aggregation_by_empty_set,
+        params.tmp_data_scope,
         settings.max_threads,
         settings.min_free_disk_space_for_temporary_data,
         settings.compile_aggregate_expressions,
         settings.min_count_to_compile_aggregate_expression,
+        max_block_size,
+        settings.enable_software_prefetch_in_aggregation,
+        false,
+        settings.optimize_group_by_constant_keys,
+        settings.min_hit_rate_to_use_consecutive_keys_optimization,
+        {},
         {},
         optimizer_settings.enable_lc_group_by_opt);
 
@@ -463,10 +473,17 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                         transform_params->params.spill_buffer_bytes_before_external_group_by,
                         /// Return empty result when aggregating without keys on empty set, if ansi
                         transform_params->params.empty_result_for_aggregation_by_empty_set,
+                        transform_params->params.tmp_data_scope,
                         transform_params->params.max_threads,
                         transform_params->params.min_free_disk_space,
                         transform_params->params.compile_aggregate_expressions,
                         transform_params->params.min_count_to_compile_aggregate_expression,
+                        max_block_size,
+                        settings.enable_software_prefetch_in_aggregation,
+                        false,
+                        settings.optimize_group_by_constant_keys,
+                        settings.min_hit_rate_to_use_consecutive_keys_optimization,
+                        {},
                         {},
                         transform_params->params.enable_lc_group_by_opt};
                     using TwoLevelMode = AggregatorExt::Params::TwoLevelMode;
@@ -610,11 +627,39 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                 }
 
                 // todo: implement
-                // auto transform = std::make_shared<FinishAggregatingInOrderTransform>(
-                //     pipeline.getHeader(), pipeline.getNumStreams(), transform_params, group_by_sort_description, max_block_size);
 
-                // pipeline.addTransform(std::move(transform));
-                // aggregating_sorted = collector.detachProcessors(1);
+                const auto src_header = pipeline.getHeader();
+
+                Aggregator::Params merge_params
+                {
+                    keys,
+                    transform_params->params.aggregates,
+                    transform_params->params.overflow_row,
+                    transform_params->params.max_rows_to_group_by,
+                    transform_params->params.group_by_overflow_mode,
+                    transform_params->params.group_by_two_level_threshold,
+                    transform_params->params.group_by_two_level_threshold_bytes,
+                    transform_params->params.max_bytes_before_external_group_by,
+                    transform_params->params.empty_result_for_aggregation_by_empty_set,
+                    transform_params->params.tmp_data_scope,
+                    transform_params->params.max_threads,
+                    transform_params->params.min_free_disk_space,
+                    transform_params->params.compile_aggregate_expressions,
+                    transform_params->params.min_count_to_compile_aggregate_expression,
+                    max_block_size,
+                    transform_params->params.enable_prefetch,
+                    /* only_merge */ false,
+                    transform_params->params.optimize_group_by_constant_keys,
+                    transform_params->params.min_hit_rate_to_use_consecutive_keys_optimization,
+                    {},
+                };
+
+                auto merge_transform_params = std::make_shared<AggregatingTransformParams>(src_header, std::move(merge_params), final);
+                auto transform = std::make_shared<FinishAggregatingInOrderTransform>(
+                    pipeline.getHeader(), pipeline.getNumStreams(), merge_transform_params, group_by_sort_description, 0, max_block_size);
+
+                pipeline.addTransform(std::move(transform));
+                aggregating_sorted = collector.detachProcessors(1);
             }
             else
             {

@@ -261,7 +261,8 @@ public:
 
 #endif
 
-AggregatorExt::AggregatorExt(const Params & params_) : params(params_)
+AggregatorExt::AggregatorExt(const Params & params_) : params(params_),
+    tmp_data(params.tmp_data_scope ? std::make_unique<TemporaryDataOnDisk>(params.tmp_data_scope, CurrentMetrics::TemporaryFilesForAggregation) : nullptr)
 {
     /// Use query-level memory tracker
     if (auto * memory_tracker_child = CurrentThread::getMemoryTracker())
