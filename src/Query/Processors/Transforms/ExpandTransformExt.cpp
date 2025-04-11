@@ -41,9 +41,9 @@ void ExpandTransformExt::transform(Chunk & chunk)
             auto converting_dag = ActionsDAG::makeConvertingActions(
                 block.getColumnsWithTypeAndName(), output_block.getColumnsWithTypeAndName(), ActionsDAG::MatchColumnsMode::Name);
 
-           
+
             auto converting_actions = std::make_shared<ExpressionActions>(std::move(converting_dag));
-             //TODO FIXME getSideBlock!!!!
+            
             // converting_actions->execute(block, chunk.getSideBlock(), num_rows);
             converting_actions->execute(block, num_rows, num_rows);
         }

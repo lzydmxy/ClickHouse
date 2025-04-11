@@ -1,11 +1,12 @@
 #include <Query/Processors/QueryPlan/MarkDistinctStepExt.h>
 
 // #include <DataTypes/DataTypeHelper.h>
+#include <DataTypes/DataTypesNumber.h>
 #include <IO/Operators.h>
 #include <Interpreters/ExpressionActions.h>
 // #include <Interpreters/RuntimeFilter/RuntimeFilterConsumer.h>
 #include <QueryPipeline/QueryPipeline.h>
-// #include <Query/Processors/Transforms/MarkDistinctTransformExt.h>
+#include <Query/Processors/Transforms/MarkDistinctTransformExt.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 
 namespace DB
@@ -19,15 +20,14 @@ void MarkDistinctStepExt::updateInputStreams(const DataStreams & input_streams_)
 {
     input_streams = input_streams_;
     output_stream = input_streams[0];
-    // TODO FIXME DataTypeUInt8
-    // output_stream->header.insert(ColumnWithTypeAndName{std::make_shared<DataTypeUInt8>(), marker_symbol});
+    output_stream->header.insert(ColumnWithTypeAndName{std::make_shared<DataTypeUInt8>(), marker_symbol});
 }
 
 void MarkDistinctStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &)
 {
-    // TODO Add Local Exchange
-    // pipeline.resize(1);
-    // pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<MarkDistinctTransformExt>(header, marker_symbol, distinct_symbols); });
+    //byconity warning Add Local Exchange
+    pipeline.resize(1);
+    pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<MarkDistinctTransformExt>(header, marker_symbol, distinct_symbols); });
 }
 
 std::shared_ptr<IQueryPlanStep> MarkDistinctStepExt::copy(ContextPtr) const

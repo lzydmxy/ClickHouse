@@ -2,17 +2,20 @@
 
 #include <DataTypes/DataTypesNumber.h>
 #include <QueryPipeline/QueryPipeline.h>
-// #include <Query/Processors/Transforms/AssignUniqueIdTransformExt.h>
+#include <Query/Processors/Transforms/AssignUniqueIdTransformExt.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 
 
 namespace DB
 {
-AssignUniqueIdStepExt::AssignUniqueIdStepExt(const DataStream & input_stream_, String unique_id_)
-    : ITransformingStep(input_stream_, /***AssignUniqueIdTransformExt::transformHeader(input_stream_.header, unique_id_)***/ input_stream_.header, {})
+    AssignUniqueIdStepExt::AssignUniqueIdStepExt(const DataStream & input_stream_, String unique_id_)
+    : ITransformingStep(input_stream_, AssignUniqueIdTransformExt::transformHeader(input_stream_.header, unique_id_), {})
     , unique_id(std::move(unique_id_))
 {
 }
+
+
+// ITransformingStep(DataStream input_stream, Block output_header, Traits traits, bool collect_processors_ = true);
 
 void AssignUniqueIdStepExt::updateInputStreams(const DataStreams & input_streams_)
 {
@@ -23,8 +26,7 @@ void AssignUniqueIdStepExt::updateInputStreams(const DataStreams & input_streams
 
 void AssignUniqueIdStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &)
 {
-    //TODO FIXME
-    // pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<AssignUniqueIdTransformExt>(header, unique_id); });
+    pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<AssignUniqueIdTransformExt>(header, unique_id); });
 }
 
 std::shared_ptr<IQueryPlanStep> AssignUniqueIdStepExt::copy(ContextPtr) const

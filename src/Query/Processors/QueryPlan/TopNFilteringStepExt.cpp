@@ -3,7 +3,7 @@
 #include <IO/Operators.h>
 #include <QueryPipeline/QueryPipeline.h>
 #include <Processors/Transforms/PartialSortingTransform.h>
-// #include <Query/Processors/Transforms/TopNFilteringTransformExt.h>
+#include <Query/Processors/Transforms/TopNFilteringTransformExt.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 
 namespace DB
@@ -32,46 +32,45 @@ void TopNFilteringStepExt::updateInputStreams(const DataStreams & input_streams_
 
 void TopNFilteringStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
-    //TODO FIXME
-    // if (algorithm == TopNFilteringAlgorithm::Unspecified)
-    // {
-    //     // String default_algorithm = settings.context->getSettingsRef().topn_filtering_algorithm_for_unsorted_stream;
-    //     //TODO read from settings
-    //     String default_algorithm = "SortAndLimit";
+    if (algorithm == TopNFilteringAlgorithm::Unspecified)
+    {
+        // String default_algorithm = settings.context->getSettingsRef().topn_filtering_algorithm_for_unsorted_stream;
+        //Warning read from settings
+        String default_algorithm = "SortAndLimit";
 
-    //     if (default_algorithm == "SortAndLimit")
-    //         algorithm = TopNFilteringAlgorithm::SortAndLimit;
-    //     else if (default_algorithm == "Heap")
-    //         algorithm = TopNFilteringAlgorithm::Heap;
-    //     else
-    //         throw Exception(ErrorCodes::INVALID_SETTING_VALUE, "Invalid setting value for topn_filtering_algorithm_for_unsorted_stream");
-    // }
+        if (default_algorithm == "SortAndLimit")
+            algorithm = TopNFilteringAlgorithm::SortAndLimit;
+        else if (default_algorithm == "Heap")
+            algorithm = TopNFilteringAlgorithm::Heap;
+        else
+            throw Exception(ErrorCodes::INVALID_SETTING_VALUE, "Invalid setting value for topn_filtering_algorithm_for_unsorted_stream");
+    }
 
-    // switch (algorithm)
-    // {
-    //     case TopNFilteringAlgorithm::SortAndLimit:
-    //         pipeline.addSimpleTransform(
-    //             [&](const Block & header) { return std::make_shared<PartialSortingTransform>(header, sort_description, 0); });
-    //         pipeline.addSimpleTransform([&](const Block & header) {
-    //             return std::make_shared<TopNFilteringByLimitingTransformExt>(header, sort_description, size, model);
-    //         });
-    //         break;
-    //     case TopNFilteringAlgorithm::Limit:
-    //         pipeline.addSimpleTransform([&](const Block & header) {
-    //             return std::make_shared<TopNFilteringByLimitingTransformExt>(header, sort_description, size, model);
-    //         });
-    //         break;
-    //     case TopNFilteringAlgorithm::Heap:
-    //         pipeline.addSimpleTransform([&](const Block & header) {
-    //             return std::make_shared<TopNFilteringByHeapTransformExt>(header, sort_description, size, model);
-    //         });
-    //         break;
-    //     default:
-    //         throw Exception(
-    //             ErrorCodes::NOT_IMPLEMENTED,
-    //             "Not implemented topn filtering algorithm `{}` is used",
-    //             TopNFilteringAlgorithmConverter::toString(algorithm));
-    // }
+    switch (algorithm)
+    {
+        case TopNFilteringAlgorithm::SortAndLimit:
+            pipeline.addSimpleTransform(
+                [&](const Block & header) { return std::make_shared<PartialSortingTransform>(header, sort_description, 0); });
+            pipeline.addSimpleTransform([&](const Block & header) {
+                return std::make_shared<TopNFilteringByLimitingTransformExt>(header, sort_description, size, model);
+            });
+            break;
+        case TopNFilteringAlgorithm::Limit:
+            pipeline.addSimpleTransform([&](const Block & header) {
+                return std::make_shared<TopNFilteringByLimitingTransformExt>(header, sort_description, size, model);
+            });
+            break;
+        case TopNFilteringAlgorithm::Heap:
+            pipeline.addSimpleTransform([&](const Block & header) {
+                return std::make_shared<TopNFilteringByHeapTransformExt>(header, sort_description, size, model);
+            });
+            break;
+        default:
+            throw Exception(
+                ErrorCodes::NOT_IMPLEMENTED,
+                "Not implemented topn filtering algorithm `{}` is used",
+                TopNFilteringAlgorithmConverter::toString(algorithm));
+    }
 }
 
 std::shared_ptr<IQueryPlanStep> TopNFilteringStepExt::copy(ContextPtr) const
