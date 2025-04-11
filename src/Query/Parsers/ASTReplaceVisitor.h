@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <Query/Parsers/ASTSelectQueryExt.h>
 #include <Query/Parsers/ASTExpressionListExt.h>
+#include <Parsers/ASTSelectWithUnionQuery.h>
 
 namespace DB {
 
