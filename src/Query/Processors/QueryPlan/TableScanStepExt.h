@@ -229,9 +229,6 @@ public:
 
     Names getRequiredColumns(GetFlags flags = All) const;
 
-    //todo: need to implement PreparedStatementContext
-    //void prepare(const PreparedStatementContext & prepared_context) override;
-
 private:
     StoragePtr storage;
     StorageID storage_id;

@@ -23,7 +23,7 @@ using PlanSegmentProfiles = std::vector<PlanSegmentProfilePtr>;
 struct Analysis;
 using AnalysisPtr = std::shared_ptr<Analysis>;
 
-//todo: need impl PlanPrinter,PlanPrinter::TextPrinter
+//todo: liyang453, other feat need impl PlanPrinter,PlanPrinter::TextPrinter
 
 class TextPrinterIntent
 {
@@ -128,7 +128,7 @@ struct PlanSegmentDescription
     Poco::JSON::Object::Ptr jsonPlanSegmentDescription(const StepProfiles & profiles, bool is_pipeline = false);
     String jsonPlanSegmentDescriptionAsString(const StepProfiles & profiles)
     {
-        //todo: now just a fake impl for build, need to impl
+        //todo: liyang453, other feat:  need to impl
         return "";
     }
     static PlanSegmentDescriptionPtr getPlanSegmentDescription(PlanSegmentPtr & segment, bool record_plan_detail = false) { auto plan_segment_desc = std::make_shared<PlanSegmentDescription>(); return plan_segment_desc;}

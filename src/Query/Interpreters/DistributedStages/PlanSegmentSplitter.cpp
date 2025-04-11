@@ -174,7 +174,7 @@ PlanSegmentResult PlanSegmentVisitor::visitExchangeStepExtNode(QueryPlanExt::Nod
     }
     QueryPlanStepPtr remote_step = std::make_unique<RemoteExchangeSourceStepExt>(inputs, step->getOutputStream(), is_add_totals, is_add_extremes);
     remote_step->setStepDescription(step->getStepDescription());
-    //todo: need add id in QueryPlanExt::Node
+    //todo: liyang453, other feat: need add id in QueryPlanExt::Node
     //QueryPlanExt::Node remote_node{.step = std::move(remote_step), .children = {}, .id = node->id};
     QueryPlanExt::Node remote_node{.step = std::move(remote_step), .children = {}};
     size_t node_id = 0;
@@ -227,7 +227,7 @@ PlanSegmentResult PlanSegmentVisitor::visitCTERefStepExtNode(QueryPlanExt::Node 
 
     QueryPlanStepPtr remote_step = std::make_unique<RemoteExchangeSourceStepExt>(PlanSegmentInputs{input}, step->getOutputStream(), false, false); // with totals is not expected used in queries with multiple table
     remote_step->setStepDescription(step->getStepDescription());
-    //todo: need add id in QueryPlanExt::Node
+    //todo: liyang453, other feat:  need add id in QueryPlanExt::Node
     //QueryPlanExt::Node remote_node{.step = std::move(remote_step), .children = {}, .id = node->id};
     QueryPlanExt::Node remote_node{.step = std::move(remote_step), .children = {}};
     size_t node_id = 0;
@@ -240,7 +240,7 @@ PlanSegmentResult PlanSegmentVisitor::visitCTERefStepExtNode(QueryPlanExt::Node 
     QueryPlanExt::Node projection_node{
         .step = step->toProjectionStep(),
         .children = {plan_segment_context.query_plan.getLastNode()}
-        //todo: neee dadd id in QueryPlanExt::Node
+        //todo: liyang453, other feat:  need add id in QueryPlanExt::Node
         //.id = plan_segment_context.context->getPlanNodeIdAllocator()->nextId()};
        };
     plan_segment_context.query_plan.addNode(std::move(projection_node), node_id);
@@ -380,7 +380,7 @@ PlanSegmentInputs PlanSegmentVisitor::findInputs(QueryPlanExt::Node * node)
         StoragePtr storage = table_scan_step->getStorage();
         if (storage)
         {
-            //todo: need to check if need to use num_of_buckets
+            //todo: liyang453, other feat:  need to check if need to use num_of_buckets
             Int64 num_of_buckets = 1;
             input->setNumOfBuckets(num_of_buckets);
         }
@@ -516,7 +516,7 @@ std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitReadStorag
 
 std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitTableScanStepExtNode(QueryPlanExt::Node * node, const Context &)
 {
-    //todo: need supportsDistributedRead in storage
+    //todo: liyang453, need storage: need supportsDistributedRead in storage
     //auto * source_step = dynamic_cast<TableScanStepExt *>(node->step.get());
     //if (source_step->getStorage()->supportsDistributedRead())
     //    return {{PartitioningHandle::Partitioning_Handle_FIXED_HASH}};
@@ -639,7 +639,7 @@ std::vector<size_t> ParallelSizeChecker::visitReadNothingStepNode(QueryPlanExt::
 std::vector<size_t> ParallelSizeChecker::visitTableScanStepExtNode(QueryPlanExt::Node * node, const Context & context)
 {
     auto * source_step = dynamic_cast<TableScanStepExt *>(node->step.get());
-    //todo: need supportsDistributedRead in storage
+    //todo: liyang453, need storage: need supportsDistributedRead in storage
     //if (source_step->getStorage()->supportsDistributedRead())
     //    return {shard_number};
 

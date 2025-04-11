@@ -26,7 +26,7 @@ namespace _scan_execute_impl
     using ProjectionMatchContexts = std::vector<ProjectionMatchContext>;
 
     const UInt32 NODE_ID_TABLE_SCAN = 0;
-    //todo: need to implement Optimizer/SymbolTransformMap
+    //todo: liyang453, need optimizer: need to implement Optimizer/SymbolTransformMap
     /*
     
     const UInt32 NODE_ID_FILTER = 1;
@@ -85,7 +85,7 @@ namespace _scan_execute_impl
         for (const auto & column: require_columns)
             names_and_types.emplace_back(column, column_types.at(column));
 
-        // TODO: need to convert to ColumnsWithTypeAndName from NamesAndTypes
+        //todo: liyang453, other feat: need to convert to ColumnsWithTypeAndName from NamesAndTypes
         // DataStream input_stream {.header = Block{names_and_types}};
         DataStream input_stream;
 
@@ -228,7 +228,7 @@ TableScanExecutor::TableScanExecutor(TableScanStepExt & step, const MergeTreeDat
 
     has_aggregate = step.getPushdownAggregation() != nullptr;
     query_required_columns = step.getRequiredColumns(TableScanStepExt::OutputAndPrewhere);
-    //todo: need to implement PlanNodeBase
+    //todo: liyang453, other feat: need to implement PlanNodeBase
     /*
     query_lineage = [&]() {
         PlanNodePtr node;
@@ -311,7 +311,7 @@ ExecutePlan TableScanExecutor::buildExecutePlan(const DistributedPipelineSetting
         if (distributed_settings.source_task_filter.isValid())
         {
             auto size_before_filtering = parts.size();
-            //todo:need to implement filterParts
+            //todo: liyang453, other feat: need to implement filterParts
             //filterParts(parts, distributed_settings.source_task_filter);
             LOG_TRACE(
                 log,
@@ -517,7 +517,7 @@ void TableScanExecutor::prunePartsByIndex(MergeTreeData::DataPartsVector & parts
     if (parts.empty())
         return;
 
-    //todo: need to convet select_query_info to ActionsDAGPtr
+    //todo: liyang453, other feat: need to convet select_query_info to ActionsDAGPtr
     //auto part_values = MergeTreeDataSelectExecutor::filterPartsByVirtualColumns(storage, parts, select_query_info, context);
     auto part_values = MergeTreeDataSelectExecutor::filterPartsByVirtualColumns(storage, parts, nullptr, context);
 
@@ -527,8 +527,8 @@ void TableScanExecutor::prunePartsByIndex(MergeTreeData::DataPartsVector & parts
         return;
     }
 
+    //todo: liyang453, other feat: need to add partition_pruner,minmax_idx_condition,alter_conversions
     /*
-    // todo: need to add partition_pruner,minmax_idx_condition,alter_conversions
     ReadFromMergeTree::AnalysisResult result;
     MergeTreeDataSelectExecutor::filterPartsByPartition(parts,
                                                         part_values,
@@ -597,7 +597,7 @@ void TableScanStepExt::makeSetsForIndex(
     auto settings = context->getSettingsRef();
     SizeLimits size_limits_for_set(settings.max_rows_in_set, settings.max_bytes_in_set, settings.set_overflow_mode);
 
-    //todo: need to check supportsIndexForIn
+    //todo: liyang453, other feat:  need to check supportsIndexForIn
     //if (!node || !storage || !storage->supportsIndexForIn())
     if (!node || !storage)
         return;
@@ -614,14 +614,14 @@ void TableScanStepExt::makeSetsForIndex(
 
     const auto * func = node->as<ASTFunction>();
     
-    //todo: need to implement functionIsInOrGlobalInOperator
+    //todo: liyang453, other feat: need to implement functionIsInOrGlobalInOperator
     //if (func && functionIsInOrGlobalInOperator(func->name))
     if (func)
     {
         const IAST & args = *func->arguments;
         const ASTPtr & left_in_operand = args.children.at(0);
 
-        //todo: need to check mayBenefitFromIndexForIn
+        //todo: liyang453, other feat: need to check mayBenefitFromIndexForIn
         //if (storage && storage->mayBenefitFromIndexForIn(left_in_operand, context, metadata_snapshot))
         if (storage)
         {
@@ -819,8 +819,7 @@ std::vector<ASTPtr> cloneChildrenReplacement(std::vector<ASTPtr> ast_children_re
 
 void TableScanStepExt::rewriteInForBucketTable(ContextPtr context) const
 {
-    // todo: remove dynamic cast
-    // todo: need to implement StorageCloudMergeTree
+    //todo: liyang453, other feat: need to use dist MergeTree
     //const auto * cloud_merge_tree = dynamic_cast<StorageCloudMergeTree *>(storage.get());
     //if (!cloud_merge_tree)
     //    return;
@@ -828,7 +827,7 @@ void TableScanStepExt::rewriteInForBucketTable(ContextPtr context) const
     if (!context->getSettingsRef().optimize_skip_unused_shards)
         return;
 
-    // todo: need to implement StorageCloudMergeTree
+    //todo: liyang453, other feat: need to use dist MergeTree
     //const bool need_optimise = metadata_snapshot->getColumnsForClusterByKey().size() == 1 && !cloud_merge_tree->getRequiredBucketNumbers().empty();
     const bool need_optimise = false;
     if (!need_optimise)
@@ -841,7 +840,7 @@ void TableScanStepExt::rewriteInForBucketTable(ContextPtr context) const
     LOG_TRACE(log, "Before rewriteInForBucketTable:\n: {}", query->dumpTree());
     if (query->where())
     {
-        // todo: need to implement StorageCloudMergeTree
+        //todo: liyang453, other feat: need to use dist MergeTree
         // auto ast_children_replacement = cloud_merge_tree->convertBucketNumbersToAstLiterals(query->where(), context);
         std::vector<ASTPtr> ast_children_replacement;
         if (!ast_children_replacement.empty())
@@ -853,7 +852,7 @@ void TableScanStepExt::rewriteInForBucketTable(ContextPtr context) const
     }
     if (query->prewhere())
     {
-        // todo: need to implement StorageCloudMergeTree
+        //todo: liyang453, other feat: need to use dist MergeTree
         //auto ast_children_replacement = cloud_merge_tree->convertBucketNumbersToAstLiterals(query->prewhere(), context);
         std::vector<ASTPtr> ast_children_replacement;
         if (!ast_children_replacement.empty())
@@ -869,7 +868,7 @@ void TableScanStepExt::rewriteInForBucketTable(ContextPtr context) const
 void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, const BuildQueryPipelineSettings & build_settings, bool use_expand_pipe)
 {
 
-    //todo: need to add  partition_filter to SelectQueryInfo
+    //todo: liyang453, other feat: need to add  partition_filter to SelectQueryInfo
     ASTPtr partition_filter;
     //if (select_query.partition_filter)
     if (partition_filter)
@@ -894,7 +893,7 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
             where_predicates.insert(where_predicates.end(), runtime_filters.begin(), runtime_filters.end());
         }
         auto where_dicates = PredicateUtils::combineConjuncts(where_predicates);
-        // todo: need to add  partition_filter to SelectQueryInfo
+        //todo: liyang453, other feat: need to add  partition_filter to SelectQueryInfo
         // select_query.partition_filter = !PredicateUtils::isTruePredicate(where_dicates) ? std::move(where_dicates) : nullptr;
         partition_filter = !PredicateUtils::isTruePredicate(where_dicates) ? std::move(where_dicates) : nullptr;
 
@@ -935,7 +934,7 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
         size_t wait_ms = use_expand_pipe ? 0 : setting.wait_runtime_filter_timeout;
         bool enable_bf_in_prewhere = setting.enable_rewrite_bf_into_prewhere;
         bool enable_range_cover =  setting.enable_range_cover;
-        //todo: need adjust_gap in settings
+        //todo: liyang453, other feat: need adjust_gap in settings
         //double adjust_gap = setting.adjust_range_set_filter_rate;
         double adjust_gap = 1.0;
         std::vector<ASTPtr> rf_predicates(descriptions.size());
@@ -1078,7 +1077,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             ids.insert(ids.end(), prewhere_ids.begin(), prewhere_ids.end());
         }
 
-        // todo: need partition_filter
+        //todo: liyang453, other feat: need partition_filter
         //auto partition_filter = query_info.partition_filter;
         //if (query_info.partition_filter)
         ASTPtr partition_filter;
@@ -1096,7 +1095,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     initMetadataAndStorageSnapshot(build_context.getBuildQueryPipelineSettingsExt().context);
     auto * merge_tree_storage = dynamic_cast<MergeTreeData *>(storage.get());
 
-    //todo: need optimizer_index_projection_support settiings
+    //todo: liyang453, other feat: need optimizer_index_projection_support settiings
     //bool is_merge_tree = merge_tree_storage != nullptr;
     //bool use_projection_index = build_context.getBuildQueryPipelineSettingsExt().context->getSettingsRef().optimizer_index_projection_support && is_merge_tree && build_context.context->getSettingsRef().enable_ab_index_optimization;
     // && is_merge_tree && !use_projection_index;
@@ -1175,7 +1174,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     if (max_block_size < build_context.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_block_size)
         max_streams = 1; // single block single stream.
 
-    //todo: need to convet max_streams_to_max_threads_ratio
+    //todo: liyang453, other feat: need to convet max_streams_to_max_threads_ratio
     // auto max_streams_to_max_threads_ratio = build_context.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_streams_to_max_threads_ratio;
     auto max_streams_to_max_threads_ratio = 1;
     if (max_streams > 1 && !storage->isRemote())
@@ -1185,7 +1184,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     {
         if (auto * cloud_merge_tree = dynamic_cast<MergeTreeData *>(storage.get()))
         {
-            //todo: need cloud_merge_tree
+            //todo: liyang453, other feat: need to use dist merge tree
             //cloud_merge_tree->source_task_filter = build_context.distributed_settings.source_task_filter;
         }
         // Here columns of PREWHERE being included in required columns is by design
@@ -1205,7 +1204,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             for (auto & node : nodes)
             {
                 node.step->setStepDescription("Read from MergeTree");
-                //todo:need AttributeDescriptions
+                //todo: liyang453, other feat: need AttributeDescriptions
                 //auto & att_descs = node.step->getAttributeDescriptions();
                 //if (att_descs.empty())
                 //    continue;
@@ -1218,7 +1217,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
         }
 
         Pipe pipe;
-        //todo: need add getCacheHolder
+        //todo: liyang453, other feat: need add getCacheHolder
         //if (pipe.getCacheHolder())
         //    pipeline.addCacheHolder(pipe.getCacheHolder());
 
@@ -1226,7 +1225,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
         if (pipe.empty())
         {
             auto header = storage_snapshot->getSampleBlockForColumns(getRequiredColumns());
-            //todo:need InterpreterSelectQuery::generateNullSourcePipe
+            //todo: liyang453, other feat: need InterpreterSelectQuery::generateNullSourcePipe
             //auto null_pipe = InterpreterSelectQuery::generateNullSourcePipe(header, query_info);
             Pipe null_pipe;
             auto read_from_pipe = std::make_shared<ReadFromPreparedSource>(std::move(null_pipe));
@@ -1283,7 +1282,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
                 projection_query_info.prewhere_info = std::make_shared<PrewhereInfo>(*projection_query_info.prewhere_info);
                 projection_query_info.prewhere_info->prewhere_actions = plan_element.prewhere_actions;
             }
-            //todo:need MergeTreeData::DeleteBitmapGetter
+            //todo: liyang453, need storage: need MergeTreeData::DeleteBitmapGetter
             //MergeTreeData::DeleteBitmapGetter null_getter = [](auto & /*part*/) { return nullptr; };
             plan_element_storage_snapshot->addProjection(plan_element.projection_desc);
             std::vector<AlterConversionsPtr> alter_conversions;
@@ -1310,7 +1309,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
         }
         else
         {
-            //todo: need DeleteBitmapGetter
+            //todo: liyang453, need storage: need MergeTreeData::DeleteBitmapGetter
             //MergeTreeData::DeleteBitmapGetter delete_bitmap_getter = [](const auto & part) { return part->getDeleteBitmap(); };
             //query_info_for_index.read_bitmap_index = plan_element.read_bitmap_index;
             auto query_info_for_index = query_info;
@@ -1500,7 +1499,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             step_desc << plan_element.part_group.partsNum() << " parts from raw data";
     }
     setStepDescription(step_desc.str());
-    //todo: need RuntimeAttributeDescription
+    //todo: liyang453, other feat: need RuntimeAttributeDescription
     //RuntimeAttributeDescription tablescan_desc;
     //tablescan_desc.description = step_desc.str();
     //attribute_descriptions.emplace("TableScanDescription", tablescan_desc);
@@ -1512,7 +1511,7 @@ std::shared_ptr<IQueryPlanStep> TableScanStepExt::copy(ContextPtr) const
 {
     SelectQueryInfo copy_query_info = query_info; // fixme@kaixi: deep copy here
     copy_query_info.query = query_info.query->clone();
-    // todo: need partition_filter
+    //todo: liyang453, other feat: need partition_filter
     //if (query_info.partition_filter)
     //    copy_query_info.partition_filter = query_info.partition_filter->clone();
 
@@ -1566,7 +1565,7 @@ void TableScanStepExt::allocate(ContextPtr context)
     //tood: need partition_filter;
     //makeSetsForIndex(query_info.partition_filter, context, query_info.sets, source);
     original_table = storage_id.table_name;
-    //todo: need IStorage add prepareTableRead
+    //todo: liyang453, need storage: need IStorage add prepareTableRead
     //storage_id = storage->prepareTableRead(getRequiredColumns(), query_info, context);
     //size_t shards = context->tryGetCurrentWorkerGroup() ? context->getCurrentWorkerGroup()->getShardsInfo().size() : 1;
     size_t shards=1;
@@ -1718,7 +1717,7 @@ void TableScanStepExt::setQuotaAndLimits(QueryPipelineBuilder & pipeline, const 
 
 
     /// Table lock is stored inside pipeline here.
-    //todo: need add setLimits in pipeline
+    //todo: liyang453, other feat: need add setLimits in pipeline
     //pipeline.setLimits(limits);
 
     /**
@@ -1729,7 +1728,7 @@ void TableScanStepExt::setQuotaAndLimits(QueryPipelineBuilder & pipeline, const 
       * on the results merging stage.
       */
 
-    // todo: need add setLeafLimits、setQuota in pipeline
+    //todo: liyang453, other feat: need add setLeafLimits、setQuota in pipeline
     //if (!storage->isRemote())
     //    pipeline.setLeafLimits(leaf_limits);
 
@@ -1785,7 +1784,7 @@ Names TableScanStepExt::getRequiredColumns(GetFlags flags) const
     {
         for (const auto & item : inline_expressions)
         {
-            // todo: need functionCanUseBitmapIndex
+            //todo: liyang453, other feat: need functionCanUseBitmapIndex
             //const auto * func = item.second->as<ASTFunction>();
             //if (func && functionCanUseBitmapIndex(*func))
                 add_columns_in_expr(item.second);
@@ -1834,18 +1833,9 @@ NameToNameMap TableScanStepExt::getAliasToColumnMap() const
     return ret;
 }
 
-//todo: need prepared_statement
-/*
-void TableScanStepExt::prepare(const PreparedStatementContext & prepared_context)
-{
-    prepared_context.prepare(query_info.partition_filter);
-    prepared_context.prepare(query_info.query);
-}
-*/
-
 bool TableScanStepExt::hasFunctionCanUseBitmapIndex() const
 {
-    //todo: need MergeTree/Index/BitmapIndexHelper
+    //todo: liyang453, need storage: need MergeTree/Index/BitmapIndexHelper
     //for (const auto & item : inline_expressions)
     //{
         //const auto * func = item.second->as<ASTFunction>();
@@ -1888,7 +1878,7 @@ void TableScanStepExt::fillQueryInfoV2(ContextPtr context)
         query_info.prewhere_info = std::make_shared<PrewhereInfo>(prewhere_action, prewhere->getColumnName());
     }
 
-    //todo: need impl MergeTreeIndexContext
+    //todo: liyang453, need storage: need impl MergeTreeIndexContext
     /// 4. build index context
     //query_info.index_context = std::make_shared<MergeTreeIndexContext>();
 }
@@ -1904,7 +1894,7 @@ Names TableScanStepExt::getRequiredColumnsAndPartitionColumns() const
 {
     auto columns = getRequiredColumns();
     ASTPtr partition_filter;
-    //todo: need to add partition_filter in query_info;
+    //todo: liyang453, other feat: need to add partition_filter in query_info;
     // auto columns_of_partition_filter = SymbolsExtractor::extract(query_info.partition_filter);
     auto columns_of_partition_filter = SymbolsExtractor::extract(partition_filter);
     columns.insert(columns.end(), columns_of_partition_filter.begin(), columns_of_partition_filter.end());

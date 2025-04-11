@@ -43,21 +43,11 @@ public:
         return offset;
     }
 
-    bool hasPreparedParam() const
-    {
-        return limit || offset;
-        // todo: need to implement check the logic
-        //return std::holds_alternative<String>(limit) || std::holds_alternative<String>(offset);
-    }
-
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
     bool isAlwaysReadTillEnd() const { return always_read_till_end; }
     bool isWithTies() const { return with_ties; }
     const SortDescription & getSortDescription() const { return description; }
     bool isPartial() const { return partial; }
-    
-    //todo: need to implement prepare
-    //void prepare(const PreparedStatementContext & prepared_context) override;
 
 private:
     bool partial;

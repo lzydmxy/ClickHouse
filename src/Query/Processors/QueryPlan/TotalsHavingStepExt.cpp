@@ -27,8 +27,8 @@ void TotalsHavingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, con
 {
     if (!actions_dag && having_filter)
     {
+        //todo: liyang453, other feat: need to implement rewriteRuntimeFilter
         /*
-        // todo: need to implement rewriteRuntimeFilter
         auto rewrite_filter = FilterStep::rewriteRuntimeFilter(having_filter, pipeline, settings);
         actions_dag = IQueryPlanStep::createFilterExpressionActions(
             settings.context, rewrite_filter->clone(), TotalsHavingTransform::transformHeader(input_streams[0].header, nullptr, final));

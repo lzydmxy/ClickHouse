@@ -51,7 +51,7 @@ UInt128 PlanCacheManager::hash(const ASTPtr & query_ast, ContextMutablePtr & con
     String settings_string;
     WriteBufferFromString buffer(settings_string);
 
-    //todo: add whitelist in settings.write
+    //todo: liyang453, other feat: add whitelist in settings.write
     //const static std::unordered_set<String> whitelist{"enable_plan_cache", "force_plan_cache"};
     //settings.write(buffer, SettingsWriteFormat::DEFAULT, whitelist);
     settings.write(buffer, SettingsWriteFormat::DEFAULT);
@@ -99,7 +99,7 @@ PlanNodePtr PlanCacheManager::getNewPlanNode(PlanNodePtr node, ContextMutablePtr
 
 void PlanCacheManager::invalidate(ContextMutablePtr)
 {
-    //todo: need to impl
+    //todo: liyang453, other feat: need to impl
 }
 
 QueryPlanExtPtr PlanCacheManager::getPlanFromCache(UInt128 query_hash, ContextMutablePtr & context)
@@ -128,7 +128,7 @@ QueryPlanExtPtr PlanCacheManager::getPlanFromCache(UInt128 query_hash, ContextMu
         }
 
         // check statistic version
-        //todo: need Statistics
+        //todo: liyang453, need optimizer: need Statistics
 
         /*
         for (auto & item : plan_object->query_info->stats_version)
@@ -201,7 +201,7 @@ bool PlanCacheManager::addPlanToCache(UInt128 query_hash, QueryPlanExtPtr & plan
                 plan_object.query_info->query_access_info[backQuoteIfNeed(storage_id.getDatabaseName())][storage_id.getFullTableName()].emplace_back(column);
         }
 
-        //todo: need Statistics
+        //todo: liyang453, need optimizer: need Statistics
         /*
         Statistics::StatsTableIdentifier table_identifier{storage_id};
         auto version_value = Statistics::getVersion(context, table_identifier);

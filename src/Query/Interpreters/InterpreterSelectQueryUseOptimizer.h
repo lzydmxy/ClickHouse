@@ -52,7 +52,7 @@ public:
     QueryPlanExtPtr getPlanFromCache(UInt128 query_hash);
     bool addPlanToCache(UInt128 query_hash, QueryPlanExtPtr & plan, AnalysisPtr analysis);
     static void setPlanSegmentInfoForExplainAnalyze(PlanSegmentTreeUniqPtr & plan_segment_tree, ContextMutablePtr context);
-    //todo: need support query cache
+    //todo: liyang453, other feat: need support query cache
     //BlockIO readFromQueryCache(ContextPtr local_context, QueryCacheContext & can_use_query_cache);
 
     BlockIO execute() override;
@@ -60,7 +60,7 @@ public:
     void extendQueryLogElemImpl(QueryLogElement & elem, const ASTPtr &, ContextPtr) const override
     {
         elem.query_kind = IAST::QueryKind::Select;
-        //todo：need add segment_profiles in QueryLogElement
+        //todo: liyang453, other feat: need add segment_profiles in QueryLogElement
         //elem.segment_profiles = segment_profiles;
     }
 

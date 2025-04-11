@@ -23,12 +23,4 @@ void LimitStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const Buil
     pipeline.addTransform(std::move(transform));
 }
 
-/*
-void LimitStepExt::prepare(const PreparedStatementContext & prepared_context)
-{
-    prepared_context.prepare(limit);
-    prepared_context.prepare(offset);
-}
-*/
-
 }

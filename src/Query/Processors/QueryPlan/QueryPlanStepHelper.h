@@ -259,10 +259,11 @@ public:
         }
         else if (auto window_step = std::dynamic_pointer_cast<WindowStep>(query_plan_step))
         {
+            //todo: wujianchao5, other feat: WindowStep need deep copy
             return std::make_shared<WindowStep>(
                 window_step->input_streams[0],
-                window_step->window_description, /// TODO deep copy
-                window_step->window_functions, /// TODO deep copy
+                window_step->window_description,
+                window_step->window_functions,
                 window_step->streams_fan_out);
         }
         else if (auto sorting_step = std::dynamic_pointer_cast<SortingStep>(query_plan_step))
@@ -306,11 +307,12 @@ public:
         }
         else if (auto filling_step = std::dynamic_pointer_cast<FillingStep>(query_plan_step))
         {
+            //todo: wujianchao5, other feat: FillingStep need deep copy
             return std::make_shared<FillingStep>(
                 filling_step->input_streams[0],
                 filling_step->sort_description,
                 filling_step->fill_description,
-                filling_step->interpolate_description, /// TODO deep copy
+                filling_step->interpolate_description,
                 filling_step->use_with_fill_by_sorting_prefix);
         }
         else if (auto aggregating_projection_step = std::dynamic_pointer_cast<AggregatingProjectionStep>(query_plan_step))

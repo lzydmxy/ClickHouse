@@ -45,10 +45,10 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
             auto interpreter = std::make_shared<InterpreterSelectQuery>(query->clone(), context, SelectQueryOptions());
             SelectQueryInfo temp_query_info;
             temp_query_info.query = interpreter->getQuery();
-            // todo: getSyntaxAnalyzerResult need to be implemented by interpreter
+            //todo: liyang453, other feat: getSyntaxAnalyzerResult need to be implemented by interpreter
             //temp_query_info.syntax_analyzer_result = interpreter->getSyntaxAnalyzerResult();
             temp_query_info.prepared_sets = interpreter->getQueryAnalyzer()->getPreparedSets();
-            // todo: need to implement get ActionsDAGPtr from SelectQueryInfo
+            //todo: liyang453, other feat: need to implement get ActionsDAGPtr from SelectQueryInfo
             //rows_cnt = storage->totalRowsByPartitionPredicate(temp_query_info, context);
         }
 
@@ -61,10 +61,10 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
                 select_query.refSelect() = std::make_shared<ASTExpressionList>();
                 select_query.refSelect()->children.emplace_back(count_func);
                 DataTypes types;
-                // todo: need to implement InterpreterSelectQueryUseOptimizer
+                //todo: liyang453, other feat: need to implement InterpreterSelectQueryUseOptimizer
                 // auto pre_execute = [&types](InterpreterSelectQueryUseOptimizer & interpreter) { types = interpreter.getSampleBlock().getDataTypes(); };
 
-                // todo: need to implement createContextForSubQuery
+                //todo: liyang453, other feat: need to implement createContextForSubQuery
                 //auto query_context = createContextForSubQuery(context);
                 SettingsChanges changes;
                 changes.emplace_back("max_result_rows", 1);
@@ -98,7 +98,7 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
     {
         auto count_column = ColumnVector<UInt64>::create();
         count_column->insertValue(num_rows);
-        // todo: need to implement getReturnType in AggregateFunction
+        //todo: liyang453, other feat: need to implement getReturnType in AggregateFunction
         // output_header.insert({count_column->getPtr(), agg_count.getReturnType(), agg_desc.column_name});
     }
     else
@@ -114,7 +114,7 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
         column->insertFrom(place);
 
         // AggregateFunction's argument type must keep same. 
-        // todo: need to implement getArgumentTypes in AggregateFunction
+        //todo: liyang453, other feat: need to implement getArgumentTypes in AggregateFunction
         output_header.insert({std::move(column), std::make_shared<DataTypeAggregateFunction>(func, func->getArgumentTypes(), agg_desc.parameters), agg_desc.column_name});
     }
 
@@ -125,7 +125,7 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
 
     pipeline.init(std::move(pipe));
 
-    // TODO: need addInterpreterContext
+    //todo: liyang453, other feat: need addInterpreterContext
     // if (context)
     //     pipeline.addInterpreterContext(context);
 }

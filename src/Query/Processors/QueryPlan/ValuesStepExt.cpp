@@ -28,7 +28,7 @@ void ValuesStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const Bu
         block.insert({std::move(col), output_stream->header.getByPosition(index).type, output_stream->header.getByPosition(index).name});
     }
 
-    //TODO: implement pipeline build
+    //todo: liyang453, other feat: implement pipeline build
     //pipeline.init(Pipe(std::make_shared<SourceFromSingleChunk>(getOutputStream().header, Chunk(block.getColumns(), block.rows()))));
     //for (const auto & processor : pipeline.getProcessors())
     //    processors.emplace_back(processor);

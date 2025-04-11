@@ -42,7 +42,7 @@ public:
      */
     static PlanNodePtr unalias(const PlanNodePtr & plan, ContextMutablePtr & context)
     {
-        //todo: need impl, now just a fake
+        //todo: liyang453, other feat: need impl
         return nullptr;
     }
 
@@ -53,7 +53,7 @@ public:
      */
     static PlanNodeAndMappings reallocate(const PlanNodePtr & plan, ContextMutablePtr & context)
     {
-        //todo: need impl, now just a fake
+        //todo: liyang453, other feat: need impl
         PlanNodePtr plan_node;
         NameToNameMap mappings;
         return {plan_node, mappings};
@@ -62,7 +62,7 @@ public:
     /* check output stream is overlapping */
     static bool isOverlapping(const DataStream & lho, const DataStream & rho)
     {
-        //todo: need impl, now just a fake
+        //todo: liyang453, other feat: need impl
         return false;
     }
 };

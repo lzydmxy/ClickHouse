@@ -257,7 +257,7 @@ void InterpreterSelectQueryUseOptimizer::fillQueryPlan(ContextPtr context, Query
 {
     WriteBufferFromOwnString buffer;
     Protos::QueryPlan plan_pb;
-    //todo: need add toProto for query_plan
+    //todo: liyang453, other feat: need add toProto for query_plan
     //query_plan.toProto(plan_pb);
     String json_msg;
     google::protobuf::util::JsonPrintOptions pb_options;
@@ -328,7 +328,7 @@ QueryPlanExt::Node * PlanNodeToNodeVisitor::visitPlanNode(PlanNodeBase & node, V
 {
     if (node.getChildren().empty())
     {
-        //todo: need add node id
+        //todo: liyang453, other feat: need add node id
         //auto res = QueryPlanExt::Node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = {}, .id = node.getId()};
         size_t node_id = 0;
         auto res = QueryPlanExt::Node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = {}};
@@ -344,7 +344,7 @@ QueryPlanExt::Node * PlanNodeToNodeVisitor::visitPlanNode(PlanNodeBase & node, V
         children.emplace_back(child);
     }
 
-    //todo: need add node id
+    //todo: liyang453, other feat: need add node id
     //QueryPlan::Node query_plan_node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = children, .id = node.getId()};
     size_t node_id = 0;
     QueryPlan::Node query_plan_node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = children};
@@ -396,7 +396,7 @@ std::optional<PlanSegmentContext> ClusterInfoFinder::visitTableScanNode(TableSca
             .context = cluster_info_context.context,
             .query_plan = cluster_info_context.query_plan,
             .query_id = cluster_info_context.context->getCurrentQueryId(),
-            //todo: need modify shard_number,cluster name
+            //todo: liyang453, other feat: need modify shard_number,cluster name
             .shard_number = 1,
             .cluster_name = "test",
             .plan_segment_tree = cluster_info_context.plan_segment_tree.get()};
