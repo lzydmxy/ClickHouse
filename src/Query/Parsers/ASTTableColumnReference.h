@@ -2,6 +2,7 @@
 
 #include <Parsers/IAST.h>
 #include <Storages/IStorage_fwd.h>
+#include <Storages/IStorage.h>
 
 namespace DB
 {
@@ -42,10 +43,9 @@ struct TableInputRef
 
     String getDatabaseTableName() const
     {
-        //todo: need to get table name
-        //return storage->getStorageID().getFullTableName();
-        return {};
+        return storage->getStorageID().getFullTableName();
     }
+
     String toString() const { return getDatabaseTableName() + "#" + std::to_string(unique_id); }
 };
 
