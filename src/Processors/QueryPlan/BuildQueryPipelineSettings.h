@@ -4,8 +4,6 @@
 #include <Interpreters/ExpressionActionsSettings.h>
 #include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
-#include <cstddef>
-
 
 namespace DB
 {
