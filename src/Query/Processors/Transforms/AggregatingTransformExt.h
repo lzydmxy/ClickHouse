@@ -11,6 +11,15 @@ using BlockInputStreamPtr = std::shared_ptr<IBlockInputStream>;
 using AggregatorExtList = std::list<AggregatorExt>;
 using AggregatorExtListPtr = std::shared_ptr<AggregatorExtList>;
 
+class AggregatedArenasChunkInfo : public ChunkInfo
+{
+public:
+    Arenas arenas;
+    AggregatedArenasChunkInfo(Arenas arenas_)
+        : arenas(std::move(arenas_)) { }
+};
+
+
 struct AggregatingTransformParamsExt
 {
     AggregatorExt::Params params;

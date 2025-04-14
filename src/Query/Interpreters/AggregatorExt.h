@@ -307,8 +307,8 @@ private:
     friend struct AggregatedDataVariants;
     friend class ConvertingAggregatedToChunksTransformExt;
     friend class ConvertingAggregatedToChunksSourceExt;
-    friend class AggregatingInOrderTransform;
-    friend class AggregatingStreamingTransform;
+    friend class AggregatingInOrderTransformExt;
+    friend class AggregatingStreamingTransformExt;
     friend class MergingAggregatedStreamingTransform;
     friend class PreAggregatingTransform;
 
