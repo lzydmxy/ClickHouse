@@ -139,7 +139,6 @@ public:
             && getStrictness() != JoinStrictness::Any && getStrictness() != JoinStrictness::Semi && getStrictness() != JoinStrictness::Anti)
             return false;
 
-        // todo can support swap
         if (require_right_keys || has_using)
             return false;
 

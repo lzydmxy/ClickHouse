@@ -50,7 +50,7 @@ private:
     FinishPipePtr finish_pipe;
     bool has_counter_finished = false;
 
-    // TODO impl parallel execute left input and right input
+    // todo: lizhuoyu5, other feat: Parallel execute left input and right input for join
     bool join_parallel_left_right;
 };
 

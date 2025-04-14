@@ -18,7 +18,7 @@ namespace
         else if constexpr (std::is_same_v<TP, ConstASTPtr>)
             return std::const_pointer_cast<IAST>(std::forward<TP>(p));
         else
-            throw Exception(ErrorCodes::LOGICAL_ERROR, "logical errror!");
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "logical error!");
     }
 }
 
@@ -91,6 +91,7 @@ std::vector<std::vector<ConstASTPtr>> PredicateUtils::extractSubPredicates(Const
     return sub_predicates;
 }
 
+// todo: lizhuoyu5, need optimizer
 // ConstASTPtr PredicateUtils::extractCommonPredicates(ConstASTPtr predicate, ContextMutablePtr & context)
 // {
 //     auto fun = predicate->as<const ASTFunction &>();
@@ -390,6 +391,7 @@ bool PredicateUtils::containsAny(const Strings & partition_symbols, const std::s
     return false;
 }
 
+// todo: lizhuoyu5, need optimizer
 // bool PredicateUtils::isInliningCandidate(ConstASTPtr & predicate, ProjectionNode & node)
 // {
 //     // candidate symbols for inlining are

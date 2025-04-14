@@ -43,7 +43,7 @@ JoinPtr JoinStepExt::makeJoin(
     if (kind != JoinKind::Inner && kind != JoinKind::Cross)
         table_join->setInequalCondition(filter_action, filter_column_name);
 
-    // TODO support storage join
+    // todo: lizhuoyu5, other feat: support join with dictionaries and join engine table
     //    if (table_to_join.database_and_table_name)
     //    {
     //        auto joined_table_id = context->resolveStorageID(table_to_join.database_and_table_name);
@@ -130,7 +130,7 @@ JoinPtr JoinStepExt::makeJoin(
     {
         if (context->getOptimizerContext()->getSettingsRef().enable_nested_loop_join)
             throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Set enable_nested_loop_join=1 to enable outer join with filter");
-        // TODO support NESTED_LOOP_JOIN join Algorithm, we may not need
+        // todo: lizhuoyu5, other feat: support NESTED_LOOP_JOIN join Algorithm, we may not need
         // table_join->join_algorithm = JoinAlgorithm::NESTED_LOOP_JOIN;
         // table_join->table_join.on_expression = filter->clone();
         // table_join->table_join.kind = isCrossJoin() ? JoinKind::Inner : kind;
@@ -146,7 +146,7 @@ JoinPtr JoinStepExt::makeJoin(
     String dict_name;
     String key_name;
 
-    // TODO support NESTED_LOOP_JOIN join Algorithm, we may not need
+    // todo: lizhuoyu5, other feat: support NESTED_LOOP_JOIN join Algorithm, we may not need
     // if (table_join->forceNestedLoopJoin())
     //     return std::make_shared<NestedLoopJoin>(table_join, r_sample_block, context);
 
@@ -154,7 +154,7 @@ JoinPtr JoinStepExt::makeJoin(
     {
         if (table_join->allowParallelHashJoin() && join_algorithm == JoinAlgorithm::PARALLEL_HASH)
         {
-            // TODO: Yuanning RuntimeFilter, compare with CE code when fix
+            // todo: lizhuoyu5, other feat: Yuanning RuntimeFilter, compare with CE code when fix
             // if (enable_parallel_hash_join)
             // {
             //     LOG_TRACE(getLogger("JoinStep::makeJoin"), "will use parallel Hash Join");
@@ -185,7 +185,7 @@ JoinPtr JoinStepExt::makeJoin(
         {
             if (GraceHashJoin::isSupported(table_join) ) {
                 table_join->join_algorithm = {JoinAlgorithm::GRACE_HASH};
-                // TODO support join left side parallel for GraceHashJoin
+                // todo: lizhuoyu5, other feat: Parallel execute left input and right input for join
                 // auto parallel = (context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel != 0 ? context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel: num_streams);
                 return std::make_shared<GraceHashJoin>(context, table_join, l_sample_block, r_sample_block, context->getTempDataOnDisk(), false);
             } else if (allow_merge_join) { // fallback into merge join
@@ -203,7 +203,7 @@ JoinPtr JoinStepExt::makeJoin(
     else if ((table_join->forceGraceHashJoin() || join_algorithm == JoinAlgorithm::GRACE_HASH) && allow_grace_hash_join)
     {
         if (GraceHashJoin::isSupported(table_join) ) {
-            // TODO support join left side parallel for GraceHashJoin
+            // todo: lizhuoyu5, other feat: Parallel execute left input and right input for join
             // auto parallel = (context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel != 0 ? context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel: num_streams);
             // return std::make_shared<GraceHashJoin>(context, table_join, l_sample_block, r_sample_block, context->getTempDataOnDisk(), parallel, context->getSettingsRef().spill_mode == SpillMode::AUTO, false, num_streams);
             return std::make_shared<GraceHashJoin>(context, table_join, l_sample_block, r_sample_block, context->getTempDataOnDisk(), false);
@@ -358,7 +358,7 @@ QueryPipelineBuilderPtr JoinStepExt::updatePipeline(QueryPipelineBuilders pipeli
                 1, /// for normal HashJoin only one right table, parallel or concurrent hash join will change it to num_streams
                 settings_ext.distributed_settings.parallel_size,
                 settings_ext.distributed_settings.coordinator_address,
-                settings_ext.context->getOptimizerContext()->getPlanSegmentInstanceID().parallel_index); // TODO: Yuanning RuntimeFilter, parallel_id
+                settings_ext.context->getOptimizerContext()->getPlanSegmentInstanceID().parallel_index);
 
             join = makeJoin(settings_ext.context, std::move(consumer), pipelines[0]->getNumStreams(), filter_action, filter->getColumnName());
             need_build_runtime_filter = true;

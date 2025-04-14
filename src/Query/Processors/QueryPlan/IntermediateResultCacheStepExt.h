@@ -23,7 +23,8 @@ using CacheHolderPtr = std::shared_ptr<IntermediateResult::CacheHolder>;
 class IntermediateResultCacheStepExt : public IQueryPlanStep
 {
 public:
-    // TODO add CacheParam
+    // todo: lizhuoyu5, other feat: IntermediateResultCache is not necessary for the optimizer at this stage.
+    // todo: However, we might implement it in the future. For now, we have added the class definition without implementing its functionality.
     IntermediateResultCacheStepExt(const DataStream & input_stream_, /* CacheParam cache_param_,*/ Aggregator::Params aggregator_params_);
 
     String getName() const override { return "IntermediateResultCacheStepExt"; }

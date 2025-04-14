@@ -33,6 +33,7 @@
 #include <Query/Processors/QueryPlan/LimitStepExt.h>
 #include <Query/Processors/QueryPlan/CTERefStepExt.h>
 #include <Query/Processors/QueryPlan/ApplyStepExt.h>
+#include <Query/Processors/QueryPlan/MergingAggregatedStepExt.h>
 #include <Query/Common/Void.h>
 
 #include <Query/Common/SymbolsExtractor.h>
@@ -1144,26 +1145,25 @@ void QueryPlannerVisitor::planAggregate(PlanBuilder & builder, ASTSelectQueryExt
     }
 
     // build grouping operations
-    // TODO: add GroupingDescriptions
-    // GroupingDescriptions grouping_operations_descs;
-    // for (auto & grouping_op : analysis.getGroupingOperations(select_query))
-    //     if (!mappings_for_aggregate.count(grouping_op))
-    //     {
-    //         GroupingDescription description;
-    //
-    //         for (const auto & argument : grouping_op->arguments->children)
-    //             description.argument_names.emplace_back(builder.translateToSymbol(argument));
-    //
-    //         description.output_name = context->getOptimizerContext()->getSymbolAllocator()->newSymbol(grouping_op);
-    //
-    //         mappings_for_aggregate.emplace(grouping_op, description.output_name);
-    //         grouping_operations_descs.emplace_back(std::move(description));
-    //     }
+    GroupingDescriptions grouping_operations_descs;
+    for (auto & grouping_op : analysis.getGroupingOperations(select_query))
+        if (!mappings_for_aggregate.count(grouping_op))
+        {
+            GroupingDescription description;
+
+            for (const auto & argument : grouping_op->arguments->children)
+                description.argument_names.emplace_back(builder.translateToSymbol(argument));
+
+            description.output_name = context->getOptimizerContext()->getSymbolAllocator()->newSymbol(grouping_op);
+
+            mappings_for_aggregate.emplace(grouping_op, description.output_name);
+            grouping_operations_descs.emplace_back(std::move(description));
+        }
 
     // collect group by keys & prune invisible columns
     Names keys_for_all_group;
     NameSet key_set_for_all_group;
-    GroupingSetsParamsList grouping_sets_params;
+    GroupingSetsParamsExtList grouping_sets_params;
     FieldSymbolInfos visible_fields(builder.getFieldSymbolInfos().size());
     AstToSymbol complex_expressions = createScopeAwaredASTMap<String>(analysis, builder.getScope());
 
@@ -1213,7 +1213,7 @@ void QueryPlannerVisitor::planAggregate(PlanBuilder & builder, ASTSelectQueryExt
             }
         }
 
-        grouping_sets_params.emplace_back(GroupingSetsParams(keys_for_this_group, {}));
+        grouping_sets_params.emplace_back(GroupingSetsParamsExt(keys_for_this_group));
     };
 
     for (const auto & grouping_set : group_by_analysis.grouping_sets)
@@ -1255,7 +1255,7 @@ void QueryPlannerVisitor::planAggregate(PlanBuilder & builder, ASTSelectQueryExt
             auto end = keys_for_all_group.begin();
             std::advance(end, set_size);
             Names keys_for_this_group{keys_for_all_group.begin(), end};
-            grouping_sets_params.emplace_back(GroupingSetsParams(keys_for_this_group, {}));
+            grouping_sets_params.emplace_back(GroupingSetsParamsExt(keys_for_this_group));
         }
     }
 
@@ -1264,25 +1264,25 @@ void QueryPlannerVisitor::planAggregate(PlanBuilder & builder, ASTSelectQueryExt
         grouping_sets_params.clear();
         for (auto keys_for_this_group : powerSet(keys_for_all_group))
         {
-            grouping_sets_params.emplace_back(GroupingSetsParams(keys_for_this_group, {}));
+            grouping_sets_params.emplace_back(GroupingSetsParamsExt(keys_for_this_group));
         }
-        grouping_sets_params.emplace_back(GroupingSetsParams{});
+        grouping_sets_params.emplace_back(GroupingSetsParamsExt{});
     }
 
-    // auto agg_step = std::make_shared<AggregatingStep>(
-    //     builder.getCurrentDataStream(),
-    //     keys_for_all_group,
-    //     NameSet{},
-    //     aggregate_descriptions,
-    //     select_query.group_by_with_grouping_sets || grouping_sets_params.size() > 1 ? grouping_sets_params : GroupingSetsParamsList{},
-    //     !select_query.group_by_with_totals, // when WITH TOTALS exists, TotalsHavingStep is to finalize aggregates
-    //     AggregateStagePolicy::DEFAULT,
-    //     SortDescription{},
-    //     grouping_operations_descs,
-    //     needAggregateOverflowRow(select_query),
-    //     false);
-    //
-    // builder.addStep(std::move(agg_step));
+    auto agg_step = std::make_shared<AggregatingStepExt>(
+        builder.getCurrentDataStream(),
+        keys_for_all_group,
+        NameSet{},
+        aggregate_descriptions,
+        select_query.group_by_with_grouping_sets || grouping_sets_params.size() > 1 ? grouping_sets_params : GroupingSetsParamsExtList{},
+        !select_query.group_by_with_totals, // when WITH TOTALS exists, TotalsHavingStep is to finalize aggregates
+        AggregateStagePolicy::DEFAULT,
+        SortDescriptionWithPositions{},
+        grouping_operations_descs,
+        needAggregateOverflowRow(select_query),
+        false);
+
+    builder.addStep(std::move(agg_step));
     builder.withAdditionalMappings(mappings_for_aggregate);
 
     if (select_query.group_by_with_totals)
@@ -1299,17 +1299,22 @@ void QueryPlannerVisitor::planAggregate(PlanBuilder & builder, ASTSelectQueryExt
 
         auto transform_params = std::make_shared<AggregatingTransformParams>(header, params, false);
 
-        // QueryPlanStepPtr merge_agg = std::make_shared<MergingAggregatedStep>(
-        //     builder.getCurrentDataStream(),
-        //     keys_for_all_group,
-        //     select_query.group_by_with_grouping_sets || grouping_sets_params.size() > 1 ? grouping_sets_params : GroupingSetsParamsList{},
-        //     grouping_operations_descs,
-        //     transform_params,
-        //     false,
-        //     context->getSettingsRef().max_threads,
-        //     context->getSettingsRef().aggregation_memory_efficient_merge_threads);
-        //
-        // builder.addStep(std::move(merge_agg));
+        QueryPlanStepPtr merge_agg = std::make_shared<MergingAggregatedStepExt>(
+            builder.getCurrentDataStream(),
+            keys_for_all_group,
+            select_query.group_by_with_grouping_sets || grouping_sets_params.size() > 1 ? grouping_sets_params : GroupingSetsParamsExtList{},
+            grouping_operations_descs,
+            false,
+            params,
+            false,
+            context->getSettingsRef().max_threads,
+            context->getSettingsRef().aggregation_memory_efficient_merge_threads,
+            settings.max_block_size,
+            settings.aggregation_in_order_max_block_bytes,
+            SortDescription{},
+            settings.enable_memory_bound_merging_of_aggregation_results);
+
+        builder.addStep(std::move(merge_agg));
     }
 
     // PRINT_PLAN(builder.plan, plan_aggregate);

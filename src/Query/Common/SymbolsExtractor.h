@@ -6,13 +6,17 @@
 
 namespace DB
 {
+
+class PlanNodeBase;
+using PlanNodePtr = std::shared_ptr<PlanNodeBase>;
+
 class SymbolsExtractor
 {
 public:
     static std::vector<std::string> extractVector(ConstASTPtr node);
     static std::set<std::string> extract(ConstASTPtr node);
-    // TODO need ExpressionExtractor
-    // static std::set<std::string> extract(PlanNodePtr & node);
+
+    static std::set<std::string> extract(PlanNodePtr & node);
     static std::set<std::string> extract(std::vector<ConstASTPtr> & nodes);
 };
 

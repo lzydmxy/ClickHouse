@@ -30,7 +30,7 @@ std::set<std::string> SymbolsExtractor::extract(ConstASTPtr node)
     return std::set(result.begin(), result.end());
 }
 
-// TODO need ExpressionExtractor
+// todo: lizhuoyu5, need optimizer
 //std::set<std::string> SymbolsExtractor::extract(PlanNodePtr & node)
 //{
 //    std::vector<ConstASTPtr> expressions;
