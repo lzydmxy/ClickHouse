@@ -259,7 +259,6 @@ public:
         }
         else if (auto window_step = std::dynamic_pointer_cast<WindowStep>(query_plan_step))
         {
-            //todo: wujianchao5, other feat: WindowStep need deep copy
             return std::make_shared<WindowStep>(
                 window_step->input_streams[0],
                 window_step->window_description,
@@ -307,7 +306,6 @@ public:
         }
         else if (auto filling_step = std::dynamic_pointer_cast<FillingStep>(query_plan_step))
         {
-            //todo: wujianchao5, other feat: FillingStep need deep copy
             return std::make_shared<FillingStep>(
                 filling_step->input_streams[0],
                 filling_step->sort_description,
