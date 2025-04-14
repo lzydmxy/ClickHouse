@@ -39,10 +39,7 @@ public:
         SortDescriptionWithPositions description_,
         size_t max_block_size_);
 
-    const char * getName() const override
-    {
-        return "FinishAggregatingInOrderAlgorithmExt";
-    }
+    const char * getName() const override { return "FinishAggregatingInOrderAlgorithmExt"; }
     void initialize(Inputs inputs) override;
     void consume(Input & input, size_t source_num) override;
     Status merge() override;
