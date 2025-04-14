@@ -7,6 +7,8 @@
 #include <AggregateFunctions/AggregateFunctionCount.h>
 #include <Columns/ColumnAggregateFunction.h>
 #include <Processors/Sources/SourceFromSingleChunk.h>
+#include <Query/Interpreters/InterpreterSelectQueryUseOptimizer.h>
+#include <Query/Interpreters/executeSubQuery.h>
 
 namespace DB
 {
@@ -61,19 +63,15 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
                 select_query.refSelect() = std::make_shared<ASTExpressionList>();
                 select_query.refSelect()->children.emplace_back(count_func);
                 DataTypes types;
-                //todo: liyang453, other feat: need to implement InterpreterSelectQueryUseOptimizer
-                // auto pre_execute = [&types](InterpreterSelectQueryUseOptimizer & interpreter) { types = interpreter.getSampleBlock().getDataTypes(); };
-
-                //todo: liyang453, other feat: need to implement createContextForSubQuery
-                //auto query_context = createContextForSubQuery(context);
+                auto pre_execute = [&types](InterpreterSelectQueryUseOptimizer & interpreter) { types = interpreter.getSampleBlock().getDataTypes(); };
+                auto query_context = createContextForSubQuery(context);
                 SettingsChanges changes;
                 changes.emplace_back("max_result_rows", 1);
                 changes.emplace_back("result_overflow_mode", "throw");
                 changes.emplace_back("extremes", false);
                 changes.emplace_back("optimize_trivial_count_query", false);
-                //query_context->applySettingsChanges(changes);
-                //auto block = executeSubPipelineWithOneRow(query, query_context, pre_execute);
-                Block  block;
+                query_context->applySettingsChanges(changes);
+                auto block = executeSubPipelineWithOneRow(query, query_context, pre_execute);
 
                 if (block.rows() != 1 || block.columns() != 1)
                     throw Exception(ErrorCodes::INCORRECT_RESULT_OF_SCALAR_SUBQUERY, "Trivial count query returned error data");
@@ -98,8 +96,7 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
     {
         auto count_column = ColumnVector<UInt64>::create();
         count_column->insertValue(num_rows);
-        //todo: liyang453, other feat: need to implement getReturnType in AggregateFunction
-        // output_header.insert({count_column->getPtr(), agg_count.getReturnType(), agg_desc.column_name});
+        output_header.insert({count_column->getPtr(), std::make_shared<DataTypeUInt64>(), agg_desc.column_name});
     }
     else
     {
@@ -113,8 +110,6 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
         auto column = ColumnAggregateFunction::create(func);
         column->insertFrom(place);
 
-        // AggregateFunction's argument type must keep same. 
-        //todo: liyang453, other feat: need to implement getArgumentTypes in AggregateFunction
         output_header.insert({std::move(column), std::make_shared<DataTypeAggregateFunction>(func, func->getArgumentTypes(), agg_desc.parameters), agg_desc.column_name});
     }
 
@@ -125,9 +120,8 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
 
     pipeline.init(std::move(pipe));
 
-    //todo: liyang453, other feat: need addInterpreterContext
-    // if (context)
-    //     pipeline.addInterpreterContext(context);
+    if (context)
+        pipeline.addContext(context);
 }
 
 }

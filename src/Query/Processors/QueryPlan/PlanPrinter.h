@@ -23,8 +23,6 @@ using PlanSegmentProfiles = std::vector<PlanSegmentProfilePtr>;
 struct Analysis;
 using AnalysisPtr = std::shared_ptr<Analysis>;
 
-//todo: liyang453, other feat need impl PlanPrinter,PlanPrinter::TextPrinter
-
 class TextPrinterIntent
 {
 public:
@@ -88,7 +86,7 @@ struct PlanSegmentDescription
     {
         size_t segment_id;
         String plan_segment_type;
-        RExchangeMode mode;
+        RExchangeMode::Enum mode;
         size_t exchange_id;
         size_t parallel_size;
         bool keep_order;
@@ -96,7 +94,7 @@ struct PlanSegmentDescription
     struct InputInfo
     {
         size_t segment_id;
-        RExchangeMode mode;
+        RExchangeMode::Enum mode;
         size_t exchange_id;
         size_t exchange_parallel_size;
         bool keep_order;
@@ -114,7 +112,7 @@ struct PlanSegmentDescription
     size_t parallel;
     size_t exchange_parallel_size;
     UInt32 shard_num;
-    RExchangeMode mode;
+    RExchangeMode::Enum mode;
     Names shuffle_keys;
     std::unordered_map<PlanNodeId, size_t> exchange_to_segment;
     std::vector<std::shared_ptr<OutputInfo>> outputs_desc;
@@ -126,11 +124,7 @@ struct PlanSegmentDescription
     NodeDescriptionPtr node_description;
 
     Poco::JSON::Object::Ptr jsonPlanSegmentDescription(const StepProfiles & profiles, bool is_pipeline = false);
-    String jsonPlanSegmentDescriptionAsString(const StepProfiles & profiles)
-    {
-        //todo: liyang453, other feat:  need to impl
-        return "";
-    }
+    String jsonPlanSegmentDescriptionAsString(const StepProfiles & profiles);
     static PlanSegmentDescriptionPtr getPlanSegmentDescription(PlanSegmentPtr & segment, bool record_plan_detail = false) { auto plan_segment_desc = std::make_shared<PlanSegmentDescription>(); return plan_segment_desc;}
 };
 

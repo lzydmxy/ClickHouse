@@ -12,18 +12,26 @@
 #include <Query/Processors/QueryPlan/QueryPlanExt.h>
 #include <Query/Processors/QueryPlan/PlanNode.h>
 #include <Query/Processors/QueryPlan/PlanPrinter.h>
+#include <Query/Common/TxnTimestamp.h>
 
 namespace DB
 {
 struct Analysis;
 using AnalysisPtr = std::shared_ptr<Analysis>;
 using PlanNodeId = UInt32;
-struct QueryCacheContext;
 class CTEInfo;
 class PlanNodeBase;
 using PlanNodePtr = std::shared_ptr<PlanNodeBase>;
 using PlanNodes = std::vector<PlanNodePtr>;
 
+
+struct QueryCacheContext
+{
+    bool can_use_query_cache = false;
+    bool query_executed_by_optimizer = false; /// true if query is executed_by_optimizer
+    TxnTimestamp source_update_time_for_query_cache = TxnTimestamp::minTS();
+    QueryCache::Usage query_cache_usage = QueryCache::Usage::None;
+};
 
 class InterpreterSelectQueryUseOptimizer : public IInterpreter
 {

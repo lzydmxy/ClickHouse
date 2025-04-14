@@ -1,9 +1,9 @@
 #include <Interpreters/ExpressionActions.h>
-#include <Processors/QueryPlan/FilterStep.h>
 #include <Processors/Transforms/TotalsHavingTransform.h>
 #include <Processors/Transforms/ExpressionTransform.h>
 #include <Query/Processors/QueryPlan/TotalsHavingStepExt.h>
-
+#include <Query/Processors/QueryPlan/FilterStepExt.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 
 namespace DB
 {
@@ -27,13 +27,11 @@ void TotalsHavingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, con
 {
     if (!actions_dag && having_filter)
     {
-        //todo: liyang453, other feat: need to implement rewriteRuntimeFilter
-        /*
-        auto rewrite_filter = FilterStep::rewriteRuntimeFilter(having_filter, pipeline, settings);
-        actions_dag = IQueryPlanStep::createFilterExpressionActions(
-            settings.context, rewrite_filter->clone(), TotalsHavingTransform::transformHeader(input_streams[0].header, nullptr, final));
+        auto rewrite_filter = FilterStepExt::rewriteRuntimeFilter(having_filter, pipeline, settings);
+        actions_dag = QueryPlanStepHelper::createFilterExpressionActions(settings.getBuildQueryPipelineSettingsExt().context,
+                                                                         rewrite_filter->clone(),
+                                                                         TotalsHavingTransform::transformHeader(input_streams[0].header, actions_dag.get(), filter_column_name, remove_filter, final, getAggregatesMask(input_streams[0].header, aggregates)));
         filter_column_name = rewrite_filter->getColumnName();
-        */
     }
     auto expression_actions = actions_dag ? std::make_shared<ExpressionActions>(actions_dag, settings.getActionsSettings()) : nullptr;
 

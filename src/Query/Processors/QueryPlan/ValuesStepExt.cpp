@@ -1,12 +1,7 @@
 #include <Query/Processors/QueryPlan/ValuesStepExt.h>
 #include <QueryPipeline/QueryPipeline.h>
-
-/*
-#include <DataStreams/OneBlockInputStream.h>
-#include <Processors/QueryPipeline.h>
+#include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Processors/Sources/SourceFromSingleChunk.h>
-#include <QueryPlan/PlanSerDerHelper.h>
-*/
 
 namespace DB
 {
@@ -28,10 +23,9 @@ void ValuesStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const Bu
         block.insert({std::move(col), output_stream->header.getByPosition(index).type, output_stream->header.getByPosition(index).name});
     }
 
-    //todo: liyang453, other feat: implement pipeline build
-    //pipeline.init(Pipe(std::make_shared<SourceFromSingleChunk>(getOutputStream().header, Chunk(block.getColumns(), block.rows()))));
-    //for (const auto & processor : pipeline.getProcessors())
-    //    processors.emplace_back(processor);
+    pipeline.init(Pipe(std::make_shared<SourceFromSingleChunk>(getOutputStream().header, Chunk(block.getColumns(), block.rows()))));
+    for (const auto & processor : pipeline.getProcessors())
+        processors.emplace_back(processor);
 }
 
 std::shared_ptr<IQueryPlanStep> ValuesStepExt::copy(ContextPtr) const

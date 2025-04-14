@@ -516,10 +516,6 @@ std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitReadStorag
 
 std::vector<std::optional<PartitioningHandle>> SourceNodeFinder::visitTableScanStepExtNode(QueryPlanExt::Node * node, const Context &)
 {
-    //todo: liyang453, need storage: need supportsDistributedRead in storage
-    //auto * source_step = dynamic_cast<TableScanStepExt *>(node->step.get());
-    //if (source_step->getStorage()->supportsDistributedRead())
-    //    return {{PartitioningHandle::Partitioning_Handle_FIXED_HASH}};
     return {{PartitioningHandle::Partitioning_Handle_HCOORDINATOR}};
 }
 
@@ -639,10 +635,6 @@ std::vector<size_t> ParallelSizeChecker::visitReadNothingStepNode(QueryPlanExt::
 std::vector<size_t> ParallelSizeChecker::visitTableScanStepExtNode(QueryPlanExt::Node * node, const Context & context)
 {
     auto * source_step = dynamic_cast<TableScanStepExt *>(node->step.get());
-    //todo: liyang453, need storage: need supportsDistributedRead in storage
-    //if (source_step->getStorage()->supportsDistributedRead())
-    //    return {shard_number};
-
     // hack for unittest
     if (context.getOptimizerContext()->getSettingsRef().enable_memory_catalog)
         if (auto memory_tree = dynamic_pointer_cast<StorageMemory>(source_step->getStorage()))
