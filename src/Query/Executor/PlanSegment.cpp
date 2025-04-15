@@ -30,8 +30,7 @@ namespace ErrorCodes
 
 void IPlanSegment::serialize(WriteBuffer & buf) const
 {
-    //TODO: serialize block stream 
-    //serializeBlock(header, buf);
+    serializeBlock(header, buf);
     writeBinary(UInt8(type), buf);
     writeBinary(UInt8(exchange_mode), buf);
     writeBinary(exchange_id, buf);
@@ -46,8 +45,7 @@ void IPlanSegment::serialize(WriteBuffer & buf) const
 
 void IPlanSegment::deserialize(ReadBuffer & buf, ContextPtr)
 {
-    //TODO: deserialize block stream
-    //header = deserializeBlock(buf);
+    header = deserializeBlock(buf);
 
     UInt8 read_type;
     readBinary(read_type, buf);
@@ -72,7 +70,7 @@ void IPlanSegment::deserialize(ReadBuffer & buf, ContextPtr)
 void IPlanSegment::toProtoBase(RIPlanSegment & proto) const
 {
     //TODO: wait query plan code
-    //serializeHeaderToProto(header, *proto.mutable_header());
+    serializeHeaderToProto(header, *proto.mutable_header());
 
     proto.set_type(type);
     proto.set_exchange_mode(exchange_mode);
@@ -268,6 +266,7 @@ void PlanSegment::setPlanSegmentToQueryPlan(QueryPlan::Node * node, ContextPtr &
     // }
 }
 
+/*
 void PlanSegment::serialize(WriteBuffer & buf) const
 {
     writeBinary(segment_id, buf);
@@ -355,11 +354,20 @@ void PlanSegment::deserialize(ReadBuffer & buf, ContextMutablePtr context)
     readBinary(parallel_index, buf);
 }
 
+PlanSegmentPtr PlanSegment::deserializePlanSegment(ReadBuffer & buf, ContextMutablePtr context)
+{
+    auto plan_segment = std::make_unique<PlanSegment>();
+    plan_segment->deserialize(buf, context);
+    plan_segment->update(std::move(context));
+    return plan_segment;
+}
+*/
+
 void PlanSegment::toProto(RPlanSegment & plan_segment_proto)
 {
     auto plan_ptr = std::make_unique<RQueryPlan>();
     
-    // TODO:
+    // TODO: Add toProto function for QueryPlan
     // query_plan.toProto(*plan_ptr);
     plan_segment_proto.set_allocated_query_plan(plan_ptr.release());
     plan_segment_proto.set_cluster_name(cluster_name);
@@ -383,7 +391,7 @@ void PlanSegment::toProto(RPlanSegment & plan_segment_proto)
 void PlanSegment::fromProto(const RPlanSegment & proto, ContextMutablePtr context_)
 {
     query_plan.addInterpreterContext(context_);
-    //TODO:
+    //TODO: Add fromProto function for QueryPlan
     //query_plan.fromProto(proto.query_plan());
     cluster_name = proto.cluster_name();
     parallel = proto.parallel();
@@ -421,14 +429,6 @@ void PlanSegment::update(ContextPtr context)
     has_local_output
         = std::find_if(outputs.begin(), outputs.end(), [](const auto & output) { return isLocalExchange(output->getExchangeMode()); })
         != outputs.end();
-}
-
-PlanSegmentPtr PlanSegment::deserializePlanSegment(ReadBuffer & buf, ContextMutablePtr context)
-{
-    auto plan_segment = std::make_unique<PlanSegment>();
-    plan_segment->deserialize(buf, context);
-    plan_segment->update(std::move(context));
-    return plan_segment;
 }
 
 String PlanSegment::toString()

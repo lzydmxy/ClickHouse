@@ -10,3 +10,5 @@
 ./build/src/unit_tests_dbms debug --gtest_filter="ExchangeLocalBroadcastTest*"
 ./build/src/unit_tests_dbms debug --gtest_filter="ExchangeSinkTest*"
 ./build/src/unit_tests_dbms trace --gtest_filter="ExchangeRemoteTest*"
+./build/src/unit_tests_dbms trace --gtest_filter="PlanSegmentTest*"
+./build/src/unit_tests_dbms trace --gtest_filter="ProtobufTest*"

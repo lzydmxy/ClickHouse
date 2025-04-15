@@ -52,6 +52,7 @@ using RPlanSegmentProfileResponse = Protos::PlanSegmentProfileResponse;
 
 using RAST = Protos::AST;
 using RDataType = Protos::DataType;
+using RNameAndTypePair = Protos::NameAndTypePair;
 using RBlock = Protos::Block;
 using RAggregateFunction = Protos::AggregateFunction;
 using RQueryPlanStep = Protos::QueryPlanStep;

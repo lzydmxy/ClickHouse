@@ -252,15 +252,13 @@ public:
 
     void setQueryPlan(QueryPlan && query_plan_) { query_plan = std::move(query_plan_); }
 
-    void serialize(WriteBuffer & buf) const;
-
-    void deserialize(ReadBuffer & buf, ContextMutablePtr context);
+     // Use toProto/fromProto in new version code
+    // void serialize(WriteBuffer & buf) const;
+    // void deserialize(ReadBuffer & buf, ContextMutablePtr context);
+    // static PlanSegmentPtr deserializePlanSegment(ReadBuffer & buf, ContextMutablePtr context);
 
     void toProto(RPlanSegment & proto);
-
     void fromProto(const RPlanSegment & proto, ContextMutablePtr context);
-
-    static PlanSegmentPtr deserializePlanSegment(ReadBuffer & buf, ContextMutablePtr context);
 
     size_t getPlanSegmentId() const { return segment_id; }
 

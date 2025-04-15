@@ -48,6 +48,7 @@
 #include <Parsers/ASTSelectQuery.h>
 #include <Parsers/ASTIdentifier.h>
 #include <Storages/SelectQueryInfo.h>
+#include <Storages/registerStorages.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
 #include <Processors/Transforms/AggregatingTransform.h>
 #include <Processors/QueryPlan/AggregatingStep.h>
@@ -61,7 +62,7 @@
 #include <Query/Executor/PlanSegment.h>
 
 
-namespace DB::UnitTest
+namespace UnitTest
 {
 
 using namespace DB;
@@ -69,6 +70,11 @@ using namespace DB;
 using InputOrderInfoPtr = std::shared_ptr<DB::InputOrderInfo>;
 using ArrayJoinActionPtr = std::shared_ptr<DB::ArrayJoinAction>;
 using NameToType = std::map<String, DataTypePtr>;
+
+inline void tryRegisterStorages()
+{
+    static struct Register { Register() { DB::registerStorages(); } } registered;
+}
 
 class ProtobufTest : public testing::Test
 {
@@ -79,7 +85,7 @@ public:
     {
         tryRegisterFunctions();
         tryRegisterFormats();
-        // tryRegisterStorages();
+        tryRegisterStorages();
         tryRegisterAggregateFunctions();
         // tryRegisterHints();
 

@@ -4,20 +4,19 @@
 #include <Common/SipHash.h>
 #include <Common/ClickHouseRevision.h>
 #include <DataTypes/IDataType.h>
-//#include <IO/WriteBuffer.h>
+#include <DataTypes/DataTypeFactory.h>
 #include <IO/ReadBufferFromString.h>
 #include <IO/WriteBufferFromString.h>
+#include <Formats/NativeReader.h>
+#include <Formats/NativeWriter.h>
 #include <Core/NamesAndTypes.h>
 #include <Parsers/queryToString.h>
 #include <AggregateFunctions/AggregateFunctionFactory.h>
-// #include <DataStreams/NativeBlockInputStream.h>
-// #include <DataStreams/NativeBlockOutputStream.h>
 #include <Interpreters/ArrayJoinAction.h>
 #include <Interpreters/Context.h>
 #include <Interpreters/JoinedTables.h>
 #include <Interpreters/TableJoin.h>
 #include <Processors/Transforms/AggregatingTransform.h>
-
 #include <Query/ProtosHelper/QueryProto.h>
 #include <Query/ProtosHelper/ASTSerDerHelper.h>
 #include <Query/ProtosHelper/DataTypeHelper.h>
@@ -154,48 +153,19 @@ ColumnPtr deserializeColumn(ReadBuffer & buf)
     return column;
 }
 
-//TODO : Wait for Input/Output Streams
-// void serializeBlock(const Block & block, WriteBuffer & buf)
-// {
-//     BlockOutputStreamPtr block_out
-//         = std::make_shared<NativeBlockOutputStream>(buf, ClickHouseRevision::getVersionRevision(), block);
-//     block_out->write(block);
-// }
+void serializeBlock(const Block & block, WriteBuffer & buf)
+{
+    auto server_revision = ClickHouseRevision::getVersionRevision();
+    auto block_out = std::make_unique<NativeWriter>(buf, server_revision, block);
+    block_out->write(block);
+}
 
-// void serializeBlockWithData(const Block & block, WriteBuffer & buf)
-// {
-//     BlockOutputStreamPtr block_out
-//         = std::make_shared<NativeBlockOutputStream>(buf, ClickHouseRevision::getVersionRevision(), block.cloneEmpty());
-//     block_out->write(block);
-// }
-
-// Block deserializeBlock(ReadBuffer & buf)
-// {
-//     BlockInputStreamPtr block_in = std::make_shared<NativeBlockInputStream>(buf, ClickHouseRevision::getVersionRevision());
-//     return block_in->read();
-// }
-
-//TODO: Wait to refactor Block
-// void serializeHeaderToProto(const Block & block, RBlock & proto)
-// {
-//     // we only handle header
-//     for (const auto & pair : block.getNamesAndTypes())
-//     {
-//         pair.toProto(*proto.add_names_and_types());
-//     }
-// }
-// Block deserializeHeaderFromProto(const RBlock & proto)
-// {
-//     std::vector<NameAndTypePair> pairs;
-//     for (const auto & pair_pb : proto.names_and_types())
-//     {
-//         NameAndTypePair pair;
-//         pair.fillFromProto(pair_pb);
-//         pairs.emplace_back(std::move(pair));
-//     }
-//     return Block(std::move(pairs));
-// }
-
+Block deserializeBlock(ReadBuffer & buf)
+{
+    auto server_revision = ClickHouseRevision::getVersionRevision();
+    auto block_in = std::make_shared<NativeReader>(buf, server_revision);
+    return block_in->read();
+}
 
 QueryPlanStepPtr deserializePlanStep(ReadBuffer & buf, ContextPtr context)
 {
@@ -237,6 +207,46 @@ void serializePlanStep(const QueryPlanStepPtr & step, WriteBuffer & buf)
 //     }
 //     return res;
 // }
+
+void nameAndTypePairToProto(const NameAndTypePair & pair, RNameAndTypePair & proto)
+{
+    proto.set_name(pair.name);
+    serializeDataTypeToProto(pair.type, *proto.mutable_type());
+    //serializeDataTypeToProto(type_in_storage, *proto.mutable_type_in_storage());
+    // if (subcolumn_delimiter_position.has_value())
+    //     proto.set_subcolumn_delimiter_position(subcolumn_delimiter_position.value());
+}
+
+NameAndTypePair nameAndTypePairFromProto(const RNameAndTypePair & proto)
+{
+    NameAndTypePair pair;
+    pair.name = proto.name();
+    pair.type = deserializeDataTypeFromProto(proto.type());
+    // type_in_storage = deserializeDataTypeFromProto(proto.type_in_storage());
+    // if (proto.has_subcolumn_delimiter_position())
+    //     subcolumn_delimiter_position = proto.subcolumn_delimiter_position();
+    return pair;
+}
+
+void serializeHeaderToProto(const Block & block, RBlock & proto)
+{
+    for (const auto & pair : block.getNamesAndTypes())
+        nameAndTypePairToProto(pair, *proto.add_names_and_types());
+}
+
+Block deserializeHeaderFromProto(const RBlock & proto)
+{
+    ColumnsWithTypeAndName cols;
+    for (const auto & pair_pb : proto.names_and_types())
+    {
+        NameAndTypePair pair = nameAndTypePairFromProto(pair_pb);
+        ColumnWithTypeAndName column;
+        column.name = pair.name;
+        column.type = pair.type;
+        cols.push_back(column);
+    }
+    return Block(cols);
+}
 
 void serializeAggregateFunctionToProto(
     AggregateFunctionPtr function, const Array & parameters, const DataTypes & arg_types, RAggregateFunction & proto)

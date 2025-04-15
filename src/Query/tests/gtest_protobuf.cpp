@@ -3,7 +3,8 @@
 #include <Query/Executor/PlanSegment.h>
 
 using namespace DB;
-using namespace DB::UnitTest;
+namespace UnitTest
+{
 
 ContextMutablePtr ProtobufTest::session_context;
 ContextMutablePtr ProtobufTest::context;
@@ -66,21 +67,21 @@ std::vector<StorageID> ProtobufTest::test_storage_ids;
 //     compareProto(pb, pb2);
 // }
 
-// TEST_F(ProtobufTest, Block)
-// {
-//     std::default_random_engine eng(42);
-//     // construct valid object
-//     auto obj = generateBlock(eng);
-//     // serialize to protobuf
-//     Protos::Block pb;
-//     serializeHeaderToProto(obj, pb);
-//     // deserialize from protobuf
-//     Block obj2 = deserializeHeaderFromProto(pb);
-//     // re-serialize to protobuf
-//     Protos::Block pb2;
-//     serializeHeaderToProto(obj2, pb2);
-//     compareProto(pb, pb2);
-// }
+TEST_F(ProtobufTest, Block)
+{
+    std::default_random_engine eng(42);
+    // construct valid object
+    auto obj = generateBlock(eng);
+    // serialize to protobuf
+    Protos::Block pb;
+    serializeHeaderToProto(obj, pb);
+    // deserialize from protobuf
+    Block obj2 = deserializeHeaderFromProto(pb);
+    // re-serialize to protobuf
+    Protos::Block pb2;
+    serializeHeaderToProto(obj2, pb2);
+    compareProto(pb, pb2);
+}
 
 // TEST_F(ProtobufTest, DataStream)
 // {
@@ -410,3 +411,5 @@ std::vector<StorageID> ProtobufTest::test_storage_ids;
 //     obj2.toProto(pb2);
 //     compareProto(pb, pb2);
 // }
+
+}
