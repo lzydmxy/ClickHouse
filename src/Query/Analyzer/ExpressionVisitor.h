@@ -29,7 +29,7 @@ protected:
     virtual R visitExistsSubquery(ASTPtr & node, ASTFunction & ast, C & visitor_context) { return visitFunction(node, ast, visitor_context); }
     virtual R visitScalarSubquery(ASTPtr & node, ASTSubquery & ast, C & visitor_context) { return visitExpression(node, ast, visitor_context); }
     virtual R visitQuantifiedComparisonSubquery(ASTPtr & node, ASTQuantifiedComparisonExt & ast, C & visitor_context) { return visitExpression(node, ast, visitor_context); }
-    // TODO: now do not support ASTCreatePreparedStatementQuery
+    // todo: zhangwanyun1, now do not support ASTCreatePreparedStatementQuery
     // virtual R visitPreparedParameter(ASTPtr & node, ASTPreparedParameter & ast, C & visitor_context)
     // {
     //     return visitExpression(node, ast, visitor_context);
@@ -166,7 +166,7 @@ public:
     void process(ASTPtr & node, const Void & traversal_context) override
     {
         // node is expression AST
-        // TODO: || node->as<ASTPreparedParameter>(), now do not support ASTCreatePreparedStatementQuery
+        // todo: zhangwanyun1, now do not support ASTCreatePreparedStatementQuery, || node->as<ASTPreparedParameter>()
         if (node->as<ASTIdentifier>() || node->as<ASTFunction>() || node->as<ASTLiteral>() || node->as<ASTSubquery>()
             || node->as<ASTFieldReferenceExt>() || node->as<ASTQuantifiedComparisonExt>())
             user_visitor.process(node, user_context);

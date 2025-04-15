@@ -83,14 +83,14 @@ class QueryAnalyzerVisitor : public ASTVisitor<Void, const Void>
 {
 public:
     Void process(ASTPtr & node) { return ASTVisitorUtil::accept(node, *this, {}); }
-    // TODO: now do not support ASTInsertQuery
+    // todo: zhangwanyun1, now do not support ASTInsertQuery
     // Void visitASTInsertQuery(ASTPtr & node, const Void &) override;
     Void visitASTSelectIntersectExceptQuery(ASTPtr & node, const Void &) override;
     Void visitASTSelectWithUnionQuery(ASTPtr & node, const Void &) override;
     Void visitASTSelectQueryExt(ASTPtr & node, const Void &) override;
     Void visitASTSubquery(ASTPtr & node, const Void &) override;
     Void visitASTExplainQueryExt(ASTPtr & node, const Void &) override;
-    // TODO: now do not support ASTCreatePreparedStatementQuery
+    // todo: zhangwanyun1, now do not support ASTCreatePreparedStatementQuery
     // Void visitASTCreatePreparedStatementQuery(ASTPtr & node, const Void &) override
     // {
     //     auto & prepare = node->as<ASTCreatePreparedStatementQuery &>();
@@ -105,12 +105,12 @@ public:
         , context(std::move(context_))
         , analysis(analysis_)
         , outer_query_scope(outer_query_scope_)
-        , use_ansi_semantic(false)  // TODO: now do not support other dialect: context->getSettingsRef().dialect_type != DialectType::CLICKHOUSE
+        , use_ansi_semantic(false)  // todo: zhangwanyun1, now do not support other dialect: context->getSettingsRef().dialect_type != DialectType::CLICKHOUSE
         , enable_shared_cte(context->getOptimizerContext()->getSettingsRef().cte_mode != CTEMode::INLINED)
         , enable_implicit_type_conversion(context->getOptimizerContext()->getSettingsRef().enable_implicit_type_conversion)
-        , allow_extended_conversion(false)  // TODO: this setting is mysql related, now do not support
+        , allow_extended_conversion(false)  // todo: zhangwanyun1, this setting is mysql related, now do not support
         , enable_subcolumn_optimization_through_union(context->getOptimizerContext()->getSettingsRef().enable_subcolumn_optimization_through_union)
-        , enable_implicit_arg_type_convert(false)  // TODO: this setting is mysql related, now do not support
+        , enable_implicit_arg_type_convert(false)  // todo: zhangwanyun1, this setting is mysql related, now do not support
     {
     }
 
@@ -179,9 +179,9 @@ private:
     void verifyAggregate(ASTSelectQueryExt & select_query, ScopePtr source_scope);
     void verifyNoFreeReferencesToLambdaArgument(ASTSelectQueryExt & select_query);
     UInt64 analyzeUIntConstExpression(const ASTPtr & expression);
-    // TODO: do not support Hint now
+    // todo: zhangwanyun1, do not support Hint now
     // void countLeadingHint(const IAST & ast);
-    // TODO: do not support ansi semantic now
+    // todo: zhangwanyun1, do not support ansi semantic now
     // void rewriteSelectInANSIMode(ASTSelectQueryExt & select_query, const Aliases & aliases, ScopePtr source_scope);
     void normalizeAliases(ASTPtr & expr, ASTPtr & aliases_expr);
     void normalizeAliases(ASTPtr & expr, Aliases & aliases, const NameSet & source_columns_set);
@@ -243,7 +243,7 @@ Void QueryAnalyzerVisitor::visitASTSelectQueryExt(ASTPtr & node, const Void &)
     // Collect query aliases for aliases rewritting, for ANSI only.
     // since aliases rewritting for CLICKHOUSE is done by QueryRewriter
     Aliases query_aliases;
-    // TODO: now do not support other dialect, so use_ansi_semantic is false
+    // todo: zhangwanyun1, now do not support other dialect, so use_ansi_semantic is false
     // if (use_ansi_semantic)
     //     QueryAliasesAllowAmbiguousNoSubqueriesVisitor(query_aliases).visit(node);
 
@@ -252,7 +252,7 @@ Void QueryAnalyzerVisitor::visitASTSelectQueryExt(ASTPtr & node, const Void &)
     else
         source_scope = analyzeWithoutFrom(select_query);
 
-    // TODO: do not support ansi semantic now
+    // todo: zhangwanyun1, do not support ansi semantic now
     // rewriteSelectInANSIMode(select_query, query_aliases, source_scope);
     analyzeWindow(select_query);
     analyzeWhere(select_query, source_scope);
@@ -266,7 +266,7 @@ Void QueryAnalyzerVisitor::visitASTSelectQueryExt(ASTPtr & node, const Void &)
     analyzeLimitAndOffset(select_query);
     verifyAggregate(select_query, source_scope);
     verifyNoFreeReferencesToLambdaArgument(select_query);
-    // TODO: do not support Hint now
+    // todo: zhangwanyun1, do not support Hint now
     // countLeadingHint(select_query);
     return {};
 }
@@ -352,7 +352,7 @@ void QueryAnalyzerVisitor::analyzeSetOperation(ASTPtr & node, ASTs & selects)
             }
 
             DataTypePtr output_type;
-            // TODO: if support enable_implicit_arg_type_convert and allow_extended_conversion, then add other code
+            // todo: zhangwanyun1, if support enable_implicit_arg_type_convert and allow_extended_conversion, then add other code
             // promote output type to super type if necessary
             output_type = getLeastSupertype(elem_types);
             output_desc.emplace_back(
@@ -461,7 +461,7 @@ QueryAnalyzerVisitor::analyzeFrom(ASTTablesInSelectQuery & tables_in_select, AST
             throw Exception(ErrorCodes::LOGICAL_ERROR, "Invalid table element.");
     }
 
-    // TODO: do not support Hint now
+    // todo: zhangwanyun1, do not support Hint now
     // countLeadingHint(tables_in_select);
     analysis.setScope(tables_in_select, current_scope);
     return current_scope;
@@ -485,7 +485,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeTableExpression(
     else
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Invalid ASTTableExpression: {}", serializeAST(table_expression));
 
-    // TODO: do not support Hint now
+    // todo: zhangwanyun1, do not support Hint now
     // countLeadingHint(table_expression);
     return scope;
 }
@@ -507,13 +507,13 @@ ScopePtr QueryAnalyzerVisitor::analyzeTable(
         storage->renameInMemory(storage_id);
         full_table_name = storage_id.getFullTableName();
 
-        // TODO: need !storage->supportsOptimizer(), MergeTree and StorageMaterializedView are support optimizer, other types are not considered now
+        // todo: zhangwanyun1, need !storage->supportsOptimizer(), temporarily use the type judgment method to identify whether support optimizer
         bool support_optimizer = false;
         if (storage->as<MergeTreeData>() || storage->as<StorageMaterializedView>())
         {
             support_optimizer = true;
         }
-        // TODO: temporarily use the type judgment method to identify whether support optimizer
+
         if (storage_id.getDatabaseName() != "system" && !support_optimizer)
             throw Exception(ErrorCodes::NOT_IMPLEMENTED, "table is not supported in optimizer");
 
@@ -698,7 +698,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeTableFunction(ASTFunction & table_function
     return table_function_scope;
 }
 
-// TODO: the relevant enumeration classes such as JoinStrictness and methods are temporarily provided by CK and will be adjusted later if necessary.
+// todo: zhangwanyun1, the relevant enumeration classes such as JoinStrictness and methods are temporarily provided by CK and will be adjusted later if necessary.
 ScopePtr QueryAnalyzerVisitor::analyzeJoin(
     ASTTableJoin & table_join,
     ScopePtr left_scope,
@@ -790,7 +790,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeJoin(
         }
     }
 
-    // TODO: do not support Hint now
+    // todo: zhangwanyun1, do not support Hint now
     // countLeadingHint(table_join);
     return joined_scope;
 }
@@ -870,7 +870,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeJoinUsing(
             {
                 try
                 {
-                    // TODO: if support enable_implicit_arg_type_convert and allow_extended_conversion, then add other code
+                    // todo: zhangwanyun1, if support enable_implicit_arg_type_convert and allow_extended_conversion, then add other code
                     output_type = getLeastSupertype(DataTypes{left_type, right_type});
                 }
                 catch (DB::Exception & ex)
@@ -968,7 +968,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeJoinUsing(
             {
                 try
                 {
-                    // TODO: if support enable_implicit_arg_type_convert and allow_extended_conversion, then add other code
+                    // todo: zhangwanyun1, if support enable_implicit_arg_type_convert and allow_extended_conversion, then add other code
                     output_type = getLeastSupertype(DataTypes{left_type, right_type});
                 }
                 catch (DB::Exception & ex)
@@ -1190,7 +1190,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeJoinOn(
                             {
                                 try
                                 {
-                                    // TODO: if support enable_implicit_arg_type_convert and allow_extended_conversion, then add other code
+                                    // todo: zhangwanyun1, if support enable_implicit_arg_type_convert and allow_extended_conversion, then add other code
                                     super_type = getLeastSupertype(DataTypes{left_type, right_type});
                                 }
                                 catch (DB::Exception & ex)
@@ -1965,9 +1965,8 @@ void QueryAnalyzerVisitor::verifyAggregate(ASTSelectQueryExt & select_query, Sco
     }
 
     // verify no reference to non grouping fields after aggregate
-    // TODO: only_full_group_by is enabled by default
-    // if (!context->getSettingsRef().only_full_group_by)
-    //     return;
+    if (!context->getOptimizerContext()->getSettingsRef().only_full_group_by)
+        return;
 
     // verify no reference to non grouping fields after aggregate
     PostAggregateAnalyzerExpressionVisitor post_agg_visitor{context, analysis, source_scope, grouping_field_indices};
@@ -2056,7 +2055,7 @@ UInt64 QueryAnalyzerVisitor::analyzeUIntConstExpression(const ASTPtr & expressio
     return uint_val.safeGet<UInt64>();
 }
 
-// TODO: do not support Hint now
+// todo: zhangwanyun1, do not support Hint now
 // void QueryAnalyzerVisitor::countLeadingHint(const IAST & ast)
 // {
 //     for (const auto & hint : ast.hints)
@@ -2075,7 +2074,7 @@ void QueryAnalyzerVisitor::normalizeAliases(ASTPtr & expr, ASTPtr & aliases_expr
 
 void QueryAnalyzerVisitor::normalizeAliases(ASTPtr & expr, Aliases & aliases, const NameSet & source_columns_set)
 {
-    // TODO: QueryNormalizer::Data is different, further confirmation is needed to determine whether there is any impact
+    // todo: zhangwanyun1, QueryNormalizer::Data is different, further confirmation is needed to determine whether there is any impact
     QueryNormalizer::Data normalizer_data(
         aliases,
         source_columns_set,

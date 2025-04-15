@@ -76,7 +76,7 @@ public:
     ColumnWithTypeAndName visitASTOrderByElement(ASTPtr & node, AnalyzeContext &) override;
     ColumnWithTypeAndName visitASTQuantifiedComparisonExt(ASTPtr & node, AnalyzeContext &) override;
     ColumnWithTypeAndName visitASTTableColumnReference(ASTPtr & node, AnalyzeContext &) override;
-    // TODO: now do not support ASTPreparedParameter
+    // todo: zhangwanyun1, now do not support ASTPreparedParameter
     // ColumnWithTypeAndName visitASTPreparedParameter(ASTPtr & node, AnalyzeContext &) override;
     ColumnWithTypeAndName visitASTExpressionListExt(ASTPtr & node, AnalyzeContext &) override;
 
@@ -84,10 +84,10 @@ public:
         : context(std::move(context_))
         , analysis(analysis_)
         , options(std::move(options_))
-        , use_ansi_semantic(false)  // TODO: need dialect_type context->getSettingsRef().dialect_type != DialectType::CLICKHOUSE
+        , use_ansi_semantic(false)  // todo: zhangwanyun1, need dialect_type context->getSettingsRef().dialect_type != DialectType::CLICKHOUSE
         , enable_implicit_type_conversion(context->getOptimizerContext()->getSettingsRef().enable_implicit_type_conversion)
-        , allow_extended_conversion(false)  // TODO: this setting is mysql related, now do not support
-        , enable_implicit_arg_type_convert(false)  // TODO: this setting is mysql related, now do not support
+        , allow_extended_conversion(false)  // todo: zhangwanyun1, this setting is mysql related, now do not support
+        , enable_implicit_arg_type_convert(false)  // todo: zhangwanyun1, this setting is mysql related, now do not support
         , scopes({scope_})
     {
     }
@@ -404,7 +404,8 @@ ColumnWithTypeAndName ExprAnalyzerVisitor::analyzeOrdinaryFunction(ASTFunctionPt
 
     ColumnPtr res_col;
     auto function_ret_type = function_base->getResultType();
-    // TODO: need isSuitableForConstantFoldingInOptimizer
+    // todo: zhangwanyun1, need isSuitableForConstantFoldingInOptimizer, it will call isSuitableForConstantFolding by default.
+    // functions about ExternalDictionary, in, map will override and return false, adjustments will be made later if necessary
     if (options.evaluate_constant_expression && function_base->isSuitableForConstantFolding())
     {
         if (all_const)
@@ -662,7 +663,7 @@ void ExprAnalyzerVisitor::processSubqueryArgsWithCoercion(ASTPtr & lhs_ast, ASTP
                 }
             }
             else
-                // TODO: if support enable_implicit_arg_type_convert and allow_extended_conversion, then add other code
+                // todo: zhangwanyun1, if support enable_implicit_arg_type_convert and allow_extended_conversion, then add other code
                 super_type = getLeastSupertype(DataTypes{lhs_type, rhs_type});
         }
         if (!super_type)

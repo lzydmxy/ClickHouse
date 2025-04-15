@@ -39,12 +39,12 @@ bool compareNode(const ASTWindowDefinition & left, const ASTWindowDefinition & r
         left.frame_begin_type == right.frame_begin_type &&
         compareTree(left.frame_begin_offset, right.frame_begin_offset, comparator) &&
         left.frame_begin_preceding == right.frame_begin_preceding &&
-        left.frame_end_type == right.frame_end_type&&
+        left.frame_end_type == right.frame_end_type &&
         compareTree(left.frame_end_offset, right.frame_end_offset, comparator) &&
         left.frame_end_preceding == right.frame_end_preceding;
 }
 
-// TODO: do not support ASTClusterByElement now, need to confirm whether it is really necessary
+// todo: zhangwanyun1, do not support ASTClusterByElement now, need to confirm whether it is really necessary
 // bool compareNode(const ASTClusterByElement & left, const ASTClusterByElement & right)
 // {
 //     return left.split_number == right.split_number &&
@@ -54,7 +54,7 @@ bool compareNode(const ASTWindowDefinition & left, const ASTWindowDefinition & r
 
 bool compareNode(const ASTSubquery & left, const ASTSubquery & right)
 {
-    // TODO: need field database_of_view from  ASTSubquery
+    // todo: zhangwanyun1, need field database_of_view from  ASTSubquery
     return left.cte_name == right.cte_name;
 }
 
@@ -140,7 +140,7 @@ bool compareTree(const ASTPtr & left, const ASTPtr & right, const SubtreeCompara
         case ASTType::ASTTableIdentifier:
             node_equals = compareNode(left->as<ASTTableIdentifier &>(), right->as<ASTTableIdentifier &>());
             break;
-        // TODO: do not support ASTClusterByElement now, need to confirm whether it is really necessary
+        // todo: zhangwanyun1, do not support ASTClusterByElement now, need to confirm whether it is really necessary
         // case ASTType::ASTClusterByElement:
         //     node_equals = compareNode(left->as<ASTClusterByElement &>(), right->as<ASTClusterByElement &>());
         //     break;

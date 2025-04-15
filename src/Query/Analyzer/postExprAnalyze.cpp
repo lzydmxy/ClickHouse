@@ -32,11 +32,11 @@ void postExprAnalyze(ASTFunctionPtr & function, const ColumnsWithTypeAndName & p
 
     do
     {
-        // TODO: if support FunctionMapElement, then add other code
+        // todo: zhangwanyun1, if support FunctionMapElement, then add other code
 
-        // TODO: if support FunctionMapKeys, then add other code
+        // todo: zhangwanyun1, if support FunctionMapKeys, then add other code
 
-        // TODO: if support FunctionMapValues, then add other code
+        // todo: zhangwanyun1, if support FunctionMapValues, then add other code
 
         if ((func_name_lowercase == "get_json_object" || func_name_lowercase == "jsonextractraw")
             && context->getOptimizerContext()->getSettingsRef().optimize_json_function_to_subcolumn)
