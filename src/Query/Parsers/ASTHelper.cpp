@@ -1,6 +1,8 @@
 #include <Query/Parsers/ASTHelper.h>
 
 #include <boost/algorithm/string/case_conv.hpp>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
+#include <Query/ProtosHelper/ASTSerDerHelper.h>
 
 namespace DB
 {
@@ -94,6 +96,34 @@ void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_ch
     }
 
     throw Exception(ErrorCodes::LOGICAL_ERROR, "AST subtree not found in children");
+}
+
+void serializeASTImpl(ASTPtr ast, WriteBuffer & buf)
+{
+    if (auto * casted = ast->as<ASTArrayJoin>())
+    {
+        serializeEnum(casted->kind, buf);
+        serializeASTImpl(casted->expression_list, buf);
+    }
+    // todo wujianchao add more types
+    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement serialize of " + toString(getAstType(ast)));
+}
+
+ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
+{
+    switch (type)
+    {
+        case ASTType::ASTArrayJoin:
+        {
+            auto ast = std::make_shared<ASTArrayJoin>();
+            deserializeEnum(ast->kind, buf);
+            ast->expression_list = deserializeASTWithChildren(ast->children, buf);
+            return ast;
+        }
+        // todo wujianchao add more types
+        default:
+            throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement deserializeASTImpl AST for {}", toString(type));
+    }
 }
 
 ASTFunctionPtr makeASTFunctionWithVectorArgs(ASTFunctionPtr & ast, const String &name, ASTs &&args)

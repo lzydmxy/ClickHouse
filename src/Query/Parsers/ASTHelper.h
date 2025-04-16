@@ -108,6 +108,10 @@ inline ASTType getAstType(const ConstASTPtr & ast)
 void astToLowerCase(const ASTPtr & ast);
 void astToUpperCase(const ASTPtr & ast);
 
+void serializeASTImpl(ASTPtr ast, WriteBuffer & buf);
+ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf);
+
+
 void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_child);
 
 ASTFunctionPtr makeASTFunctionWithVectorArgs(ASTFunctionPtr & ast, const String &name, ASTs &&args);
