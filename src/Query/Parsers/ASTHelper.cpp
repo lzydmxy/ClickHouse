@@ -171,7 +171,7 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
         serializeEnum(casted->kind, buf);
         serializeAST(casted->expression_list, buf);
     }
-    else if (auto * casted = ast->as<ASTIdentifier>())
+    else if (const auto *casted = ast.as<ASTIdentifier>())
     {
         //parent serialize
         writeBinary(casted->alias, buf);
@@ -197,7 +197,7 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
             writeBinary(casted->semantic->legacy_compound, buf);
         }
     }
-    else if (auto * casted = ast->as<ASTTableIdentifier>())
+    else if (const auto *casted = ast.as<ASTTableIdentifier>())
     {
             //parent serialize
             writeBinary(casted->alias, buf);
@@ -223,7 +223,7 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
                 writeBinary(casted->semantic->legacy_compound, buf);
             }
     }
-    else if (auto * casted = ast->as<ASTWindowDefinition>())
+    else if (const auto *casted = ast.as<ASTWindowDefinition>())
     {
         writeBinary(casted->parent_window_name, buf);
         serializeAST(casted->partition_by, buf);
@@ -237,21 +237,21 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
         serializeAST(casted->frame_end_offset, buf);
         writeBinary(casted->frame_end_preceding, buf);
     }
-    else if (auto * casted = ast->as<ASTWindowListElement>())
+    else if (const auto * casted = ast.as<ASTWindowListElement>())
     {
         writeBinary(casted->name, buf);
         serializeAST(casted->definition, buf);
     }
-    else if (auto * casted = ast->as<ASTSampleRatio>())
+    else if (const auto * casted = ast.as<ASTSampleRatio>())
     {
         writeBinary(casted->ratio.numerator, buf);
         writeBinary(casted->ratio.denominator, buf);
     }
-    else if (auto * casted = ast->as<ASTSetQuery>())
+    else if (const auto * casted = ast.as<ASTSetQuery>())
     {
         writeBinary(casted->is_standalone, buf);
         writeBinary(casted->size(), buf);
-        for (auto & change : casted->changes)
+        for (const auto & change : casted->changes)
         {
             writeBinary(change.name, buf);
             writeFieldBinary(change.value, buf);
