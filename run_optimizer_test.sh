@@ -7,3 +7,4 @@
 ./build/src/unit_tests_dbms trace --gtest_filter="NameResolutionTest*"
 ./build/src/unit_tests_dbms trace --gtest_filter="JSONSuite*"
 ./build/src/unit_tests_dbms trace --gtest_filter="ASTEqualsTest*"
+./build/src/unit_tests_dbms trace --gtest_filter="ProfileLogHubTest*"
