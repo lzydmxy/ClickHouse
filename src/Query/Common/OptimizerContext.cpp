@@ -11,6 +11,7 @@
 #include <Interpreters/Context.h>
 #include <Poco/Util/AbstractConfiguration.h>
 #include <Query/Executor/PlanSegmentInstance.h>
+#include <Query/Executor/PlanSegmentProcessList.h>
 
 namespace DB
 {
@@ -39,6 +40,7 @@ OptimizerContext::OptimizerContext(const Settings & settings_, OptimizerSettings
     else
         query_max_execution_time = 100 * 60 * 1000; // default as 100min
     data = std::make_shared<OptimizerContextData>();
+    plan_segment_process_list = std::make_shared<PlanSegmentProcessList>();
 }
 
 UInt32 OptimizerContext::getQueryMaxExecutionTime() const
@@ -94,11 +96,6 @@ void OptimizerContext::setPlanSegmentProcessListEntry(PlanSegmentProcessListEntr
 PlanSegmentProcessListEntryPtr OptimizerContext::getPlanSegmentProcessListEntry() const
 {
     return segment_process_list_entry;
-}
-
-void OptimizerContext::setPlanSegmentProcessList(PlanSegmentProcessListPtr segment_process_list_)
-{
-    plan_segment_process_list = segment_process_list_;
 }
 
 PlanSegmentProcessListPtr OptimizerContext::getPlanSegmentProcessList() const

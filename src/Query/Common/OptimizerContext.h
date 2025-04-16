@@ -72,7 +72,6 @@ public:
     void setPlanSegmentProcessListEntry(PlanSegmentProcessListEntryPtr segment_process_list_entry_);
     PlanSegmentProcessListEntryPtr getPlanSegmentProcessListEntry() const;
 
-    void setPlanSegmentProcessList(PlanSegmentProcessListPtr segment_process_list_);
     PlanSegmentProcessListPtr getPlanSegmentProcessList() const;
 
     void setProcessListEntry(ProcessListEntryPtr process_list_entry_);

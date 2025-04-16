@@ -75,10 +75,17 @@ void setQueryDuration(DB::ContextMutablePtr context)
     context->getOptimizerContext()->initQueryExpirationTimeStamp();
 }
 
+static bool is_init = false;
+
 DB::ContextMutablePtr getInitContext()
 {
     auto context = getContext().context;
-    context->initializeOptimizerContext();
+    if (!is_init)
+    {
+        context->initializeOptimizerContext();
+        context->setTemporaryStoragePath("./tmp/", 1024);
+        is_init = true;
+    }
     return context;
 }
 

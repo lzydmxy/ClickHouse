@@ -12,3 +12,4 @@
 ./build/src/unit_tests_dbms trace --gtest_filter="ExchangeRemoteTest*"
 ./build/src/unit_tests_dbms trace --gtest_filter="PlanSegmentTest*"
 ./build/src/unit_tests_dbms trace --gtest_filter="ProtobufTest*"
+./build/src/unit_tests_dbms trace --gtest_filter="PlanSegmentProcessListTest*"
