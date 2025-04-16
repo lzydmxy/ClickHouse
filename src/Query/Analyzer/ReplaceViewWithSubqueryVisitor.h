@@ -58,7 +58,7 @@ struct ReplaceViewWithSubquery
                 table_expression.database_and_table_name = {};
                 table_expression.subquery = std::make_shared<ASTSubquery>();
                 table_expression.subquery->children.push_back(subquery);
-                // todo: wujianchao, open and add to subquery
+                // todo: wujianchao5, other feat: open and add to subquery
                 // table_expression.subquery->as<ASTSubquery &>().database_of_view = database_name;
                 table_expression.subquery->as<ASTSubquery &>().cte_name = table_name;
                 if (!alias.empty())

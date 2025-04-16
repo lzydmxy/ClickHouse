@@ -168,28 +168,28 @@ void OptimizerContext::logOptimizerProfile(LoggerPtr log, String prefix, String 
 
 void OptimizerContext::setPlanCacheManager(std::unique_ptr<PlanCacheManager> && manager)
 {
-    //todo: need a part shared lock
+    //todo: zhangdongdong92, other feat: need a part shared lock
     //auto lock = getLock(); // checked
     plan_cache_manager = std::move(manager);
 }
 
 PlanCacheManager* OptimizerContext::getPlanCacheManager()
 {
-    //todo: need a part shared lock
+    //todo: zhangdongdong92, other feat: need a part shared lock
     //auto lock = getLock(); // checked
     return plan_cache_manager ? plan_cache_manager.get() : nullptr;
 }
 
 HostWithPorts OptimizerContext::getHostWithPorts() const
 {
-    //tood: need impl, now just a fake impl
+    //todo: zhangdongdong92, other feat: need impl, now just a fake impl
     HostWithPorts hp;
     return hp;
 }
 
 std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> OptimizerContext::getProcessorProfileElementConsumer() const
 {
-    //tood: need impl, now just a fake impl
+    //todo: zhangdongdong92, other feat: need impl, now just a fake impl
     std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> processor_log_element_consumer;
     return processor_log_element_consumer;
 }
@@ -197,7 +197,7 @@ std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> OptimizerCon
 
 SegmentSchedulerPtr OptimizerContext::getSegmentScheduler() const
 {
-    //todo: need a part shared lock
+    //todo: zhangdongdong92, other feat: need a part shared lock
     return segment_scheduler;
 }
 

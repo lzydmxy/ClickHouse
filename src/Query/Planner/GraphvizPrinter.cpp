@@ -231,7 +231,7 @@ void GraphvizPrinter::addID(ASTPtr & ast, std::unordered_map<ASTPtr, UInt16> & a
 
 String GraphvizPrinter::printLogicalPlan(PlanNodeBase & node, CTEInfo * cte_info, StepProfiles profiles)
 {
-    // TODO IMPL CTEInfo
+    //todo: lizhuoyu, other feat: IMPL CTEInfo
     throw Exception(ErrorCodes::NOT_IMPLEMENTED, "GraphvizPrinter::printGroup: not implemented");
 
 }
@@ -262,20 +262,20 @@ String GraphvizPrinter::printSettings(const String & color, const ContextMutable
 
 void GraphvizPrinter::printLogicalPlan(PlanNodeBase &, ContextMutablePtr &, const String &)
 {
-    // TODO add impl
+    //todo: lizhuoyu, other feat: add impl
     return;
 }
 
 void GraphvizPrinter::printLogicalPlan(QueryPlan &, ContextMutablePtr &, const String &, StepProfiles)
 {
-    // TODO add impl
+    //todo: lizhuoyu, other feat: add impl
     return;
 }
 
 
 void GraphvizPrinter::printPlanSegment(const PlanSegmentTreeUniqPtr &, const ContextMutablePtr &)
 {
-    // TODO add impl
+    //todo: lizhuoyu, other feat: add impl
     return;
 }
 
@@ -306,7 +306,7 @@ void GraphvizPrinter::appendPlanSegmentNodes(
 
     // QueryPlan::Node * plan = plan_segment->getQueryPlan().getRootNode();
 
-    // TODO add PlanSegmentEdgePrinter
+    //todo: lizhuoyu, other feat: add PlanSegmentEdgePrinter
     // PlanSegmentEdgePrinter edge_printer{out};
     // VisitorUtil::accept(plan, edge_printer, segments);
 
@@ -413,13 +413,13 @@ void GraphvizPrinter::appendPlanSegmentNode(std::stringstream & out, const PlanS
     // QueryPlan::Node * node = segment_ptr->getQueryPlan().getRoot();
     // PrinterContext context{};
 
-    // TODO add PlanSegmentEdgePrinter
+    //todo: lizhuoyu, other feat: add PlanSegmentEdgePrinter
     // PlanSegmentNodePrinter node_printer{out, true};
     // VisitorUtil::accept(node, node_printer, context);
     out << "}\n";
 }
 
-// Todo: Should imp Memo and Group
+//todo: lizhuoyu, other feat: Should imp Memo and Grou
 // static String printGroupEdges(
 //     const Memo & memo,
 //     const std::unordered_map<GroupId, std::unordered_set<GroupId>> & edge_winner,
@@ -430,13 +430,13 @@ void GraphvizPrinter::appendPlanSegmentNode(std::stringstream & out, const PlanS
 
 String GraphvizPrinter::printMemo(const Memo & memo, GroupId root)
 {
-    // Todo: Should imp Memo
+    //todo: lizhuoyu, other feat: Should imp Memo
     throw Exception(ErrorCodes::NOT_IMPLEMENTED, "GraphvizPrinter::printMemo: not implemented");
 }
 
 String GraphvizPrinter::printGroup(const Group & group, const std::unordered_map<GroupId, WinnerPtr> & group_winner)
 {
-    // Todo: Should imp Group
+    //todo: lizhuoyu, other feat: Should imp Group
     throw Exception(ErrorCodes::NOT_IMPLEMENTED, "GraphvizPrinter::printGroup: not implemented");
 }
 

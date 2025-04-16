@@ -298,11 +298,10 @@ AggregatingStepExt::AggregatingStepExt(
 
 void AggregatingStepExt::updateOutputStream()
 {
-    // TODO: what if input_streams and params->getHeader() are inconsistent?
+    //todo: wujianchao5, other feat: what if input_streams and params->getHeader() are inconsistent?
     output_stream->header = appendGroupingColumns(params.getHeader(final), grouping_sets_params, groupings, final);
 }
 
-// ! todo
 void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & build_settings)
 {
     // todo: hongzhigao1, implement
