@@ -14,9 +14,6 @@ namespace DB
 {
 }
 
-
-// ITransformingStep(DataStream input_stream, Block output_header, Traits traits, bool collect_processors_ = true);
-
 void AssignUniqueIdStepExt::updateInputStreams(const DataStreams & input_streams_)
 {
     input_streams = input_streams_;

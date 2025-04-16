@@ -43,7 +43,7 @@ void MarkDistinctTransformExt::transform(Chunk & chunk)
         distinct_columns.emplace_back(block.getByName(distinct_symbol));
     }
 
-    //TODO: 
+    //TODO: zhangdongdong92, need distinct_set
     // Block mark_block{distinct_columns};
     // ColumnUInt8::MutablePtr result = distinct_set.markDistinctBlock(mark_block);
     // chunk.addColumn(std::move(result));
