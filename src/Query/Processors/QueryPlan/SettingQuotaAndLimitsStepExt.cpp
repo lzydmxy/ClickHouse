@@ -48,7 +48,7 @@ void SettingQuotaAndLimitsStepExt::updateInputStreams(const DataStreams & input_
 
 void SettingQuotaAndLimitsStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &)
 {
-    //TODO FIXME pipeline
+    //todo: zhangdongdong92, other feat: FIXME pipeline
     /// Table lock is stored inside pipeline here.
     // pipeline.setLimits(limits);
 

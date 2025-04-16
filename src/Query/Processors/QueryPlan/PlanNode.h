@@ -30,7 +30,7 @@ public:
     PlanNodes & getChildren() { return children; }
     const PlanNodes & getChildren() const { return children; }
     void replaceChildren(const PlanNodes & children_) { replaceChildrenImpl(children_); }
-    //todo: need optimizer Statistics
+    //todo: hongzhigao, need optimizer: Statistics
     // void setStatistics(const PlanNodeStatisticsEstimate & statistics_) { statistics = statistics_; }
     // const PlanNodeStatisticsEstimate & getStatistics() const { return statistics; }
     QueryPlanStepPtr getStep() const { return getStepImpl(); }
@@ -75,7 +75,7 @@ public:
 #undef CREATE_PLAN_NODE
 
         //PlanNodePtr plan_node;
-        //todo: need optimizer Statistics
+        //todo: hongzhigao, need optimizer: Statistics
         //plan_node->setStatistics(statistics_);
         return plan_node;
     }
@@ -83,7 +83,7 @@ public:
 protected:
     PlanNodeId id;
     PlanNodes children;
-    //todo: need optimizer Statistics
+    //todo: hongzhigao, need optimizer: Statistics
     //PlanNodeStatisticsEstimate statistics;
 
 private:
@@ -109,12 +109,12 @@ public:
     void setStep(StepPtr & step_) { step = step_; }
     const DataStream & getCurrentDataStream() const override { return step->getOutputStream(); }
 
-    //todo: need optimizer Statistics
+    //todo: hongzhigao, need optimizer: Statistics
     //static PlanNodePtr createPlanNode(PlanNodeId id_, StepPtr step_, const PlanNodes & children_ = {}, const PlanNodeStatisticsEstimate & statistics_ = {})
     static PlanNodePtr createPlanNode(PlanNodeId id_, StepPtr step_, const PlanNodes & children_ = {})
     {
         PlanNodePtr plan_node = std::make_shared<PlanNode<Step>>(id_, std::move(step_), children_);
-        ////todo: need optimizer Statistics
+        //todo: hongzhigao, need optimizer: Statistics
         //plan_node->setStatistics(statistics_);
         return plan_node;
     }

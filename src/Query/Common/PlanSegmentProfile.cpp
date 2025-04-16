@@ -54,7 +54,7 @@ ProfileMetricPtr ProfileMetric::fromProto(const RProfileMetric & proto)
         profile->inputs.emplace(input_profile.id, input_profile);
     }
 
-    // TODO: Wait for RuntimeAttributeDescription in IQueryPlanStep.h
+    // todo: liyang453, other feat: Wait for RuntimeAttributeDescription in IQueryPlanStep.h
     // for (const auto & [attribute_type, attribute] : proto.attributes())
     // {    
     //     AttributeInfoPtr info = std::make_shared<RuntimeAttributeDescription>();

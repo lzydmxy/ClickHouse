@@ -26,7 +26,7 @@ void ExpandTransformExt::transform(Chunk & chunk)
     for (auto & expression : expressions)
     {
         auto block = getInputPort().getHeader().cloneWithColumns(columns);
-         //TODO FIXME getSideBlock!!!!
+        //todo: zhangdongdong92, other feat: FIXME getSideBlock
         expression->execute(block, num_rows, num_rows);
         // expression->execute(block, chunk.getSideBlock(), num_rows);
         blocks.emplace_back(block);

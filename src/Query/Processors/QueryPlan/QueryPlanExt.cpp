@@ -260,7 +260,7 @@ QueryPipelineBuilderPtr QueryPlanExt::buildQueryPipeline(
             stack.push(Frame{.node = frame.node->children[next_child], .pipelines = {}});
     }
 
-    // TODO: add context in QueryPipelineBuilder (use globalContext instead now)
+    //todo: hongzhigao, other feat: add context in QueryPipelineBuilder (use globalContext instead now)
     // for (auto & context : interpreter_context)
     //     last_pipeline->addInterpreterContext(std::move(context));
 
@@ -270,8 +270,8 @@ QueryPipelineBuilderPtr QueryPlanExt::buildQueryPipeline(
 
 void QueryPlanExt::updatePipelineStepInfo(QueryPipelineBuilderPtr & pipeline_ptr, QueryPlanStepPtr & step, size_t step_id)
 {
+    //todo: hongzhigao, other feat: add step_id in IProcessor
     // auto * source_step = dynamic_cast<ISourceStep *>(step.get());
-    // TODO: add step_id in IProcessor
     // for (const auto & processor : pipeline_ptr->getProcessors())
     //     if (processor->getStepId() == -1 || source_step)
     //         processor->setStepId(step_id);
@@ -346,7 +346,7 @@ void QueryPlanExt::explainPipeline(WriteBuffer & buffer, const ExplainPipelineOp
     }
 }
 
-// TODO: implement
+//todo: hongzhigao, other feat: need impl toProto/fromProto
 // handle when plan is tree-like, i.e., plan_node + cte_info
 // void QueryPlanExt::toProto(Protos::QueryPlan & proto) const
 // {
@@ -366,7 +366,6 @@ void QueryPlanExt::explainPipeline(WriteBuffer & buffer, const ExplainPipelineOp
 //     }
 // }
 
-// TODO: implement
 // void QueryPlanExt::fromProto(const Protos::QueryPlan & proto)
 // {
 //     auto mode = QueryPlanModeConverter::fromProto(proto.mode());
@@ -384,7 +383,6 @@ void QueryPlanExt::explainPipeline(WriteBuffer & buffer, const ExplainPipelineOp
 //     }
 // }
 
-// TODO: implement
 // handle when plan is flatten, i.e., root + nodes + cte_nodes
 // void QueryPlanExt::toProtoFlatten(Protos::QueryPlan & proto) const
 // {
@@ -411,7 +409,6 @@ void QueryPlanExt::explainPipeline(WriteBuffer & buffer, const ExplainPipelineOp
 //     proto.set_root_id(root->id);
 // }
 
-// TODO: implement
 // void QueryPlanExt::fromProtoFlatten(const Protos::QueryPlan & proto)
 // {
 //     std::unordered_map<size_t, Node *> id_to_node;
@@ -442,7 +439,6 @@ void QueryPlanExt::explainPipeline(WriteBuffer & buffer, const ExplainPipelineOp
 //     root = id_to_node[root_id];
 // }
 
-// TODO: implement
 // support optimizer mode
 // void QueryPlanExt::toProtoTreeLike(Protos::QueryPlan & proto) const
 // {
@@ -478,7 +474,6 @@ void QueryPlanExt::explainPipeline(WriteBuffer & buffer, const ExplainPipelineOp
 //     }
 // }
 
-// TODO: implement
 // void QueryPlanExt::fromProtoTreeLike(const Protos::QueryPlan & proto)
 // {
 //     std::unordered_map<Int64, PlanNodePtr> id_to_plan;
@@ -542,7 +537,7 @@ static PlanNodePtr copyPlanNode(const PlanNodePtr & plan, ContextMutablePtr & co
     PlanNodes children;
     for (auto & child : plan->getChildren())
         children.emplace_back(copyPlanNode(child, context));
-    // TODO: implement PlanNode
+    //todo: hongzhigao, other feat:  implement PlanNode
     // return PlanNodeBase::createPlanNode(plan->getId(), plan->getStep()->copy(context), children, plan->getStatistics());
     return {};
 }

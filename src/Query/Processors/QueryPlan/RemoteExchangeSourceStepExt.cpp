@@ -63,7 +63,7 @@ void RemoteExchangeSourceStepExt::setPlanSegment(const PlanSegmentSharedPtr & pl
 
 void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
-    // TODO: need query_unique_id from getCurrentTransactionID
+    //todo: zhangwanyun, other feat: need query_unique_id from getCurrentTransactionID
     UInt64 current_tx_id = 0;
     if (!plan_segment)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Should setPlanSegment before initializePipeline!");
@@ -101,7 +101,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
     auto enable_metrics = optimizer_context->getSettingsRef().log_query_exchange;
     auto query_exchange_log = enable_metrics ? context->getOptimizerContext()->getQueryExchangeLog(): nullptr;
     auto register_mode = BrpcExchangeReceiverRegistryService::BRPC;
-    // TODO: need bsp_mode context->getSettingsRef().bsp_mode ? context->getDiskExchangeDataManager()
+    //todo: zhangwanyun, other feat: need bsp_mode context->getSettingsRef().bsp_mode ? context->getDiskExchangeDataManager()
     auto disk_exchange_mgr = nullptr;
     size_t local_queue_size = optimizer_context->getSettingsRef().exchange_local_receiver_queue_size;
     size_t remote_queue_size = optimizer_context->getSettingsRef().exchange_remote_receiver_queue_size;
@@ -142,7 +142,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
             collector = std::make_shared<MultiPathBoundedQueue>(multi_path_queue_size, memory_controller);
         bool is_final_plan_segment = plan_segment_id == 0;
         size_t input_index = 0;
-        // TODO: need bsp_mode context->getSettingsRef().bsp_mode &&
+        //todo: zhangwanyun, other feat: need bsp_mode context->getSettingsRef().bsp_mode
         if (iter != settings.getBuildQueryPipelineSettingsExt().sources.end())
         {
             for (const auto & source : iter->second)
@@ -189,7 +189,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
             {
                 UInt32 partition_id = partition_id_start + i;
                 ExchangeDataKeyPtr data_key;
-                // TODO:  if bsp_mode is required, then add other codes
+                //todo: zhangwanyun, other feat: if bsp_mode is required, then add other codes
                 data_key = std::make_shared<ExchangeDataKey>(current_tx_id, exchange_id, partition_id);
 
                 bool is_local_exchange = ExchangeUtils::isLocalExchange(read_address_info, source_address);
@@ -287,9 +287,9 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
                                         const Block &) { return std::make_shared<DeserializeBufTransform>(header, enable_compress); });
     }
     LOG_DEBUG(logger, "Total exchange source : {}, keep_order: {}", source_num, keep_order);
-    // TODO: need limitMinThreads
+    //todo: zhangwanyun, other feat: need limitMinThreads
     // pipeline.limitMinThreads(source_num);
-    // TODO: check if the pipeline is still in use
+    //todo: zhangwanyun, other feat: check if the pipeline is still in use
     QueryPlanResourceHolder resource;
     for (const auto & processor : QueryPipelineBuilder::getPipe(std::move(pipeline), resource).getProcessors())
         processors.emplace_back(processor);
@@ -334,7 +334,7 @@ BroadcastReceiverPtr RemoteExchangeSourceStepExt::createReceiver(
             auto queue = collector ? collector : std::make_shared<MultiPathBoundedQueue>(local_options.queue_size, memory_controller);
             auto local_channel = std::make_shared<LocalBroadcastChannel>(data_key, local_options, name, std::move(queue), context);
             receiver = std::dynamic_pointer_cast<IBroadcastReceiver>(local_channel);
-            // TODO: if bsp_mode is required, then add other codes
+            //todo: zhangwanyun, other feat: if bsp_mode is required, then add other codes
         }
         else
         {

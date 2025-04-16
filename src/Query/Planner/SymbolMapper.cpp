@@ -697,7 +697,7 @@ std::shared_ptr<ExplainAnalyzeStepExt> SymbolMapper::map(const ExplainAnalyzeSte
 
 std::shared_ptr<LocalExchangeStepExt> SymbolMapper::map(const LocalExchangeStepExt & step)
 {
-    // TODO: need Partitioning
+    //todo: lizhuoyu, other feat:  need Partitioning
     return std::make_shared<LocalExchangeStepExt>(map(step.getInputStreams()[0]), step.getExchangeMode()/*, map(step.getSchema())*/);
 }
 

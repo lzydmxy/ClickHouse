@@ -24,14 +24,14 @@ void LocalExchangeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, co
     if (streams <= 1)
     {
         /// Same as round-robin shuffle
-        // TODO: need context from BuildQueryPipelineSettings
+        //todo: zhangwanyun1, other feat: need context from BuildQueryPipelineSettings
         // pipeline.addTransform(std::make_shared<ResizeProcessor>(
         //     stream_header, 1, build_context.context->getSettingsRef().max_threads));
         return;
     }
 
     ColumnNumbers key_columns;
-    // TODO: need Partitioning
+    //todo: zhangwanyun1, other feat: need Partitioning
     // key_columns.reserve(schema.getColumns().size());
     // for (const auto & name : schema.getColumns())
     //     key_columns.push_back(stream_header.getPositionByName(name));
@@ -66,7 +66,7 @@ void LocalExchangeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, co
 
 std::shared_ptr<IQueryPlanStep> LocalExchangeStepExt::copy(ContextPtr) const
 {
-    // TODO: need Partitioning
+    //todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
     return std::make_shared<LocalExchangeStepExt>(input_streams[0], exchange_type);
 }
 

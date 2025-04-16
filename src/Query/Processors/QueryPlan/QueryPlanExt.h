@@ -92,7 +92,7 @@ public:
 
     QueryPlanExt getSubPlan(QueryPlan::Node * node_);
 
-    // TODO: implement
+    //todo: hongzhigao, other feat: need impl toProto/fromProto
     // void toProto(Protos::QueryPlanExt & proto) const;
     // void fromProto(const Protos::QueryPlanExt & proto);
 

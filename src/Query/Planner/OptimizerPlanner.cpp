@@ -423,7 +423,7 @@ JoinTreeQueryPlan buildQueryPlanForTableExpression(QueryTreeNodePtr table_expres
                 from_stage = storage->getQueryProcessingStage(
                     query_context, select_query_options.to_stage, storage_snapshot, table_expression_query_info);
 
-                // Todo just use columns_names for TableScanStepExt
+                //todo: lizhuoyu, other feat: just use columns_names for TableScanStepExt
                 NamesWithAliases columns_with_aliases;
                 columns_with_aliases.reserve(columns_names.size());
                 for (const auto & column : columns_names)

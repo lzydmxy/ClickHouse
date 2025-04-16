@@ -10,7 +10,7 @@ namespace DB
     class LocalExchangeStepExt : public ITransformingStep
     {
     public:
-        // TODO: need Partitioning from Optimizer/Property/Property.h
+        //todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
         // explicit LocalExchangeStep(const DataStream & input_stream_, const ExchangeMode & mode_, Partitioning schema_);
         explicit LocalExchangeStepExt(const DataStream & input_stream_, const RExchangeMode::Enum & mode_);
 
@@ -23,7 +23,7 @@ namespace DB
 
         const RExchangeMode::Enum & getExchangeMode() const { return exchange_type; }
 
-        // // TODO: need Partitioning
+        //todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
         // const Partitioning & getSchema() const { return schema; }
 
         Block getHeader() const
@@ -36,7 +36,7 @@ namespace DB
 
     private:
         RExchangeMode::Enum exchange_type = RExchangeMode::UNKNOWN;
-        // TODO: need Partitioning
+        //todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
         // Partitioning schema;
     };
 
