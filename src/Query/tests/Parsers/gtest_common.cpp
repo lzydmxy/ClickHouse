@@ -14,8 +14,6 @@ using namespace DB;
 using namespace std::literals;
 }
 
-
-#if 0
 TEST_P(ParserRegexTest, parseQueryExt)
 {
     const auto & parser = std::get<0>(GetParam());
@@ -77,4 +75,3 @@ TEST_P(ParserKQLTest, parseKQLQueryExt)
         ASSERT_THROW(parseKQLQuery(*parser, input_text.begin(), input_text.end(), 0, 0, 0), DB::Exception);
     }
 }
-#endif

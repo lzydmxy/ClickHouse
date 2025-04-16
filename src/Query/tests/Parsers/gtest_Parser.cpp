@@ -1,4 +1,3 @@
-#if 0
 #include <string_view>
 #include <Parsers/ASTCreateQuery.h>
 #include <Parsers/ASTIdentifier.h>
@@ -472,4 +471,3 @@ INSTANTIATE_TEST_SUITE_P(
                 },
             })));
 
-#endif
