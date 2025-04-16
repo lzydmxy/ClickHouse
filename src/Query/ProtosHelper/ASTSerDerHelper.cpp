@@ -1,105 +1,10 @@
 #include "ASTSerDerHelper.h"
-#include <Core/Types.h>
 #include <IO/ReadHelpers.h>
 #include <IO/WriteHelpers.h>
 #include <Parsers/IAST_fwd.h>
 #include <Query/ProtosHelper/QueryProto.h>
 #include <IO/ReadBufferFromString.h>
 #include <IO/WriteBufferFromString.h>
-
-// #include <Parsers/ASTAlterQuery.h>
-// #include <Parsers/ASTAsterisk.h>
-// #include <Parsers/ASTCheckQuery.h>
-// #include <Parsers/ASTColumnDeclaration.h>
-// #include <Parsers/ASTColumnsMatcher.h>
-// #include <Parsers/ASTColumnsTransformers.h>
-// #include <Parsers/ASTConstraintDeclaration.h>
-// #include <Parsers/ASTCreateQuery.h>
-// #include <Parsers/ASTForeignKeyDeclaration.h>
-// #include <Parsers/ASTDeleteQuery.h>
-// #include <Parsers/ASTDictionary.h>
-// #include <Parsers/ASTDictionaryAttributeDeclaration.h>
-
-// #include <Parsers/Access/ASTCreateQuotaQuery.h>
-// #include <Parsers/Access/ASTCreateRoleQuery.h>
-// #include <Parsers/Access/ASTCreateRowPolicyQuery.h>
-// #include <Parsers/Access/ASTCreateSettingsProfileQuery.h>
-// #include <Parsers/Access/ASTCreateUserQuery.h>
-
-
-//#include <Parsers/ASTAssignment.h>
-//#include <Parsers/ASTAutoStatsQuery.h>
-//#include <Parsers/ASTBitEngineConstraintDeclaration.h>
-//#include <Parsers/ASTClusterByElement.h>
-//#include <Parsers/ASTCreateQueryAnalyticalMySQL.h>
-//#include <Parsers/ASTDataType.h>
-//#include <Parsers/ASTAdviseQuery.h>
-//#include <Parsers/ASTAlterDiskCacheQuery.h>
-//#include <Parsers/ASTUniqueNotEnforcedDeclaration.h>
-
-// #include <Parsers/ASTDropAccessEntityQuery.h>
-// #include <Parsers/ASTDropQuery.h>
-// #include <Parsers/ASTDumpQuery.h>
-// #include <Parsers/ASTExplainQuery.h>
-// #include <Parsers/ASTExpressionList.h>
-// #include <Parsers/ASTExternalDDLQuery.h>
-// #include <Parsers/ASTFieldReference.h>
-// #include <Parsers/ASTFunction.h>
-// #include <Parsers/ASTFunctionWithKeyValueArguments.h>
-// #include <Parsers/ASTGrantQuery.h>
-// #include <Parsers/ASTIdentifier.h>
-// #include <Parsers/ASTIndexDeclaration.h>
-// #include <Parsers/ASTInsertQuery.h>
-// #include <Parsers/ASTKillQueryQuery.h>
-// #include <Parsers/ASTLiteral.h>
-// #include <Parsers/ASTNameTypePair.h>
-// #include <Parsers/ASTOptimizeQuery.h>
-// #include <Parsers/ASTOrderByElement.h>
-// #include <Parsers/ASTPartToolKit.h>
-// #include <Parsers/ASTPartition.h>
-// #include <Parsers/ASTPreparedParameter.h>
-// #include <Parsers/ASTPreparedStatement.h>
-// #include <Parsers/ASTProjectionDeclaration.h>
-// #include <Parsers/ASTProjectionSelectQuery.h>
-// #include <Parsers/ASTQualifiedAsterisk.h>
-// #include <Parsers/ASTQuantifiedComparison.h>
-// #include <Parsers/ASTQueryParameter.h>
-// #include <Parsers/ASTQueryWithOnCluster.h>
-// #include <Parsers/ASTQueryWithOutput.h>
-// #include <Parsers/ASTRefreshQuery.h>
-// #include <Parsers/ASTRenameQuery.h>
-// #include <Parsers/ASTReproduceQuery.h>
-// #include <Parsers/ASTRolesOrUsersSet.h>
-// #include <Parsers/ASTRowPolicyName.h>
-// #include <Parsers/ASTSQLBinding.h>
-// #include <Parsers/ASTSampleRatio.h>
-// #include <Parsers/ASTSelectIntersectExceptQuery.h>
-// #include <Parsers/ASTSelectQuery.h>
-// #include <Parsers/ASTSelectWithUnionQuery.h>
-// #include <Parsers/ASTSetQuery.h>
-// #include <Parsers/ASTSetSensitiveQuery.h>
-// #include <Parsers/ASTSetRoleQuery.h>
-// #include <Parsers/ASTSettingsProfileElement.h>
-// #include <Parsers/ASTShowAccessEntitiesQuery.h>
-// #include <Parsers/ASTShowAccessQuery.h>
-// #include <Parsers/ASTShowCreateAccessEntityQuery.h>
-// #include <Parsers/ASTShowGrantsQuery.h>
-// #include <Parsers/ASTShowTablesQuery.h>
-// #include <Parsers/ASTStatsQuery.h>
-// #include <Parsers/ASTSubquery.h>
-// #include <Parsers/ASTSwitchQuery.h>
-// #include <Parsers/ASTSystemQuery.h>
-// #include <Parsers/ASTTEALimit.h>
-// #include <Parsers/ASTTTLElement.h>
-// #include <Parsers/ASTTableColumnReference.h>
-// #include <Parsers/ASTTablesInSelectQuery.h>
-// #include <Parsers/ASTUpdateQuery.h>
-// #include <Parsers/ASTUseQuery.h>
-// #include <Parsers/ASTUserNameWithHost.h>
-// #include <Parsers/ASTWatchQuery.h>
-// #include <Parsers/ASTWindowDefinition.h>
-// #include <Parsers/ASTWithElement.h>
-// #include <Parsers/queryToString.h>
 
 #include <Query/Parsers/ASTType.h>
 #include <Query/Parsers/ASTHelper.h>
@@ -129,19 +34,15 @@ namespace DB
 void serializeAST(const IAST & ast, WriteBuffer & buf)
 {
     writeBinary(true, buf);
-    // TODO: wait AST class
-    // writeBinary(UInt8(ast.getType()), buf);
-    // ast.serialize(buf);
+    writeBinary(UInt8(getAstType(ast)), buf);
+    serializeASTImpl(ast, buf);
 }
 
 void serializeAST(const ConstASTPtr & ast, WriteBuffer & buf)
 {
     if (ast)
     {
-        writeBinary(true, buf);
-        //TODO:
-        // writeBinary(UInt8(ast->getType()), buf);
-        // ast->serialize(buf);
+        serializeAST(*ast, buf);
     }
     else
         writeBinary(false, buf);
@@ -149,7 +50,7 @@ void serializeAST(const ConstASTPtr & ast, WriteBuffer & buf)
 
 ASTPtr deserializeAST(ReadBuffer & buf)
 {
-    bool has_ast;
+    bool has_ast = false;
     readBinary(has_ast, buf);
     if (has_ast)
     {

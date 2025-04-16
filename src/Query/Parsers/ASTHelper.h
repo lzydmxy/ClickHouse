@@ -87,20 +87,32 @@ inline String toString(ASTType type)
 }
 
 #define CHECK_AND_RETURN_AST_TYPE(type) \
+if (auto * casted_ast = ast.as<type>()) \
+{ \
+    return ASTType::type; \
+}
+
+#define CHECK_AND_RETURN_AST_TYPE_PTR(type) \
 if (auto * casted_ast = ast->as<type>()) \
 { \
     return ASTType::type; \
 }
 
-inline ASTType getAstType(const ASTPtr & ast)
+inline ASTType getAstType(const IAST & ast)
 {
     APPLY_AST_TYPES(CHECK_AND_RETURN_AST_TYPE)
     return ASTType::UNDEFINED;
 }
 
+inline ASTType getAstType(const ASTPtr & ast)
+{
+    APPLY_AST_TYPES(CHECK_AND_RETURN_AST_TYPE_PTR)
+    return ASTType::UNDEFINED;
+}
+
 inline ASTType getAstType(const ConstASTPtr & ast)
 {
-    APPLY_AST_TYPES(CHECK_AND_RETURN_AST_TYPE)
+    APPLY_AST_TYPES(CHECK_AND_RETURN_AST_TYPE_PTR)
     return ASTType::UNDEFINED;
 }
 #undef CHECK_AND_RETURN_AST_TYPE
@@ -108,7 +120,8 @@ inline ASTType getAstType(const ConstASTPtr & ast)
 void astToLowerCase(const ASTPtr & ast);
 void astToUpperCase(const ASTPtr & ast);
 
-[[ noreturn ]] void serializeASTImpl(ASTPtr ast, WriteBuffer & buf);
+[[ noreturn ]] void serializeASTImpl(const ConstASTPtr & ast, WriteBuffer & buf);
+[[ noreturn ]] void serializeASTImpl(const IAST & ast, WriteBuffer & buf);
 ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf);
 
 
