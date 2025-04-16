@@ -101,22 +101,29 @@
 // #include <Parsers/ASTWithElement.h>
 // #include <Parsers/queryToString.h>
 
+#include <Query/Parsers/ASTType.h>
+#include <Query/Parsers/ASTHelper.h>
+
 
 
 namespace DB
 {
+
+// namespace
+// {
 // ASTPtr createWithASTType(ASTType type, ReadBuffer & buf)
 // {
 //     switch (type)
 //     {
 // #define DISPATCH(TYPE) \
 //     case ASTType::TYPE: \
-//         return TYPE::deserialize(buf);
+//         return deserializeASTImpl(type, buf);
 //         APPLY_AST_TYPES(DISPATCH)
 // #undef DISPATCH
 //         default:
-//             throw Exception("Create using unsupported type.", ErrorCodes::LOGICAL_ERROR);
+//             throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Create using unsupported type.");
 //     }
+// }
 // }
 
 void serializeAST(const IAST & ast, WriteBuffer & buf)
@@ -148,11 +155,8 @@ ASTPtr deserializeAST(ReadBuffer & buf)
     {
         UInt8 read_type;
         readBinary(read_type, buf);
-        //TODO:
-        // auto type = ASTType(read_type);
-        //auto ast = createWithASTType(type, buf);
-        ASTPtr ast = nullptr;
-        return ast;
+        auto type = static_cast<ASTType>(read_type);
+        return deserializeASTImpl(type, buf);
     }
     else
         return nullptr;
