@@ -42,6 +42,34 @@ void astToLowerCase(const ASTPtr & ast)
         boost::to_lower(casted_ast->alias);
         boost::to_lower(casted_ast->comparator);
     }
+    else if (auto * casted_ast = ast->as<ASTIdentifier>())
+    {
+        boost::to_lower(casted_ast->alias);
+        boost::to_lower(casted_ast->full_name);
+        for (auto &name_part : casted_ast->name_parts)
+            boost::to_lower(name_part);
+    
+        if (casted_ast->semantic)
+            boost::to_lower(casted_ast->semantic->table);
+    }
+    else if (auto * casted_ast = ast->as<ASTTableIdentifier>())
+    {
+        boost::to_lower(casted_ast->alias);
+        boost::to_lower(casted_ast->full_name);
+        for (auto &name_part : casted_ast->name_parts)
+            boost::to_lower(name_part);
+    
+        if (casted_ast->semantic)
+            boost::to_lower(casted_ast->semantic->table);
+    }
+    else if (auto * casted_ast = ast->as<ASTWindowDefinition>())
+    {
+        boost::to_lower(casted_ast->parent_window_name);
+    }
+    else if (auto * casted_ast = ast->as<ASTWindowListElement>())
+    {
+        boost::to_lower(casted_ast->name);
+    }
 
     // TODO wujianchao add more types
 }
@@ -68,6 +96,34 @@ void astToUpperCase(const ASTPtr & ast)
     {
         boost::to_upper(casted_ast->alias);
         boost::to_upper(casted_ast->comparator);
+    }
+    else if (auto * casted_ast = ast->as<ASTIdentifier>())
+    {
+        boost::to_upper(casted_ast->alias);
+        boost::to_upper(casted_ast->full_name);
+        for (auto &name_part : casted_ast->name_parts)
+            boost::to_upper(name_part);
+    
+        if (casted_ast->semantic)
+            boost::to_upper(casted_ast->semantic->table);
+    }
+    else if (auto * casted_ast = ast->as<ASTTableIdentifier>())
+    {
+        boost::to_upper(casted_ast->alias);
+        boost::to_upper(casted_ast->full_name);
+        for (auto &name_part : casted_ast->name_parts)
+            boost::to_upper(name_part);
+    
+        if (casted_ast->semantic)
+            boost::to_upper(casted_ast->semantic->table);
+    }
+    else if (auto * casted_ast = ast->as<ASTWindowDefinition>())
+    {
+        boost::to_upper(casted_ast->parent_window_name);
+    }
+    else if (auto * casted_ast = ast->as<ASTWindowListElement>())
+    {
+        boost::to_upper(casted_ast->name);
     }
 
     // TODO wujianchao add more types
@@ -211,7 +267,8 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
 {
     switch (type)
     {
-        case ASTType::ASTArrayJoin: {
+        case ASTType::ASTArrayJoin:
+        {
             auto ast = std::make_shared<ASTArrayJoin>();
             deserializeEnum(ast->kind, buf);
             ast->expression_list = deserializeASTWithChildren(ast->children, buf);
