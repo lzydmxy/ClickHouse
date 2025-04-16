@@ -254,4 +254,7 @@ QueryPlanStepPtr deserializeQueryPlanStepFromProto(const RQueryPlanStep & proto,
 
 bool isPlanStepEqual(const IQueryPlanStep & a, const IQueryPlanStep & b);
 UInt64 hashPlanStep(const IQueryPlanStep & step, bool ignore_output_stream);
+
+void toProto(const DataStream & data_stream, Protos::DataStream & proto);
+void fillFromProto(DataStream & data_stream, const Protos::DataStream & proto);
 }

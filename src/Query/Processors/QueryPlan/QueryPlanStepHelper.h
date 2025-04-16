@@ -377,4 +377,16 @@ public:
     static size_t getIntersectOrExceptStepMaxThreads(const IntersectOrExceptStep & intersect_or_except) {return intersect_or_except.max_threads;}
 };
 
+
+using DataStreamSortScope = DataStream::SortScope;
+
+ENUM_TO_PROTO_CONVERTER(
+    DataStreamSortScope,
+    Protos::DataStream::SortScope,
+    (None),
+    (Chunk),
+    (Stream),
+    (Global)
+);
+
 }

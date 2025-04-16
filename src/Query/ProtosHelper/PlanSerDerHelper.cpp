@@ -21,8 +21,11 @@
 #include <Query/ProtosHelper/QueryProto.h>
 #include <Query/ProtosHelper/ASTSerDerHelper.h>
 #include <Query/ProtosHelper/DataTypeHelper.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <Query/ProtosHelper/ProgressHelper.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
+
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 
 //#include <Protos/ReadWriteProtobuf.h>
 // #include <Processors/QueryPlan/AggregatingStep.h>
@@ -392,6 +395,58 @@ UInt64 hashPlanStep(const IQueryPlanStep & /*step*/, bool /*ignore_output_stream
 // #undef CASE_DEF
 //     }
     return 0;
+}
+
+void serializeHeaderToProto(const Block & block, Protos::Block & proto)
+{
+    // we only handle header
+    for (const auto & pair : block.getNamesAndTypes())
+    {
+        ProtosSerDerHelper::toProto(pair, *proto.add_names_and_types());
+    }
+}
+
+Block deserializeHeaderFromProto(const Protos::Block & proto)
+{
+    std::vector<NameAndTypePair> pairs;
+    for (const auto & pair_pb : proto.names_and_types())
+    {
+        NameAndTypePair pair;
+        ProtosSerDerHelper::fillFromProto(pair, pair_pb);
+        pairs.emplace_back(std::move(pair));
+    }
+
+    ColumnsWithTypeAndName data;
+
+    for (const auto & item : pairs)
+    {
+        data.emplace_back(item.type, item.name);
+    }
+    return Block(std::move(data));
+}
+
+void toProto(const DataStream & data_stream, Protos::DataStream & proto)
+{
+    serializeHeaderToProto(data_stream.header, *proto.mutable_header());
+    std::sort(proto.mutable_distinct_columns()->begin(), proto.mutable_distinct_columns()->end());
+    proto.set_has_single_port(data_stream.has_single_port);
+    for (const auto & element : data_stream.sort_description)
+        ProtosSerDerHelper::toProto(element, *proto.add_sort_description());
+
+    proto.set_sort_scope(DataStreamSortScopeConverter::toProto(data_stream.sort_scope));
+}
+
+void fillFromProto(DataStream & data_stream, const Protos::DataStream & proto)
+{
+    data_stream.header = deserializeHeaderFromProto(proto.header());
+    data_stream.has_single_port = proto.has_single_port();
+    for (const auto & proto_element : proto.sort_description())
+    {
+        SortColumnDescription element;
+        ProtosSerDerHelper::fillFromProto(element, proto_element);
+        data_stream.sort_description.emplace_back(std::move(element));
+    }
+    data_stream.sort_scope = DataStreamSortScopeConverter::fromProto(proto.sort_scope());
 }
 
 }

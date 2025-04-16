@@ -45,6 +45,7 @@ public:
     String name;
     DataTypePtr type;
 
+    friend class ProtosSerDerHelper;
 private:
     DataTypePtr type_in_storage;
     std::optional<size_t> subcolumn_delimiter_position;

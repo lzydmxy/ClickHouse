@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Query/Analyzer/Analysis.h>
-#include <Query/Interpreters/asof.h>
+#include <Query/Core/JoinsExt.h>
 #include <Parsers/ASTSelectQuery.h>
 #include <Parsers/ASTFunction.h>
 #include <Parsers/ASTLiteral.h>

@@ -10,6 +10,9 @@
 #include <Query/Processors/Transforms/FilterTransformExt.h>
 #include <Query/Pipeline/QueryPipelineBuilderHelper.h>
 
+#include <Query/ProtosHelper/ASTSerDerHelper.h>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
+
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Interpreters/ConcurrentHashJoin.h>
 #include <Interpreters/GraceHashJoin.h>
@@ -494,6 +497,121 @@ bool JoinStepExt::mustReplicate() const
 bool JoinStepExt::mustRepartition() const
 {
     return kind == JoinKind::Right || kind == JoinKind::Full;
+}
+
+void JoinStepExt::toProto(Protos::JoinStepExt & proto, bool for_hash_equals) const
+{
+    if (for_hash_equals)
+    {
+        // skip
+    }
+    else if (output_stream.has_value())
+            {
+        for (const auto & element : input_streams)
+            DB::toProto(element, *proto.add_input_streams());
+        DB::toProto(*output_stream, *proto.mutable_output_stream());
+    }
+    else
+        throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "required to have output stream");
+
+    proto.set_step_description(step_description);
+    proto.set_kind( JoinKindConverter::toProto(kind));
+    proto.set_strictness( JoinStrictnessConverter::toProto(strictness));
+    proto.set_max_streams(max_streams);
+    proto.set_keep_left_read_in_order(keep_left_read_in_order);
+    for (const auto & element : left_keys)
+        proto.add_left_keys(element);
+    for (const auto & element : right_keys)
+        proto.add_right_keys(element);
+    for (bool element : key_ids_null_safe)
+        proto.add_key_ids_null_safe(element);
+    serializeASTToProto(filter, *proto.mutable_filter());
+    proto.set_has_using(has_using);
+    proto.set_flag_require_right_keys(require_right_keys.has_value());
+    if (require_right_keys.has_value())
+        for (bool element : require_right_keys.value())
+            proto.add_require_right_keys(element);
+    proto.set_asof_inequality(ASOFJoinInequalityConverter::toProto(asof_inequality));
+    proto.set_distribution_type(DistributionTypeConverter::toProto(distribution_type));
+    proto.set_join_algorithm(JoinAlgorithmConverter::toProto(join_algorithm));
+    proto.set_is_magic(is_magic);
+    proto.set_is_ordered(is_ordered);
+    for (const auto & [k, v] : runtime_filter_builders)
+    {
+        auto * proto_element = proto.add_runtime_filter_builders();
+        proto_element->set_key(k);
+        v.toProto(*proto_element->mutable_value());
+    }
+}
+
+std::shared_ptr<JoinStepExt> JoinStepExt::fromProto(const Protos::JoinStepExt & proto, ContextPtr)
+{
+    DataStreams input_streams;
+    for (const auto & proto_element : proto.input_streams())
+    {
+        DataStream element;
+        DB::fillFromProto(element, proto_element);
+        input_streams.emplace_back(std::move(element));
+    }
+    DataStream output_stream;
+    if (proto.has_output_stream())
+        DB::fillFromProto(output_stream, proto.output_stream());
+    else
+        throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "required to have output stream");
+    const auto & step_description = proto.step_description();
+    auto kind = JoinKindConverter::fromProto(proto.kind());
+    auto strictness = JoinStrictnessConverter::fromProto(proto.strictness());
+    auto max_streams = proto.max_streams();
+    auto keep_left_read_in_order = proto.keep_left_read_in_order();
+    std::vector<String> left_keys;
+    for (const auto & element : proto.left_keys())
+        left_keys.emplace_back(element);
+    std::vector<String> right_keys;
+    for (const auto & element : proto.right_keys())
+        right_keys.emplace_back(element);
+    std::vector<bool> key_ids_null_safe;
+    for (const auto & null_safe : proto.key_ids_null_safe())
+        key_ids_null_safe.emplace_back(null_safe);
+    auto filter = deserializeASTFromProto(proto.filter());
+    auto has_using = proto.has_using();
+    std::optional<std::vector<bool>> require_right_keys;
+    if (proto.flag_require_right_keys())
+        require_right_keys = std::vector<bool>(proto.require_right_keys().begin(), proto.require_right_keys().end());
+    auto asof_inequality = ASOFJoinInequalityConverter::fromProto(proto.asof_inequality());
+    auto distribution_type = DistributionTypeConverter::fromProto(proto.distribution_type());
+    auto join_algorithm = JoinAlgorithmConverter::fromProto(proto.join_algorithm());
+    auto is_magic = proto.is_magic();
+    auto is_ordered = proto.is_ordered();
+
+    LinkedHashMap<String, RuntimeFilter> runtime_filter_builders;
+    for (const auto & element : proto.runtime_filter_builders())
+    {
+        auto key = element.key();
+        auto value = RuntimeFilter::fromProto(element.value());
+        runtime_filter_builders.emplace(key, value);
+    }
+    auto step = std::make_shared<JoinStepExt>(
+        input_streams,
+        output_stream,
+        kind,
+        strictness,
+        max_streams,
+        keep_left_read_in_order,
+        left_keys,
+        right_keys,
+        key_ids_null_safe,
+        filter,
+        has_using,
+        require_right_keys,
+        asof_inequality,
+        distribution_type,
+        join_algorithm,
+        is_magic,
+        is_ordered,
+        is_ordered,
+        runtime_filter_builders);
+    step->setStepDescription(step_description);
+    return step;
 }
 
 }

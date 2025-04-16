@@ -1,11 +1,11 @@
 #include "FieldHelper.h"
 #include <Core/Field.h>
-#include <Common/FieldVisitors.h>
 #include <Common/FieldVisitorWriteBinary.h>
 #include <IO/WriteHelpers.h>
 #include <IO/ReadHelpers.h>
-#include <Query/Common/ReadHelpers.h>
 #include <Query/Common/FieldVisitorReadBinary.h>
+#include <Query/Protos/plan_node.pb.h>
+#include <IO/ReadBufferFromString.h>
 
 namespace DB
 {
@@ -23,6 +23,19 @@ void readFieldBinary(Field & field, ReadBuffer & buf)
     readBinary(read_type, buf);
     auto type = static_cast<Field::Types::Which>(read_type);
     field = dispatchField(FieldVisitorReadBinary(buf), type);
+}
+
+void FieldToProto(const Field & field, Protos::Field & proto)
+{
+    WriteBufferFromOwnString buf;
+    writeFieldBinary(field, buf);
+    proto.set_blob(std::move(buf.str()));
+}
+
+void FieldFillFromProto(Field & field, const Protos::Field & proto)
+{
+    ReadBufferFromString buf(proto.blob());
+    readFieldBinary(field, buf);
 }
 
 }

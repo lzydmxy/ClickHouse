@@ -30,7 +30,7 @@ message NameAndTypePair {
     string name = 1;
     DataType type = 2;
     DataType type_in_storage = 3;
-    uint64 subcolumn_delimiter_position = 4;
+    optional uint64 subcolumn_delimiter_position = 4;
 }
 
 message Block {
@@ -118,27 +118,34 @@ message FillColumnDescription {
     Field fill_step = 3;
 }
 
+message Collator {
+    string locale = 1;
+}
+
 message SortColumnDescription {
     string column_name = 1;
     uint64 column_number = 2;
     int32 direction = 3;
     int32 nulls_direction = 4;
-    string collator = 5;
+    optional Collator collator = 5;
     bool with_fill = 6;
     FillColumnDescription fill_description = 7;
 }
 
 message DataStream {
-    enum SortMode {
-        Chunk = 0;   /// Separate chunks are sorted
-        Port = 1;    /// Data from each port is sorted
-        Stream = 2;  /// Data is globally sorted
+    message SortScope {
+        enum Enum {
+            None   = 0;
+            Chunk  = 1; /// Separate chunks are sorted
+            Stream = 2; /// Each data steam is sorted
+            Global = 3; /// Data is globally sorted
+        }
     }
     Block header = 1;
     string distinct_columns = 2;
     bool has_single_port = 3;
     repeated SortColumnDescription sort_description = 4;
-    SortMode sort_mode = 5;
+    SortScope.Enum sort_scope = 5;
 }
 
 message StringVec {
@@ -507,33 +514,16 @@ message ProjectionStep {
     bool index_project = 6;
 }
 
-message JoinStep {
+message JoinStepExt {
     message RuntimeFilterBuilders {
         string key = 1;
         RuntimeFilter value = 2;
     }
-    enum Strictness {
-        Unspecified = 0;
-        RightAny = 1;
-        Any = 2;
-        All = 3;
-        Asof = 4;
-        Semi = 5;
-        Anti = 6;
-    }  
-    enum Kind {
-        Inner = 0;
-        Left = 1;
-        Right = 2;
-        Full = 3;
-        Cross = 4;
-        Comma = 5;
-    }
     repeated DataStream input_streams = 1;
     DataStream output_stream = 2;
     string step_description = 3;
-    Kind kind = 4;
-    Strictness strictness = 5;
+    JoinKind.Enum kind = 4;
+    JoinStrictness.Enum strictness = 5;
     uint64 max_streams = 6;
     bool keep_left_read_in_order = 7;
     repeated string left_keys = 8;
@@ -823,7 +813,7 @@ message QueryPlanStep {
         FinalSampleStep final_sample_step = 12;
         FinishSortingStep finish_sorting_step = 13;
         IntersectStep intersect_step = 14;
-        JoinStep join_step = 15;
+        JoinStepExt join_step = 15;
         LimitByStep limit_by_step = 16;
         LimitStep limit_step = 17;
         MarkDistinctStep mark_distinct_step = 18;
