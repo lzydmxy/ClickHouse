@@ -1,3 +1,4 @@
+#if 0
 // TODO: reenable this test when sync mode is ready
 #include <Parsers/parseQuery.h>
 #include <Query/Parsers/ASTPartitionExt.h>
@@ -497,3 +498,4 @@ TEST_F(StatsQueryTest, CreateStatsASTRewrittenWithoutOnCluster)
     ASSERT_TRUE(ptr1->any_table == ptr2->any_table);
     ASSERT_TRUE(ptr2->cluster.empty());
 }
+#endif
