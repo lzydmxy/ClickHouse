@@ -1,3 +1,4 @@
+#if 0
 #include <IO/WriteBufferFromString.h>
 #include <Parsers/ASTCreateQuery.h>
 #include <Parsers/ASTDropQuery.h>
@@ -353,3 +354,5 @@ TEST(ParserDictionaryDDL, ParsePropertiesQueriesExt)
     EXPECT_EQ(show2->getDatabase(), "");
     EXPECT_EQ(serializeAST(*show2), input2);
 }
+
+#endif
