@@ -98,7 +98,7 @@ void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_ch
     throw Exception(ErrorCodes::LOGICAL_ERROR, "AST subtree not found in children");
 }
 
-void serializeASTImpl(ASTPtr ast, WriteBuffer & buf)
+[[ noreturn ]] void serializeASTImpl(ASTPtr ast, WriteBuffer & buf)
 {
     if (auto * casted = ast->as<ASTArrayJoin>())
     {
@@ -106,7 +106,7 @@ void serializeASTImpl(ASTPtr ast, WriteBuffer & buf)
         serializeASTImpl(casted->expression_list, buf);
     }
     // todo wujianchao add more types
-    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement serialize of " + toString(getAstType(ast)));
+    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement serialize of {}", toString(getAstType(ast)));
 }
 
 ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)

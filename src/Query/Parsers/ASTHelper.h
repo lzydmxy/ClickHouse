@@ -108,7 +108,7 @@ inline ASTType getAstType(const ConstASTPtr & ast)
 void astToLowerCase(const ASTPtr & ast);
 void astToUpperCase(const ASTPtr & ast);
 
-void serializeASTImpl(ASTPtr ast, WriteBuffer & buf);
+[[ noreturn ]] void serializeASTImpl(ASTPtr ast, WriteBuffer & buf);
 ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf);
 
 
