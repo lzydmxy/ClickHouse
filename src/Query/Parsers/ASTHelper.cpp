@@ -4,6 +4,8 @@
 #include <Query/ProtosHelper/PlanSerDerHelper.h>
 #include <Query/ProtosHelper/ASTSerDerHelper.h>
 #include "Interpreters/IdentifierSemantic.h"
+#include "Query/Parsers/ASTType.h"
+#include <Query/ProtosHelper/FieldHelper.h>
 
 namespace DB
 {
@@ -184,6 +186,21 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
         writeBinary(casted->name, buf);
         serializeAST(casted->definition, buf);
     }
+    else if (auto * casted = ast->as<ASTSampleRatio>())
+    {
+        writeBinary(casted->ratio.numerator, buf);
+        writeBinary(casted->ratio.denominator, buf);
+    }
+    else if (auto * casted = ast->as<ASTSetQuery>())
+    {
+        writeBinary(casted->is_standalone, buf);
+        writeBinary(casted->size(), buf);
+        for (auto & change : casted->changes)
+        {
+            writeBinary(change.name, buf);
+            writeFieldBinary(change.value, buf);
+        }
+    }
 
     // todo wujianchao add more types
     else
@@ -297,6 +314,31 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
             ast->definition = deserializeAST(buf);
             return ast;
         }
+        case ASTType::ASTSampleRatio:
+        {
+            ASTSampleRatio::Rational ratio;
+            readBinary(ratio.numerator, buf);
+            readBinary(ratio.denominator, buf);
+    
+            auto ast = std::make_shared<ASTSampleRatio>(ratio);
+            return ast;
+        }
+        case ASTType::ASTSetQuery:
+        {
+            auto ast = std::make_shared<ASTSetQuery>();
+            readBinary(ast->is_standalone, buf);
+            size_t size;
+            readBinary(size, buf);
+            for (size_t i = 0; i < size; ++i) {
+                SettingChange change;
+                readBinary(change.name, buf);
+                readFieldBinary(change.value, buf);
+                ast->changes.push_back(change);
+            }
+
+            return ast;
+        }
+            
         // todo wujianchao add more types
         default:
             throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement deserializeASTImpl AST for {}", toString(type));
