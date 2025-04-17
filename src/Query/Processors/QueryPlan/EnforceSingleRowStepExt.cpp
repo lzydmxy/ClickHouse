@@ -1,6 +1,7 @@
 #include <Interpreters/JoinUtils.h>
 #include <Query/Processors/QueryPlan/EnforceSingleRowStepExt.h>
 #include <Query/Processors/Transforms/EnforceSingleRowTransformExt.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 
 namespace DB
@@ -37,6 +38,19 @@ void EnforceSingleRowStepExt::makeOutputNullable()
         else
             nullable_output_header.emplace_back(JoinCommon::convertTypeToNullable(input.type), input.name);
     output_stream = DataStream{.header = {nullable_output_header}};
+}
+
+void EnforceSingleRowStepExt::toProto(Protos::EnforceSingleRowStep & proto, bool) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
+}
+
+std::shared_ptr<EnforceSingleRowStepExt> EnforceSingleRowStepExt::fromProto(const Protos::EnforceSingleRowStep & proto, ContextPtr)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    auto step = std::make_shared<EnforceSingleRowStepExt>(base_input_stream);
+    step->setStepDescription(step_description);
+    return step;
 }
 
 }
