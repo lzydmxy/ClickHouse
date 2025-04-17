@@ -9,7 +9,6 @@
 
 namespace DB
 {
-using std::make_shared;
 
 
 namespace ErrorCodes
@@ -18,6 +17,27 @@ extern const int LOGICAL_ERROR;
 extern const int NOT_IMPLEMENTED;
 }
 
+namespace
+{
+    void serializeASTWithAlias(const IAST & ast, WriteBuffer & buf)
+    {
+        if (const auto * casted = ast.as<ASTWithAlias>())
+        {
+            writeBinary(casted->alias, buf);
+            writeBinary(casted->prefer_alias_to_column_name, buf);
+
+            return;
+        }
+
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Can not convert {} to ASTWithAlias", toString(getAstType(ast)));
+    }
+
+    void deserializeASTWithAlias(ASTWithAlias & ast, ReadBuffer & buf)
+    {
+        readBinary(ast.alias, buf);
+        readBinary(ast.prefer_alias_to_column_name, buf);
+    }
+}
 
 void astToLowerCase(const ASTPtr & ast)
 {
@@ -69,6 +89,21 @@ void astToLowerCase(const ASTPtr & ast)
     else if (auto * casted_ast = ast->as<ASTWindowListElement>())
     {
         boost::to_lower(casted_ast->name);
+    }
+    else if (auto * casted_ast = ast->as<ASTTableExpression>())
+    {
+        if (casted_ast->database_and_table_name)
+        {
+            astToLowerCase(casted_ast->database_and_table_name);
+        }
+        else if (casted_ast->table_function)
+        {
+            astToLowerCase(casted_ast->table_function);
+        }
+        else
+        {
+            astToLowerCase(casted_ast->subquery);
+        }
     }
 
     // TODO wujianchao add more types
@@ -125,6 +160,22 @@ void astToUpperCase(const ASTPtr & ast)
     {
         boost::to_upper(casted_ast->name);
     }
+    else if (auto * casted_ast = ast->as<ASTTableExpression>())
+    {
+        if (casted_ast->database_and_table_name)
+        {
+            astToUpperCase(casted_ast->database_and_table_name);
+        }
+        else if (casted_ast->table_function)
+        {
+            astToUpperCase(casted_ast->table_function);
+        }
+        else
+        {
+            astToUpperCase(casted_ast->subquery);
+        }
+    }
+
 
     // TODO wujianchao add more types
 }
@@ -164,6 +215,7 @@ void serializeASTImpl(const ConstASTPtr & ast, WriteBuffer & buf)
     serializeASTImpl(*ast, buf);
 }
 
+// todo: zhangwanyun1, other feat: if support SqlHints, then add related serialize, hints.serialize(buf);
 void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
 {
     if (const auto * casted = ast.as<ASTArrayJoin>())
@@ -171,11 +223,40 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
         serializeEnum(casted->kind, buf);
         serializeAST(casted->expression_list, buf);
     }
-    else if (const auto *casted = ast.as<ASTIdentifier>())
+    else if (const auto * casted = ast.as<ASTTablesInSelectQueryElement>())
+    {
+        serializeAST(casted->table_join, buf);
+        serializeAST(casted->table_expression, buf);
+        serializeAST(casted->array_join, buf);
+    }
+    else if (const auto * casted = ast.as<ASTTablesInSelectQuery>())
+    {
+        serializeASTs(casted->children, buf);
+    }
+    else if (const auto * casted = ast.as<ASTTableExpression>())
+    {
+        serializeAST(casted->database_and_table_name, buf);
+        serializeAST(casted->table_function, buf);
+        serializeAST(casted->subquery, buf);
+
+        writeBinary(casted->final, buf);
+
+        serializeAST(casted->sample_size, buf);
+        serializeAST(casted->sample_offset, buf);
+    }
+    else if (const auto * casted = ast.as<ASTTableJoin>())
+    {
+        serializeEnum(casted->locality, buf);
+        serializeEnum(casted->strictness, buf);
+        serializeEnum(casted->kind, buf);
+
+        serializeAST(casted->using_expression_list, buf);
+        serializeAST(casted->on_expression, buf);
+    }
+    else if (const auto * casted = ast.as<ASTIdentifier>())
     {
         //parent serialize
-        writeBinary(casted->alias, buf);
-        writeBinary(casted->prefer_alias_to_column_name, buf);
+        serializeASTWithAlias(ast, buf);
  
         writeBinary(casted->full_name, buf);
         writeBinary(casted->name_parts, buf);
@@ -197,33 +278,32 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
             writeBinary(casted->semantic->legacy_compound, buf);
         }
     }
-    else if (const auto *casted = ast.as<ASTTableIdentifier>())
+    else if (const auto * casted = ast.as<ASTTableIdentifier>())
     {
-            //parent serialize
-            writeBinary(casted->alias, buf);
-            writeBinary(casted->prefer_alias_to_column_name, buf);
-     
-            writeBinary(casted->full_name, buf);
-            writeBinary(casted->name_parts, buf);
-            if (casted->semantic)
+        //parent serialize
+        serializeASTWithAlias(ast, buf);
+
+        writeBinary(casted->full_name, buf);
+        writeBinary(casted->name_parts, buf);
+        if (casted->semantic)
+        {
+            writeBinary(true, buf);
+            writeBinary(casted->semantic->special, buf);
+            writeBinary(casted->semantic->can_be_alias, buf);
+            writeBinary(casted->semantic->covered, buf);
+            if (casted->semantic->membership)
             {
                 writeBinary(true, buf);
-                writeBinary(casted->semantic->special, buf);
-                writeBinary(casted->semantic->can_be_alias, buf);
-                writeBinary(casted->semantic->covered, buf);
-                if (casted->semantic->membership)
-                {
-                    writeBinary(true, buf);
-                    writeBinary(casted->semantic->membership.value(), buf);
-                }
-                else
-                    writeBinary(false, buf);
-            
-                writeBinary(casted->semantic->table, buf);
-                writeBinary(casted->semantic->legacy_compound, buf);
+                writeBinary(casted->semantic->membership.value(), buf);
             }
+            else
+                writeBinary(false, buf);
+
+            writeBinary(casted->semantic->table, buf);
+            writeBinary(casted->semantic->legacy_compound, buf);
+        }
     }
-    else if (const auto *casted = ast.as<ASTWindowDefinition>())
+    else if (const auto * casted = ast.as<ASTWindowDefinition>())
     {
         writeBinary(casted->parent_window_name, buf);
         serializeAST(casted->partition_by, buf);
@@ -265,8 +345,7 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
     else if (const auto * casted = ast.as<ASTFunction>())
     {
         /// serialize alias
-        writeBinary(casted->alias, buf);
-        writeBinary(casted->prefer_alias_to_column_name, buf);
+        serializeASTWithAlias(ast, buf);
 
         // serialize function
         writeBinary(casted->name, buf);
@@ -309,6 +388,7 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
         throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement serialize of {}", toString(getAstType(ast)));
 }
 
+// todo: zhangwanyun1, other feat: if support SqlHints, then add related deserialize, hints.deserialize(buf);
 ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
 {
     switch (type)
@@ -320,11 +400,48 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
             ast->expression_list = deserializeASTWithChildren(ast->children, buf);
             return ast;
         }
+        case ASTType::ASTTablesInSelectQueryElement:
+        {
+            auto ast = std::make_shared<ASTTablesInSelectQueryElement>();
+            ast->table_join = deserializeASTWithChildren(ast->children, buf);
+            ast->table_expression = deserializeASTWithChildren(ast->children, buf);
+            ast->array_join = deserializeASTWithChildren(ast->children, buf);
+            return ast;
+        }
+        case ASTType::ASTTablesInSelectQuery:
+        {
+            auto ast = std::make_shared<ASTTablesInSelectQuery>();
+            ast->children = deserializeASTs(buf);
+            return ast;
+        }
+        case ASTType::ASTTableExpression:
+        {
+            auto ast = std::make_shared<ASTTableExpression>();
+            ast->database_and_table_name = deserializeASTWithChildren(ast->children, buf);
+            ast->table_function = deserializeASTWithChildren(ast->children, buf);
+            ast->subquery = deserializeASTWithChildren(ast->children, buf);
+
+            readBinary(ast->final, buf);
+
+            ast->sample_size = deserializeASTWithChildren(ast->children, buf);
+            ast->sample_offset = deserializeASTWithChildren(ast->children, buf);
+            return ast;
+        }
+        case ASTType::ASTTableJoin:
+        {
+            auto ast = std::make_shared<ASTTableJoin>();
+            deserializeEnum(ast->locality, buf);
+            deserializeEnum(ast->strictness, buf);
+            deserializeEnum(ast->kind, buf);
+
+            ast->using_expression_list = deserializeASTWithChildren(ast->children, buf);
+            ast->on_expression = deserializeASTWithChildren(ast->children, buf);
+            return ast;
+        }
         case ASTType::ASTIdentifier:
         {
-            auto ast = make_shared<ASTIdentifier>("");
-            readBinary(ast->alias, buf);
-            readBinary(ast->prefer_alias_to_column_name, buf);
+            auto ast = std::make_shared<ASTIdentifier>("");
+            deserializeASTWithAlias(*ast, buf);
 
             readBinary(ast->full_name, buf);
             readBinary(ast->name_parts, buf);
@@ -354,8 +471,7 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
         case ASTType::ASTTableIdentifier:
         {
             auto ast = std::make_shared<ASTTableIdentifier>("");
-            readBinary(ast->alias, buf);
-            readBinary(ast->prefer_alias_to_column_name, buf);
+            deserializeASTWithAlias(*ast, buf);
 
             readBinary(ast->full_name, buf);
             readBinary(ast->name_parts, buf);
@@ -452,8 +568,7 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
         {
             auto ast = std::make_shared<ASTFunction>();
             // deserialize alias
-            readBinary(ast->alias, buf);
-            readBinary(ast->prefer_alias_to_column_name, buf);
+            deserializeASTWithAlias(*ast, buf);
             // deserialize function
             readBinary(ast->name, buf);
             ast->arguments = deserializeASTWithChildren(ast->children, buf);
