@@ -6,6 +6,11 @@
 namespace DB
 {
 
+namespace ErrorCodes
+{
+extern const int PROTOBUF_BAD_CAST;
+}
+
 ExplainAnalyzeStepExt::ExplainAnalyzeStepExt(
     const DataStream & input_stream_,
     const String & output_name_,
@@ -37,6 +42,17 @@ void ExplainAnalyzeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, c
 std::shared_ptr<IQueryPlanStep> ExplainAnalyzeStepExt::copy(ContextPtr) const
 {
     return std::make_shared<ExplainAnalyzeStepExt>(input_streams[0], getOutputName(), kind, context, query_plan_ptr, settings);
+}
+
+void ExplainAnalyzeStepExt::toProto(Protos::ExplainAnalyzeStep & proto, bool for_hash_equals = false) const
+{
+    // do nothing
+}
+
+std::shared_ptr<ExplainAnalyzeStepExt> ExplainAnalyzeStepExt::fromProto(const Protos::ExplainAnalyzeStep & proto, ContextPtr)
+{
+    (void)proto;
+    throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "unimplemented");
 }
 
 }

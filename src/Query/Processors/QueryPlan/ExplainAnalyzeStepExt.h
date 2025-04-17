@@ -35,6 +35,9 @@ public:
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
     void setPlanSegmentDescriptions(PlanSegmentDescriptions & descriptions) { segment_descriptions = descriptions; }
 
+    void toProto([[maybe_unused]] Protos::ExplainAnalyzeStep & proto, [[maybe_unused]] bool for_hash_equals) const;
+    static std::shared_ptr<ExplainAnalyzeStepExt> fromProto(const Protos::ExplainAnalyzeStep & proto, ContextPtr);
+
 private:
     ASTExplainQueryExt::ExplainKindExt kind;
     ContextMutablePtr context;
