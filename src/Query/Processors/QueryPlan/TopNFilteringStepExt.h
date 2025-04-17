@@ -44,6 +44,8 @@ public:
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
     void describeActions(JSONBuilder::JSONMap & map) const override {};
     void describeActions(FormatSettings & settings) const override {};
+    void toProto(Protos::TopNFilteringStep & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<TopNFilteringStepExt> fromProto(const Protos::TopNFilteringStep & proto, ContextPtr context);
 
     const SortDescription & getSortDescription() const { return sort_description; }
     UInt64 getSize() const { return size; }

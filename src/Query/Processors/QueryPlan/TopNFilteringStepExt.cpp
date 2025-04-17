@@ -5,7 +5,7 @@
 #include <Processors/Transforms/PartialSortingTransform.h>
 #include <Query/Processors/Transforms/TopNFilteringTransformExt.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
-
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 namespace DB
 {
 
@@ -30,7 +30,7 @@ void TopNFilteringStepExt::updateInputStreams(const DataStreams & input_streams_
     output_stream->header = input_streams_[0].header;
 }
 
-void TopNFilteringStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
+void TopNFilteringStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &  /*settings*/)
 {
     if (algorithm == TopNFilteringAlgorithm::Unspecified)
     {
@@ -76,5 +76,33 @@ void TopNFilteringStepExt::transformPipeline(QueryPipelineBuilder & pipeline, co
 std::shared_ptr<IQueryPlanStep> TopNFilteringStepExt::copy(ContextPtr) const
 {
     return std::make_shared<TopNFilteringStepExt>(input_streams[0], sort_description, size, model, algorithm);
+}
+
+std::shared_ptr<TopNFilteringStepExt> TopNFilteringStepExt::fromProto(const Protos::TopNFilteringStep & proto, ContextPtr)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    SortDescription sort_description;
+    for (const auto & proto_element : proto.sort_description())
+    {
+        SortColumnDescription element;
+        ProtosSerDerHelper::fillFromProto(element,proto_element);
+        sort_description.emplace_back(std::move(element));
+    }
+    auto size = proto.size();
+    auto model = TopNModelConverter::fromProto(proto.model());
+    auto algorithm = TopNFilteringAlgorithmConverter::fromProto(proto.algorithm());
+    auto step = std::make_shared<TopNFilteringStepExt>(base_input_stream, sort_description, size, model, algorithm);
+    step->setStepDescription(step_description);
+    return step;
+}
+
+void TopNFilteringStepExt::toProto(Protos::TopNFilteringStep & proto, bool) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this ,*proto.mutable_query_plan_base());
+    for (const auto & element : sort_description)
+    ProtosSerDerHelper::toProto(element,*proto.add_sort_description());
+    proto.set_size(size);
+    proto.set_model(TopNModelConverter::toProto(model));
+    proto.set_algorithm(TopNFilteringAlgorithmConverter::toProto(algorithm));
 }
 }
