@@ -26,11 +26,11 @@ public:
     static void toProto(const NameAndTypePair & pair, Protos::NameAndTypePair & proto);
     static void fillFromProto(NameAndTypePair & pair, const Protos::NameAndTypePair & proto);
 
-    static void toProto(const SortColumnDescription & pair, Protos::SortColumnDescription & proto);
-    static void fillFromProto(SortColumnDescription & pair, const Protos::SortColumnDescription & proto);
+    static void toProto(const SortColumnDescription & sort_column_description, Protos::SortColumnDescription & proto);
+    static void fillFromProto(SortColumnDescription & sort_column_description, const Protos::SortColumnDescription & proto);
 
-    static void toProto(const FillColumnDescription & pair, Protos::FillColumnDescription & proto);
-    static void fillFromProto(FillColumnDescription & pair, const Protos::FillColumnDescription & proto);
+    static void toProto(const FillColumnDescription & fill_column_description, Protos::FillColumnDescription & proto);
+    static void fillFromProto(FillColumnDescription & fill_column_description, const Protos::FillColumnDescription & proto);
 };
 
 }
