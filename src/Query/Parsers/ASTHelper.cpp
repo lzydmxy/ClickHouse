@@ -257,6 +257,11 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
             writeFieldBinary(change.value, buf);
         }
     }
+    else if (const auto * casted = ast.as<ASTExpressionListExt>())
+    {
+        writeBinary(casted->separator, buf);
+        serializeASTs(casted->children, buf);
+    }
 
     // todo wujianchao add more types
     else
@@ -393,6 +398,13 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
                 ast->changes.push_back(change);
             }
 
+            return ast;
+        }
+        case ASTType::ASTExpressionListExt:
+        {
+            auto ast = std::make_shared<ASTExpressionListExt>();
+            readBinary(ast->separator, buf);
+            ast->children = deserializeASTs(buf);
             return ast;
         }
             
