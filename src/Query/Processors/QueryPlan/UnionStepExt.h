@@ -29,6 +29,9 @@ public:
 
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
 
+    void toProto(Protos::UnionStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<UnionStepExt> fromProto(const Protos::UnionStepExt & proto, ContextPtr context);
+
 private:
     bool local;
     OutputToInputs output_to_inputs;

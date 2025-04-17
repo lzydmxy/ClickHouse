@@ -215,6 +215,8 @@ public:
     // void toProto(Protos::AggregatingStep & proto, bool for_hash_equals = false) const;
     // static std::shared_ptr<AggregatingStep> fromProto(const Protos::AggregatingStep & proto, ContextPtr context);
 
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
+
     void updateOutputStream() override;
     static AggregatorExt::Params
     createParams(Block header_before_aggregation, AggregateDescriptions aggregates, Names group_by_keys, bool overflow_row);

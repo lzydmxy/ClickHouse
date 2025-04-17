@@ -49,6 +49,8 @@ public:
     const SortDescription & getSortDescription() const { return description; }
     bool isPartial() const { return partial; }
 
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
+
 private:
     bool partial;
 };

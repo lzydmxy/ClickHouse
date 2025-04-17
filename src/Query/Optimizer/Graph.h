@@ -4,6 +4,8 @@
 #include <boost/dynamic_bitset.hpp>
 #include <Query/Optimizer/Property/Equivalences.h>
 
+#include <Query/ProtosHelper/ASTSerDerHelper.h>
+
 
 namespace DB
 {
@@ -83,6 +85,32 @@ public:
         dfs(res, min, sub_nodes, visited);
 
         return res;
+    }
+
+    void toProto(Protos::Graph & proto) const
+    {
+        for (auto node : nodes)
+            proto.add_node(node);
+
+        for (const auto & [from, map] : edges)
+        {
+            for (const auto & [to, links] : map)
+            {
+                for (const auto & edge : links)
+                {
+                    auto * e = proto.add_edges();
+                    e->set_from(from);
+                    e->set_to(to);
+                    e->set_source(edge.source_symbol);
+                    e->set_target(edge.target_symbol);
+                }
+            }
+        }
+        serializeASTToProto(filter, *proto.mutable_filter());
+    }
+
+    void fillFromProto(const Protos::Graph &)
+    {
     }
 
     const UnionFind<String> & getUnionFind() const { return union_find; }

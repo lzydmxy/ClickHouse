@@ -16,7 +16,7 @@ class ApplyStepExt : public IQueryPlanStep
 public:
     ENUM_WITH_PROTO_CONVERTER(
         ApplyType, // enum name
-        Protos::ApplyStep::ApplyType, // proto enum message
+        Protos::ApplyStepExt::ApplyType, // proto enum message
         (CROSS, 0),
         (LEFT),
         (SEMI),
@@ -24,7 +24,7 @@ public:
 
     ENUM_WITH_PROTO_CONVERTER(
         SubqueryType, // enum name
-        Protos::ApplyStep::SubqueryType, // proto enum message
+        Protos::ApplyStepExt::SubqueryType, // proto enum message
         (SCALAR, 0),
         (IN),
         (EXISTS),
@@ -53,6 +53,16 @@ public:
     bool supportSemiAnti() const { return support_semi_anti; }
 
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
+
+    [[noreturn]] void toProto(Protos::ApplyStepExt &, bool for_hash_equals) const
+    {
+        throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "unimplemented");
+    }
+
+    static std::shared_ptr<ApplyStepExt> fromProto(const Protos::ApplyStepExt &, ContextPtr)
+    {
+        throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "unimplemented");
+    }
 
 private:
     /**
