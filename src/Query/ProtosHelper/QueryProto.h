@@ -53,6 +53,7 @@ using RPlanSegmentProfileResponse = Protos::PlanSegmentProfileResponse;
 using RAST = Protos::AST;
 using RDataType = Protos::DataType;
 using RBlock = Protos::Block;
+using RAssignments = Protos::Assignments;
 using RAggregateFunction = Protos::AggregateFunction;
 using RQueryPlanStep = Protos::QueryPlanStep;
 using RFieldVector = Protos::FieldVector;

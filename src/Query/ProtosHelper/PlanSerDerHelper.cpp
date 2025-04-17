@@ -219,27 +219,27 @@ void serializePlanStep(const QueryPlanStepPtr & step, WriteBuffer & buf)
     writeBinary(blob, buf);
 }
 
-// void serializeAssignmentsToProto(const Assignments & assignments, RAssignments & proto)
-// {
-//     for (const auto & [k, v] : assignments)
-//     {
-//         auto pair = proto.add_pairs();
-//         pair->set_key(k);
-//         serializeASTToProto(v, *pair->mutable_value());
-//     }
-// }
+void serializeAssignmentsToProto(const Assignments & assignments, RAssignments & proto)
+{
+    for (const auto & [k, v] : assignments)
+    {
+        auto *pair = proto.add_pairs();
+        pair->set_key(k);
+        serializeASTToProto(v, *pair->mutable_value());
+    }
+}
 
-// Assignments deserializeAssignmentsFromProto(const RAssignments & proto)
-// {
-//     Assignments res;
-//     for (const auto & pair : proto.pairs())
-//     {
-//         auto k = pair.key();
-//         auto v = deserializeASTFromProto(pair.value());
-//         res.emplace_back(k, v);
-//     }
-//     return res;
-// }
+Assignments deserializeAssignmentsFromProto(const RAssignments & proto)
+{
+    Assignments res;
+    for (const auto & pair : proto.pairs())
+    {
+        auto k = pair.key();
+        auto v = deserializeASTFromProto(pair.value());
+        res.emplace_back(k, v);
+    }
+    return res;
+}
 
 void serializeAggregateFunctionToProto(
     AggregateFunctionPtr function, const Array & parameters, const DataTypes & arg_types, RAggregateFunction & proto)

@@ -9,17 +9,17 @@
 #include <DataTypes/IDataType.h>
 #include <IO/ReadHelpers.h>
 #include <IO/WriteHelpers.h>
-//#include <QueryPlan/Assignment.h>
 #include <Processors/QueryPlan/QueryPlan.h>
-#include <Query/ProtosHelper/QueryProto.h>
+#include <Query/Processors/QueryPlan/Assignment.h>
 #include <Query/ProtosHelper/DataTypeHelper.h>
+#include <Query/ProtosHelper/QueryProto.h>
 
 namespace DB
 {
 
 namespace Protos
 {
-    class QueryPlanStep;
+class QueryPlanStep;
 }
 
 class DataStream;
@@ -100,26 +100,26 @@ QueryPlanStepPtr deserializePlanStep(ReadBuffer & buf, ContextPtr context);
 void serializeHeaderToProto(const Block & block, RBlock & proto);
 Block deserializeHeaderFromProto(const RBlock & proto);
 
-// void serializeAssignmentsToProto(const Assignments & assignment, RAssignments & proto);
-// Assignments deserializeAssignmentsFromProto(const RAssignments & proto);
+void serializeAssignmentsToProto(const Assignments & assignment, RAssignments & proto);
+Assignments deserializeAssignmentsFromProto(const RAssignments & proto);
 
 namespace impl
 {
-    template <typename Type>
-    inline constexpr bool is_protobuf_native_v = std::is_fundamental_v<Type> || std::is_same_v<Type, String>;
+template <typename Type>
+inline constexpr bool is_protobuf_native_v = std::is_fundamental_v<Type> || std::is_same_v<Type, String>;
 
-    template <class>
-    inline constexpr bool always_false_v = false;
+template <class>
+inline constexpr bool always_false_v = false;
 
-    template <typename>
-    struct is_std_vector : std::false_type
-    {
-    };
+template <typename>
+struct is_std_vector : std::false_type
+{
+};
 
-    template <typename T, typename A>
-    struct is_std_vector<std::vector<T, A>> : std::true_type
-    {
-    };
+template <typename T, typename A>
+struct is_std_vector<std::vector<T, A>> : std::true_type
+{
+};
 }
 
 // assume proto type and obj is matched, won't check
