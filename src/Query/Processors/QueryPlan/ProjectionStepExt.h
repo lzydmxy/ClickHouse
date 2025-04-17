@@ -36,6 +36,9 @@ public:
 
     static ActionsDAGPtr createActions(const Assignments & assignments, const NamesAndTypesList & source, ContextPtr context);
 
+    void toProto(Protos::ProjectionStep & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<ProjectionStepExt> fromProto(const Protos::ProjectionStep & proto, ContextPtr context);
+
 private:
     Assignments assignments;
     NameToType name_to_type;
