@@ -98,12 +98,12 @@ void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_ch
     throw Exception(ErrorCodes::LOGICAL_ERROR, "AST subtree not found in children");
 }
 
-[[ noreturn ]] void serializeASTImpl(const ConstASTPtr & ast, WriteBuffer & buf)
+void serializeASTImpl(const ConstASTPtr & ast, WriteBuffer & buf)
 {
     serializeASTImpl(*ast, buf);
 }
 
-[[ noreturn ]] void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
+void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
 {
     if (const auto * casted = ast.as<ASTArrayJoin>())
     {

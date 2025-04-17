@@ -31,7 +31,7 @@ namespace DB
 // }
 // }
 
-[[noreturn]]void serializeAST(const IAST & ast, WriteBuffer & buf)
+void serializeAST(const IAST & ast, WriteBuffer & buf)
 {
     writeBinary(true, buf);
     writeBinary(UInt8(getAstType(ast)), buf);
@@ -63,7 +63,7 @@ ASTPtr deserializeAST(ReadBuffer & buf)
         return nullptr;
 }
 
-[[noreturn]] void serializeASTToProto(const IAST & ast, RAST & proto)
+void serializeASTToProto(const IAST & ast, RAST & proto)
 {
     WriteBufferFromOwnString buf;
     serializeAST(ast, buf);
@@ -71,7 +71,7 @@ ASTPtr deserializeAST(ReadBuffer & buf)
     proto.set_text(queryToString(ast));
 }
 
-[[noreturn]] void serializeASTToProto(const ConstASTPtr & ast, RAST & proto)
+void serializeASTToProto(const ConstASTPtr & ast, RAST & proto)
 {
     if (ast)
         serializeASTToProto(*ast, proto);
