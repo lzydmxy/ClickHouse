@@ -111,7 +111,8 @@ void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_ch
         serializeAST(casted->expression_list, buf);
     }
     // todo wujianchao add more types
-    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement serialize of {}", toString(getAstType(ast)));
+    else
+        throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement serialize of {}", toString(getAstType(ast)));
 }
 
 ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)

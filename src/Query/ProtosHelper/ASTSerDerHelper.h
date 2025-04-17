@@ -19,14 +19,14 @@ using ConstASTPtr = std::shared_ptr<const IAST>;
 
 void serializeAST(const ConstASTPtr & ast, WriteBuffer & buf);
 
-void serializeAST(const IAST & ast, WriteBuffer & buf);
+[[noreturn]] void serializeAST(const IAST & ast, WriteBuffer & buf);
 
 void serializeAST(const ConstASTPtr & ast, WriteBuffer & buf);
 
 ASTPtr deserializeAST(ReadBuffer & buf);
 
-void serializeASTToProto(const ConstASTPtr & ast, RAST & proto);
-void serializeASTToProto(const IAST & ast, RAST & proto);
+[[noreturn]] void serializeASTToProto(const ConstASTPtr & ast, RAST & proto);
+[[noreturn]] void serializeASTToProto(const IAST & ast, RAST & proto);
 ASTPtr deserializeASTFromProto(const RAST & proto);
 
 void serializeASTs(const ASTs & asts, WriteBuffer & buf);
