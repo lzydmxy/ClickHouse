@@ -15,6 +15,9 @@ public:
 
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
+    void toProto(Protos::BufferStep & proto, bool for_hash_equals) const;
+    static std::shared_ptr<BufferStepExt> fromProto(const Protos::BufferStep & proto, ContextPtr);
+
 private:
     void updateOutputStream() override;
 };
