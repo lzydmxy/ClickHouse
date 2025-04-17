@@ -262,6 +262,47 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
         writeBinary(casted->separator, buf);
         serializeASTs(casted->children, buf);
     }
+    else if (const auto * casted = ast.as<ASTFunction>())
+    {
+        /// serialize alias
+        writeBinary(casted->alias, buf);
+        writeBinary(casted->prefer_alias_to_column_name, buf);
+
+        // serialize function
+        writeBinary(casted->name, buf);
+        serializeAST(casted->arguments, buf);
+        serializeAST(casted->parameters, buf);
+        writeBinary(casted->is_window_function, buf);
+        writeBinary(casted->window_name, buf);
+        serializeAST(casted->window_definition, buf);
+        writeBinary(casted->no_empty_args, buf);
+    }
+    else if (const auto * casted = ast.as<ASTFunctionWithKeyValueArguments>())
+    {
+        writeBinary(casted->name, buf);
+        serializeAST(casted->elements, buf);
+        writeBinary(casted->has_brackets, buf);
+    }
+    else if (const auto * casted = ast.as<ASTNameTypePair>())
+    {
+        writeBinary(casted->name, buf);
+        serializeAST(casted->type, buf);
+    }
+    else if (const auto * casted = ast.as<ASTOrderByElement>())
+    {
+        writeBinary(casted->direction, buf);
+        writeBinary(casted->nulls_direction, buf);
+        writeBinary(casted->nulls_direction_was_explicitly_specified, buf);
+
+        serializeAST(casted->getCollation(), buf);
+
+        writeBinary(casted->with_fill, buf);
+        serializeAST(casted->getFillFrom(), buf);
+        serializeAST(casted->getFillTo(), buf);
+        serializeAST(casted->getFillStep(), buf);
+
+        serializeASTs(casted->children, buf);
+    }
 
     // todo wujianchao add more types
     else
@@ -407,7 +448,54 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
             ast->children = deserializeASTs(buf);
             return ast;
         }
-            
+        case ASTType::ASTFunction:
+        {
+            auto ast = std::make_shared<ASTFunction>();
+            // deserialize alias
+            readBinary(ast->alias, buf);
+            readBinary(ast->prefer_alias_to_column_name, buf);
+            // deserialize function
+            readBinary(ast->name, buf);
+            ast->arguments = deserializeASTWithChildren(ast->children, buf);
+            ast->parameters = deserializeASTWithChildren(ast->children, buf);
+            readBinary(ast->is_window_function, buf);
+            readBinary(ast->window_name, buf);
+            ast->window_definition = deserializeASTWithChildren(ast->children, buf);
+            readBinary(ast->no_empty_args, buf);
+            return ast;
+        }
+        case ASTType::ASTFunctionWithKeyValueArguments:
+        {
+            auto ast = std::make_shared<ASTFunctionWithKeyValueArguments>();
+            readBinary(ast->name, buf);
+            ast->elements = deserializeASTWithChildren(ast->children, buf);
+            readBinary(ast->has_brackets, buf);
+            return ast;
+        }
+        case ASTType::ASTNameTypePair:
+        {
+            auto ast = std::make_shared<ASTNameTypePair>();
+            readBinary(ast->name, buf);
+            ast->type = deserializeASTWithChildren(ast->children, buf);
+            return ast;
+        }
+        case ASTType::ASTOrderByElement:
+        {
+            auto ast = std::make_shared<ASTOrderByElement>();
+            readBinary(ast->direction, buf);
+            readBinary(ast->nulls_direction, buf);
+            readBinary(ast->nulls_direction_was_explicitly_specified, buf);
+
+            ast->setCollation(deserializeAST(buf));
+
+            readBinary(ast->with_fill, buf);
+            ast->setFillFrom(deserializeAST(buf));
+            ast->setFillStep(deserializeAST(buf));
+
+            ast->children = deserializeASTs(buf);
+            return ast;
+        }
+
         // todo wujianchao add more types
         default:
             throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement deserializeASTImpl AST for {}", toString(type));
