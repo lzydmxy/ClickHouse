@@ -41,7 +41,7 @@ TEST(ParserDictionaryDDL, SimpleDictionaryExt)
 
     ParserCreateDictionaryQuery parser;
     ASTPtr ast = parseQuery(parser, input.data(), input.data() + input.size(), "", 0, 0, 0);
-    DB::ASTReplaceVisitor::replace(ast);
+    // DB::ASTReplaceVisitor::replace(ast);
     ASTCreateQuery * create = ast->as<ASTCreateQuery>();
     EXPECT_EQ(create->getTable(), "dict1");
     EXPECT_EQ(create->getDatabase(), "test");
@@ -138,7 +138,7 @@ TEST(ParserDictionaryDDL, AttributesWithMultiplePropertiesExt)
 
     ParserCreateDictionaryQuery parser;
     ASTPtr ast = parseQuery(parser, input.data(), input.data() + input.size(), "", 0, 0, 0);
-    DB::ASTReplaceVisitor::replace(ast);
+    //DB::ASTReplaceVisitor::replace(ast);
     ASTCreateQuery * create = ast->as<ASTCreateQuery>();
     EXPECT_EQ(create->getTable(), "dict2");
     EXPECT_EQ(create->getDatabase(), "");
@@ -186,7 +186,7 @@ TEST(ParserDictionaryDDL, CustomAttributePropertiesOrderExt)
 
     ParserCreateDictionaryQuery parser;
     ASTPtr ast = parseQuery(parser, input.data(), input.data() + input.size(), "", 0, 0, 0);
-    DB::ASTReplaceVisitor::replace(ast);
+    //DB::ASTReplaceVisitor::replace(ast);
     ASTCreateQuery * create = ast->as<ASTCreateQuery>();
 
     /// test attributes
@@ -242,7 +242,7 @@ TEST(ParserDictionaryDDL, NestedSourceExt)
 
     ParserCreateDictionaryQuery parser;
     ASTPtr ast = parseQuery(parser, input.data(), input.data() + input.size(), "", 0, 0, 0);
-    DB::ASTReplaceVisitor::replace(ast);
+    //DB::ASTReplaceVisitor::replace(ast);
     ASTCreateQuery * create = ast->as<ASTCreateQuery>();
     EXPECT_EQ(create->getTable(), "dict4");
     EXPECT_EQ(create->getDatabase(), "");
@@ -291,7 +291,7 @@ TEST(ParserDictionaryDDL, FormattingExt)
 
     ParserCreateDictionaryQuery parser;
     ASTPtr ast = parseQuery(parser, input.data(), input.data() + input.size(), "", 0, 0, 0);
-    DB::ASTReplaceVisitor::replace(ast);
+    //DB::ASTReplaceVisitor::replace(ast);
     ASTCreateQuery * create = ast->as<ASTCreateQuery>();
     auto str = serializeAST(*create);
     EXPECT_EQ(
