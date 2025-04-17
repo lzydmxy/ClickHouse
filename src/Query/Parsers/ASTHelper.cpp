@@ -45,10 +45,6 @@ void astToLowerCase(const ASTPtr & ast)
     {
         boost::to_lower(casted_ast->name);
     }
-    else if (auto * casted_ast = ast->as<ASTPartitionExt>())
-    {
-        boost::to_lower(casted_ast->fields_str);
-    }
     else if (auto * casted_ast = ast->as<ASTProjectionDeclaration>())
     {
         boost::to_lower(casted_ast->name);
@@ -114,10 +110,6 @@ void astToUpperCase(const ASTPtr & ast)
     if (auto * casted_ast = ast->as<ASTConstraintDeclaration>())
     {
         boost::to_upper(casted_ast->name);
-    }
-    else if (auto * casted_ast = ast->as<ASTPartitionExt>())
-    {
-        boost::to_upper(casted_ast->fields_str);
     }
     else if ( auto * casted_ast = ast->as<ASTProjectionDeclaration>())
     {

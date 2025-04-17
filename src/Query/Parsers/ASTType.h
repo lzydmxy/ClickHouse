@@ -46,7 +46,6 @@
 #include <Query/Parsers/ASTExplainQueryExt.h>
 #include <Query/Parsers/ASTExpressionListExt.h>
 #include <Query/Parsers/ASTFieldReferenceExt.h>
-#include <Query/Parsers/ASTPartitionExt.h>
 #include <Query/Parsers/ASTSelectQueryExt.h>
 #include <Query/Parsers/ASTTableColumnReference.h>
 #include <Query/Parsers/ASTQuantifiedComparisonExt.h>
@@ -109,7 +108,7 @@ using ASTFunctionPtr = std::shared_ptr<ASTFunction>;
     M(ASTNameTypePair) \
     M(ASTOrderByElement) \
     M(ASTPair) \
-    M(ASTPartitionExt) \
+    M(ASTPartition) \
     M(ASTProjectionDeclaration) \
     M(ASTProjectionSelectQuery) \
     M(ASTQualifiedAsterisk) \

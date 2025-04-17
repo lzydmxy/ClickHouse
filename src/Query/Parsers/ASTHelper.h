@@ -22,6 +22,7 @@
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/ASTNameTypePair.h>
 #include <Parsers/ASTOrderByElement.h>
+#include <Parsers/ASTPartition.h>
 #include <Parsers/ASTProjectionDeclaration.h>
 #include <Parsers/ASTProjectionSelectQuery.h>
 #include <Parsers/ASTQualifiedAsterisk.h>
@@ -45,7 +46,6 @@
 #include <Query/Parsers/ASTExplainQueryExt.h>
 #include <Query/Parsers/ASTExpressionListExt.h>
 #include <Query/Parsers/ASTFieldReferenceExt.h>
-#include <Query/Parsers/ASTPartitionExt.h>
 #include <Query/Parsers/ASTSelectQueryExt.h>
 #include <Query/Parsers/ASTTableColumnReference.h>
 #include <Query/Parsers/ASTQuantifiedComparisonExt.h>
