@@ -105,6 +105,22 @@ void astToLowerCase(const ASTPtr & ast)
             astToLowerCase(casted_ast->subquery);
         }
     }
+    else if (auto * casted = ast->as<ASTColumnsRegexpMatcher>())
+    {
+        auto pattern = casted->getPattern();
+        boost::to_lower(pattern);
+        casted->setPattern(pattern);
+    }
+    else if (auto * casted = ast->as<ASTQualifiedColumnsRegexpMatcher>())
+    {
+        auto pattern = casted->getPattern();
+        boost::to_lower(pattern);
+        casted->setPattern(pattern);
+    }
+    else if (auto * casted = ast->as<ASTWithElement>())
+    {
+        boost::to_lower(casted->name);
+    }
 
     // TODO wujianchao add more types
 }
@@ -174,6 +190,22 @@ void astToUpperCase(const ASTPtr & ast)
         {
             astToUpperCase(casted_ast->subquery);
         }
+    }
+    else if (auto * casted = ast->as<ASTColumnsRegexpMatcher>())
+    {
+        auto pattern = casted->getPattern();
+        boost::to_upper(pattern);
+        casted->setPattern(pattern);
+    }
+    else if (auto * casted = ast->as<ASTQualifiedColumnsRegexpMatcher>())
+    {
+        auto pattern = casted->getPattern();
+        boost::to_upper(pattern);
+        casted->setPattern(pattern);
+    }
+    else if (auto * casted = ast->as<ASTWithElement>())
+    {
+        boost::to_upper(casted->name);
     }
 
 
@@ -382,7 +414,46 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
 
         serializeASTs(casted->children, buf);
     }
-
+    else if (const auto * casted = ast.as<ASTAsterisk>())
+    {
+        serializeASTs(casted->children, buf);
+        serializeAST(casted->expression, buf);
+        serializeAST(casted->transformers, buf);
+    }
+    else if (const auto * casted = ast.as<ASTColumnsRegexpMatcher>())
+    {
+        writeBinary(casted->getPattern(), buf);
+        serializeAST(casted->expression, buf);
+        serializeAST(casted->transformers, buf);
+    }
+    else if (const auto * casted = ast.as<ASTColumnsListMatcher>())
+    {
+        serializeAST(casted->expression, buf);
+        serializeAST(casted->column_list, buf);
+        serializeAST(casted->transformers, buf);
+    }
+    else if (const auto * casted = ast.as<ASTQualifiedColumnsRegexpMatcher>())
+    {
+        writeBinary(casted->getPattern(), buf);
+        serializeAST(casted->qualifier, buf);
+        serializeAST(casted->transformers, buf);
+    }
+    else if (const auto * casted = ast.as<ASTQualifiedColumnsListMatcher>())
+    {
+        serializeAST(casted->qualifier, buf);
+        serializeAST(casted->column_list, buf);
+        serializeAST(casted->transformers, buf);
+    }
+    else if (const auto * casted = ast.as<ASTDataTypeExt>())
+    {
+        writeChar(casted->getNullable(), buf);
+        serializeASTs(casted->children, buf);
+    }
+    else if (const auto * casted = ast.as<ASTWithElement>())
+    {
+        writeBinary(casted->name, buf);
+        serializeAST(casted->subquery, buf);
+    }
     // todo wujianchao add more types
     else
         throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement serialize of {}", toString(getAstType(ast)));
@@ -608,6 +679,66 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
             ast->setFillStep(deserializeAST(buf));
 
             ast->children = deserializeASTs(buf);
+            return ast;
+        }
+        case ASTType::ASTAsterisk:
+        {
+            auto ast = std::make_shared<ASTAsterisk>();
+            ast->children = deserializeASTs(buf);
+            ast->expression = deserializeAST(buf);
+            ast->transformers = deserializeAST(buf);
+            return ast;
+        }
+        case ASTType::ASTColumnsRegexpMatcher:
+        {
+            auto ast = std::make_shared<ASTColumnsRegexpMatcher>();
+            String pattern;
+            readBinary(pattern, buf);
+            ast->setPattern(pattern);
+            ast->expression = deserializeAST(buf);
+            ast->transformers = deserializeAST(buf);
+            return ast;
+        }
+        case ASTType::ASTColumnsListMatcher:
+        {
+            auto ast = std::make_shared<ASTColumnsListMatcher>();
+            ast->expression = deserializeAST(buf);
+            ast->column_list = deserializeAST(buf);
+            ast->transformers = deserializeAST(buf);
+            return ast;
+        }
+        case ASTType::ASTQualifiedColumnsRegexpMatcher:
+        {
+            auto ast = std::make_shared<ASTQualifiedColumnsRegexpMatcher>();
+            String pattern;
+            readBinary(pattern, buf);
+            ast->setPattern(pattern);
+            ast->qualifier = deserializeAST(buf);
+            ast->transformers = deserializeAST(buf);
+            return ast;
+        }
+        case ASTType::ASTQualifiedColumnsListMatcher:
+        {
+            auto ast = std::make_shared<ASTQualifiedColumnsListMatcher>();
+            ast->qualifier = deserializeAST(buf);
+            ast->column_list = deserializeAST(buf);
+            ast->transformers = deserializeAST(buf);
+            return ast;
+        }
+        case ASTType::ASTDataTypeExt:
+        {
+            auto ast = std::make_shared<ASTDataTypeExt>();
+            char nullable;
+            readChar(nullable, buf);
+            ast->setNullable(static_cast<bool>(nullable));
+            ast->children = deserializeASTs(buf);
+            return ast;
+        }
+        case ASTType::ASTWithElement:
+        {
+            auto ast = std::make_shared<ASTWithElement>();
+            readBinary(ast->name, buf);
+            ast->subquery = deserializeAST(buf);
             return ast;
         }
 

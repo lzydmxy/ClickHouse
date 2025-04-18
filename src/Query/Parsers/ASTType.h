@@ -113,6 +113,8 @@ using ASTFunctionPtr = std::shared_ptr<ASTFunction>;
     M(ASTProjectionDeclaration) \
     M(ASTProjectionSelectQuery) \
     M(ASTQualifiedAsterisk) \
+    M(ASTQualifiedColumnsRegexpMatcher) \
+    M(ASTQualifiedColumnsListMatcher) \
     M(ASTQueryParameter) \
     M(ASTQueryWithOutput) \
     M(ASTRowPolicyName) \
