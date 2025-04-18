@@ -384,6 +384,38 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
     {
         serializeASTs(casted->children, buf);
     }
+    else if (const auto * casted = ast.as<ASTSelectQueryExt>())
+    {
+        writeBinary(casted->distinct, buf);
+        writeBinary(casted->group_by_with_totals, buf);
+        writeBinary(casted->group_by_with_rollup, buf);
+        writeBinary(casted->group_by_with_cube, buf);
+        writeBinary(casted->group_by_with_constant_keys, buf);
+        writeBinary(casted->limit_with_ties, buf);
+
+        ASTPtr ast_tmp = nullptr;
+#define SERIALIZE_EXPRESSION(expr) \
+    ast_tmp = casted->getExpression(expr, false); \
+    serializeAST(ast_tmp, buf);
+
+        SERIALIZE_EXPRESSION(ASTSelectQuery::Expression::WITH)
+        SERIALIZE_EXPRESSION(ASTSelectQuery::Expression::SELECT)
+        SERIALIZE_EXPRESSION(ASTSelectQuery::Expression::TABLES)
+        SERIALIZE_EXPRESSION(ASTSelectQuery::Expression::PREWHERE)
+        SERIALIZE_EXPRESSION(ASTSelectQuery::Expression::WHERE)
+        SERIALIZE_EXPRESSION(ASTSelectQuery::Expression::GROUP_BY)
+        SERIALIZE_EXPRESSION(ASTSelectQuery::Expression::HAVING)
+        SERIALIZE_EXPRESSION(ASTSelectQuery::Expression::WINDOW)
+        SERIALIZE_EXPRESSION(ASTSelectQuery::Expression::ORDER_BY)
+        SERIALIZE_EXPRESSION(ASTSelectQuery::Expression::LIMIT_BY_OFFSET)
+        SERIALIZE_EXPRESSION(ASTSelectQuery::Expression::LIMIT_BY_LENGTH)
+        SERIALIZE_EXPRESSION(ASTSelectQuery::Expression::LIMIT_BY)
+        SERIALIZE_EXPRESSION(ASTSelectQuery::Expression::LIMIT_OFFSET)
+        SERIALIZE_EXPRESSION(ASTSelectQuery::Expression::LIMIT_LENGTH)
+        SERIALIZE_EXPRESSION(ASTSelectQuery::Expression::SETTINGS)
+
+#undef SERIALIZE_EXPRESSION
+    }
 
     // todo wujianchao add more types
     else
@@ -624,6 +656,46 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
         {
             auto ast = std::make_shared<ASTQualifiedAsterisk>();
             ast->children = deserializeASTs(buf);
+            return ast;
+        }
+        case ASTType::ASTSelectQueryExt:
+        {
+            auto ast = std::make_shared<ASTSelectQueryExt>();
+            ast->children.clear();
+            ast->positions.clear();
+
+            readBinary(ast->distinct, buf);
+            readBinary(ast->group_by_with_totals, buf);
+            readBinary(ast->group_by_with_rollup, buf);
+            readBinary(ast->group_by_with_cube, buf);
+            readBinary(ast->group_by_with_constant_keys, buf);
+            readBinary(ast->limit_with_ties, buf);
+
+
+#define DESERIALIZE_EXPRESSION(expr) \
+    { \
+        auto ast_tmp = deserializeAST(buf); \
+        if (ast_tmp) \
+            ast->setExpression(expr, std::move(ast_tmp)); \
+    }
+
+            DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::WITH)
+            DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::SELECT)
+            DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::TABLES)
+            DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::PREWHERE)
+            DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::WHERE)
+            DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::GROUP_BY)
+            DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::HAVING)
+            DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::WINDOW)
+            DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::ORDER_BY)
+            DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::LIMIT_BY_OFFSET)
+            DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::LIMIT_BY_LENGTH)
+            DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::LIMIT_BY)
+            DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::LIMIT_OFFSET)
+            DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::LIMIT_LENGTH)
+            DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::SETTINGS)
+
+#undef DESERIALIZE_EXPRESSION
             return ast;
         }
 
