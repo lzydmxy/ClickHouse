@@ -68,7 +68,7 @@ ActionsDAGPtr ProjectionStepExt::createActions(const Assignments & assignments, 
     return QueryPlanStepHelper::createExpressionActions(context, source, output, expr_list);
 }
 
-void ProjectionStepExt::toProto(Protos::ProjectionStep & proto, bool) const
+void ProjectionStepExt::toProto(Protos::ProjectionStepExt & proto, bool) const
 {
     ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
     serializeAssignmentsToProto(assignments, *proto.mutable_assignments());
@@ -77,7 +77,7 @@ void ProjectionStepExt::toProto(Protos::ProjectionStep & proto, bool) const
     proto.set_index_project(index_project);
 }
 
-std::shared_ptr<ProjectionStepExt> ProjectionStepExt::fromProto(const Protos::ProjectionStep & proto, ContextPtr)
+std::shared_ptr<ProjectionStepExt> ProjectionStepExt::fromProto(const Protos::ProjectionStepExt & proto, ContextPtr)
 {
     auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
     auto assignments = deserializeAssignmentsFromProto(proto.assignments());

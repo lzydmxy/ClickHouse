@@ -295,7 +295,7 @@ message AssignUniqueIdStep {
     string unique_id = 2;
 }
 
-message EnforceSingleRowStep {
+message EnforceSingleRowStepExt {
     ITransformingStep query_plan_base = 1;
 }
 
@@ -425,7 +425,7 @@ message PartialSortingStep {
     SizeLimits size_limits = 4;
 }
  
-message PartitionTopNStep {
+message PartitionTopNStepExt {
     ITransformingStep query_plan_base = 1;
     repeated string partition = 2;
     repeated string order_by = 3;
@@ -508,7 +508,7 @@ message FilterStep {
     bool remove_filter_column = 3;
 }
 
-message ProjectionStep {
+message ProjectionStepExt {
     ITransformingStep query_plan_base = 1;
     Assignments assignments = 2;
     map<string, DataType> name_to_type = 3;
@@ -641,7 +641,7 @@ message TableScanStep {
     SelectQueryInfo query_info = 3;
     uint64 max_block_size = 4;
     AggregatingStep pushdown_aggregation = 5;
-    ProjectionStep pushdown_projection = 6;
+    ProjectionStepExt pushdown_projection = 6;
     FilterStep pushdown_filter = 7;
     Assignments inline_expressions = 14;
     DataStream output_stream = 15;
@@ -727,11 +727,11 @@ message IntersectOrExceptStep {
     uint64 max_threads = 3;
 }
 
-message BufferStep {
+message BufferStepExt {
     ITransformingStep query_plan_base = 1;
 }
 
-message ExplainAnalyzeStep {}
+message ExplainAnalyzeStepExt {}
 
 message CacheParam {
     bytes digest = 1;
@@ -807,7 +807,7 @@ message QueryPlanStep {
         AssignUniqueIdStep assign_unique_id_step = 3;
         CTERefStep c_t_e_ref_step = 4;  // must be perfectly matched
         DistinctStep distinct_step = 5;
-        EnforceSingleRowStep enforce_single_row_step = 6;
+        EnforceSingleRowStepExt enforce_single_row_step = 6;
         ExceptStep except_step = 7;
         ExchangeStepExt exchange_step = 8;
         ExtremesStep extremes_step = 9;
@@ -825,8 +825,8 @@ message QueryPlanStep {
         MergingSortedStep merging_sorted_step = 21;
         OffsetStep offset_step = 22;
         PartialSortingStep partial_sorting_step = 23;
-        PartitionTopNStep partition_top_n_step = 24;
-        ProjectionStep projection_step = 25;
+        PartitionTopNStepExt partition_top_n_step = 24;
+        ProjectionStepExt projection_step = 25;
         ReadNothingStep read_nothing_step = 26;
         ReadStorageRowCountStep read_storage_row_count_step = 27;
         RemoteExchangeSourceStepExt remote_exchange_source_step = 28;
@@ -839,11 +839,11 @@ message QueryPlanStep {
         WindowStep window_step = 35;
         ValuesStep values_step = 36;
         IntersectOrExceptStep intersect_or_except_step = 37;
-        BufferStep buffer_step = 38;
+        BufferStepExt buffer_step = 38;
         ApplyStepExt apply_step = 39;
         OutfileWriteStep outfile_write_step = 40;
         OutfileFinishStep outfile_finish_step = 41;
-        ExplainAnalyzeStep explain_analyze_step = 44;
+        ExplainAnalyzeStepExt explain_analyze_step = 44;
         TotalsHavingStep totals_having_step = 50;
         IntermediateResultCacheStepExt intermediate_result_cache_step = 53;
         LocalExchangeStepExt local_exchange_step = 54;
@@ -861,8 +861,8 @@ message QueryPlanNode {
 
 message QueryPlan {
     enum Enum {
-        TreeLike = 0;
-        Flatten = 1;
+            TreeLike = 0;
+            Flatten = 1;
     }
     uint64 root_id = 1;
     map<uint64, QueryPlanNode> plan_nodes = 2;

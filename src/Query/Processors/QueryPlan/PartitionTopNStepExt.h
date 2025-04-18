@@ -26,8 +26,8 @@ public:
 
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
-    void toProto(Protos::PartitionTopNStep & proto, bool for_hash_equals = false) const;
-    static std::shared_ptr<PartitionTopNStepExt> fromProto(const Protos::PartitionTopNStep & proto, ContextPtr context);
+    void toProto(Protos::PartitionTopNStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<PartitionTopNStepExt> fromProto(const Protos::PartitionTopNStepExt & proto, ContextPtr context);
 
 private:
     Names partition;
