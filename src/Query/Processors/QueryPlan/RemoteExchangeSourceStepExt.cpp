@@ -18,6 +18,7 @@
 #include <Common/Exception.h>
 #include <Query/Exchange/QueryExchangeLog.h>
 #include <Query/Executor/sendPlanSegment.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 
 #include <memory>
 #include <string>
@@ -35,6 +36,45 @@ RemoteExchangeSourceStepExt::RemoteExchangeSourceStepExt(PlanSegmentInputs input
 {
     input_streams.emplace_back(std::move(input_stream_));
     logger = getLogger("RemoteExchangeSourceStepExt");
+}
+
+void RemoteExchangeSourceStepExt::toProto(Protos::RemoteExchangeSourceStepExt & proto, bool) const
+{
+    // NOTE: this step is ISourceStep but not using serde of ISourceStep
+    // maybe a bug, but here just follow the original serde anyway
+    ProtosSerDerHelper::toProto(input_streams[0], *proto.mutable_input_stream());
+    proto.set_step_description(step_description);
+    for (auto & element : inputs)
+    {
+        if (!element)
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "PlanSegmentInput cannot be nullptr");
+        element->toProto(*proto.add_inputs());
+    }
+    proto.set_is_add_totals(is_add_totals);
+    proto.set_is_add_extremes(is_add_extremes);
+}
+
+std::shared_ptr<RemoteExchangeSourceStepExt> RemoteExchangeSourceStepExt::fromProto(const Protos::RemoteExchangeSourceStepExt & proto, ContextPtr context)
+{
+    DataStream input_stream;
+    ProtosSerDerHelper::fillFromProto(input_stream, proto.input_stream());
+    auto step_description = proto.step_description();
+
+    PlanSegmentInputs inputs;
+    for (auto & proto_element : proto.inputs())
+    {
+        auto element = std::make_shared<PlanSegmentInput>();
+        element->fromProto(proto_element, context);
+        inputs.emplace_back(std::move(element));
+    }
+
+    bool is_add_totals = proto.has_is_add_totals() ? proto.is_add_totals(): false;
+    bool is_add_extremes = proto.has_is_add_extremes() ? proto.is_add_extremes(): false;
+
+    auto step = std::make_unique<RemoteExchangeSourceStepExt>(inputs, input_stream, is_add_totals, is_add_extremes);
+    step->setStepDescription(step_description);
+
+    return step;
 }
 
 std::shared_ptr<IQueryPlanStep> RemoteExchangeSourceStepExt::copy(ContextPtr) const

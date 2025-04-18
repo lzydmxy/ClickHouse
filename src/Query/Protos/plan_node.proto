@@ -648,12 +648,12 @@ message TableScanStep {
     DataStream table_output_stream = 16;
 }
 
-message RemoteExchangeSourceStep {
+message RemoteExchangeSourceStepExt {
     DataStream input_stream = 1;
     string step_description = 2;
     repeated PlanSegmentInput inputs = 3;
-    bool is_add_totals = 4;
-    bool is_add_extremes = 5;
+    optional bool is_add_totals = 4;
+    optional bool is_add_extremes = 5;
 }
 
 message FinalSampleStep {
@@ -829,7 +829,7 @@ message QueryPlanStep {
         ProjectionStep projection_step = 25;
         ReadNothingStep read_nothing_step = 26;
         ReadStorageRowCountStep read_storage_row_count_step = 27;
-        RemoteExchangeSourceStep remote_exchange_source_step = 28;
+        RemoteExchangeSourceStepExt remote_exchange_source_step = 28;
         SortingStep sorting_step = 29;
         TableFinishStep table_finish_step = 30;
         TableScanStep table_scan_step = 31;
