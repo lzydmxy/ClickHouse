@@ -396,7 +396,7 @@ message UnionStepExt {
     bool local = 6;
 }
 
-message ExchangeStep {
+message ExchangeStepExt {
     repeated DataStream input_streams = 1;
     ExchangeMode.Enum exchange_type = 2;
     Partitioning schema = 3;
@@ -809,7 +809,7 @@ message QueryPlanStep {
         DistinctStep distinct_step = 5;
         EnforceSingleRowStep enforce_single_row_step = 6;
         ExceptStep except_step = 7;
-        ExchangeStep exchange_step = 8;
+        ExchangeStepExt exchange_step = 8;
         ExtremesStep extremes_step = 9;
         FillingStep filling_step = 10;
         FilterStep filter_step = 11;
