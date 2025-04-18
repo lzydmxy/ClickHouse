@@ -380,6 +380,10 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
         writeBinary(casted->fields_count.value(), buf);
         serializeAST(*casted->id, buf);
     }
+    else if (const auto * casted = ast.as<ASTQualifiedAsterisk>())
+    {
+        serializeASTs(casted->children, buf);
+    }
 
     // todo wujianchao add more types
     else
@@ -614,6 +618,12 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
             ast->setPartitionID(deserializeAST(buf));
             readBinary(ast->fields_count.value(), buf);
             ast->setPartitionID(deserializeAST(buf));
+            return ast;
+        }
+        case ASTType::ASTQualifiedAsterisk:
+        {
+            auto ast = std::make_shared<ASTQualifiedAsterisk>();
+            ast->children = deserializeASTs(buf);
             return ast;
         }
 
