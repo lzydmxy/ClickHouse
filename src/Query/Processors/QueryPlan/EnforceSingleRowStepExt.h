@@ -16,8 +16,8 @@ public:
     /// make output columns nullable, we should generate a null output value when subquery return empty results
     void makeOutputNullable();
 
-    void toProto(Protos::EnforceSingleRowStep & proto, bool for_hash_equals = false) const;
-    static std::shared_ptr<EnforceSingleRowStepExt> fromProto(const Protos::EnforceSingleRowStep & proto, ContextPtr);
+    void toProto(Protos::EnforceSingleRowStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<EnforceSingleRowStepExt> fromProto(const Protos::EnforceSingleRowStepExt & proto, ContextPtr);
 
 private:
     void updateOutputStream() override;

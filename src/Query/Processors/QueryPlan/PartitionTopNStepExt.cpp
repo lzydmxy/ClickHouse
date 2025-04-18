@@ -42,7 +42,7 @@ std::shared_ptr<IQueryPlanStep> PartitionTopNStepExt::copy(ContextPtr) const
     return std::make_shared<PartitionTopNStepExt>(input_streams[0], partition, order_by, limit, model);
 }
 
-void PartitionTopNStepExt::toProto(Protos::PartitionTopNStep & proto, bool) const
+void PartitionTopNStepExt::toProto(Protos::PartitionTopNStepExt & proto, bool) const
 {
     ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
     for (const auto & element : partition)
@@ -53,7 +53,7 @@ void PartitionTopNStepExt::toProto(Protos::PartitionTopNStep & proto, bool) cons
     proto.set_model(TopNModelConverter::toProto(model));
 }
 
-std::shared_ptr<PartitionTopNStepExt> PartitionTopNStepExt::fromProto(const Protos::PartitionTopNStep & proto, ContextPtr)
+std::shared_ptr<PartitionTopNStepExt> PartitionTopNStepExt::fromProto(const Protos::PartitionTopNStepExt & proto, ContextPtr)
 {
     auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
     std::vector<String> partition;

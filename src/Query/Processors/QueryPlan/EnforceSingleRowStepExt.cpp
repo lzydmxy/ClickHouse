@@ -40,12 +40,12 @@ void EnforceSingleRowStepExt::makeOutputNullable()
     output_stream = DataStream{.header = {nullable_output_header}};
 }
 
-void EnforceSingleRowStepExt::toProto(Protos::EnforceSingleRowStep & proto, bool) const
+void EnforceSingleRowStepExt::toProto(Protos::EnforceSingleRowStepExt & proto, bool) const
 {
     ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
 }
 
-std::shared_ptr<EnforceSingleRowStepExt> EnforceSingleRowStepExt::fromProto(const Protos::EnforceSingleRowStep & proto, ContextPtr)
+std::shared_ptr<EnforceSingleRowStepExt> EnforceSingleRowStepExt::fromProto(const Protos::EnforceSingleRowStepExt & proto, ContextPtr)
 {
     auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
     auto step = std::make_shared<EnforceSingleRowStepExt>(base_input_stream);
