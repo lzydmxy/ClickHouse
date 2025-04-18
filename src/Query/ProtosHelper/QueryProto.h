@@ -60,7 +60,7 @@ using RFieldVector = Protos::FieldVector;
 
 using RProgress = Protos::Progress;
 
-using RQueryPlan = Protos::QueryPlan;
+using RQueryPlan = Protos::QueryPlanExt;
 
 //For bRPC server
 using RPlanSegmentService = Protos::PlanSegmentService;

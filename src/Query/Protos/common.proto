@@ -16,7 +16,7 @@ message ExchangeMode {
 message ReportProfileType {
     enum Enum {
       Unspecified = 0;
-      QueryPlan = 1;
+      QueryPlanExt = 1;
       QueryPipeline = 2;
     }
 }

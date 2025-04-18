@@ -859,14 +859,16 @@ message QueryPlanNode {
     QueryPlanStep step = 3;
 }
 
-message QueryPlan {
-    enum Enum {
+message QueryPlanExt {
+    message PlanMode {
+        enum Enum{
             TreeLike = 0;
             Flatten = 1;
+        }
     }
     uint64 root_id = 1;
     map<uint64, QueryPlanNode> plan_nodes = 2;
     // CteId -> plan_id
     map<uint64, uint64> cte_id_mapping = 3;
-    QueryPlan.Enum mode = 4;
+    PlanMode.Enum mode = 4;
 }

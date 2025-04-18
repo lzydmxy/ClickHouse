@@ -286,7 +286,7 @@ void fillPlanSegmentProfile(
         segment_profile->profile_root_id = output_root->id;
         segment_profile->profiles = GroupedProcessorProfile::getProfileMetricsFromOutputRoot(output_root);
     }
-    else if (type == RReportProfileType::QueryPlan)
+    else if (type == RReportProfileType::QueryPlanExt)
     {
         auto step_profile = GroupedProcessorProfile::aggregateOperatorProfileToStepLevel(grouped_profiles);
         for (auto & [step_id, profile] : step_profile)

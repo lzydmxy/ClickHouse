@@ -92,17 +92,16 @@ public:
 
     QueryPlanExt getSubPlan(QueryPlan::Node * node_);
 
-    //todo: hongzhigao, other feat: need impl toProto/fromProto
-    // void toProto(Protos::QueryPlanExt & proto) const;
-    // void fromProto(const Protos::QueryPlanExt & proto);
+    void toProto(Protos::QueryPlanExt & proto);
+    void fromProto(const Protos::QueryPlanExt & proto);
 
-    // // handle when plan is tree-like, i.e., plan_node + cte_info
-    // void toProtoTreeLike(Protos::QueryPlanExt & proto) const;
-    // void fromProtoTreeLike(const Protos::QueryPlanExt & proto);
+    // handle when plan is tree-like, i.e., plan_node + cte_info
+    void toProtoTreeLike(Protos::QueryPlanExt & proto) const;
+    void fromProtoTreeLike(const Protos::QueryPlanExt & proto);
 
-    // // handle when plan is flatten, i.e., root + nodes + cte_nodes
-    // void toProtoFlatten(Protos::QueryPlanExt & proto) const;
-    // void fromProtoFlatten(const Protos::QueryPlanExt & proto);
+    // handle when plan is flatten, i.e., root + nodes + cte_nodes
+    void toProtoFlatten(Protos::QueryPlanExt & proto);
+    void fromProtoFlatten(const Protos::QueryPlanExt & proto);
 
     void freshPlan();
 
