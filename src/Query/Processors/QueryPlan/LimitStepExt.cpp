@@ -23,4 +23,9 @@ void LimitStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const Buil
     pipeline.addTransform(std::move(transform));
 }
 
+std::shared_ptr<IQueryPlanStep> LimitStepExt::copy(ContextPtr) const
+{
+    return std::make_shared<LimitStepExt>(input_streams[0], limit, offset, always_read_till_end, with_ties, description, partial);
+}
+
 }

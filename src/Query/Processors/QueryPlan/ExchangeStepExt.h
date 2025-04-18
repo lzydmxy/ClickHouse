@@ -21,6 +21,9 @@ public:
 
     QueryPipelineBuilderPtr updatePipeline(QueryPipelineBuilders pipelines, const BuildQueryPipelineSettings & context) override;
 
+    void toProto(Protos::ExchangeStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<ExchangeStepExt> fromProto(const Protos::ExchangeStepExt & proto, ContextPtr context);
+
     const RExchangeMode::Enum & getExchangeMode() const { return exchange_type; }
     const Partitioning & getSchema() const { return schema; }
 

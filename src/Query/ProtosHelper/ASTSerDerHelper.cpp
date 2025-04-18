@@ -68,7 +68,7 @@ void serializeASTToProto(const IAST & ast, RAST & proto)
     WriteBufferFromOwnString buf;
     serializeAST(ast, buf);
     proto.set_blob(std::move(buf.str()));
-    proto.set_text(queryToString(ast));
+    proto.set_text(queryToString(ast, false));
 }
 
 void serializeASTToProto(const ConstASTPtr & ast, RAST & proto)

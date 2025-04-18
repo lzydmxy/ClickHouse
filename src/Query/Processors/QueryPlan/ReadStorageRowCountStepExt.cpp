@@ -124,4 +124,11 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
         pipeline.addContext(context);
 }
 
+std::shared_ptr<IQueryPlanStep> ReadStorageRowCountStepExt::copy(ContextPtr context) const
+{
+    auto step = std::make_shared<ReadStorageRowCountStepExt>(output_stream->header, query, agg_desc, is_final_agg, storage_id, context);
+    step->setNumRows(num_rows);
+    return step;
+}
+
 }

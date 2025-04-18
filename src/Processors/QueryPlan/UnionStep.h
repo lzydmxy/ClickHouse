@@ -21,7 +21,7 @@ public:
 
     bool canUpdateInputStream() const override { return true; }
 
-private:
+protected:
     void updateOutputStream() override;
 
     Block header;

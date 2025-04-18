@@ -24,6 +24,7 @@
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <Query/ProtosHelper/ProgressHelper.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 
 //#include <Protos/ReadWriteProtobuf.h>
 // #include <Processors/QueryPlan/AggregatingStep.h>
@@ -284,24 +285,30 @@ inline void serializeQueryPlanStepToProtoImpl(const QueryPlanStepPtr & origin_st
     step->toProto(proto);
 }
 
-void serializeQueryPlanStepToProto(const QueryPlanStepPtr & /*step*/, RQueryPlanStep & /*proto*/)
+void serializeQueryPlanStepToProto(const QueryPlanStepPtr & step, RQueryPlanStep & proto)
 {
-//TODO: Wait to add Type for QueryPlanStep
-//     switch (step->getType())
-//     {
-// #define CASE_DEF(TYPE, VAR_NAME) \
-//     case IQueryPlanStep::Type::TYPE: { \
-//         serializeQueryPlanStepToProtoImpl<TYPE##Step, Protos::TYPE##Step>(step, *proto.mutable_##VAR_NAME##_step()); \
-//         return; \
-//     }
+     switch (getQueryPlanStepType(step))
+     {
+         case QueryPlanStepType::JoinStepExt:
+         {
+             serializeQueryPlanStepToProtoImpl<JoinStepExt, Protos::JoinStepExt>(step, *proto.mutable_join_step_ext());
+             return;
+         }
+         default:
+             break;
+ // #define CASE_DEF(TYPE, VAR_NAME) \
+ //     case QueryPlanStepType::TYPE: { \
+ //         serializeQueryPlanStepToProtoImpl<TYPE, Protos::TYPE>(step, *proto.mutable_##VAR_NAME##_step()); \
+ //         return; \
+ //     }
+ //
+ //         APPLY_STEP_PROTOBUF_TYPES_AND_NAMES(CASE_DEF)
+ // #undef CASE_DEF
 
-//         APPLY_STEP_PROTOBUF_TYPES_AND_NAMES(CASE_DEF)
-// #undef CASE_DEF
-
-//         default: {
-//             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Not implemented step: {}"), static_cast<int>(step->getType());
-//         }
-//     }
+         // default: {
+         //     throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Not implemented step: {}"), static_cast<int>(getQueryPlanStepType(step));
+         // }
+     }
 }
 
 template <typename Step, typename ProtoType>

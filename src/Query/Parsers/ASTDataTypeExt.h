@@ -24,6 +24,7 @@ public:
     void formatImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override;
 
     bool getNullable() const { return nullable; }
+    void setNullable(bool nullable_) { nullable = nullable_; }
 
     ASTPtr getNestedType() const { return data_type; }
 

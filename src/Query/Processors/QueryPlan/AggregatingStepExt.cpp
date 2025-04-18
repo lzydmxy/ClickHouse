@@ -296,6 +296,25 @@ AggregatingStepExt::AggregatingStepExt(
     updateInputStreams(input_streams);
 }
 
+std::shared_ptr<IQueryPlanStep> AggregatingStepExt::copy(ContextPtr) const
+{
+    return std::make_shared<AggregatingStepExt>(
+        input_streams[0],
+        keys,
+        keys_not_hashed,
+        params.aggregates,
+        grouping_sets_params,
+        final,
+        stage_policy,
+        group_by_sort_description,
+        groupings,
+        needOverflowRow(),
+        should_produce_results_in_order_of_bucket_number,
+        no_shuffle,
+        streaming_for_cache);
+}
+
+
 void AggregatingStepExt::updateOutputStream()
 {
     //todo: wujianchao5, other feat: what if input_streams and params->getHeader() are inconsistent?

@@ -34,6 +34,9 @@ namespace DB
         std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
         void updateOutputStream() override;
 
+        void toProto(Protos::LocalExchangeStepExt & proto, bool for_hash_equals = false) const;
+        static std::shared_ptr<LocalExchangeStepExt> fromProto(const Protos::LocalExchangeStepExt & proto, ContextPtr context);
+
     private:
         RExchangeMode::Enum exchange_type = RExchangeMode::UNKNOWN;
         //todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h

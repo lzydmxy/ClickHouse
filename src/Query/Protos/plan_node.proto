@@ -387,13 +387,16 @@ message IntersectStep {
     bool distinct = 2;
 }
 
-message UnionStep {
-    SetOperationStep query_plan_base = 1;
-    uint64 max_threads = 2;
-    bool local = 3;
+message UnionStepExt {
+    repeated DataStream input_streams = 1;
+    DataStream output_stream = 2;
+    map<string, StringVec> output_to_inputs = 3;
+    Block header = 4;
+    uint64 max_threads = 5;
+    bool local = 6;
 }
 
-message ExchangeStep {
+message ExchangeStepExt {
     repeated DataStream input_streams = 1;
     ExchangeMode.Enum exchange_type = 2;
     Partitioning schema = 3;
@@ -434,7 +437,7 @@ message ReadNothingStep {
     ISourceStep query_plan_base = 1;
 }
 
-message ApplyStep {
+message ApplyStepExt {
     message ApplyType {
         enum Enum {
             CROSS = 0;
@@ -645,12 +648,12 @@ message TableScanStep {
     DataStream table_output_stream = 16;
 }
 
-message RemoteExchangeSourceStep {
+message RemoteExchangeSourceStepExt {
     DataStream input_stream = 1;
     string step_description = 2;
     repeated PlanSegmentInput inputs = 3;
-    bool is_add_totals = 4;
-    bool is_add_extremes = 5;
+    optional bool is_add_totals = 4;
+    optional bool is_add_extremes = 5;
 }
 
 message FinalSampleStep {
@@ -738,14 +741,14 @@ message CacheParam {
     repeated StorageID dependent_tables = 5;
 }
 
-message IntermediateResultCacheStep {
+message IntermediateResultCacheStepExt {
     string step_description = 1;
     DataStream input_stream = 2;
     CacheParam cache_param = 3;
     AggregatorParams aggregator_params = 4;
 }
 
-message LocalExchangeStep {
+message LocalExchangeStepExt {
     ITransformingStep query_plan_base = 1;
     ExchangeMode.Enum exchange_type = 2;
     Partitioning schema = 3;
@@ -773,7 +776,7 @@ message SettingsChanges {
     repeated SettingChange settings_changes = 1;
 }
 
-message MultiJoinStep {
+message MultiJoinStepExt {
     Graph graph = 1;
 }
 
@@ -806,14 +809,14 @@ message QueryPlanStep {
         DistinctStep distinct_step = 5;
         EnforceSingleRowStep enforce_single_row_step = 6;
         ExceptStep except_step = 7;
-        ExchangeStep exchange_step = 8;
+        ExchangeStepExt exchange_step = 8;
         ExtremesStep extremes_step = 9;
         FillingStep filling_step = 10;
         FilterStep filter_step = 11;
         FinalSampleStep final_sample_step = 12;
         FinishSortingStep finish_sorting_step = 13;
         IntersectStep intersect_step = 14;
-        JoinStepExt join_step = 15;
+        JoinStepExt join_step_ext = 15;
         LimitByStep limit_by_step = 16;
         LimitStep limit_step = 17;
         MarkDistinctStep mark_distinct_step = 18;
@@ -826,25 +829,25 @@ message QueryPlanStep {
         ProjectionStep projection_step = 25;
         ReadNothingStep read_nothing_step = 26;
         ReadStorageRowCountStep read_storage_row_count_step = 27;
-        RemoteExchangeSourceStep remote_exchange_source_step = 28;
+        RemoteExchangeSourceStepExt remote_exchange_source_step = 28;
         SortingStep sorting_step = 29;
         TableFinishStep table_finish_step = 30;
         TableScanStep table_scan_step = 31;
         TableWriteStep table_write_step = 32;
         TopNFilteringStep top_n_filtering_step = 33;
-        UnionStep union_step = 34;
+        UnionStepExt union_step = 34;
         WindowStep window_step = 35;
         ValuesStep values_step = 36;
         IntersectOrExceptStep intersect_or_except_step = 37;
         BufferStep buffer_step = 38;
-        ApplyStep apply_step = 39;
+        ApplyStepExt apply_step = 39;
         OutfileWriteStep outfile_write_step = 40;
         OutfileFinishStep outfile_finish_step = 41;
         ExplainAnalyzeStep explain_analyze_step = 44;
         TotalsHavingStep totals_having_step = 50;
-        IntermediateResultCacheStep intermediate_result_cache_step = 53;
-        LocalExchangeStep local_exchange_step = 54;
-        MultiJoinStep multi_join_step = 55;
+        IntermediateResultCacheStepExt intermediate_result_cache_step = 53;
+        LocalExchangeStepExt local_exchange_step = 54;
+        MultiJoinStepExt multi_join_step = 55;
         SampleRatioStep sample_ratio_step = 56;
         ExpandStep expand_step = 57;
     }
