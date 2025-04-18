@@ -416,6 +416,23 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
 
 #undef SERIALIZE_EXPRESSION
     }
+    else if (const auto * casted = ast.as<ASTSettingsProfileElement>())
+    {
+        writeBinary(casted->parent_profile, buf);
+        writeBinary(casted->setting_name, buf);
+        writeFieldBinary(casted->value.value(), buf);
+        writeFieldBinary(casted->min_value.value(), buf);
+        writeFieldBinary(casted->max_value.value(), buf);
+        writeBinary(static_cast<int>(casted->writability.value()), buf);
+        writeBinary(casted->id_mode, buf);
+        writeBinary(casted->use_inherit_keyword, buf);
+    }
+    else if (const auto * casted = ast.as<ASTSettingsProfileElements>())
+    {
+        writeBinary(casted->elements.size(), buf);
+        for (const auto & element : casted->elements)
+            serializeAST(element, buf);
+    }
 
     // todo wujianchao add more types
     else
@@ -696,6 +713,35 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
             DESERIALIZE_EXPRESSION(ASTSelectQuery::Expression::SETTINGS)
 
 #undef DESERIALIZE_EXPRESSION
+            return ast;
+        }
+        case ASTType::ASTSettingsProfileElement:
+        {
+            auto ast = std::make_shared<ASTSettingsProfileElement>();
+            readBinary(ast->parent_profile, buf);
+            readBinary(ast->setting_name, buf);
+            readFieldBinary(ast->value.value(), buf);
+            readFieldBinary(ast->min_value.value(), buf);
+            readFieldBinary(ast->max_value.value(), buf);
+            int writability_num;
+            readBinary(writability_num, buf);
+            ast->writability = static_cast<SettingConstraintWritability>(writability_num);
+            readBinary(ast->id_mode, buf);
+            readBinary(ast->use_inherit_keyword, buf);
+            return ast;
+        }
+        case ASTType::ASTSettingsProfileElements:
+        {
+            auto ast = std::make_shared<ASTSettingsProfileElements>();
+            size_t size;
+            readBinary(size, buf);
+            ast->elements.resize(size);
+            for (size_t i = 0; i < size; ++i)
+            {
+                ASTPtr element = deserializeASTImpl(ASTType::ASTSettingsProfileElement, buf);
+                ast->elements[i] = std::dynamic_pointer_cast<ASTSettingsProfileElement>(element);
+                ;
+            }
             return ast;
         }
 
