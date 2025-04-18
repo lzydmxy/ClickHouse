@@ -748,7 +748,7 @@ message IntermediateResultCacheStepExt {
     AggregatorParams aggregator_params = 4;
 }
 
-message LocalExchangeStep {
+message LocalExchangeStepExt {
     ITransformingStep query_plan_base = 1;
     ExchangeMode.Enum exchange_type = 2;
     Partitioning schema = 3;
@@ -846,7 +846,7 @@ message QueryPlanStep {
         ExplainAnalyzeStep explain_analyze_step = 44;
         TotalsHavingStep totals_having_step = 50;
         IntermediateResultCacheStepExt intermediate_result_cache_step = 53;
-        LocalExchangeStep local_exchange_step = 54;
+        LocalExchangeStepExt local_exchange_step = 54;
         MultiJoinStepExt multi_join_step = 55;
         SampleRatioStep sample_ratio_step = 56;
         ExpandStep expand_step = 57;
