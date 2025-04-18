@@ -317,7 +317,7 @@ std::shared_ptr<IQueryPlanStep> AggregatingStepExt::copy(ContextPtr) const
 
 void AggregatingStepExt::updateOutputStream()
 {
-    //todo: wujianchao5, other feat: what if input_streams and params->getHeader() are inconsistent?
+    //todo: bc, other feat: what if input_streams and params->getHeader() are inconsistent?
     output_stream->header = appendGroupingColumns(params.getHeader(final), grouping_sets_params, groupings, final);
 }
 
