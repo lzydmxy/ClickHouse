@@ -6,6 +6,11 @@
 namespace DB
 {
 
+namespace Protos
+{
+class AggregatingTransformParamsExt;
+}
+
 class IBlockInputStream;
 using BlockInputStreamPtr = std::shared_ptr<IBlockInputStream>;
 using AggregatorExtList = std::list<AggregatorExt>;
@@ -15,8 +20,7 @@ class AggregatedArenasChunkInfo : public ChunkInfo
 {
 public:
     Arenas arenas;
-    AggregatedArenasChunkInfo(Arenas arenas_)
-        : arenas(std::move(arenas_)) { }
+    AggregatedArenasChunkInfo(Arenas arenas_) : arenas(std::move(arenas_)) { }
 };
 
 
@@ -53,9 +57,9 @@ struct AggregatingTransformParamsExt
 
     Block getCustomHeader(bool final_) const { return aggregator_ext.getHeader(final_); }
 
-    // todo: hongzhigao1, implement
-    // void toProto(Protos::AggregatingTransformParams & proto) const;
-    // static std::shared_ptr<AggregatingTransformParams> fromProto(const Protos::AggregatingTransformParams & proto, ContextPtr context);
+    void toProto(Protos::AggregatingTransformParamsExt & proto) const;
+    static std::shared_ptr<AggregatingTransformParamsExt>
+    fromProto(const Protos::AggregatingTransformParamsExt & proto, ContextPtr context);
 };
 
 using AggregatingTransformParamsExtPtr = std::shared_ptr<AggregatingTransformParamsExt>;

@@ -1,6 +1,7 @@
 #include <Processors/ISource.h>
 #include <Query/Processors/Transforms/AggregatingTransformExt.h>
 #include <Query/Processors/Transforms/MergingAggregatedMemoryEfficientTransformExt.h>
+#include <Query/Protos/plan_node.pb.h>
 #include <QueryPipeline/Pipe.h>
 #include <Common/formatReadable.h>
 #include <Common/logger_useful.h>
@@ -399,22 +400,21 @@ AggregatingTransformExt::AggregatingTransformExt(
 {
 }
 
-// todo: hongzhigao1, implement proto
-// void AggregatingTransformParams::toProto(Protos::AggregatingTransformParams & proto) const
-// {
-//     params.toProto(*proto.mutable_params());
-//     proto.set_final(final);
-// }
+void AggregatingTransformParamsExt::toProto(Protos::AggregatingTransformParamsExt & proto) const
+{
+    params.toProto(*proto.mutable_params());
+    proto.set_final(final);
+}
 
-// std::shared_ptr<AggregatingTransformParams>
-// AggregatingTransformParams::fromProto(const Protos::AggregatingTransformParams & proto, ContextPtr context)
-// {
-//     auto params = Aggregator::Params::fromProto(proto.params(), context);
-//     auto final = proto.final();
-//     auto step = std::make_shared<AggregatingTransformParams>(params, final);
+std::shared_ptr<AggregatingTransformParamsExt>
+AggregatingTransformParamsExt::fromProto(const Protos::AggregatingTransformParamsExt & proto, ContextPtr context)
+{
+    auto params = AggregatorExt::Params::fromProto(proto.params(), context);
+    auto final = proto.final();
+    auto step = std::make_shared<AggregatingTransformParamsExt>(params, final);
 
-//     return step;
-// }
+    return step;
+}
 
 AggregatingTransformExt::~AggregatingTransformExt() = default;
 

@@ -268,7 +268,7 @@ message AggregatorExtParams {
     bool enable_adaptive_spill = 18;
 }
 
-message AggregatingTransformParams {
+message AggregatingTransformParamsExt {
     AggregatorExtParams params = 1;
     bool final = 2;
 }
@@ -566,7 +566,7 @@ message MergingAggregatedStep {
     repeated string keys = 2;
     repeated GroupingSetsParamsExt grouping_sets_params = 3;
     repeated GroupingDescription groupings = 4;
-    AggregatingTransformParams params = 5;
+    AggregatingTransformParamsExt params = 5;
     bool memory_efficient_aggregation = 6;
     uint64 max_threads = 7;
     uint64 memory_efficient_merge_threads = 8;
