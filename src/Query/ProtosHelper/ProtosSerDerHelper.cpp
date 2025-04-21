@@ -133,4 +133,42 @@ void ProtosSerDerHelper::fillFromProto(AggregateDescription & aggregate_descript
     aggregate_description.mask_column = proto.mask_column();
 }
 
+void ProtosSerDerHelper::toProto(const InputOrderInfo & input_order_info, Protos::InputOrderInfo & proto)
+{
+    for (const auto & element : input_order_info.sort_description_for_merging)
+        toProto(element, *proto.add_sort_description_for_merging());
+    proto.set_direction(input_order_info.direction);
+}
+
+std::shared_ptr<InputOrderInfo> ProtosSerDerHelper::fillFromProto(const Protos::InputOrderInfo & proto)
+{
+    SortDescription sort_description_for_merging;
+    for (const auto & proto_element : proto.sort_description_for_merging())
+    {
+        SortColumnDescription element;
+        fillFromProto(element, proto_element);
+        sort_description_for_merging.emplace_back(std::move(element));
+    }
+    auto direction = proto.direction();
+    auto res = std::make_shared<InputOrderInfo>(std::move(sort_description_for_merging), 0, direction, 0);
+
+    return res;
+}
+
+void ProtosSerDerHelper::toProto(
+    const SortColumnDescriptionWithColumnIndex & sort_column_description_with_column_index,
+    Protos::SortColumnDescriptionWithColumnIndex & proto)
+{
+    toProto(sort_column_description_with_column_index.base, *proto.mutable_base());
+    proto.set_column_number(sort_column_description_with_column_index.column_number);
+}
+
+void ProtosSerDerHelper::fillFromProto(
+    SortColumnDescriptionWithColumnIndex & sort_column_description_with_column_index,
+    const Protos::SortColumnDescriptionWithColumnIndex & proto)
+{
+    fillFromProto(sort_column_description_with_column_index.base, proto.base());
+    sort_column_description_with_column_index.column_number = proto.column_number();
+}
+
 }
