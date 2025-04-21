@@ -106,4 +106,31 @@ void ProtosSerDerHelper::fillFromProto(FillColumnDescription & fill_column_descr
     FieldFillFromProto(fill_column_description.fill_step ,proto.fill_step());
 }
 
+void ProtosSerDerHelper::toProto(const AggregateDescription & aggregate_description, Protos::AggregateDescription & proto)
+{
+    serializeAggregateFunctionToProto(aggregate_description.function, aggregate_description.parameters, *proto.mutable_function());
+
+    for (const auto & element : aggregate_description.arguments)
+        proto.add_arguments(element);
+    for (const auto & element : aggregate_description.argument_names)
+        proto.add_argument_names(element);
+    proto.set_column_name(aggregate_description.column_name);
+    proto.set_mask_column(aggregate_description.mask_column);
+}
+
+void ProtosSerDerHelper::fillFromProto(AggregateDescription & aggregate_description, const Protos::AggregateDescription & proto)
+{
+    DataTypes arg_types;
+    std::tie(aggregate_description.function, aggregate_description.parameters, arg_types)
+        = deserializeAggregateFunctionFromProto(proto.function());
+    (void)arg_types;
+
+    for (const auto & element : proto.arguments())
+        aggregate_description.arguments.emplace_back(element);
+    for (const auto & element : proto.argument_names())
+        aggregate_description.argument_names.emplace_back(element);
+    aggregate_description.column_name = proto.column_name();
+    aggregate_description.mask_column = proto.mask_column();
+}
+
 }

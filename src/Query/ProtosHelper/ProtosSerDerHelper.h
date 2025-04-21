@@ -1,3 +1,4 @@
+#include <Interpreters/AggregateDescription.h>
 #include <Processors/QueryPlan/ITransformingStep.h>
 
 namespace DB
@@ -31,6 +32,9 @@ public:
 
     static void toProto(const FillColumnDescription & fill_column_description, Protos::FillColumnDescription & proto);
     static void fillFromProto(FillColumnDescription & fill_column_description, const Protos::FillColumnDescription & proto);
+
+    static void toProto(const AggregateDescription & aggregate_description, Protos::AggregateDescription & proto);
+    static void fillFromProto(AggregateDescription & aggregate_description, const Protos::AggregateDescription & proto);
 };
 
 }

@@ -4,6 +4,9 @@
 #include <DataTypes/DataTypeLowCardinality.h>
 #include <Interpreters/JIT/CompiledExpressionCache.h>
 #include <Query/Interpreters/AggregatorExt.h>
+#include <Query/Protos/plan_node.pb.h>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <Common/CurrentMetrics.h>
 #include <Common/JSONBuilder.h>
 #include <Common/ProfileEvents.h>
@@ -159,84 +162,89 @@ void AggregatorExt::Params::explain(JSONBuilder::JSONMap & map) const
     }
 }
 
-// todo: hongzhigao1, implement proto
-// void Aggregator::Params::toProto(Protos::AggregatorParams & proto) const
-// {
-//     serializeHeaderToProto(src_header, *proto.mutable_src_header());
-//     serializeHeaderToProto(intermediate_header, *proto.mutable_intermediate_header());
-//     for (const auto & element : keys)
-//         proto.add_keys(element);
-//     for (const auto & element : aggregates)
-//         element.toProto(*proto.add_aggregates());
-//     proto.set_overflow_row(overflow_row);
-//     proto.set_max_rows_to_group_by(max_rows_to_group_by);
-//     proto.set_group_by_overflow_mode(OverflowModeConverter::toProto(group_by_overflow_mode));
-//     proto.set_group_by_two_level_threshold(group_by_two_level_threshold);
-//     proto.set_group_by_two_level_threshold_bytes(group_by_two_level_threshold_bytes);
-//     proto.set_max_bytes_before_external_group_by(max_bytes_before_external_group_by);
-//     proto.set_enable_adaptive_spill(enable_adaptive_spill);
-//     proto.set_spill_buffer_bytes_before_external_group_by(spill_buffer_bytes_before_external_group_by);
-//     proto.set_empty_result_for_aggregation_by_empty_set(empty_result_for_aggregation_by_empty_set);
+void AggregatorExt::Params::toProto(Protos::AggregatorExtParams & proto) const
+{
+    serializeHeaderToProto(src_header, *proto.mutable_src_header());
+    serializeHeaderToProto(intermediate_header, *proto.mutable_intermediate_header());
+    for (const auto & element : keys)
+        proto.add_keys(element);
+    for (const auto & element : aggregates)
+        ProtosSerDerHelper::toProto(element, *proto.add_aggregates());
+    proto.set_overflow_row(overflow_row);
+    proto.set_max_rows_to_group_by(max_rows_to_group_by);
+    proto.set_group_by_overflow_mode(OverflowModeConverter::toProto(group_by_overflow_mode));
+    proto.set_group_by_two_level_threshold(group_by_two_level_threshold);
+    proto.set_group_by_two_level_threshold_bytes(group_by_two_level_threshold_bytes);
+    proto.set_max_bytes_before_external_group_by(max_bytes_before_external_group_by);
+    proto.set_enable_adaptive_spill(enable_adaptive_spill);
+    proto.set_spill_buffer_bytes_before_external_group_by(spill_buffer_bytes_before_external_group_by);
+    proto.set_empty_result_for_aggregation_by_empty_set(empty_result_for_aggregation_by_empty_set);
 
-//     proto.set_max_threads(max_threads);
-//     proto.set_min_free_disk_space(min_free_disk_space);
-//     proto.set_compile_aggregate_expressions(compile_aggregate_expressions);
-//     proto.set_min_count_to_compile_aggregate_expression(min_count_to_compile_aggregate_expression);
-//     proto.set_enable_lc_group_by_opt(enable_lc_group_by_opt);
-// }
+    proto.set_max_threads(max_threads);
+    proto.set_min_free_disk_space(min_free_disk_space);
+    proto.set_compile_aggregate_expressions(compile_aggregate_expressions);
+    proto.set_min_count_to_compile_aggregate_expression(min_count_to_compile_aggregate_expression);
+    proto.set_enable_lc_group_by_opt(enable_lc_group_by_opt);
+}
 
-// Aggregator::Params Aggregator::Params::fromProto(const Protos::AggregatorParams & proto, ContextPtr context)
-// {
-//     auto src_header = deserializeHeaderFromProto(proto.src_header());
-//     auto intermediate_header = deserializeHeaderFromProto(proto.intermediate_header());
-//     ColumnNumbers keys;
-//     for (const auto & element : proto.keys())
-//         keys.emplace_back(element);
-//     AggregateDescriptions aggregates;
-//     for (const auto & proto_element : proto.aggregates())
-//     {
-//         AggregateDescription element;
-//         element.fillFromProto(proto_element);
-//         aggregates.emplace_back(std::move(element));
-//     }
-//     auto overflow_row = proto.overflow_row();
-//     auto max_rows_to_group_by = proto.max_rows_to_group_by();
-//     auto group_by_overflow_mode = OverflowModeConverter::fromProto(proto.group_by_overflow_mode());
-//     auto group_by_two_level_threshold = proto.group_by_two_level_threshold();
-//     auto group_by_two_level_threshold_bytes = proto.group_by_two_level_threshold_bytes();
-//     auto max_bytes_before_external_group_by = proto.max_bytes_before_external_group_by();
-//     auto enable_adaptive_spill = proto.enable_adaptive_spill();
-//     auto spill_buffer_bytes_before_external_group_by = proto.spill_buffer_bytes_before_external_group_by();
-//     auto empty_result_for_aggregation_by_empty_set = proto.empty_result_for_aggregation_by_empty_set();
-//     VolumePtr tmp_volume = context ? context->getTemporaryVolume() : nullptr;
-//     auto max_threads = proto.max_threads();
-//     auto min_free_disk_space = proto.min_free_disk_space();
-//     auto compile_aggregate_expressions = proto.compile_aggregate_expressions();
-//     auto min_count_to_compile_aggregate_expression = proto.min_count_to_compile_aggregate_expression();
-//     auto enable_lc_group_by_opt = proto.enable_lc_group_by_opt();
-//     auto step = Aggregator::Params(
-//         src_header,
-//         keys,
-//         aggregates,
-//         overflow_row,
-//         max_rows_to_group_by,
-//         group_by_overflow_mode,
-//         group_by_two_level_threshold,
-//         group_by_two_level_threshold_bytes,
-//         max_bytes_before_external_group_by,
-//         enable_adaptive_spill,
-//         spill_buffer_bytes_before_external_group_by,
-//         empty_result_for_aggregation_by_empty_set,
-//         tmp_volume,
-//         max_threads,
-//         min_free_disk_space,
-//         compile_aggregate_expressions,
-//         min_count_to_compile_aggregate_expression,
-//         intermediate_header,
-//         enable_lc_group_by_opt);
+AggregatorExt::Params AggregatorExt::Params::fromProto(const Protos::AggregatorExtParams & proto, ContextPtr context)
+{
+    auto src_header = deserializeHeaderFromProto(proto.src_header());
+    auto intermediate_header = deserializeHeaderFromProto(proto.intermediate_header());
+    ColumnNumbers keys;
+    for (const auto & element : proto.keys())
+        keys.emplace_back(element);
+    AggregateDescriptions aggregates;
+    for (const auto & proto_element : proto.aggregates())
+    {
+        AggregateDescription element;
+        ProtosSerDerHelper::fillFromProto(element, proto_element);
+        aggregates.emplace_back(std::move(element));
+    }
+    auto overflow_row = proto.overflow_row();
+    auto max_rows_to_group_by = proto.max_rows_to_group_by();
+    auto group_by_overflow_mode = OverflowModeConverter::fromProto(proto.group_by_overflow_mode());
+    auto group_by_two_level_threshold = proto.group_by_two_level_threshold();
+    auto group_by_two_level_threshold_bytes = proto.group_by_two_level_threshold_bytes();
+    auto max_bytes_before_external_group_by = proto.max_bytes_before_external_group_by();
+    auto enable_adaptive_spill = proto.enable_adaptive_spill();
+    auto spill_buffer_bytes_before_external_group_by = proto.spill_buffer_bytes_before_external_group_by();
+    auto empty_result_for_aggregation_by_empty_set = proto.empty_result_for_aggregation_by_empty_set();
+    TemporaryDataOnDiskScopePtr tmp_data_scope = context ? context->getTempDataOnDisk() : nullptr;
+    auto max_threads = proto.max_threads();
+    auto min_free_disk_space = proto.min_free_disk_space();
+    auto compile_aggregate_expressions = proto.compile_aggregate_expressions();
+    auto min_count_to_compile_aggregate_expression = proto.min_count_to_compile_aggregate_expression();
+    auto enable_lc_group_by_opt = proto.enable_lc_group_by_opt();
+    auto step = AggregatorExt::Params(
+        src_header,
+        keys,
+        aggregates,
+        overflow_row,
+        max_rows_to_group_by,
+        group_by_overflow_mode,
+        group_by_two_level_threshold,
+        group_by_two_level_threshold_bytes,
+        max_bytes_before_external_group_by,
+        enable_adaptive_spill,
+        spill_buffer_bytes_before_external_group_by,
+        empty_result_for_aggregation_by_empty_set,
+        tmp_data_scope,
+        max_threads,
+        min_free_disk_space,
+        compile_aggregate_expressions,
+        min_count_to_compile_aggregate_expression,
+        0,
+        false,
+        false,
+        true,
+        0.5,
+        {},
+        intermediate_header,
+        enable_lc_group_by_opt);
 
-//     return step;
-// }
+    return step;
+}
 
 #if USE_EMBEDDED_COMPILER
 
