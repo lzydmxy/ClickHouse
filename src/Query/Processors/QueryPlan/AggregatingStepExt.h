@@ -30,9 +30,8 @@ struct GroupingSetsParamsExt
     ColumnNumbers missing_keys;
 
 public:
-    // todo: hongzhigao1, implement proto
-    // void toProto(Protos::GroupingSetsParams & proto) const;
-    // void fillFromProto(const Protos::GroupingSetsParams & proto);
+    void toProto(Protos::GroupingSetsParamsExt & proto) const;
+    void fillFromProto(const Protos::GroupingSetsParamsExt & proto);
 };
 
 using GroupingSetsParamsExtList = std::vector<GroupingSetsParamsExt>;
@@ -43,9 +42,8 @@ struct GroupingDescription
     String output_name;
 
 public:
-    // todo: hongzhigao1, implement proto
-    // void toProto(Protos::GroupingDescription & proto) const;
-    // void fillFromProto(const Protos::GroupingDescription & proto);
+    void toProto(Protos::GroupingDescription & proto) const;
+    void fillFromProto(const Protos::GroupingDescription & proto);
 };
 
 using GroupingDescriptions = std::vector<GroupingDescription>;
@@ -211,9 +209,8 @@ public:
     AggregateStagePolicy getStagePolicy() const { return stage_policy; }
     void setStagePolicy(AggregateStagePolicy policy) { stage_policy = policy; }
 
-    // todo: hongzhigao1, implement proto
-    // void toProto(Protos::AggregatingStep & proto, bool for_hash_equals = false) const;
-    // static std::shared_ptr<AggregatingStep> fromProto(const Protos::AggregatingStep & proto, ContextPtr context);
+    void toProto(Protos::AggregatingStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<AggregatingStepExt> fromProto(const Protos::AggregatingStepExt & proto, ContextPtr context);
 
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
 

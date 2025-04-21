@@ -1,5 +1,6 @@
 #include <Interpreters/AggregateDescription.h>
 #include <Processors/QueryPlan/ITransformingStep.h>
+#include <Storages/SelectQueryInfo.h>
 
 namespace DB
 {
@@ -35,6 +36,16 @@ public:
 
     static void toProto(const AggregateDescription & aggregate_description, Protos::AggregateDescription & proto);
     static void fillFromProto(AggregateDescription & aggregate_description, const Protos::AggregateDescription & proto);
+
+    static void toProto(const InputOrderInfo & input_order_info, Protos::InputOrderInfo & proto);
+    static std::shared_ptr<InputOrderInfo> fillFromProto(const Protos::InputOrderInfo & proto);
+
+    static void toProto(
+        const SortColumnDescriptionWithColumnIndex & sort_column_description_with_column_index,
+        Protos::SortColumnDescriptionWithColumnIndex & proto);
+    static void fillFromProto(
+        SortColumnDescriptionWithColumnIndex & sort_column_description_with_column_index,
+        const Protos::SortColumnDescriptionWithColumnIndex & proto);
 };
 
 }
