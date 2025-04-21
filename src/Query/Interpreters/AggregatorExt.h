@@ -7,6 +7,8 @@
 #include <Interpreters/AggregatedDataVariants.h>
 #include <Interpreters/Aggregator.h>
 #include <Interpreters/TemporaryDataOnDisk.h>
+#include <Query/Protos/EnumMacros.h>
+#include <Query/Protos/common.pb.h>
 #include <QueryPipeline/SizeLimits.h>
 
 namespace DB
@@ -26,10 +28,21 @@ namespace DB
 
 /** Aggregates the source of the blocks.
    */
-// namespace Protos
-// {
-// class AggregatorParams;
-// }
+namespace Protos
+{
+class AggregatorExtParams;
+}
+
+/// What to do if the limit is exceeded.
+ENUM_TO_PROTO_CONVERTER(
+    OverflowMode, // enum name
+    Protos::OverflowMode, // proto enum message
+    (THROW, 0), /// Throw exception.
+    (BREAK, 1), /// Abort query execution, return what is.
+    /** Only for GROUP BY: do not add new rows to the set,
+      * but continue to aggregate for keys that are already in the set.
+      */
+    (ANY, 2));
 
 class AggregatorExt final
 {
@@ -214,9 +227,8 @@ public:
         void explain(WriteBuffer & out, size_t indent) const;
         void explain(JSONBuilder::JSONMap & map) const;
 
-        // todo: hongzhigao1, implement proto
-        // void toProto(Protos::AggregatorParams & proto) const;
-        // static Aggregator::Params fromProto(const Protos::AggregatorParams & proto, ContextPtr context);
+        void toProto(Protos::AggregatorExtParams & proto) const;
+        static AggregatorExt::Params fromProto(const Protos::AggregatorExtParams & proto, ContextPtr context);
     };
 
     /// Only part of the params that required for ChooseMethod

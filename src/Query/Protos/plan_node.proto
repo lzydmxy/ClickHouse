@@ -242,7 +242,7 @@ message AggregateDescription {
     string mask_column = 6;
 }
 
-message AggregatorParams {
+message AggregatorExtParams {
     Block src_header = 1;
     Block intermediate_header = 2;
     repeated uint64 keys = 3;
@@ -264,7 +264,7 @@ message AggregatorParams {
 }
 
 message AggregatingTransformParams {
-    AggregatorParams params = 1;
+    AggregatorExtParams params = 1;
     bool final = 2;
 }
 
@@ -575,7 +575,7 @@ message InputOrderInfo {
 message AggregatingStep {
     ITransformingStep query_plan_base = 1;
     repeated string keys = 2;
-    AggregatorParams params = 3;
+    AggregatorExtParams params = 3;
     repeated GroupingSetsParams grouping_sets_params = 4;
     bool final = 5;
     uint64 max_block_size = 6;
@@ -745,7 +745,7 @@ message IntermediateResultCacheStepExt {
     string step_description = 1;
     DataStream input_stream = 2;
     CacheParam cache_param = 3;
-    AggregatorParams aggregator_params = 4;
+    AggregatorExtParams aggregator_params = 4;
 }
 
 message LocalExchangeStepExt {
