@@ -2,6 +2,7 @@
 #include <Processors/Transforms/ExpressionTransform.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
+#include "Query/ProtosHelper/ProtosSerDerHelper.h"
 
 
 namespace DB
@@ -157,23 +158,12 @@ if (auto step_ptr = std::dynamic_pointer_cast<type>(query_plan_step)) \
 }
 
 
-void QueryPlanStepHelper::toProto(const QueryPlanStepPtr & query_plan_step, Protos::QueryPlanStep & proto)
+void QueryPlanStepHelper::toProto(const QueryPlanStepPtr & query_plan_step, Protos::QueryPlanStep & proto, bool for_hash_equals)
 {
     switch (getQueryPlanStepType(query_plan_step))
     {
-        // todo need all APPLY_STEP_EXT_PROTOBUF_TYPES_AND_NAMES to impl function toProto
-        // #define CASE_DEF(TYPE, VAR_NAME) \
-        //     case QueryPlanStepType::TYPE: { \
-        //         serializeQueryPlanStepToProtoImpl<TYPE, Protos::TYPE>(step, *proto.mutable_##VAR_NAME##_step()); \
-        //         return; \
-        //     }
-        //
-        //         APPLY_STEP_EXT_PROTOBUF_TYPES_AND_NAMES(CASE_DEF)
-        // #undef CASE_DEF
+        case QueryPlanStepType::FillingStep: {
 
-        // steps need proto, see APPLY_STEP_PROTOBUF_TYPES_AND_NAMES
-        case QueryPlanStepType::ArrayJoinStep: {
-            // need impl
             return;
         }
 
@@ -183,26 +173,40 @@ void QueryPlanStepHelper::toProto(const QueryPlanStepPtr & query_plan_step, Prot
     }
 }
 
-void QueryPlanStepHelper::fromProto(QueryPlanStepPtr & query_plan_step, Protos::QueryPlanStep & proto)
+QueryPlanStepPtr QueryPlanStepHelper::fromProto(Protos::QueryPlanStep & proto, ContextPtr context)
 {
     switch (proto.step_case())
     {
-        // todo need all APPLY_STEP_EXT_PROTOBUF_TYPES_AND_NAMES to impl function fromProto
-        // #define CASE_DEF(TYPE, VAR_NAME) \
-        //         case Protos::QueryPlanStep::StepCase::k##TYPE: { \
-        //         return deserializeQueryPlanStepFromProtoImpl<TYPE, Protos::TYPE>(proto.VAR_NAME##_step(), context); \
-        //         }
-        //             APPLY_STEP_EXT_PROTOBUF_TYPES_AND_NAMES(CASE_DEF)
-        // #undef CASE_DEF
-
-        // steps need proto, see APPLY_STEP_PROTOBUF_TYPES_AND_NAMES
-        case Protos::QueryPlanStep::StepCase::kArrayJoinStep: {
-            // need impl
-            return;
+        case Protos::QueryPlanStep::StepCase::kFillingStep:
+        {
+            auto & proto_step = proto.filling_step();
+            auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
+            SortDescription sort_description;
+            for (const auto & proto_element : proto_step.sort_description())
+            {
+                SortColumnDescription element;
+                ProtosSerDerHelper::fillFromProto(element, proto_element);
+                sort_description.emplace_back(std::move(element));
+            }
+            SortDescription fill_description;
+            for (const auto & proto_element : proto_step.fill_description())
+            {
+                SortColumnDescription element;
+                ProtosSerDerHelper::fillFromProto(element, proto_element);
+                fill_description.emplace_back(std::move(element));
+            }
+            auto step = std::make_shared<FillingStep>(base_input_stream, sort_description, fill_description, nullptr, proto_step.use_with_fill_by_sorting_prefix());
+            step->setStepDescription(step_description);
+            return step;
+        }
+        case Protos::QueryPlanStep::StepCase::kFilterStep:
+        {
+            auto & proto_step = proto.filter_step();
+            return FilterStepExt::fromProto(proto_step, context);
         }
 
         default: {
-            throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "not implemented step: {}", static_cast<int>(getQueryPlanStepType(query_plan_step)));
+            throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "not implemented step: {}", static_cast<int>(proto.step_case()));
         }
     }
 }

@@ -217,8 +217,8 @@ public:
 
     static QueryPlanStepPtr copyQueryPlanStep(const QueryPlanStepPtr & query_plan_step, ContextPtr context);
 
-    static void toProto(const QueryPlanStepPtr & query_plan_step, Protos::QueryPlanStep & proto);
-    static void fromProto(QueryPlanStepPtr & query_plan_step, Protos::QueryPlanStep & proto);
+    static void toProto(const QueryPlanStepPtr & query_plan_step, Protos::QueryPlanStep & proto, bool for_hash_equals = false);
+    static QueryPlanStepPtr fromProto(Protos::QueryPlanStep & proto, ContextPtr context);
 
     static const Names & getLimitByStepColumns(const LimitByStep & limit) { return limit.columns; }
     static size_t getLimitByStepGroupLength(const LimitByStep & limit) { return limit.group_length; }
