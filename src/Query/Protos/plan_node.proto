@@ -311,6 +311,8 @@ message ExtremesStep {
 message FillingStep {
     ITransformingStep query_plan_base = 1;
     repeated SortColumnDescription sort_description = 2;
+    repeated SortColumnDescription fill_description = 3;
+    bool use_with_fill_by_sorting_prefix = 4;
 }
 
 message FinishSortingStep {
@@ -507,7 +509,7 @@ message OutfileWriteStep {
 
 message OutfileFinishStep {}
 
-message FilterStep {
+message FilterStepExt {
     ITransformingStep query_plan_base = 1;
     AST filter = 2;
     bool remove_filter_column = 3;
@@ -647,7 +649,7 @@ message TableScanStep {
     uint64 max_block_size = 4;
     AggregatingStepExt pushdown_aggregation = 5;
     ProjectionStepExt pushdown_projection = 6;
-    FilterStep pushdown_filter = 7;
+    FilterStepExt pushdown_filter = 7;
     Assignments inline_expressions = 14;
     DataStream output_stream = 15;
     DataStream table_output_stream = 16;
@@ -817,7 +819,7 @@ message QueryPlanStep {
         ExchangeStepExt exchange_step = 8;
         ExtremesStep extremes_step = 9;
         FillingStep filling_step = 10;
-        FilterStep filter_step = 11;
+        FilterStepExt filter_step = 11;
         FinalSampleStep final_sample_step = 12;
         FinishSortingStep finish_sorting_step = 13;
         IntersectStep intersect_step = 14;
