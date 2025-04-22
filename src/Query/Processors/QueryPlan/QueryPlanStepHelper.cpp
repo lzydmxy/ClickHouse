@@ -145,14 +145,14 @@ QueryPlanStepPtr QueryPlanStepHelper::copyQueryPlanStep(const QueryPlanStepPtr &
     else if (auto step_ptr = std::dynamic_pointer_cast<CreatingSetsStep>(query_plan_step))
         return std::make_shared<CreatingSetsStep>(step_ptr->getInputStreams());
 
-// steps end by Ext use macroc to copy
-#define CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT(type) \
-if (auto step_ptr = std::dynamic_pointer_cast<type>(query_plan_step)) \
-{ \
-    return step_ptr->copy(context); \
-}
-    APPLY_ALL_QUERY_PLAN_STEP_EXT_TYPES(CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT)
-#undef CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT
+// StepExt uses macros to execute copy
+#define CHECK_AND_COPY_QUERY_PLAN_STEP_EXT(type) \
+    if (auto step_ptr = std::dynamic_pointer_cast<type>(query_plan_step)) \
+    { \
+        return step_ptr->copy(context); \
+    }
+    APPLY_ALL_STEP_TYPES_FOR_EXT(CHECK_AND_COPY_QUERY_PLAN_STEP_EXT)
+#undef CHECK_AND_COPY_QUERY_PLAN_STEP_EXT
 
     return nullptr;
 }
@@ -162,10 +162,22 @@ void QueryPlanStepHelper::toProto(const QueryPlanStepPtr & query_plan_step, Prot
 {
     switch (getQueryPlanStepType(query_plan_step))
     {
+// todo: all, need all steps with proto implementing toProto, see PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT and PROTOBUF_STEP_TYPES_AND_NAMES
+// 1. StepExt with proto uses macros to execute toProto, see PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT
+// #define CASE_DEF(TYPE, VAR_NAME) \
+//     case QueryPlanStepType::TYPE: { \
+//         serializeQueryPlanStepToProtoImpl<TYPE, Protos::TYPE>(query_plan_step, *proto.mutable_##VAR_NAME##_step()); \
+//         return; \
+//     }
+
+//         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(CASE_DEF)
+// #undef CASE_DEF
+
+        // 2. Step with proto needs implementing toProto manually, see PROTOBUF_STEP_TYPES_AND_NAMES
         case QueryPlanStepType::FillingStep:
         {
             auto step = std::dynamic_pointer_cast<FillingStep>(query_plan_step);
-            auto proto_step = proto.mutable_filling_step();
+            auto *proto_step = proto.mutable_filling_step();
             ProtosSerDerHelper::serializeToProtoBase(*step, *proto_step->mutable_query_plan_base());
             for (const auto & element : step->sort_description)
                 ProtosSerDerHelper::toProto(element, *proto_step->add_sort_description());
@@ -177,7 +189,7 @@ void QueryPlanStepHelper::toProto(const QueryPlanStepPtr & query_plan_step, Prot
         case QueryPlanStepType::WindowStep:
         {
             auto step = std::dynamic_pointer_cast<WindowStep>(query_plan_step);
-            auto proto_step = proto.mutable_window_step();
+            auto *proto_step = proto.mutable_window_step();
             ProtosSerDerHelper::serializeToProtoBase(*step, *proto_step->mutable_query_plan_base());
             ProtosSerDerHelper::toProto(step->window_description, *proto_step->mutable_window_description());
             for (const auto & element : step->window_functions)
@@ -188,14 +200,14 @@ void QueryPlanStepHelper::toProto(const QueryPlanStepPtr & query_plan_step, Prot
         case QueryPlanStepType::FilterStepExt:
         {
             auto step = std::dynamic_pointer_cast<FilterStepExt>(query_plan_step);
-            auto proto_step = proto.mutable_filter_step();
+            auto *proto_step = proto.mutable_filter_step_ext();
             step->toProto(*proto_step, for_hash_equals);
             break;
         }
         case QueryPlanStepType::AggregatingStepExt:
         {
             auto step = std::dynamic_pointer_cast<AggregatingStepExt>(query_plan_step);
-            auto proto_step = proto.mutable_aggregating_step();
+            auto *proto_step = proto.mutable_aggregating_step_ext();
             step->toProto(*proto_step, for_hash_equals);
             break;
         }
@@ -210,9 +222,19 @@ QueryPlanStepPtr QueryPlanStepHelper::fromProto(Protos::QueryPlanStep & proto, C
 {
     switch (proto.step_case())
     {
+// todo: all, need all steps with proto implementing fromProto, see PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT and PROTOBUF_STEP_TYPES_AND_NAMES
+// 1. StepExt with proto uses macros to execute fromProto, see PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT
+// #define CASE_DEF(TYPE, VAR_NAME) \
+//     case Protos::QueryPlanStep::StepCase::k##TYPE: { \
+//         return deserializeQueryPlanStepFromProtoImpl<TYPE, Protos::TYPE>(proto.VAR_NAME##_step(), context); \
+//     }
+//         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(CASE_DEF)
+// #undef CASE_DEF
+
+        // 2. Step with proto needs implementing fromProto manually, see PROTOBUF_STEP_TYPES_AND_NAMES
         case Protos::QueryPlanStep::StepCase::kFillingStep:
         {
-            auto & proto_step = proto.filling_step();
+            const auto & proto_step = proto.filling_step();
             auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
             SortDescription sort_description;
             for (const auto & proto_element : proto_step.sort_description())
@@ -234,7 +256,7 @@ QueryPlanStepPtr QueryPlanStepHelper::fromProto(Protos::QueryPlanStep & proto, C
         }
         case Protos::QueryPlanStep::StepCase::kWindowStep:
         {
-            auto & proto_step = proto.window_step();
+            const auto & proto_step = proto.window_step();
             auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
             WindowDescription window_description = *ProtosSerDerHelper::fillFromProto(proto_step.window_description());
             std::vector<WindowFunctionDescription> window_functions;
@@ -248,14 +270,14 @@ QueryPlanStepPtr QueryPlanStepHelper::fromProto(Protos::QueryPlanStep & proto, C
             step->setStepDescription(step_description);
             return step;
         }
-        case Protos::QueryPlanStep::StepCase::kFilterStep:
+        case Protos::QueryPlanStep::StepCase::kFilterStepExt:
         {
-            auto & proto_step = proto.filter_step();
+            const auto & proto_step = proto.filter_step_ext();
             return FilterStepExt::fromProto(proto_step, context);
         }
-        case Protos::QueryPlanStep::StepCase::kAggregatingStep:
+        case Protos::QueryPlanStep::StepCase::kAggregatingStepExt:
         {
-            auto & proto_step = proto.aggregating_step();
+            const auto & proto_step = proto.aggregating_step_ext();
             return AggregatingStepExt::fromProto(proto_step, context);
         }
 
