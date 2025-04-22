@@ -10,6 +10,7 @@
 #include <Query/Processors/QueryPlan/FinalSampleStepExt.h>
 #include <Query/Planner/GraphvizPrinter.h>
 #include <Interpreters/InterpreterFactory.h>
+#include <Storages/StorageDistributed.h>
 
 
 namespace ProfileEvents
@@ -311,6 +312,13 @@ void InterpreterSelectQueryUseOptimizer::buildQueryPlan(QueryPlanExtPtr & query_
     }
 }
 
+void InterpreterSelectQueryUseOptimizer::logUsedStorageIDs(LoggerPtr log, const std::set<StorageID> & storage_ids)
+{
+    LOG_DEBUG(log, "StorageIDs:");
+    for (auto & storage_id : storage_ids)
+        LOG_DEBUG(log, "StorageID {}", storage_id.getNameForLogs());
+}
+
 QueryPlanExt PlanNodeToNodeVisitor::convert(QueryPlanExt & query_plan)
 {
     QueryPlanExt plan;
@@ -328,9 +336,7 @@ QueryPlanExt::Node * PlanNodeToNodeVisitor::visitPlanNode(PlanNodeBase & node, V
 {
     if (node.getChildren().empty())
     {
-        //todo: liyang453, other feat: need add node id
-        //auto res = QueryPlanExt::Node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = {}, .id = node.getId()};
-        size_t node_id = 0;
+        auto node_id = node.getId();
         auto res = QueryPlanExt::Node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = {}};
         node.setStep(res.step);
         plan.addNode(std::move(res), node_id);
@@ -344,9 +350,7 @@ QueryPlanExt::Node * PlanNodeToNodeVisitor::visitPlanNode(PlanNodeBase & node, V
         children.emplace_back(child);
     }
 
-    //todo: liyang453, other feat: need add node id
-    //QueryPlan::Node query_plan_node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = children, .id = node.getId()};
-    size_t node_id = 0;
+    auto node_id = node.getId();
     QueryPlan::Node query_plan_node{.step = std::const_pointer_cast<IQueryPlanStep>(node.getStep()), .children = children};
     node.setStep(query_plan_node.step);
     plan.addNode(std::move(query_plan_node), node_id);
@@ -388,17 +392,17 @@ std::optional<PlanSegmentContext> ClusterInfoFinder::visitPlanNode(PlanNodeBase 
 
 std::optional<PlanSegmentContext> ClusterInfoFinder::visitTableScanNode(TableScanStepExtNode & node, ClusterInfoContext & cluster_info_context)
 {
+    
     auto source_step = node.getStep();
-    const auto * table = dynamic_cast<StorageReplicatedMergeTree *>(source_step->getStorage().get());
+    const auto * table = dynamic_cast<StorageDistributed *>(source_step->getStorage().get());
     if (table)
     {
         PlanSegmentContext plan_segment_context{
             .context = cluster_info_context.context,
             .query_plan = cluster_info_context.query_plan,
             .query_id = cluster_info_context.context->getCurrentQueryId(),
-            //todo: liyang453, other feat: need modify shard_number,cluster name
-            .shard_number = 1,
-            .cluster_name = "test",
+            .shard_number = table->getShardCount(),
+            .cluster_name = table->getClusterName(),
             .plan_segment_tree = cluster_info_context.plan_segment_tree.get()};
 
         return plan_segment_context;

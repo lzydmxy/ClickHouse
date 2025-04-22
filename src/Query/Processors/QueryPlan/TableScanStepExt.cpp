@@ -1,12 +1,14 @@
 
 #include <Interpreters/convertFieldToType.h>
 #include <Query/Processors/QueryPlan/TableScanStepExt.h>
+#include <Query/Processors/IQueryPlanStepExt.h>
 #include <Query/Processors/QueryPlan/ExecutePlanElement.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Optimizer/SymbolTransformMap.h>
 #include <Interpreters/evaluateConstantExpression.h>
 #include <Planner/Utils.h>
-
+#include <Storages/StorageDistributed.h>
+#include <Interpreters/misc.h>
 
 namespace DB
 {
@@ -311,8 +313,6 @@ ExecutePlan TableScanExecutor::buildExecutePlan(const DistributedPipelineSetting
         if (distributed_settings.source_task_filter.isValid())
         {
             auto size_before_filtering = parts.size();
-            //todo: liyang453, other feat: need to implement filterParts
-            //filterParts(parts, distributed_settings.source_task_filter);
             LOG_TRACE(
                 log,
                 "After filtering({}) the number of parts of table {} becomes {} from {}",
@@ -597,7 +597,7 @@ void TableScanStepExt::makeSetsForIndex(
     auto settings = context->getSettingsRef();
     SizeLimits size_limits_for_set(settings.max_rows_in_set, settings.max_bytes_in_set, settings.set_overflow_mode);
 
-    //todo: liyang453, other feat:  need to check supportsIndexForIn
+    //todo: liyang453, need storage:  need to check supportsIndexForIn
     //if (!node || !storage || !storage->supportsIndexForIn())
     if (!node || !storage)
         return;
@@ -614,14 +614,12 @@ void TableScanStepExt::makeSetsForIndex(
 
     const auto * func = node->as<ASTFunction>();
     
-    //todo: liyang453, other feat: need to implement functionIsInOrGlobalInOperator
-    //if (func && functionIsInOrGlobalInOperator(func->name))
-    if (func)
+    if (func && functionIsInOrGlobalInOperator(func->name))
     {
         const IAST & args = *func->arguments;
         const ASTPtr & left_in_operand = args.children.at(0);
 
-        //todo: liyang453, other feat: need to check mayBenefitFromIndexForIn
+        //todo: liyang453, need storage: need to check mayBenefitFromIndexForIn
         //if (storage && storage->mayBenefitFromIndexForIn(left_in_operand, context, metadata_snapshot))
         if (storage)
         {
@@ -817,58 +815,10 @@ std::vector<ASTPtr> cloneChildrenReplacement(std::vector<ASTPtr> ast_children_re
     return cloned_replacement;
 }
 
-void TableScanStepExt::rewriteInForBucketTable(ContextPtr context) const
-{
-    //todo: liyang453, other feat: need to use dist MergeTree
-    //const auto * cloud_merge_tree = dynamic_cast<StorageCloudMergeTree *>(storage.get());
-    //if (!cloud_merge_tree)
-    //    return;
-    //if (!storage->isBucketTable() || !context->getSettingsRef().optimize_skip_unused_shards)
-    if (!context->getSettingsRef().optimize_skip_unused_shards)
-        return;
-
-    //todo: liyang453, other feat: need to use dist MergeTree
-    //const bool need_optimise = metadata_snapshot->getColumnsForClusterByKey().size() == 1 && !cloud_merge_tree->getRequiredBucketNumbers().empty();
-    const bool need_optimise = false;
-    if (!need_optimise)
-        return;
-
-    auto * query = query_info.query->as<ASTSelectQuery>();
-
-    // NOTE: Have try-catch for every rewrite_in in order to find the WHERE clause that caused the error
-    RewriteInQueryVisitor::Data data;
-    LOG_TRACE(log, "Before rewriteInForBucketTable:\n: {}", query->dumpTree());
-    if (query->where())
-    {
-        //todo: liyang453, other feat: need to use dist MergeTree
-        // auto ast_children_replacement = cloud_merge_tree->convertBucketNumbersToAstLiterals(query->where(), context);
-        std::vector<ASTPtr> ast_children_replacement;
-        if (!ast_children_replacement.empty())
-        {
-            data.ast_children_replacement = cloneChildrenReplacement(ast_children_replacement);
-            ASTPtr & where = query->refWhere();
-            RewriteInQueryVisitor(data).visit(where);
-        }
-    }
-    if (query->prewhere())
-    {
-        //todo: liyang453, other feat: need to use dist MergeTree
-        //auto ast_children_replacement = cloud_merge_tree->convertBucketNumbersToAstLiterals(query->prewhere(), context);
-        std::vector<ASTPtr> ast_children_replacement;
-        if (!ast_children_replacement.empty())
-        {
-            data.ast_children_replacement = cloneChildrenReplacement(ast_children_replacement);
-            ASTPtr & pre_where = query->refPrewhere();
-            RewriteInQueryVisitor(data).visit(pre_where);
-        }
-    }
-    LOG_TRACE(log, "After rewriteInForBucketTable:\n: {}", query->dumpTree());
-}
-
 void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, const BuildQueryPipelineSettings & build_settings, bool use_expand_pipe)
 {
 
-    //todo: liyang453, other feat: need to add  partition_filter to SelectQueryInfo
+    //todo: liyang453, need storage: need to add  partition_filter to SelectQueryInfo
     ASTPtr partition_filter;
     //if (select_query.partition_filter)
     if (partition_filter)
@@ -893,7 +843,7 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
             where_predicates.insert(where_predicates.end(), runtime_filters.begin(), runtime_filters.end());
         }
         auto where_dicates = PredicateUtils::combineConjuncts(where_predicates);
-        //todo: liyang453, other feat: need to add  partition_filter to SelectQueryInfo
+        //todo: liyang453, need storage: need to add  partition_filter to SelectQueryInfo
         // select_query.partition_filter = !PredicateUtils::isTruePredicate(where_dicates) ? std::move(where_dicates) : nullptr;
         partition_filter = !PredicateUtils::isTruePredicate(where_dicates) ? std::move(where_dicates) : nullptr;
 
@@ -934,9 +884,7 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
         size_t wait_ms = use_expand_pipe ? 0 : setting.wait_runtime_filter_timeout;
         bool enable_bf_in_prewhere = setting.enable_rewrite_bf_into_prewhere;
         bool enable_range_cover =  setting.enable_range_cover;
-        //todo: liyang453, other feat: need adjust_gap in settings
-        //double adjust_gap = setting.adjust_range_set_filter_rate;
-        double adjust_gap = 1.0;
+        double adjust_gap = build_settings.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().adjust_range_set_filter_rate;
         std::vector<ASTPtr> rf_predicates(descriptions.size());
         std::vector<ASTPtr> rf_only_predicates(descriptions.size());
         std::vector<ASTPtr> rf_range_or_in_predicates(descriptions.size());
@@ -1077,7 +1025,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             ids.insert(ids.end(), prewhere_ids.begin(), prewhere_ids.end());
         }
 
-        //todo: liyang453, other feat: need partition_filter
+        //todo: liyang453, need storage: need partition_filter
         //auto partition_filter = query_info.partition_filter;
         //if (query_info.partition_filter)
         ASTPtr partition_filter;
@@ -1095,16 +1043,13 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     initMetadataAndStorageSnapshot(build_context.getBuildQueryPipelineSettingsExt().context);
     auto * merge_tree_storage = dynamic_cast<MergeTreeData *>(storage.get());
 
-    //todo: liyang453, other feat: need optimizer_index_projection_support settiings
-    //bool is_merge_tree = merge_tree_storage != nullptr;
-    //bool use_projection_index = build_context.getBuildQueryPipelineSettingsExt().context->getSettingsRef().optimizer_index_projection_support && is_merge_tree && build_context.context->getSettingsRef().enable_ab_index_optimization;
-    // && is_merge_tree && !use_projection_index;
-    bool use_projection_index = false;
-    bool use_optimizer_projection_selection = false;
+    bool is_merge_tree = merge_tree_storage != nullptr;
+    auto optimizerSettings = build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef();
+    bool use_projection_index = optimizerSettings.optimizer_index_projection_support && is_merge_tree && optimizerSettings.enable_ab_index_optimization;
+    bool use_optimizer_projection_selection =  optimizerSettings.optimizer_projection_support && is_merge_tree && !use_projection_index;
     
     LOG_INFO(getLogger("test"), "initTableScan, limit={}, !empty={}", query->limitLength() ? serializeAST(*query->limitLength()) : "nothing", use_projection_index || use_optimizer_projection_selection);
 
-    rewriteInForBucketTable(build_context.getBuildQueryPipelineSettingsExt().context);
     stage_watch.start();
     /// Rewrite runtime filter
     rewriteDynamicFilter(query_info, build_context, use_expand_pipe);
@@ -1174,22 +1119,15 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     if (max_block_size < build_context.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_block_size)
         max_streams = 1; // single block single stream.
 
-    //todo: liyang453, other feat: need to convet max_streams_to_max_threads_ratio
-    // auto max_streams_to_max_threads_ratio = build_context.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_streams_to_max_threads_ratio;
-    auto max_streams_to_max_threads_ratio = 1;
+    auto max_streams_to_max_threads_ratio = optimizerSettings.max_streams_to_max_threads_ratio;
     if (max_streams > 1 && !storage->isRemote())
-        max_streams *= max_streams_to_max_threads_ratio;
+        max_streams = size_t(max_streams * max_streams_to_max_threads_ratio);
 
     if (execute_plan.empty())
     {
-        if (auto * cloud_merge_tree = dynamic_cast<MergeTreeData *>(storage.get()))
-        {
-            //todo: liyang453, other feat: need to use dist merge tree
-            //cloud_merge_tree->source_task_filter = build_context.distributed_settings.source_task_filter;
-        }
         // Here columns of PREWHERE being included in required columns is by design
         QueryPlan storage_plan;
-        using Nodes = std::list<QueryPlan::Node>;
+        using Nodes = std::list<QueryPlanExt::Node>;
         Nodes nodes;
         storage->read(
             storage_plan,
@@ -1211,23 +1149,17 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
                 //for (auto & desc : att_descs)
                 //{
                 //    if (!attribute_descriptions.contains(desc.first))
-                //    attribute_descriptions.emplace(desc.first, desc.second);
+                //         attribute_descriptions.emplace(desc.first, desc.second);
                 //}
             }
         }
 
         Pipe pipe;
-        //todo: liyang453, other feat: need add getCacheHolder
-        //if (pipe.getCacheHolder())
-        //    pipeline.addCacheHolder(pipe.getCacheHolder());
-
         std::shared_ptr<IQueryPlanStep> step;
         if (pipe.empty())
         {
             auto header = storage_snapshot->getSampleBlockForColumns(getRequiredColumns());
-            //todo: liyang453, other feat: need InterpreterSelectQuery::generateNullSourcePipe
-            //auto null_pipe = InterpreterSelectQuery::generateNullSourcePipe(header, query_info);
-            Pipe null_pipe;
+            Pipe null_pipe(std::make_shared<NullSource>(header));
             auto read_from_pipe = std::make_shared<ReadFromPreparedSource>(std::move(null_pipe));
             read_from_pipe->setStepDescription("Read from NullSource");
             step = read_from_pipe;
@@ -1240,7 +1172,6 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             source->initializePipeline(pipeline, build_context);
 
         aliasColumns(pipeline, build_context, "normal read");
-        setQuotaAndLimits(pipeline, options, build_context);
 
         if (auto * filter_step = getPushdownFilterCast())
             filter_step->transformPipeline(pipeline, build_context);
@@ -1480,8 +1411,6 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     auto step = std::make_unique<ReadFromStorageStep>(std::move(pipe), "ExecutePlanStep", context, query_info);
     step->initializePipeline(pipeline, build_context);
 
-    setQuotaAndLimits(pipeline, options, build_context);
-
     std::ostringstream step_desc;
     bool first = true;
     for (auto & plan_element: execute_plan)
@@ -1499,9 +1428,9 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             step_desc << plan_element.part_group.partsNum() << " parts from raw data";
     }
     setStepDescription(step_desc.str());
-    //todo: liyang453, other feat: need RuntimeAttributeDescription
-    //RuntimeAttributeDescription tablescan_desc;
-    //tablescan_desc.description = step_desc.str();
+    RuntimeAttributeDescription tablescan_desc;
+    tablescan_desc.description = step_desc.str();
+    //todo: liyang453, other feat: need attribute_descriptions in base class
     //attribute_descriptions.emplace("TableScanDescription", tablescan_desc);
 
     LOG_DEBUG(log, "init pipeline total run time: {} ms, table scan descriptiion: {}", total_watch.elapsedMilliseconds(), step_desc.str());
@@ -1511,7 +1440,7 @@ std::shared_ptr<IQueryPlanStep> TableScanStepExt::copy(ContextPtr) const
 {
     SelectQueryInfo copy_query_info = query_info; // fixme@kaixi: deep copy here
     copy_query_info.query = query_info.query->clone();
-    //todo: liyang453, other feat: need partition_filter
+    //todo: liyang453, need storage: need partition_filter
     //if (query_info.partition_filter)
     //    copy_query_info.partition_filter = query_info.partition_filter->clone();
 
@@ -1562,7 +1491,7 @@ void TableScanStepExt::allocate(ContextPtr context)
     query_info.syntax_analyzer_result = tree_rewriter_result;
     // make set for IN statements for subsequent partition pruning
     query_info = fillQueryInfo(context);
-    //tood: need partition_filter;
+    //tood: liyang453, need storage: need partition_filter;
     //makeSetsForIndex(query_info.partition_filter, context, query_info.sets, source);
     original_table = storage_id.table_name;
     //todo: liyang453, need storage: need IStorage add prepareTableRead
@@ -1694,61 +1623,6 @@ void TableScanStepExt::aliasColumns(QueryPipelineBuilder & pipeline, const Build
     }
 }
 
-void TableScanStepExt::setQuotaAndLimits(QueryPipelineBuilder & pipeline, const SelectQueryOptions & options, const BuildQueryPipelineSettings & build_context)
-{
-    auto context = build_context.getBuildQueryPipelineSettingsExt().context;
-    const auto & settings = context->getSettingsRef();
-
-    StreamLocalLimits limits;
-    SizeLimits leaf_limits;
-    std::shared_ptr<const EnabledQuota> quota;
-
-    /// Set the limits and quota for reading data, the speed and time of the query.
-    if (!options.ignore_limits)
-    {
-        limits = getLimitsForStorage(settings, options);
-        leaf_limits = SizeLimits(settings.max_rows_to_read_leaf, settings.max_bytes_to_read_leaf, settings.read_overflow_mode_leaf);
-    }
-
-    if (!options.ignore_quota && (options.to_stage == QueryProcessingStage::Complete))
-        quota = context->getQuota();
-
-    auto table_lock = storage->lockForShare(context->getInitialQueryId(), context->getSettingsRef().lock_acquire_timeout);
-
-
-    /// Table lock is stored inside pipeline here.
-    //todo: liyang453, other feat: need add setLimits in pipeline
-    //pipeline.setLimits(limits);
-
-    /**
-      * Leaf size limits should be applied only for local processing of distributed queries.
-      * Such limits allow to control the read stage on leaf nodes and exclude the merging stage.
-      * Consider the case when distributed query needs to read from multiple shards. Then leaf
-      * limits will be applied on the shards only (including the root node) but will be ignored
-      * on the results merging stage.
-      */
-
-    //todo: liyang453, other feat: need add setLeafLimits、setQuota in pipeline
-    //if (!storage->isRemote())
-    //    pipeline.setLeafLimits(leaf_limits);
-
-    //if (quota)
-    //    pipeline.getPipeline(pipeline).setQuota(quota);
-
-    /// Order of resources below is important.
-    //if (context)
-    //    pipeline.addInterpreterContext(std::move(context));
-
-    //if (storage)
-    //    pipeline.addStorageHolder(storage);
-
-    //if (table_lock)
-    //    pipeline.addTableLock(std::move(table_lock));
-
-    //for (const auto & processor : pipeline.getProcessors())
-    //    processors.emplace_back(processor);
-}
-
 void TableScanStepExt::setReadOrder(SortDescription read_order)
 {
     if (!read_order.empty())
@@ -1784,7 +1658,7 @@ Names TableScanStepExt::getRequiredColumns(GetFlags flags) const
     {
         for (const auto & item : inline_expressions)
         {
-            //todo: liyang453, other feat: need functionCanUseBitmapIndex
+            //todo: liyang453, need storage: need functionCanUseBitmapIndex
             //const auto * func = item.second->as<ASTFunction>();
             //if (func && functionCanUseBitmapIndex(*func))
                 add_columns_in_expr(item.second);
@@ -1894,7 +1768,7 @@ Names TableScanStepExt::getRequiredColumnsAndPartitionColumns() const
 {
     auto columns = getRequiredColumns();
     ASTPtr partition_filter;
-    //todo: liyang453, other feat: need to add partition_filter in query_info;
+    //todo: liyang453, need storage: need to add partition_filter in query_info;
     // auto columns_of_partition_filter = SymbolsExtractor::extract(query_info.partition_filter);
     auto columns_of_partition_filter = SymbolsExtractor::extract(partition_filter);
     columns.insert(columns.end(), columns_of_partition_filter.begin(), columns_of_partition_filter.end());

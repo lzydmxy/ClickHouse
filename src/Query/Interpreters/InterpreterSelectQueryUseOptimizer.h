@@ -86,6 +86,8 @@ public:
 
     ASTPtr & getQuery() { return query_ptr; }
 
+    void logUsedStorageIDs(LoggerPtr log, const std::set<StorageID> & storage_ids);
+
 private:
     ASTPtr query_ptr;
     PlanNodePtr sub_plan_ptr;

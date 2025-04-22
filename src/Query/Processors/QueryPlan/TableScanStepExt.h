@@ -269,12 +269,9 @@ private:
 
     LoggerPtr log;
 
-    // Optimises the where clauses for a bucket table by rewriting the IN clause and hence reducing the IN set size
-    void rewriteInForBucketTable(ContextPtr context) const;
     void rewriteDynamicFilter(SelectQueryInfo & select_query, const BuildQueryPipelineSettings & build_settings, bool use_expand_pipe);
 
     void aliasColumns(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &, const String & pipeline_name);
-    void setQuotaAndLimits(QueryPipelineBuilder & pipeline, const SelectQueryOptions & options, const BuildQueryPipelineSettings &);
 
     bool hasFunctionCanUseBitmapIndex() const;
     void initMetadataAndStorageSnapshot(ContextPtr context);

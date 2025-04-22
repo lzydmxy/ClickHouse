@@ -169,15 +169,12 @@ PlanSegmentResult PlanSegmentVisitor::visitExchangeStepExtNode(QueryPlanExt::Nod
             output->setKeepOrder(step->needKeepOrder());
         }
 
-        // split_context.inputs.emplace_back(input);
         split_context.children.emplace_back(plan_segment);
     }
     QueryPlanStepPtr remote_step = std::make_unique<RemoteExchangeSourceStepExt>(inputs, step->getOutputStream(), is_add_totals, is_add_extremes);
     remote_step->setStepDescription(step->getStepDescription());
-    //todo: liyang453, other feat: need add id in QueryPlanExt::Node
-    //QueryPlanExt::Node remote_node{.step = std::move(remote_step), .children = {}, .id = node->id};
     QueryPlanExt::Node remote_node{.step = std::move(remote_step), .children = {}};
-    size_t node_id = 0;
+    auto node_id = plan_segment_context.query_plan.getNodeId(node);
     plan_segment_context.query_plan.addNode(std::move(remote_node), node_id);
     split_context.scalable &= step->isScalable();
     return plan_segment_context.query_plan.getLastNode();
@@ -227,10 +224,8 @@ PlanSegmentResult PlanSegmentVisitor::visitCTERefStepExtNode(QueryPlanExt::Node 
 
     QueryPlanStepPtr remote_step = std::make_unique<RemoteExchangeSourceStepExt>(PlanSegmentInputs{input}, step->getOutputStream(), false, false); // with totals is not expected used in queries with multiple table
     remote_step->setStepDescription(step->getStepDescription());
-    //todo: liyang453, other feat:  need add id in QueryPlanExt::Node
-    //QueryPlanExt::Node remote_node{.step = std::move(remote_step), .children = {}, .id = node->id};
     QueryPlanExt::Node remote_node{.step = std::move(remote_step), .children = {}};
-    size_t node_id = 0;
+    auto node_id = plan_segment_context.query_plan.getNodeId(node);
     plan_segment_context.query_plan.addNode(std::move(remote_node), node_id);
     
     if (!plan_segment_context.context->getOptimizerContext()->getPlanNodeIdAllocator())
@@ -240,10 +235,9 @@ PlanSegmentResult PlanSegmentVisitor::visitCTERefStepExtNode(QueryPlanExt::Node 
     QueryPlanExt::Node projection_node{
         .step = step->toProjectionStep(),
         .children = {plan_segment_context.query_plan.getLastNode()}
-        //todo: liyang453, other feat:  need add id in QueryPlanExt::Node
-        //.id = plan_segment_context.context->getPlanNodeIdAllocator()->nextId()};
        };
-    plan_segment_context.query_plan.addNode(std::move(projection_node), node_id);
+
+    plan_segment_context.query_plan.addNode(std::move(projection_node), plan_segment_context.context->getOptimizerContext()->getPlanNodeIdAllocator()->nextId());
 
     return plan_segment_context.query_plan.getLastNode();
 }
@@ -377,13 +371,6 @@ PlanSegmentInputs PlanSegmentVisitor::findInputs(QueryPlanExt::Node * node)
     {
         auto input = std::make_shared<PlanSegmentInput>(table_scan_step->getOutputStream().header, RIPlanSegment::Enum::IPlanSegment_Enum_SOURCE);
         input->setStorageID(table_scan_step->getStorageID());
-        StoragePtr storage = table_scan_step->getStorage();
-        if (storage)
-        {
-            //todo: liyang453, other feat:  need to check if need to use num_of_buckets
-            Int64 num_of_buckets = 1;
-            input->setNumOfBuckets(num_of_buckets);
-        }
         return {input};
     }
     else if (auto * read_nothing = dynamic_cast<ReadNothingStep *>(node->step.get()))

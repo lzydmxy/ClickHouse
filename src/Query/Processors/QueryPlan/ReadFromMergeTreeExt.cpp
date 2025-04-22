@@ -1,4 +1,5 @@
 #include <Query/Processors/QueryPlan/ReadFromMergeTreeExt.h>
+#include <Query/Processors/IQueryPlanStepExt.h>
 
 namespace DB
 {
@@ -176,7 +177,7 @@ void ReadFromMergeTreeExt::initializePipeline(QueryPipelineBuilder & pipeline, c
                                    column_names_to_read.end());
     }
 
-    //todo: liyang453, other feat: need projection in query_info
+    //todo: liyang453, need storage: need projection in query_info
     const auto & input_order_info = query_info.input_order_info;
         //? query_info.input_order_info
         //: (query_info.projection ? query_info.projection->input_order_info : nullptr);
@@ -210,7 +211,7 @@ void ReadFromMergeTreeExt::initializePipeline(QueryPipelineBuilder & pipeline, c
     else if ((settings.optimize_read_in_order || settings.optimize_aggregation_in_order) && input_order_info)
     {
         size_t prefix_size = 0;
-        //todo: liyang453, other feat: need order_key_prefix_descr in query_info.input_order_info
+        //todo: liyang453, need storage: need order_key_prefix_descr in query_info.input_order_info
         //size_t prefix_size = input_order_info->order_key_prefix_descr.size();
         auto order_key_prefix_ast = metadata_for_reading->getSortingKey().expression_list_ast->clone();
         order_key_prefix_ast->children.resize(prefix_size);
@@ -218,10 +219,10 @@ void ReadFromMergeTreeExt::initializePipeline(QueryPipelineBuilder & pipeline, c
         auto syntax_result = TreeRewriter(context).analyze(order_key_prefix_ast, metadata_for_reading->getColumns().getAllPhysical());
         auto sorting_key_prefix_expr = ExpressionAnalyzer(order_key_prefix_ast, syntax_result, context).getActionsDAG(false);
 
-        //todo: liyang453, other feat: need partition_by_monotonicity_hint in mergetree settings
-        can_read_in_partition_order = (build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().optimize_read_in_partition_order ||
-                                       build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().force_read_in_partition_order);
-        //&& canReadInPartitionOrder(*metadata_for_reading, *input_order_info, query_info.query->as<ASTSelectQuery &>(),data.getSettingsRef().partition_by_monotonicity_hint);
+        auto optimizerSettings = build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef();
+        can_read_in_partition_order = (optimizerSettings.optimize_read_in_partition_order || optimizerSettings.force_read_in_partition_order);
+        //canReadInPartitionOrder(*metadata_for_reading, *input_order_info, query_info.query->as<ASTSelectQuery &>(),data.getSettingsRef().partition_by_monotonicity_hint);
+        //canReadInPartitionOrder(*metadata_for_reading, *input_order_info, query_info.query->as<ASTSelectQuery &>(),data.getSettingsRef().partition_by_monotonicity_hint);
 
         //todo: liyang453, other feat: need selected_partitions in AnalysisResult
         //if (can_read_in_partition_order && result.selected_partitions > 1)
@@ -385,8 +386,7 @@ void ReadFromMergeTreeExt::fillRuntimeAttributeDescriptions(const ReadFromMergeT
     auto index_stats = result.index_stats;
     if (!result.index_stats.empty())
     {
-        //todo: liyang453, other feat: need RuntimeAttributeDescription
-        //RuntimeAttributeDescription index_desc;
+        RuntimeAttributeDescription index_desc;
         for (size_t i = 0; i < index_stats.size(); ++i)
         {
             const auto & stat = index_stats[i];
@@ -413,15 +413,13 @@ void ReadFromMergeTreeExt::fillRuntimeAttributeDescriptions(const ReadFromMergeT
             if (i)
                 out << '/' << index_stats[i - 1].num_granules_after;
             out << ";";
-            //todo: liyang453, other feat: need RuntimeAttributeDescription
-            //index_desc.name_and_detail.emplace_back(indexTypeToString(stat.type), out.str());
+            index_desc.name_and_detail.emplace_back(indexTypeToString(stat.type), out.str());
         }
-        //index_desc.description = "Indexes";
+        index_desc.description = "Indexes";
+        //todo: liyang453, other feat: need RuntimeAttributeDescription in base class
         //attribute_descriptions.emplace(index_desc.description, std::move(index_desc));
     }
 
-    //todo: liyang453, other feat: need RuntimeAttributeDescription
-    /*
     RuntimeAttributeDescription parts_desc;
     String selected_parts_info = fmt::format(
         "Selected {}/{} parts by partition key, {} parts by primary key, {}/{} marks by primary key, {} marks to read from {} ranges",
@@ -433,8 +431,8 @@ void ReadFromMergeTreeExt::fillRuntimeAttributeDescriptions(const ReadFromMergeT
         result.selected_marks,
         result.selected_ranges);
     parts_desc.description = selected_parts_info;
-    attribute_descriptions.emplace("SelectParts", std::move(parts_desc));
-    */
+    //todo: liyang453, other feat: need RuntimeAttributeDescription in base class
+    //attribute_descriptions.emplace("SelectParts", std::move(parts_desc));
 }
 
 }

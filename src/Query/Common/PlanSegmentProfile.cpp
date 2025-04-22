@@ -2,6 +2,7 @@
 #include "PlanSegmentProfile.h"
 #include <Interpreters/Context.h>
 #include <Query/Common/OptimizerSettings.h>
+#include <Query/Processors/IQueryPlanStepExt.h>
 //#include <QueryPlan/IQueryPlanStep.h>
 //#include <QueryPlan/PlanSerDerHelper.h>
 
@@ -54,13 +55,12 @@ ProfileMetricPtr ProfileMetric::fromProto(const RProfileMetric & proto)
         profile->inputs.emplace(input_profile.id, input_profile);
     }
 
-    // todo: liyang453, other feat: Wait for RuntimeAttributeDescription in IQueryPlanStep.h
-    // for (const auto & [attribute_type, attribute] : proto.attributes())
-    // {    
-    //     AttributeInfoPtr info = std::make_shared<RuntimeAttributeDescription>();
-    //     info->fromProto(attribute);
-    //     profile->attributes.emplace(attribute_type, info);
-    // }
+    for (const auto & [attribute_type, attribute] : proto.attributes())
+    {    
+        AttributeInfoPtr info = std::make_shared<RuntimeAttributeDescription>();
+        info->fillFromProto(attribute);
+        profile->attributes.emplace(attribute_type, info);
+    }
     return profile;
 }
 

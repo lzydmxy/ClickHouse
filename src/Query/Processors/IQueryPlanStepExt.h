@@ -10,9 +10,18 @@ struct RuntimeAttributeDescription
     std::vector<std::pair<String, String>> name_and_detail;
     // If the attribute information is complex, can use json
     String additional;
-    //TODO:
-    // void fillFromProto(const Protos::RuntimeAttributeDescription & proto);
-    // void toProto(Protos::RuntimeAttributeDescription & proto) const;
+
+    void fillFromProto(const Protos::RuntimeAttributeDescription & proto)
+    {
+        //todo: hongzhigao, other feat: need impl
+        return;
+    }
+
+    void toProto(Protos::RuntimeAttributeDescription & proto) const
+    {
+        //todo: hongzhigao, other feat: need impl
+        return;
+    }
 };
 
 class IQueryPlanStepExt : public IQueryPlanStep

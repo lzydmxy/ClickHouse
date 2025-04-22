@@ -119,6 +119,7 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(Bool, enable_rewrite_bf_into_prewhere, true, "Whether enable pushdown runtime filter to prewhere for join", 0) \
     M(UInt64, runtime_filter_bloom_build_threshold, RUNTIME_FILTER_BLOOM_BUILD_THRESHOLD, "The threshold of right table to build bloom filter", 0) \
     M(UInt64, runtime_filter_in_build_threshold, RUNTIME_FILTER_IN_BUILD_THRESHOLD, "The threshold of right table to build value set filter", 0) \
+    M(Double, adjust_range_set_filter_rate, 0.10, "If the prewhere is not range or set, adjust use this value as priority to bloom filter ", 0) \
     /** Optimizer join settings */ \
     M(Bool, enforce_all_join_to_any_join, false, "Whether enforce all join to any join", 0) \
     M(Bool, enable_nested_loop_join, false, "Whether enable nest loop join for outer join with filter", 0)\
@@ -135,6 +136,8 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(Bool, allow_extended_type_conversion, false, "When enabled, implicit type conversion is allowed for more input types(e.g. UInt64 & Ints, Decimal & Float, Float & Int64)", 0) \
     M(Bool, enable_subcolumn_optimization_through_union, true, "Whether enable sub column optimization through set operation.", 0) \
     M(Bool, optimize_json_function_to_subcolumn, false, "Whether to optimize json extract functions to subcolumn read", 0) \
+    M(Bool, optimizer_index_projection_support, true, "Use indexprojection in optimizer mode", 0) \
+    M(Bool, optimizer_projection_support, false, "Use projection in optimizer mode", 0) \
     /** Optimizer relative settings, CBO, CTE, MagicSet, MV */ \
     M(CTEMode, cte_mode, CTEMode::AUTO, "CTE mode: SHARED|INLINED|AUTO|ENFORCED", 0) \
     M(SpillMode, spill_mode, SpillMode::MANUAL, "SpillMode: MANUAL(default)|AUTO", 0) \
@@ -177,6 +180,9 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(DialectType, dialect_type, DialectType::CLICKHOUSE, "Dialect type, e.g. CLICKHOUSE, ANSI, MYSQL", 0) \
     M(Bool, only_full_group_by, true, "If the ONLY_FULL_GROUP_BY is enabled (which it is by default), rejects queries for which the select list, HAVING condition, or ORDER BY list refer to nonaggregated columns that are neither named in the GROUP BY clause nor are functionally dependent on them.", 0) \
     M(Bool, enable_final_sample, false, "Sample from result rows if it is true", 0) \
+    M(Bool, enable_ab_index_optimization, true, "Optimize ab version by reading Bitmap", 0)\
+    M(Double, max_streams_to_max_threads_ratio, 1.0, "Allows you to use more sources than the number of threads - to more evenly distribute work across threads. It is assumed that this is a temporary solution, since it will be possible in the future to make the number of sources equal to the number of threads, but for each source to dynamically select available work for itself.", 0) \
+    M(Int64, partition_by_monotonicity_hint, 0, "Hint on whether partition by expression is a monotonic function or not, e.g., '(toYYYYMMDD(ts), toHour(ts))' is a monotonic non-decreasing function. 0 means unknown, Positive means monotonic non-decrasing, Negative means monotonic non-increasing", 0) \
 
 #define MAKE_OPTIMIZER_OBSOLETE(M, TYPE, NAME, DEFAULT) \
     M(TYPE, NAME, DEFAULT, "Obsolete setting, does nothing.", BaseSettingsHelpers::Flags::OBSOLETE)

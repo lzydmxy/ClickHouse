@@ -653,7 +653,7 @@ message RemoteExchangeSourceStep {
     bool is_add_extremes = 5;
 }
 
-message FinalSampleStep {
+message FinalSampleStepExt {
     ITransformingStep query_plan_base = 1;
     uint64 sample_size = 2;
     uint64 max_chunk_size = 3;
@@ -810,7 +810,7 @@ message QueryPlanStep {
         ExtremesStep extremes_step = 9;
         FillingStep filling_step = 10;
         FilterStep filter_step = 11;
-        FinalSampleStep final_sample_step = 12;
+        FinalSampleStepExt final_sample_step = 12;
         FinishSortingStep finish_sorting_step = 13;
         IntersectStep intersect_step = 14;
         JoinStepExt join_step = 15;
