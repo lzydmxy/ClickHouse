@@ -287,28 +287,29 @@ inline void serializeQueryPlanStepToProtoImpl(const QueryPlanStepPtr & origin_st
 
 void serializeQueryPlanStepToProto(const QueryPlanStepPtr & step, RQueryPlanStep & proto)
 {
-     switch (getQueryPlanStepType(step))
-     {
-         case QueryPlanStepType::JoinStepExt:
-         {
-             serializeQueryPlanStepToProtoImpl<JoinStepExt, Protos::JoinStepExt>(step, *proto.mutable_join_step_ext());
-             return;
-         }
-         default:
-             break;
- // #define CASE_DEF(TYPE, VAR_NAME) \
- //     case QueryPlanStepType::TYPE: { \
- //         serializeQueryPlanStepToProtoImpl<TYPE, Protos::TYPE>(step, *proto.mutable_##VAR_NAME##_step()); \
- //         return; \
- //     }
- //
- //         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
- // #undef CASE_DEF
-
-         // default: {
-         //     throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Not implemented step: {}"), static_cast<int>(getQueryPlanStepType(step));
-         // }
-     }
+    switch (getQueryPlanStepType(step))
+    {
+        case QueryPlanStepType::JoinStepExt: {
+            serializeQueryPlanStepToProtoImpl<JoinStepExt, Protos::JoinStepExt>(step, *proto.mutable_join_step_ext());
+            return;
+        }
+        case QueryPlanStepType::AggregatingStepExt: {
+            serializeQueryPlanStepToProtoImpl<AggregatingStepExt, Protos::AggregatingStepExt>(step, *proto.mutable_aggregating_step_ext());
+            return;
+        }
+        default:
+            break;
+// #define CASE_DEF(TYPE, VAR_NAME) \
+//     case QueryPlanStepType::TYPE: { \
+//         serializeQueryPlanStepToProtoImpl<TYPE, Protos::TYPE>(step, *proto.mutable_##VAR_NAME##_step()); \
+//         return; \
+//     }
+//             APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
+// #undef CASE_DEF
+//         default: {
+//             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Not implemented step: {}"), static_cast<int>(getQueryPlanStepType(step));
+//         }
+    }
 }
 
 template <typename Step, typename ProtoType>
@@ -318,21 +319,26 @@ inline QueryPlanStepPtr deserializeQueryPlanStepFromProtoImpl(const ProtoType & 
     return step;
 }
 
-QueryPlanStepPtr deserializeQueryPlanStepFromProto(const RQueryPlanStep & /*proto*/, ContextPtr /*context*/)
+QueryPlanStepPtr deserializeQueryPlanStepFromProto(const RQueryPlanStep & proto, ContextPtr context)
 {
-// TODO:: Need type's definition in IQueryPlanStep
-//     switch (proto.step_case())
-//     {
+    switch (proto.step_case())
+    {
+        case RQueryPlanStep::StepCase::kAggregatingStepExt: {
+            return deserializeQueryPlanStepFromProtoImpl<AggregatingStepExt, Protos::AggregatingStepExt>(
+                proto.aggregating_step_ext(), context);
+        }
+        default:
+            break;
 // #define CASE_DEF(TYPE, VAR_NAME) \
 //     case RQueryPlanStep::StepCase::k##TYPE##Step: { \
 //         return deserializeQueryPlanStepFromProtoImpl<TYPE##Step, Protos::TYPE##Step>(proto.VAR_NAME##_step(), context); \
 //     }
-//         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
+//             APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
 // #undef CASE_DEF
 //         default: {
 //             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Not implemented protobuf step: {}"), static_cast<int>(proto.step_case());
 //         }
-//     }
+    }
     return nullptr;
 }
 
