@@ -247,9 +247,9 @@ public:
             boost::multi_index::hashed_non_unique<boost::multi_index::const_mem_fun<NameAndTypePair, String, &NameAndTypePair::getNameInStorage>>>>;
 
     void addSubcolumnsToList(NamesAndTypesList & source_list) const;
-private:
-    ColumnsContainer columns;
 
+    ColumnsContainer columns;
+private:
     /// Subcolumns are not nested columns.
     ///
     /// Example of subcolumns:

@@ -267,7 +267,7 @@ add_object_library(clickhouse_query_storages Query/Storages)
 add_object_library(clickhouse_query_pipeline Query/Pipeline)
 add_object_library(clickhouse_query_planner Query/Planner)
 add_object_library(clickhouse_query_protos Query/Protos)
-
+add_object_library(clickhouse_query_statistics Query/Statistics)
 
 #add_object_library(clickhouse_query_optimizer_cardinalityestimate Query/Optimizer/CardinalityEstimate)
 #add_object_library(clickhouse_query_optimizer_cardinalityestimate_bncardestimator Query/Optimizer/CardinalityEstimate/BNCardEstimator)

@@ -9,4 +9,5 @@ namespace DB
 {
 NamesAndTypesList getSubcolumnsOfObjectColumns(StorageSnapshotPtr storage_snapshot);
 NamesAndTypesList getSubcolumnsOfAllPhysical(const ColumnsDescription & columns_description);
+Names getNamesOfOrdinary(const ColumnsDescription & columns_description);
 }
