@@ -174,6 +174,17 @@ void QueryPlanStepHelper::toProto(const QueryPlanStepPtr & query_plan_step, Prot
             proto_step->set_use_with_fill_by_sorting_prefix(step->use_with_fill_by_sorting_prefix);
             break;
         }
+        case QueryPlanStepType::WindowStep:
+        {
+            auto step = std::dynamic_pointer_cast<WindowStep>(query_plan_step);
+            auto proto_step = proto.mutable_window_step();
+            ProtosSerDerHelper::serializeToProtoBase(*step, *proto_step->mutable_query_plan_base());
+            ProtosSerDerHelper::toProto(step->window_description, *proto_step->mutable_window_description());
+            for (const auto & element : step->window_functions)
+                ProtosSerDerHelper::toProto(element, *proto_step->add_window_functions());
+            proto_step->set_streams_fan_out(step->streams_fan_out);
+            break;
+        }
         case QueryPlanStepType::FilterStepExt:
         {
             auto step = std::dynamic_pointer_cast<FilterStepExt>(query_plan_step);
@@ -218,6 +229,22 @@ QueryPlanStepPtr QueryPlanStepHelper::fromProto(Protos::QueryPlanStep & proto, C
                 fill_description.emplace_back(std::move(element));
             }
             auto step = std::make_shared<FillingStep>(base_input_stream, sort_description, fill_description, nullptr, proto_step.use_with_fill_by_sorting_prefix());
+            step->setStepDescription(step_description);
+            return step;
+        }
+        case Protos::QueryPlanStep::StepCase::kWindowStep:
+        {
+            auto & proto_step = proto.window_step();
+            auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
+            WindowDescription window_description = *ProtosSerDerHelper::fillFromProto(proto_step.window_description());
+            std::vector<WindowFunctionDescription> window_functions;
+            for (const auto & proto_element : proto_step.window_functions())
+            {
+                WindowFunctionDescription element = *ProtosSerDerHelper::fillFromProto(proto_element);
+                window_functions.emplace_back(std::move(element));
+            }
+            auto streams_fan_out = proto_step.streams_fan_out();
+            auto step = std::make_shared<WindowStep>(base_input_stream, window_description, window_functions, streams_fan_out);
             step->setStepDescription(step_description);
             return step;
         }

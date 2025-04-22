@@ -1,6 +1,8 @@
+#pragma once
 #include <Interpreters/AggregateDescription.h>
 #include <Processors/QueryPlan/ITransformingStep.h>
 #include <Storages/SelectQueryInfo.h>
+#include <Interpreters/WindowDescription.h>
 
 namespace DB
 {
@@ -46,6 +48,19 @@ public:
     static void fillFromProto(
         SortColumnDescriptionWithColumnIndex & sort_column_description_with_column_index,
         const Protos::SortColumnDescriptionWithColumnIndex & proto);
+
+    static void toProto(const WindowFrame & window_frame, Protos::WindowFrame & proto);
+    static std::shared_ptr<WindowFrame> fillFromProto(const Protos::WindowFrame & proto);
+
+    static void toProto(const WindowDescription & window_frame, Protos::WindowDescription & proto);
+    static std::shared_ptr<WindowDescription> fillFromProto(const Protos::WindowDescription & proto);
+
+    static void toProto(const WindowFunctionDescription & window_frame, Protos::WindowFunctionDescription & proto);
+    static std::shared_ptr<WindowFunctionDescription> fillFromProto(const Protos::WindowFunctionDescription & proto);
+
+    static void toProto(const Field & field, Protos::Field & proto);
+    static std::shared_ptr<Field> fillFromProto(const Protos::Field & proto);
+
 };
 
 }

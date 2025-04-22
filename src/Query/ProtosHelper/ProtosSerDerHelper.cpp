@@ -2,6 +2,7 @@
 #include <Query/ProtosHelper/FieldHelper.h>
 #include <Query/ProtosHelper/PlanSerDerHelper.h>
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
+#include <Query/Core/FieldHelper.h>
 
 namespace DB
 {
@@ -170,5 +171,113 @@ void ProtosSerDerHelper::fillFromProto(
     fillFromProto(sort_column_description_with_column_index.base, proto.base());
     sort_column_description_with_column_index.column_number = proto.column_number();
 }
+
+void ProtosSerDerHelper::toProto(const WindowFrame & window_frame, Protos::WindowFrame & proto)
+{
+    proto.set_is_default(window_frame.is_default);
+    proto.set_type(WindowFrameTypeConverter::toProto(window_frame.type));
+    proto.set_begin_type(WindowFrameBoundaryTypeConverter::toProto(window_frame.begin_type));
+    toProto(window_frame.begin_offset, *proto.mutable_begin_offset());
+    proto.set_begin_preceding(window_frame.begin_preceding);
+    proto.set_end_type(WindowFrameBoundaryTypeConverter::toProto(window_frame.end_type));
+    toProto(window_frame.end_offset, *proto.mutable_end_offset());
+    proto.set_end_preceding(window_frame.end_preceding);
+}
+
+std::shared_ptr<WindowFrame> ProtosSerDerHelper::fillFromProto(const Protos::WindowFrame & proto)
+{
+    auto window_frame = std::make_shared<WindowFrame>();
+    window_frame->is_default = proto.is_default();
+    window_frame->type = WindowFrameTypeConverter::fromProto(proto.type());
+    window_frame->begin_type = WindowFrameBoundaryTypeConverter::fromProto(proto.begin_type());
+    window_frame->begin_offset = *fillFromProto(proto.begin_offset());
+    window_frame->begin_preceding = proto.begin_preceding();
+    window_frame->end_type = WindowFrameBoundaryTypeConverter::fromProto(proto.end_type());
+    window_frame->end_offset = *fillFromProto(proto.end_offset());
+    window_frame->end_preceding = proto.end_preceding();
+}
+
+void ProtosSerDerHelper::toProto(const WindowFunctionDescription & func, Protos::WindowFunctionDescription & proto)
+{
+    proto.set_column_name(func.column_name);
+    serializeAggregateFunctionToProto(func.aggregate_function, func.function_parameters, func.argument_types, *proto.mutable_aggregate_function());
+
+    for (const auto & element : func.argument_names)
+        proto.add_argument_names(element);
+}
+
+std::shared_ptr<WindowFunctionDescription> ProtosSerDerHelper::fillFromProto(const Protos::WindowFunctionDescription & proto)
+{
+    auto func = std::make_shared<WindowFunctionDescription>();
+    func->column_name = proto.column_name();
+    std::tie(func->aggregate_function, func->function_parameters, func->argument_types) = deserializeAggregateFunctionFromProto(proto.aggregate_function());
+
+    for (const auto & element : proto.argument_names())
+        func->argument_names.emplace_back(element);
+}
+
+
+void ProtosSerDerHelper::toProto(const WindowDescription & window_desc, Protos::WindowDescription & proto)
+{
+    proto.set_window_name(window_desc.window_name);
+    for (const auto & element : window_desc.partition_by)
+        toProto(element, *proto.add_partition_by());
+    for (const auto & element : window_desc.order_by)
+        toProto(element, *proto.add_order_by());
+    for (const auto & element : window_desc.full_sort_description)
+        toProto(element, *proto.add_full_sort_description());
+    toProto(window_desc.frame, *proto.mutable_frame());
+    for (const auto & element : window_desc.window_functions)
+        toProto(element, *proto.add_window_functions());
+}
+
+std::shared_ptr<WindowDescription> ProtosSerDerHelper::fillFromProto(const Protos::WindowDescription & proto)
+{
+    auto window_desc = std::make_shared<WindowDescription>();
+    window_desc->window_name = proto.window_name();
+    for (const auto & proto_element : proto.partition_by())
+    {
+        SortColumnDescription element;
+        fillFromProto(element, proto_element);
+        window_desc->partition_by.emplace_back(std::move(element));
+    }
+    for (const auto & proto_element : proto.order_by())
+    {
+        SortColumnDescription element;
+        fillFromProto(element, proto_element);
+        window_desc->order_by.emplace_back(std::move(element));
+    }
+    for (const auto & proto_element : proto.full_sort_description())
+    {
+        SortColumnDescription element;
+        fillFromProto(element, proto_element);
+        window_desc->full_sort_description.emplace_back(std::move(element));
+    }
+    window_desc->frame = *fillFromProto(proto.frame());
+    for (const auto & proto_element : proto.window_functions())
+    {
+        WindowFunctionDescription element = *fillFromProto(proto_element);
+        window_desc->window_functions.emplace_back(std::move(element));
+    }
+}
+
+void ProtosSerDerHelper::toProto(const Field & field, Protos::Field & proto)
+{
+    auto type = field.getType();
+    auto proto_type = FieldTypeWhichConverter::toProto(type);
+    proto.set_type(proto_type);
+    WriteBufferFromOwnString buf;
+    FieldHelper::writeFieldBinaryBlobImpl(field, type, buf);
+    proto.set_blob(std::move(buf.str()));
+}
+
+std::shared_ptr<Field> ProtosSerDerHelper::fillFromProto(const Protos::Field & proto)
+{
+    auto field = std::make_shared<Field>();
+    auto type = FieldTypeWhichConverter::fromProto(proto.type());
+    ReadBufferFromString buf(proto.blob());
+    FieldHelper::readFieldBinaryBlobImpl(*field, type, buf);
+}
+
 
 }

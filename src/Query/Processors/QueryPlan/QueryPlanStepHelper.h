@@ -245,4 +245,51 @@ ENUM_TO_PROTO_CONVERTER(
     (Global)
 );
 
+using WindowFrameType = WindowFrame::FrameType;
+ENUM_TO_PROTO_CONVERTER(
+    WindowFrameType, // enum name
+    Protos::WindowFrame::FrameType, // proto enum message
+    (ROWS),
+    (GROUPS),
+    (RANGE));
+
+using WindowFrameBoundaryType = WindowFrame::BoundaryType;
+ENUM_TO_PROTO_CONVERTER(
+    WindowFrameBoundaryType, // enum name
+    Protos::WindowFrame::BoundaryType, // proto enum message
+    (Unbounded),
+    (Current),
+    (Offset));
+
+/// diff bc has ExcludeType
+
+using FieldTypeWhich = Field::Types::Which;
+ENUM_TO_PROTO_CONVERTER(
+    FieldTypeWhich, // enum name
+    Protos::Field::FieldType, // proto enum message
+    (Null, 0),
+    (UInt64, 1),
+    (Int64, 2),
+    (Float64, 3),
+    (UInt128, 4),
+    (Int128, 5),
+
+    (String, 16),
+    (Array, 17),
+    (Tuple, 18),
+    (Decimal32, 19),
+    (Decimal64, 20),
+    (Decimal128, 21),
+    (AggregateFunctionState, 22),
+    (Decimal256, 23),
+    (UInt256, 24),
+    (Int256, 25),
+    (Map, 26),
+    (UUID, 27),
+    (Bool, 28),
+    (Object, 29),
+    (IPv4, 30),
+    (IPv6, 31),
+    (CustomType, 32));
+
 }

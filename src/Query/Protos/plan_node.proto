@@ -39,36 +39,35 @@ message Block {
 }
 
 message Field {
-    enum Enum {
-        Null = 0;
-        UInt64 = 1;
-        Int64 = 2;
-        Float64 = 3;
-        UInt128 = 4;
-        Int128 = 5;
-        String = 16;
-        Array = 17;
-        Tuple = 18;
-        Decimal32 = 19;
-        Decimal64 = 20;
-        Decimal128 = 21;
-        AggregateFunctionState = 22;
-        Decimal256 = 23;
-        UInt256 = 24;
-        Int256 = 25;
-        Map = 26;
-        UUID = 27;
-        ByteMap = 28;
-        BitMap64 = 29;
-        SketchBinary = 30;
-        IPv4 = 31;
-        IPv6 = 32;
-        Object = 33;
-        JSONB= 34;
-        NegativeInfinity = 254;
-        PositiveInfinity = 255;
+    message FieldType {
+        enum Enum {
+            Null    = 0;
+            UInt64  = 1;
+            Int64   = 2;
+            Float64 = 3;
+            UInt128 = 4;
+            Int128  = 5;
+
+            String  = 16;
+            Array   = 17;
+            Tuple   = 18;
+            Decimal32  = 19;
+            Decimal64  = 20;
+            Decimal128 = 21;
+            AggregateFunctionState = 22;
+            Decimal256 = 23;
+            UInt256 = 24;
+            Int256  = 25;
+            Map = 26;
+            UUID = 27;
+            Bool = 28;
+            Object = 29;
+            IPv4 = 30;
+            IPv6 = 31;
+            CustomType = 32;
+        }
     }
-    Field.Enum type = 1;
+    Field.FieldType.Enum type = 1;
     bytes blob = 2;
 }  
 
@@ -679,28 +678,33 @@ message ReadStorageRowCountStep {
 }
 
 message WindowFrame {
-    enum FrameType {
-        Rows = 0;
-        Groups = 1;
-        Range = 2;
+    message FrameType {
+        enum Enum {
+            ROWS = 0;
+            GROUPS = 1;
+            RANGE = 2;
+        }
     }
-    enum BoundaryType {
-        Unbounded = 0;
-        Current = 1;
-        Offset = 2;
+    message BoundaryType {
+        enum Enum {
+            Unbounded = 0;
+            Current = 1;
+            Offset = 2;
+        }
     }
-    enum ExcludeType {
-        NoOthers = 0;
-        CurrentRow = 1;
-        Group = 2;
-        Tie = 3;
-    }
+    // diff bc have ExcludeType
+    // enum ExcludeType {
+    //    NoOthers = 0;
+    //    CurrentRow = 1;
+    //    Group = 2;
+    //    Tie = 3;
+    // }
     bool is_default = 1;
-    FrameType type = 2;
-    BoundaryType begin_type = 3;
+    FrameType.Enum type = 2;
+    BoundaryType.Enum begin_type = 3;
     Field begin_offset = 4;
     bool begin_preceding = 5;
-    BoundaryType end_type = 6;
+    BoundaryType.Enum end_type = 6;
     Field end_offset = 7;
     bool end_preceding = 8;
   }
@@ -724,8 +728,7 @@ message WindowStep {
     ITransformingStep query_plan_base = 1;
     WindowDescription window_description = 2;
     repeated WindowFunctionDescription window_functions = 3;
-    bool need_sort = 4;
-    repeated SortColumnDescription prefix_description = 5;
+    bool streams_fan_out = 4;
 }
 
 message IntersectOrExceptStep {
