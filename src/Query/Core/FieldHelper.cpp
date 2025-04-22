@@ -5,7 +5,7 @@ namespace DB
 {
 
 // used for both protobuf and original serde
-void writeFieldBinaryBlobImpl(const Field & field, Field::Types::Which type, WriteBuffer & buf)
+void FieldHelper::writeFieldBinaryBlobImpl(const Field & field, Field::Types::Which type, WriteBuffer & buf)
 {
     switch (type)
     {
@@ -139,7 +139,7 @@ void writeFieldBinaryBlobImpl(const Field & field, Field::Types::Which type, Wri
 }
 
 // used for both protobuf and original serde
-void readFieldBinaryBlobImpl(Field & field, Field::Types::Which type, ReadBuffer & buf)
+void FieldHelper::readFieldBinaryBlobImpl(Field & field, Field::Types::Which type, ReadBuffer & buf)
 {
     switch (type)
     {

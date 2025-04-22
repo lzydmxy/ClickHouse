@@ -195,6 +195,7 @@ std::shared_ptr<WindowFrame> ProtosSerDerHelper::fillFromProto(const Protos::Win
     window_frame->end_type = WindowFrameBoundaryTypeConverter::fromProto(proto.end_type());
     window_frame->end_offset = *fillFromProto(proto.end_offset());
     window_frame->end_preceding = proto.end_preceding();
+    return window_frame;
 }
 
 void ProtosSerDerHelper::toProto(const WindowFunctionDescription & func, Protos::WindowFunctionDescription & proto)
@@ -214,6 +215,7 @@ std::shared_ptr<WindowFunctionDescription> ProtosSerDerHelper::fillFromProto(con
 
     for (const auto & element : proto.argument_names())
         func->argument_names.emplace_back(element);
+    return func;
 }
 
 
@@ -259,6 +261,7 @@ std::shared_ptr<WindowDescription> ProtosSerDerHelper::fillFromProto(const Proto
         WindowFunctionDescription element = *fillFromProto(proto_element);
         window_desc->window_functions.emplace_back(std::move(element));
     }
+    return window_desc;
 }
 
 void ProtosSerDerHelper::toProto(const Field & field, Protos::Field & proto)
@@ -277,7 +280,7 @@ std::shared_ptr<Field> ProtosSerDerHelper::fillFromProto(const Protos::Field & p
     auto type = FieldTypeWhichConverter::fromProto(proto.type());
     ReadBufferFromString buf(proto.blob());
     FieldHelper::readFieldBinaryBlobImpl(*field, type, buf);
+    return field;
 }
-
 
 }
