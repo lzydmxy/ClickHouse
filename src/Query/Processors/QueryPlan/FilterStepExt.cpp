@@ -166,7 +166,7 @@ void FilterStepExt::toProto(Protos::FilterStepExt & proto, bool) const
     {
         throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "actions dag is not supported in protobuf");
     }
-    ProtosSerDerHelper::serializeToProtoBase(*proto.mutable_query_plan_base());
+    ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
     serializeASTToProto(filter, *proto.mutable_filter());
     proto.set_remove_filter_column(remove_filter_column);
 }
