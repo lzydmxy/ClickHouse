@@ -17,7 +17,7 @@ public:
 
 #define VISITOR_DEF(TYPE) \
 virtual R visit##TYPE##Node(QueryPlan::Node * node, C & context) { return visitNode(node, context); }
-    APPLY_QUERY_PLAN_STEP_TYPES(VISITOR_DEF)
+    APPLY_PROTOBUF_STEP_TYPES(VISITOR_DEF)
 #undef VISITOR_DEF
 };
 
@@ -39,7 +39,7 @@ public:
 
 #define VISITOR_DEF(TYPE) \
     virtual R visit##TYPE##Node(TYPE##Node & node, C & context) { return visitPlanNode(static_cast<PlanNodeBase &>(node), context); }
-    APPLY_QUERY_PLAN_STEP_TYPES(VISITOR_DEF)
+    APPLY_PROTOBUF_STEP_TYPES(VISITOR_DEF)
 #undef VISITOR_DEF
     
 };
@@ -61,7 +61,7 @@ virtual R visit##TYPE(const TYPE & step, C & context) \
 { \
 return visitStep(static_cast<const IQueryPlanStep &>(step), context); \
 }
-    APPLY_QUERY_PLAN_STEP_TYPES(VISITOR_DEF)
+    APPLY_PROTOBUF_STEP_TYPES(VISITOR_DEF)
 #undef VISITOR_DEF
 };
 
@@ -77,7 +77,7 @@ public:
     case QueryPlanStepType::TYPE: { \
         return visitor.visit##TYPE##Node(static_cast<TYPE##Node &>(node), context); \
     }
-            APPLY_QUERY_PLAN_STEP_TYPES(VISITOR_DEF)
+            APPLY_PROTOBUF_STEP_TYPES(VISITOR_DEF)
 
 #undef VISITOR_DEF
             default:
@@ -94,7 +94,7 @@ public:
     case QueryPlanStepType::TYPE: { \
         return visitor.visit##TYPE##Node(static_cast<TYPE##Node &>(*node), context); \
     }
-            APPLY_QUERY_PLAN_STEP_TYPES(VISITOR_DEF)
+            APPLY_PROTOBUF_STEP_TYPES(VISITOR_DEF)
 
 #undef VISITOR_DEF
             default:
@@ -111,7 +111,7 @@ public:
     case QueryPlanStepType::TYPE: { \
         return visitor.visit##TYPE(static_cast<const TYPE &>(step), context); \
     }
-            APPLY_QUERY_PLAN_STEP_TYPES(VISITOR_DEF)
+            APPLY_PROTOBUF_STEP_TYPES(VISITOR_DEF)
 #undef VISITOR_DEF
             default:
                 return visitor.visitStep(step, context);
@@ -127,7 +127,7 @@ public:
     case QueryPlanStepType::TYPE: { \
         return visitor.visit##TYPE(static_cast<const TYPE &>(*step), context); \
     }
-            APPLY_QUERY_PLAN_STEP_TYPES(VISITOR_DEF)
+            APPLY_PROTOBUF_STEP_TYPES(VISITOR_DEF)
 #undef VISITOR_DEF
             default:
                 return visitor.visitStep(*step, context);
@@ -143,7 +143,7 @@ public:
     case QueryPlanStepType::TYPE: { \
         return visitor.visit##TYPE##Node(node, context); \
     }
-            APPLY_QUERY_PLAN_STEP_TYPES(VISITOR_DEF)
+            APPLY_PROTOBUF_STEP_TYPES(VISITOR_DEF)
 #undef VISITOR_DEF
             default:
                 return visitor.visitNode(node, context);

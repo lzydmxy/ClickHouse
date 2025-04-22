@@ -768,7 +768,7 @@ class SymbolMapper::SymbolMapperVisitor : public StepVisitor<QueryPlanStepPtr, S
 protected:
 #define VISITOR_DEF(TYPE) \
     QueryPlanStepPtr visit##TYPE(const TYPE & step, SymbolMapper & mapper) override { return mapper.map(step); }
-    APPLY_QUERY_PLAN_STEP_TYPES(VISITOR_DEF)
+    APPLY_PROTOBUF_STEP_TYPES(VISITOR_DEF)
 #undef VISITOR_DEF
 };
 

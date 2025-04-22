@@ -144,14 +144,14 @@ QueryPlanStepPtr QueryPlanStepHelper::copyQueryPlanStep(const QueryPlanStepPtr &
     else if (auto step_ptr = std::dynamic_pointer_cast<CreatingSetsStep>(query_plan_step))
         return std::make_shared<CreatingSetsStep>(step_ptr->getInputStreams());
 
-// steps end by Ext use macroc to copy
-#define CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT(type) \
-if (auto step_ptr = std::dynamic_pointer_cast<type>(query_plan_step)) \
-{ \
-    return step_ptr->copy(context); \
-}
-    APPLY_ALL_QUERY_PLAN_STEP_EXT_TYPES(CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT)
-#undef CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT
+// StepExt uses macros to execute copy
+#define CHECK_AND_COPY_QUERY_PLAN_STEP_EXT(type) \
+    if (auto step_ptr = std::dynamic_pointer_cast<type>(query_plan_step)) \
+    { \
+        return step_ptr->copy(context); \
+    }
+    APPLY_ALL_STEP_TYPES_FOR_EXT(CHECK_AND_COPY_QUERY_PLAN_STEP_EXT)
+#undef CHECK_AND_COPY_QUERY_PLAN_STEP_EXT
 
     return nullptr;
 }
@@ -161,17 +161,18 @@ void QueryPlanStepHelper::toProto(const QueryPlanStepPtr & query_plan_step, Prot
 {
     switch (getQueryPlanStepType(query_plan_step))
     {
-        // todo need all APPLY_STEP_EXT_PROTOBUF_TYPES_AND_NAMES to impl function toProto
-        // #define CASE_DEF(TYPE, VAR_NAME) \
-        //     case QueryPlanStepType::TYPE: { \
-        //         serializeQueryPlanStepToProtoImpl<TYPE, Protos::TYPE>(step, *proto.mutable_##VAR_NAME##_step()); \
-        //         return; \
-        //     }
-        //
-        //         APPLY_STEP_EXT_PROTOBUF_TYPES_AND_NAMES(CASE_DEF)
-        // #undef CASE_DEF
+// todo: all, need all steps with proto implementing toProto, see PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT and PROTOBUF_STEP_TYPES_AND_NAMES
+// 1. StepExt with proto uses macros to execute toProto, see PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT
+// #define CASE_DEF(TYPE, VAR_NAME) \
+//     case QueryPlanStepType::TYPE: { \
+//         serializeQueryPlanStepToProtoImpl<TYPE, Protos::TYPE>(query_plan_step, *proto.mutable_##VAR_NAME##_step()); \
+//         return; \
+//     }
 
-        // steps need proto, see APPLY_STEP_PROTOBUF_TYPES_AND_NAMES
+//         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(CASE_DEF)
+// #undef CASE_DEF
+
+        // 2. Step with proto needs implementing toProto manually, see PROTOBUF_STEP_TYPES_AND_NAMES
         case QueryPlanStepType::ArrayJoinStep: {
             // need impl
             return;
@@ -187,15 +188,16 @@ void QueryPlanStepHelper::fromProto(QueryPlanStepPtr & query_plan_step, Protos::
 {
     switch (proto.step_case())
     {
-        // todo need all APPLY_STEP_EXT_PROTOBUF_TYPES_AND_NAMES to impl function fromProto
-        // #define CASE_DEF(TYPE, VAR_NAME) \
-        //         case Protos::QueryPlanStep::StepCase::k##TYPE: { \
-        //         return deserializeQueryPlanStepFromProtoImpl<TYPE, Protos::TYPE>(proto.VAR_NAME##_step(), context); \
-        //         }
-        //             APPLY_STEP_EXT_PROTOBUF_TYPES_AND_NAMES(CASE_DEF)
-        // #undef CASE_DEF
+// todo: all, need all steps with proto implementing fromProto, see PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT and PROTOBUF_STEP_TYPES_AND_NAMES
+// 1. StepExt with proto uses macros to execute fromProto, see PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT
+// #define CASE_DEF(TYPE, VAR_NAME) \
+//     case Protos::QueryPlanStep::StepCase::k##TYPE: { \
+//         return deserializeQueryPlanStepFromProtoImpl<TYPE, Protos::TYPE>(proto.VAR_NAME##_step(), context); \
+//     }
+//         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(CASE_DEF)
+// #undef CASE_DEF
 
-        // steps need proto, see APPLY_STEP_PROTOBUF_TYPES_AND_NAMES
+        // 2. Step with proto needs implementing fromProto manually, see PROTOBUF_STEP_TYPES_AND_NAMES
         case Protos::QueryPlanStep::StepCase::kArrayJoinStep: {
             // need impl
             return;

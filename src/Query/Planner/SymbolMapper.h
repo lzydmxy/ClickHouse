@@ -92,7 +92,7 @@ public:
     // PlanNodeStatisticsEstimate map(const PlanNodeStatisticsEstimate & estimate);
 
 #define VISITOR_DEF(TYPE) std::shared_ptr<TYPE> map(const TYPE &);
-    APPLY_QUERY_PLAN_STEP_TYPES(VISITOR_DEF)
+    APPLY_PROTOBUF_STEP_TYPES(VISITOR_DEF)
 #undef VISITOR_DEF
 
     QueryPlanStepPtr map(const IQueryPlanStep & step);

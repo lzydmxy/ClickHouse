@@ -302,7 +302,7 @@ void serializeQueryPlanStepToProto(const QueryPlanStepPtr & step, RQueryPlanStep
  //         return; \
  //     }
  //
- //         APPLY_STEP_PROTOBUF_TYPES_AND_NAMES(CASE_DEF)
+ //         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
  // #undef CASE_DEF
 
          // default: {
@@ -327,7 +327,7 @@ QueryPlanStepPtr deserializeQueryPlanStepFromProto(const RQueryPlanStep & /*prot
 //     case RQueryPlanStep::StepCase::k##TYPE##Step: { \
 //         return deserializeQueryPlanStepFromProtoImpl<TYPE##Step, Protos::TYPE##Step>(proto.VAR_NAME##_step(), context); \
 //     }
-//         APPLY_STEP_PROTOBUF_TYPES_AND_NAMES(CASE_DEF)
+//         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
 // #undef CASE_DEF
 //         default: {
 //             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Not implemented protobuf step: {}"), static_cast<int>(proto.step_case());
@@ -363,7 +363,7 @@ bool isPlanStepEqual(const IQueryPlanStep & /*a*/, const IQueryPlanStep & /*b*/)
 //         return isPlanStepEqualImpl<TYPE##Step, Protos::TYPE##Step>(a, b); \
 //     }
 
-//         APPLY_STEP_PROTOBUF_TYPES_AND_NAMES(CASE_DEF)
+//         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
 
 //         default:
 //             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Unsupported step {}", a.getName());
@@ -393,7 +393,7 @@ UInt64 hashPlanStep(const IQueryPlanStep & /*step*/, bool /*ignore_output_stream
 //         return hashPlanStepImpl<TYPE##Step, Protos::TYPE##Step>(step, ignore_output_stream); \
 //     }
 
-//         APPLY_STEP_PROTOBUF_TYPES_AND_NAMES(CASE_DEF)
+//         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
 
 //         default:
 //             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Unsupported step");

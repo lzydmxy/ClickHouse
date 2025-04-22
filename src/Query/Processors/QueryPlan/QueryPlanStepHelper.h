@@ -55,8 +55,8 @@ namespace DB
 {
 class TableScanStepExt;
 
-// Ext step need PROTOBUF type
-#define APPLY_STEP_EXT_PROTOBUF_TYPES_AND_NAMES(M) \
+// protobuf's types and names for StepExt with proto
+#define APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(M) \
     M(AggregatingStepExt, aggregating_step_ext) \
     M(AnyStepExt, any_step_ext) \
     M(ApplyStepExt, apply_step_ext) \
@@ -84,16 +84,11 @@ class TableScanStepExt;
     M(UnionStepExt, union_step_ext) \
     M(ValuesStepExt, values_step_ext) \
     M(LimitStepExt, limit_step_ext) \
-    M(ReadStorageRowCountStepExt, read_storage_row_count_step_ext) \
+    M(ReadStorageRowCountStepExt, read_storage_row_count_step_ext)
 
-// Ext step without PROTOBUF
-#define APPLY_OTHER_QUERY_PLAN_STEP_EXT(M) \
-    M(PlanSegmentSourceStepExt) \
-    M(SettingQuotaAndLimitsStepExt) \
-
-// step need PROTOBUF type
-#define APPLY_STEP_PROTOBUF_TYPES_AND_NAMES(M) \
-    APPLY_STEP_EXT_PROTOBUF_TYPES_AND_NAMES(M) \
+// protobuf's types and names for Step with proto
+#define APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(M) \
+    APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(M) \
     M(AggregatingProjectionStep, aggregating_projection_step) \
     M(ArrayJoinStep, array_join_step) \
     M(ExtremesStep, extremes_step) \
@@ -104,11 +99,16 @@ class TableScanStepExt;
     M(OffsetStep, offset_step) \
     M(ReadNothingStep, read_nothing_step) \
     M(SortingStep, sorting_step) \
-    M(WindowStep, window_step) \
+    M(WindowStep, window_step)
 
-// step without PROTOBUF
-#define APPLY_OTHER_QUERY_PLAN_STEP(M) \
-    APPLY_OTHER_QUERY_PLAN_STEP_EXT(M) \
+// types for StepExt without proto
+#define APPLY_NOPROTOBUF_STEP_TYPES_FOR_EXT(M) \
+    M(PlanSegmentSourceStepExt) \
+    M(SettingQuotaAndLimitsStepExt)
+
+// types for Step without proto
+#define APPLY_NOPROTOBUF_STEP_TYPES(M) \
+    APPLY_NOPROTOBUF_STEP_TYPES_FOR_EXT(M) \
     M(ReadFromMergeTree) \
     M(ReadFromPreparedSource) \
     M(CreatingSetStep) \
@@ -117,29 +117,28 @@ class TableScanStepExt;
     M(ExpressionStep) \
     M(FilledJoinStep) \
     M(ReadFromStorageStep) \
-    M(RollupStep) \
+    M(RollupStep)
 
 // macro helpers to convert MM(x, y) to M(x)
 #define IMPL_TUPLE_TO_FIRST(_x, _y) (_x)
-#define IMPL_STEPS_PROTOBUF_TYPES APPLY_STEP_PROTOBUF_TYPES_AND_NAMES(IMPL_TUPLE_TO_FIRST)
-#define IMPL_STEPS_EXT_PROTOBUF_TYPES APPLY_STEP_EXT_PROTOBUF_TYPES_AND_NAMES(IMPL_TUPLE_TO_FIRST)
+// extract types from StepExt and Step with proto
+#define IMPL_PROTOBUF_STEP_TYPES_FOR_EXT APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(IMPL_TUPLE_TO_FIRST)
+#define IMPL_PROTOBUF_STEP_TYPES APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(IMPL_TUPLE_TO_FIRST)
+
+// apply function
 #define IMPL_MACRO_FUNCTION_APPLY(_r, _data, _elem) _data(_elem)
+// apply function for elements in seq
+#define APPLY_PROTOBUF_STEP_TYPES_FOR_EXT(M) BOOST_PP_SEQ_FOR_EACH(IMPL_MACRO_FUNCTION_APPLY, M, IMPL_PROTOBUF_STEP_TYPES_FOR_EXT)
+#define APPLY_PROTOBUF_STEP_TYPES(M) BOOST_PP_SEQ_FOR_EACH(IMPL_MACRO_FUNCTION_APPLY, M, IMPL_PROTOBUF_STEP_TYPES)
 
-// apply unary macro
-// M(Apply) M(Join) M(Aggregating)...
-#define APPLY_QUERY_PLAN_STEP_TYPES(M) BOOST_PP_SEQ_FOR_EACH(IMPL_MACRO_FUNCTION_APPLY, M, IMPL_STEPS_PROTOBUF_TYPES)
-#define APPLY_QUERY_PLAN_STEP_EXT_TYPES(M) BOOST_PP_SEQ_FOR_EACH(IMPL_MACRO_FUNCTION_APPLY, M, IMPL_STEPS_EXT_PROTOBUF_TYPES)
-
-// all Ext step
-#define APPLY_ALL_QUERY_PLAN_STEP_EXT_TYPES(M) \
-    APPLY_QUERY_PLAN_STEP_EXT_TYPES(M)\
-    APPLY_OTHER_QUERY_PLAN_STEP_EXT(M)\
-
-// all step
-#define APPLY_ALL_QUERY_PLAN_STEP_TYPES(M) \
-    APPLY_QUERY_PLAN_STEP_TYPES(M) \
-    APPLY_OTHER_QUERY_PLAN_STEP(M) \
-
+// all types for StepExt
+#define APPLY_ALL_STEP_TYPES_FOR_EXT(M) \
+    APPLY_PROTOBUF_STEP_TYPES_FOR_EXT(M) \
+    APPLY_NOPROTOBUF_STEP_TYPES_FOR_EXT(M)
+// all types for Step
+#define APPLY_ALL_STEP_TYPES(M) \
+    APPLY_PROTOBUF_STEP_TYPES(M) \
+    APPLY_NOPROTOBUF_STEP_TYPES(M)
 
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) ITEM,
 enum class QueryPlanStepType : UInt8
@@ -147,7 +146,7 @@ enum class QueryPlanStepType : UInt8
     Any = 0,
     // change this when order is changed to avoid conflicts
     StepBegin = 100,
-    APPLY_ALL_QUERY_PLAN_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE) UNDEFINED,
+    APPLY_ALL_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE) UNDEFINED,
 };
 #undef ENUM_QUERY_PLAN_STEP_TYPE
 
@@ -158,7 +157,7 @@ inline String toString(QueryPlanStepType type)
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) \
     case QueryPlanStepType::ITEM: \
         return #ITEM;
-        APPLY_ALL_QUERY_PLAN_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE)
+        APPLY_ALL_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE)
 #undef ENUM_QUERY_PLAN_STEP_TYPE
         default:
             return "UNDEFINED";
@@ -173,21 +172,21 @@ inline String toString(QueryPlanStepType type)
 
 inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStepPtr & query_plan_step)
 {
-    APPLY_ALL_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE)
+    APPLY_ALL_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE)
     return QueryPlanStepType::UNDEFINED;
 }
 #undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE
 
 #define CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF(type) \
-if (typeInfo == typeid(type)) \
-{ \
-return QueryPlanStepType::type; \
-}
+    if (typeInfo == typeid(type)) \
+    { \
+        return QueryPlanStepType::type; \
+    }
 
 inline QueryPlanStepType getQueryPlanStepType(const IQueryPlanStep & query_plan_step)
 {
-    const std::type_info& typeInfo = typeid(query_plan_step);
-    APPLY_ALL_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF)
+    const std::type_info & typeInfo = typeid(query_plan_step);
+    APPLY_ALL_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF)
     return QueryPlanStepType::UNDEFINED;
 }
 #undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF
