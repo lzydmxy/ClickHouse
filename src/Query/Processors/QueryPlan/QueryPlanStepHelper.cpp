@@ -162,9 +162,24 @@ void QueryPlanStepHelper::toProto(const QueryPlanStepPtr & query_plan_step, Prot
 {
     switch (getQueryPlanStepType(query_plan_step))
     {
-        case QueryPlanStepType::FillingStep: {
-
-            return;
+        case QueryPlanStepType::FillingStep:
+        {
+            auto step = std::dynamic_pointer_cast<FillingStep>(query_plan_step);
+            auto proto_step = proto.mutable_filling_step();
+            ProtosSerDerHelper::serializeToProtoBase(*step, *proto_step->mutable_query_plan_base());
+            for (const auto & element : step->sort_description)
+                ProtosSerDerHelper::toProto(element, *proto_step->add_sort_description());
+            for (const auto & element : step->fill_description)
+                ProtosSerDerHelper::toProto(element, *proto_step->add_fill_description());
+            proto_step->set_use_with_fill_by_sorting_prefix(step->use_with_fill_by_sorting_prefix);
+            break;
+        }
+        case QueryPlanStepType::FilterStepExt:
+        {
+            auto step = std::dynamic_pointer_cast<FilterStepExt>(query_plan_step);
+            auto proto_step = proto.mutable_filter_step();
+            step->toProto(*proto_step, for_hash_equals);
+            break;
         }
 
         default: {
