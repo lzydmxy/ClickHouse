@@ -11,8 +11,6 @@
 #include <Processors/QueryPlan/IntersectOrExceptStep.h>
 #include <Processors/QueryPlan/JoinStep.h>
 #include <Processors/QueryPlan/LimitByStep.h>
-#include <Processors/QueryPlan/LimitStep.h>
-#include <Processors/QueryPlan/MergingAggregatedStep.h>
 #include <Processors/QueryPlan/OffsetStep.h>
 #include <Processors/QueryPlan/ReadFromPreparedSource.h>
 #include <Processors/QueryPlan/RollupStep.h>
@@ -50,6 +48,7 @@
 #include <Query/Processors/QueryPlan/ValuesStepExt.h>
 #include <Query/Processors/QueryPlan/LimitStepExt.h>
 #include <Query/Processors/QueryPlan/ReadStorageRowCountStepExt.h>
+#include <Query/Processors/QueryPlan/MergingAggregatedStepExt.h>
 #include <Query/Processors/QueryPlan/MergeSortingStepExt.h>
 #include <Query/Processors/QueryPlan/MergingSortedStepExt.h>
 #include <Query/Processors/QueryPlan/PartialSortingStepExt.h>
@@ -80,6 +79,7 @@ class TableScanStepExt;
     M(LocalExchangeStepExt, local_exchange_step_ext) \
     M(MarkDistinctStepExt, mark_distinct_step_ext) \
     M(MultiJoinStepExt, multi_join_step_ext) \
+    M(MergingAggregatedStepExt, merging_aggregated_step_ext) \
     M(PartitionTopNStepExt, partition_top_n_step_ext) \
     M(ProjectionStepExt, projection_step_ext) \
     M(RemoteExchangeSourceStepExt, remote_exchange_source_step_ext) \
@@ -105,7 +105,6 @@ class TableScanStepExt;
     M(FillingStep, filling_step) \
     M(IntersectOrExceptStep, intersect_or_except_step) \
     M(LimitByStep, limit_by_step) \
-    M(MergingAggregatedStep, merging_aggregated_step) \
     M(OffsetStep, offset_step) \
     M(ReadNothingStep, read_nothing_step) \
     M(WindowStep, window_step)

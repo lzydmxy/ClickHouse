@@ -151,6 +151,10 @@ public:
 protected:
     std::shared_ptr<QueryStatistics::StatisticsMemoryStore> stats_memory_store = nullptr;
 
+    int getRuleId() const { return rule_id; }
+    void setRuleId(int rule_id_) { rule_id = rule_id_; }
+    void incRuleId() { ++rule_id; }
+
 private:
     OptimizerSettings optimizer_settings;
     UInt32 query_max_execution_time;
@@ -176,6 +180,8 @@ private:
     std::unique_ptr<PlanCacheManager> plan_cache_manager = nullptr;
     std::shared_ptr<SegmentScheduler> segment_scheduler = nullptr;
     std::shared_ptr<OptimizerProfile> optimizer_profile = nullptr;
+
+    int rule_id = 3000;
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;
