@@ -1,6 +1,7 @@
 #pragma once
 
-#include <QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
+#include <Query/Common/Void.h>
 
 namespace DB
 {

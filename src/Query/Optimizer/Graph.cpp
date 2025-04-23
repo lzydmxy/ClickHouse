@@ -3,11 +3,11 @@
 #include <Query/Optimizer/Cascades/Memo.h>
 #include <Query/Optimizer/JoinGraph.h>
 #include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
-#include <Query/Optimizer/Signature/ExpressionReorderNormalizer.h>
+// #include <Query/Optimizer/Signature/ExpressionReorderNormalizer.h>
 #include <Query/Optimizer/Utils.h>
-#include <Parsers/ASTSerDerHelper.h>
+// #include <Parsers/ASTSerDerHelper.h>
 #include <Parsers/formatAST.h>
-#include <QueryPlan/CTEInfo.h>
+// #include <QueryPlan/CTEInfo.h>
 
 namespace DB
 {
