@@ -347,7 +347,7 @@ message MarkDistinctStep {
     repeated string distinct_symbols = 3;
 }
 
-message MergingSortedStep {
+message MergingSortedStepExt {
     ITransformingStep query_plan_base = 1;
     repeated SortColumnDescription sort_description = 2;
     uint64 max_block_size = 3;
@@ -550,7 +550,7 @@ message JoinStepExt {
     repeated bool key_ids_null_safe = 25;
 }
 
-message MergeSortingStep {
+message MergeSortingStepExt {
     ITransformingStep query_plan_base = 1;
     repeated SortColumnDescription description = 2;
     uint64 max_merged_block_size = 3;
@@ -559,7 +559,6 @@ message MergeSortingStep {
     double remerge_lowered_memory_bytes_ratio = 6;
     uint64 max_bytes_before_external_sort = 7;
     uint64 min_free_disk_space = 8;
-    bool enable_adaptive_spill = 9;
 }
 
 message MergingAggregatedStep {
@@ -830,9 +829,9 @@ message QueryPlanStep {
         LimitByStep limit_by_step = 16;
         LimitStep limit_step = 17;
         MarkDistinctStep mark_distinct_step = 18;
-        MergeSortingStep merge_sorting_step = 19;
+        MergeSortingStepExt merge_sorting_step = 19;
         MergingAggregatedStep merging_aggregated_step = 20;
-        MergingSortedStep merging_sorted_step = 21;
+        MergingSortedStepExt merging_sorted_step = 21;
         OffsetStep offset_step = 22;
         PartialSortingStep partial_sorting_step = 23;
         PartitionTopNStepExt partition_top_n_step_ext = 24;
