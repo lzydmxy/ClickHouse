@@ -197,21 +197,6 @@ void QueryPlanStepHelper::toProto(const QueryPlanStepPtr & query_plan_step, Prot
             proto_step->set_streams_fan_out(step->streams_fan_out);
             break;
         }
-        case QueryPlanStepType::FilterStepExt:
-        {
-            auto step = std::dynamic_pointer_cast<FilterStepExt>(query_plan_step);
-            auto *proto_step = proto.mutable_filter_step_ext();
-            step->toProto(*proto_step, for_hash_equals);
-            break;
-        }
-        case QueryPlanStepType::AggregatingStepExt:
-        {
-            auto step = std::dynamic_pointer_cast<AggregatingStepExt>(query_plan_step);
-            auto *proto_step = proto.mutable_aggregating_step_ext();
-            step->toProto(*proto_step, for_hash_equals);
-            break;
-        }
-
         default: {
             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "not implemented step: {}", static_cast<int>(getQueryPlanStepType(query_plan_step)));
         }
@@ -270,17 +255,6 @@ QueryPlanStepPtr QueryPlanStepHelper::fromProto(Protos::QueryPlanStep & proto, C
             step->setStepDescription(step_description);
             return step;
         }
-        case Protos::QueryPlanStep::StepCase::kFilterStepExt:
-        {
-            const auto & proto_step = proto.filter_step_ext();
-            return FilterStepExt::fromProto(proto_step, context);
-        }
-        case Protos::QueryPlanStep::StepCase::kAggregatingStepExt:
-        {
-            const auto & proto_step = proto.aggregating_step_ext();
-            return AggregatingStepExt::fromProto(proto_step, context);
-        }
-
         default: {
             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "not implemented step: {}", static_cast<int>(proto.step_case()));
         }

@@ -50,6 +50,8 @@
 #include <Query/Processors/QueryPlan/ValuesStepExt.h>
 #include <Query/Processors/QueryPlan/LimitStepExt.h>
 #include <Query/Processors/QueryPlan/ReadStorageRowCountStepExt.h>
+#include <Query/Processors/QueryPlan/MergeSortingStepExt.h>
+#include <Query/Processors/QueryPlan/MergingSortedStepExt.h>
 
 namespace DB
 {
@@ -84,7 +86,9 @@ class TableScanStepExt;
     M(UnionStepExt, union_step_ext) \
     M(ValuesStepExt, values_step_ext) \
     M(LimitStepExt, limit_step_ext) \
-    M(ReadStorageRowCountStepExt, read_storage_row_count_step_ext)
+    M(ReadStorageRowCountStepExt, read_storage_row_count_step_ext) \
+    M(MergeSortingStepExt, merge_sorting_step_ext) \
+    M(MergingSortedStepExt, merging_sorted_step_ext)
 
 // protobuf's types and names for Step with proto
 #define APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(M) \
@@ -234,7 +238,6 @@ public:
 
 
 using DataStreamSortScope = DataStream::SortScope;
-
 ENUM_TO_PROTO_CONVERTER(
     DataStreamSortScope,
     Protos::DataStream::SortScope,

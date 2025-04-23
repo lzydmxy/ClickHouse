@@ -829,9 +829,9 @@ message QueryPlanStep {
         LimitByStep limit_by_step = 16;
         LimitStep limit_step = 17;
         MarkDistinctStep mark_distinct_step = 18;
-        MergeSortingStepExt merge_sorting_step = 19;
+        MergeSortingStepExt merge_sorting_step_ext = 19;
         MergingAggregatedStep merging_aggregated_step = 20;
-        MergingSortedStepExt merging_sorted_step = 21;
+        MergingSortedStepExt merging_sorted_step_ext = 21;
         OffsetStep offset_step = 22;
         PartialSortingStep partial_sorting_step = 23;
         PartitionTopNStepExt partition_top_n_step_ext = 24;
