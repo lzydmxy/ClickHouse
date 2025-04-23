@@ -33,7 +33,7 @@ public:
     size_t getMaxBytesBeforeRemerge() const { return max_bytes_before_remerge; }
     double getRemergeLoweredMemoryBytesRatio() const { return remerge_lowered_memory_bytes_ratio; }
     size_t getMaxBytesBeforeExternalSort() const { return max_bytes_before_external_sort; }
-    TemporaryDataOnDiskScopePtr getData() const { return tmp_data; }
+    TemporaryDataOnDiskScopePtr getTmpData() const { return tmp_data; }
     size_t getMinFreeDiskSpace() const { return min_free_disk_space; }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 

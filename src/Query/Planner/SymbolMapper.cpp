@@ -531,32 +531,31 @@ std::shared_ptr<LimitByStep> SymbolMapper::map(const LimitByStep & limit)
     return std::make_shared<LimitByStep>(map(limit.getInputStreams()[0]), QueryPlanStepHelper::getLimitByStepGroupLength(limit), QueryPlanStepHelper::getLimitByStepGroupOffset(limit), map(names));
 }
 
-// std::shared_ptr<MergingSortedStep> SymbolMapper::map(const MergingSortedStep & sorted)
-// {
-//     return std::make_shared<MergingSortedStep>(
-//         map(sorted.getInputStreams()[0]), SortDescription{map(sorted.getSortDescription())}, sorted.getMaxBlockSize(), sorted.getLimit());
-// }
-//
+std::shared_ptr<MergingSortedStepExt> SymbolMapper::map(const MergingSortedStepExt & sorted)
+{
+    return std::make_shared<MergingSortedStepExt>(
+        map(sorted.getInputStreams()[0]), SortDescription{map(sorted.getSortDescription())}, sorted.getMaxBlockSize(), sorted.getLimit());
+}
+
 std::shared_ptr<MergingAggregatedStep> SymbolMapper::map(const MergingAggregatedStep & merging_agg)
 {
     throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Need Imp AggregatingStep first");
 }
-//
-//
-// std::shared_ptr<MergeSortingStep> SymbolMapper::map(const MergeSortingStep & sorting)
-// {
-//     return std::make_shared<MergeSortingStep>(
-//         map(sorting.getInputStreams()[0]),
-//         SortDescription{map(sorting.getSortDescription())},
-//         sorting.getMaxMergedBlockSize(),
-//         sorting.getLimit(),
-//         sorting.getMaxBytesBeforeRemerge(),
-//         sorting.getRemergeLoweredMemoryBytesRatio(),
-//         sorting.getMaxBytesBeforeExternalSort(),
-//         sorting.getVolumPtr(),
-//         sorting.getMinFreeDiskSpace(),
-//         sorting.isAdaptiveSpillEnabled());
-// }
+
+
+std::shared_ptr<MergeSortingStepExt> SymbolMapper::map(const MergeSortingStepExt & sorting)
+{
+    return std::make_shared<MergeSortingStepExt>(
+        map(sorting.getInputStreams()[0]),
+        SortDescription{map(sorting.getSortDescription())},
+        sorting.getMaxMergedBlockSize(),
+        sorting.getLimit(),
+        sorting.getMaxBytesBeforeRemerge(),
+        sorting.getRemergeLoweredMemoryBytesRatio(),
+        sorting.getMaxBytesBeforeExternalSort(),
+        sorting.getTmpData(),
+        sorting.getMinFreeDiskSpace());
+}
 
 std::shared_ptr<MarkDistinctStepExt> SymbolMapper::map(const MarkDistinctStepExt & mark_distinct)
 {
