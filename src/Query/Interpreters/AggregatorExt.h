@@ -294,8 +294,6 @@ public:
     std::vector<Block> convertBlockToTwoLevel(const Block & block) const;
 
     /// For external aggregation.
-    // void writeToTemporaryFile(AggregatedDataVariants & data_variants, const String & tmp_path) const;
-    // void writeToTemporaryFile(AggregatedDataVariants & data_variants) const;
     void writeToTemporaryFile(AggregatedDataVariants & data_variants, size_t max_temp_file_size = 0) const;
 
     bool hasTemporaryData() const { return tmp_data && !tmp_data->empty(); }
@@ -440,10 +438,6 @@ private:
     template <typename Method, typename Table>
     void mergeDataNullKey(Table & table_dst, Table & table_src, Arena * arena) const;
 
-    // /// Merge data from hash table `src` into `dst`.
-    // template <typename Method, bool use_compiled_functions, typename Table>
-    // void mergeDataImpl(Table & table_dst, Table & table_src, Arena * arena) const;
-
     /// Merge data from hash table `src` into `dst`.
     template <typename Method, typename Table>
     void mergeDataImpl(Table & table_dst, Table & table_src, Arena * arena, bool use_compiled_functions, bool prefetch) const;
@@ -542,6 +536,50 @@ private:
 
     void createStatesAndFillKeyColumnsWithSingleKey(
         AggregatedDataVariants & data_variants, Columns & key_columns, size_t key_row, MutableColumns & final_key_columns) const;
+};
+
+class AggregatorExtHelper
+{
+public:
+    static bool isSmallKeys(const AggregatedDataVariants & aggregated_data_variants)
+    {
+#define APPLY_FOR_VARIANTS_SMALL_KEYS(M) \
+    M(key8) \
+    M(key16) \
+    M(keys16)
+
+        switch (aggregated_data_variants.type)
+        {
+#define M(NAME) \
+    case AggregatedDataVariants::Type::NAME: \
+        return true;
+
+            APPLY_FOR_VARIANTS_SMALL_KEYS(M)
+#undef M
+            default:
+                return false;
+        }
+#undef APPLY_FOR_VARIANTS_SMALL_KEYS
+    }
+
+    static size_t getVariantsBufferSizeInBytes(const AggregatedDataVariants & aggregated_data_variants)
+    {
+        switch (aggregated_data_variants.type)
+        {
+            case AggregatedDataVariants::Type::EMPTY:
+                return 0;
+            case AggregatedDataVariants::Type::without_key:
+                return 1;
+
+#define M(NAME, IS_TWO_LEVEL) \
+    case AggregatedDataVariants::Type::NAME: \
+        return aggregated_data_variants.NAME->data.getBufferSizeInBytes();
+                APPLY_FOR_AGGREGATED_VARIANTS(M)
+#undef M
+        }
+
+        __builtin_unreachable();
+    }
 };
 
 static const double kDefaultSpillTrigerThreshold = 0.7;

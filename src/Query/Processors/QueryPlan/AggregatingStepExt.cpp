@@ -42,7 +42,6 @@ static ITransformingStep::Traits getTraits(bool should_produce_results_in_order_
 {
     return ITransformingStep::Traits{
         {
-            // // .preserves_distinct_columns = false, /// Actually, we may check that distinct names are in aggregation keys
             .returns_single_stream
             = should_produce_results_in_order_of_bucket_number, /// Actually, may also return single stream if should_produce_results_in_order_of_bucket_number = false
             .preserves_number_of_streams = false,
@@ -63,11 +62,11 @@ void computeGroupingFunctions(
     if (groupings.empty())
         return;
 
-    // // const bool ansi_mode = build_settings.context->getSettingsRef().dialect_type != DialectType::CLICKHOUSE;
+    const bool ansi_mode = build_settings.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().dialect_type != DialectType::CLICKHOUSE;
     bool force_grouping_standard_compatibility
         = build_settings.getBuildQueryPipelineSettingsExt().context->getSettingsRef().force_grouping_standard_compatibility;
-    // // if (ansi_mode)
-    // //     force_grouping_standard_compatibility = true;
+    if (ansi_mode)
+        force_grouping_standard_compatibility = true;
 
     auto actions = std::make_shared<ActionsDAG>(pipeline.getHeader().getColumnsWithTypeAndName());
     ActionsDAG::NodeRawConstPtrs outputs = actions->getOutputs();
@@ -325,7 +324,8 @@ void AggregatingStepExt::updateOutputStream()
 
 void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & build_settings)
 {
-    // todo: hongzhigao1, implement
+    // todo: hongzhigao1, other feat: implement AggregatingStreamingTransform for cache later, no cache now
+    streaming_for_cache = false;
     // auto cache_holder = pipeline.getCacheHolder();
     // if (!cache_holder || cache_holder->all_part_in_storage)
     //     streaming_for_cache = false;
@@ -624,15 +624,14 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
         {
             if (pipeline.getNumStreams() > 1)
             {
-                // todo: hongzhigao1, implement
-                // auto many_data = std::make_shared<ManyAggregatedData>(pipeline.getNumStreams());
-                // size_t counter = 0;
-                // pipeline.addSimpleTransform(
-                //     [&](const Block & header)
-                //     {
-                //         return std::make_shared<AggregatingInOrderTransform>(
-                //             header, transform_params, group_by_sort_description, max_block_size, many_data, counter++);
-                //     });
+                auto many_data = std::make_shared<ManyAggregatedData>(pipeline.getNumStreams());
+                size_t counter = 0;
+                pipeline.addSimpleTransform(
+                    [&](const Block & header)
+                    {
+                        return std::make_shared<AggregatingInOrderTransformExt>(
+                            header, transform_params, group_by_sort_description, max_block_size, many_data, counter++);
+                    });
 
                 aggregating_in_order = collector.detachProcessors(0);
 
@@ -640,7 +639,7 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                 {
                     if (!column_description.base.column_name.empty())
                     {
-                        // column_description.column_number = pipeline.getHeader().getPositionByName(column_description.column_name);
+                        column_description.column_number = pipeline.getHeader().getPositionByName(column_description.base.column_name);
                         column_description.base.column_name.clear();
                     }
                 }
@@ -701,92 +700,65 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
             return;
         }
     }
-    // todo: hongzhigao1, open when support cache
-    // bool can_streaming_agg = streaming_for_cache && !transform_params->only_merge;
+    bool can_streaming_agg = streaming_for_cache && !transform_params->only_merge;
     // If there are several sources, then we perform parallel aggregation
-    // if (pipeline.getNumStreams() > 1)
-    // {
-    //     /// Add resize transform to uniformly distribute data between aggregating streams.
-    //     if (!storage_has_evenly_distributed_read && !can_streaming_agg)
-    //         pipeline.resize(pipeline.getNumStreams(), true, true);
-    //     if (can_streaming_agg)
-    //     {
-    //         pipeline.addSimpleTransform([&](const Block & header) {
-    //             return std::make_shared<AggregatingStreamingTransform>(
-    //                 header,
-    //                 transform_params,
-    //                 settings.streaming_agg_local_ratio,
-    //                 false,
-    //                 settings.enable_intermediate_result_cache_streaming,
-    //                 streaming_for_cache,
-    //                 false,
-    //                 final);
-    //         });
-    //     }
-    //     else
-    //     {
-    //         auto many_data = std::make_shared<ManyAggregatedData>(pipeline.getNumStreams());
-    //
-    //         size_t counter = 0;
-    //         pipeline.addSimpleTransform([&](const Block & header) {
-    //             return std::make_shared<AggregatingTransform>(
-    //                 header, transform_params, many_data, counter++, merge_max_threads, temporary_data_merge_threads);
-    //         });
-    //     }
-    //     /// Streaming agg no need resize here
-    //     if (!can_streaming_agg)
-    //     {
-    //         /// We add the explicit resize here, but not in case of aggregating in order, since AIO don't use two-level hash tables and thus returns only buckets with bucket_number = -1.
-    //         pipeline.resize(should_produce_results_in_order_of_bucket_number ? 1 : pipeline.getNumStreams(), true /* force */);
-    //     }
-    //     aggregating = collector.detachProcessors(0);
-    // }
-    // else
-    // {
-    //     pipeline.resize(1);
-    //
-    //     if (can_streaming_agg)
-    //         pipeline.addSimpleTransform([&](const Block & header) {
-    //             return std::make_shared<AggregatingStreamingTransform>(
-    //                 header,
-    //                 transform_params,
-    //                 settings.streaming_agg_local_ratio,
-    //                 false,
-    //                 settings.enable_intermediate_result_cache_streaming,
-    //                 streaming_for_cache);
-    //         });
-    //     else
-    //         pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<AggregatingTransform>(header, transform_params); });
-    //
-    //     aggregating = collector.detachProcessors(0);
-    // }
-
-    /// If there are several sources, then we perform parallel aggregation
     if (pipeline.getNumStreams() > 1)
     {
-        // todo: hongzhigao1, change to AggregatingStreamingTransform when support cache
-        // Add resize transform to uniformly distribute data between aggregating streams.
-        if (!storage_has_evenly_distributed_read)
+        /// Add resize transform to uniformly distribute data between aggregating streams.
+        if (!storage_has_evenly_distributed_read && !can_streaming_agg)
             pipeline.resize(pipeline.getNumStreams(), true, true);
-
-        auto many_data = std::make_shared<ManyAggregatedData>(pipeline.getNumStreams());
-
-        size_t counter = 0;
-        pipeline.addSimpleTransform([&](const Block & header) {
+        if (can_streaming_agg)
+        {
+            // todo: hongzhigao1, other feat: implement AggregatingStreamingTransform for cache later
+            // pipeline.addSimpleTransform([&](const Block & header) {
+            //     return std::make_shared<AggregatingStreamingTransform>(
+            //         header,
+            //         transform_params,
+            //         settings.streaming_agg_local_ratio,
+            //         false,
+            //         settings.enable_intermediate_result_cache_streaming,
+            //         streaming_for_cache,
+            //         false,
+            //         final);
+            // });
+        }
+        else
+        {
+            auto many_data = std::make_shared<ManyAggregatedData>(pipeline.getNumStreams());
+    
+            size_t counter = 0;
+            pipeline.addSimpleTransform([&](const Block & header) {
                 return std::make_shared<AggregatingTransformExt>(
                     header, transform_params, many_data, counter++, merge_max_threads, temporary_data_merge_threads);
             });
-
-        /// We add the explicit resize here, but not in case of aggregating in order, since AIO don't use two-level hash tables and thus returns only buckets with bucket_number = -1.
-        pipeline.resize(should_produce_results_in_order_of_bucket_number ? 1 : pipeline.getNumStreams(), true /* force */);
-
+        }
+        /// Streaming agg no need resize here
+        if (!can_streaming_agg)
+        {
+            /// We add the explicit resize here, but not in case of aggregating in order, since AIO don't use two-level hash tables and thus returns only buckets with bucket_number = -1.
+            pipeline.resize(should_produce_results_in_order_of_bucket_number ? 1 : pipeline.getNumStreams(), true /* force */);
+        }
         aggregating = collector.detachProcessors(0);
     }
     else
     {
         pipeline.resize(1);
-
-        pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<AggregatingTransformExt>(header, transform_params); });
+    
+        if (can_streaming_agg)
+        {
+            // todo: hongzhigao1, other feat: implement AggregatingStreamingTransform for cache later
+            // pipeline.addSimpleTransform([&](const Block & header) {
+            //     return std::make_shared<AggregatingStreamingTransform>(
+            //         header,
+            //         transform_params,
+            //         settings.streaming_agg_local_ratio,
+            //         false,
+            //         settings.enable_intermediate_result_cache_streaming,
+            //         streaming_for_cache);
+            // });
+        }
+        else
+            pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<AggregatingTransformExt>(header, transform_params); });
 
         aggregating = collector.detachProcessors(0);
     }

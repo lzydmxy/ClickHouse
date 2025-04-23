@@ -263,9 +263,7 @@ QueryPipelineBuilderPtr QueryPlanExt::buildQueryPipeline(
             stack.push(Frame{.node = frame.node->children[next_child], .pipelines = {}});
     }
 
-    //todo: hongzhigao, other feat: add context in QueryPipelineBuilder (use globalContext instead now)
-    // for (auto & context : interpreter_context)
-    //     last_pipeline->addInterpreterContext(std::move(context));
+    last_pipeline->addResources(std::move(resources));
 
     LOG_DEBUG(log, "Build pipeline takes: {}ms", watch.elapsedMilliseconds());
     return last_pipeline;
@@ -537,9 +535,7 @@ static PlanNodePtr copyPlanNode(const PlanNodePtr & plan, ContextMutablePtr & co
     PlanNodes children;
     for (auto & child : plan->getChildren())
         children.emplace_back(copyPlanNode(child, context));
-    //todo: hongzhigao, other feat:  implement PlanNode
-    // return PlanNodeBase::createPlanNode(plan->getId(), plan->getStep()->copy(context), children, plan->getStatistics());
-    return {};
+    return PlanNodeBase::createPlanNode(plan->getId(), QueryPlanStepHelper::copyQueryPlanStep(plan->getStep(), context), children);
 }
 
 QueryPlanExtPtr QueryPlanExt::copy(ContextMutablePtr context)

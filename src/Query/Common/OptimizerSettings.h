@@ -150,6 +150,7 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(Bool, fallback_to_simple_query, false, "Enable fallback if there is any syntax error", 0)\
     M(Bool, send_plan_segment_by_brpc_join_per_stage, false, "Whether to send plan segment by BRPC and join async rpc request per stage", 0)\
     M(Bool, send_plan_segment_by_brpc_join_at_last, true, "Whether to send plan segment by BRPC and join async rpc request at last", 0)\
+    M(Double, spill_triger_threshold, 0.7, "Threshold to triger spill then memory usage reach a certain ratio of memory quota", 0) \
     /** Optimizer relative settings, statistics */ \
     M(String, statistics_exclude_tables_regex, "", "Regex to exclude tables for statistics operations", 0) \
     /** Just for compatible, maybe removed or implemented later */ \
