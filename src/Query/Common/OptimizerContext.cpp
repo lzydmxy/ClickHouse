@@ -159,4 +159,21 @@ QueryExchangeLogPtr OptimizerContext::getQueryExchangeLog()
     return query_exchange_log;
 }
 
+HostWithPorts OptimizerContext::getHostWithPorts() const
+{
+    //TODO: Get host with port of current node
+    HostWithPorts host;
+    return host;
+}
+
+void OptimizerContext::setTransactionID(UInt64 txt_id_)
+{
+    txt_id = txt_id_;
+}
+
+UInt64 OptimizerContext::getTransactionID()
+{
+    return txt_id;
+}
+
 }

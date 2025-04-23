@@ -3,7 +3,7 @@
 #include <set>
 #include <butil/endpoint.h>
 #include <Common/ProfileEvents.h>
-//#include <Interpreters/profile/ProfileLogHub.h>
+#include <Query/Executor/ProfileLogHub.h>
 #include <Query/Executor/MPPScheduler.h>
 #include <Query/Exchange/bRPC/WriteBufferFromBrpc.h>
 #include <Query/Exchange/RpcChannelPool.h>
@@ -404,9 +404,8 @@ void SegmentScheduler::updateReceivedSegmentStatusCounter(const String & query_i
 
         if (all_received)
         {
-            //TODO: Profile log hub
-            // ProfileLogHub<ProcessorProfileLogElement>::getInstance().stopConsume(query_id);
-            // LOG_DEBUG(log, "Query:{} have received all segment status.", query_id);
+            ProfileLogHub<ProcessorProfileLogElement>::getInstance().stopConsume(query_id);
+            LOG_DEBUG(log, "Query:{} have received all segment status.", query_id);
         }
     }
 }

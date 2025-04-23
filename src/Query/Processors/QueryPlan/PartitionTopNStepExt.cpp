@@ -3,6 +3,7 @@
 #include <Query/Processors/Transforms/PartitionTopNTransformExt.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include "Core/ColumnNumbers.h"
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
 namespace DB
 {
@@ -15,8 +16,10 @@ PartitionTopNStepExt::PartitionTopNStepExt(
 
 void PartitionTopNStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
+    const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(settings);
+
     auto input_header = pipeline.getHeader();
-    pipeline.resize(settings.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_threads);
+    pipeline.resize(settings_ext.context->getSettingsRef().max_threads);
 
     ColumnNumbers partition_by_columns;
     for (const auto & col : partition)

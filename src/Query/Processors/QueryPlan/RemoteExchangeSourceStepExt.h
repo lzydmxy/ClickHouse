@@ -41,8 +41,8 @@ public:
         input_streams = {std::move(input_stream_)};
     }
 
-    void setPlanSegment(const PlanSegmentSharedPtr & plan_segment_, ContextPtr context_);
-    PlanSegmentSharedPtr getPlanSegment() const { return plan_segment; }
+    void setPlanSegment(PlanSegment * plan_segment_, ContextPtr context_);
+    PlanSegment * getPlanSegment() const { return plan_segment; }
     size_t getPlanSegmentId() const { return plan_segment_id; }
 
 
@@ -73,7 +73,7 @@ private:
         BrpcExchangeReceiverRegistryService::RegisterMode register_mode,
         std::shared_ptr<QueryExchangeLog> query_exchange_log);
     PlanSegmentInputs inputs;
-    PlanSegmentSharedPtr plan_segment;
+    PlanSegment * plan_segment = nullptr;
     LoggerPtr logger;
     size_t plan_segment_id;
     String query_id;

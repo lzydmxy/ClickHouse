@@ -6,6 +6,7 @@
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
 namespace DB
 {
@@ -28,7 +29,8 @@ ProjectionStepExt::ProjectionStepExt(
 
 void ProjectionStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
-    auto actions = createActions(settings.getBuildQueryPipelineSettingsExt().context);
+    const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(settings);
+    auto actions = createActions(settings_ext.context);
     auto expression = std::make_shared<ExpressionActions>(actions, settings.getActionsSettings());
 
     pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<ExpressionTransform>(header, expression); });

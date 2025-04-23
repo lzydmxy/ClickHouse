@@ -2,7 +2,6 @@
 
 #include <IO/Progress.h>
 #include <Interpreters/ExpressionActionsSettings.h>
-#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
 #include <cstddef>
 
@@ -22,9 +21,6 @@ struct BuildQueryPipelineSettings
 
     const ExpressionActionsSettings & getActionsSettings() const { return actions_settings; }
     static BuildQueryPipelineSettings fromContext(ContextPtr from);
-
-    void initializeBuildQueryPipelineSettingsExt() const;
-    const BuildQueryPipelineSettingsExt & getBuildQueryPipelineSettingsExt() const;
 };
 
 }

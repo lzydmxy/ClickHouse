@@ -25,6 +25,7 @@
 using namespace DB;
 namespace UnitTest
 {
+
 TEST(ExchangeSourceTest, LocalNormalTest)
 {
     auto log = &Poco::Logger::get("ExchangeSourceTest");

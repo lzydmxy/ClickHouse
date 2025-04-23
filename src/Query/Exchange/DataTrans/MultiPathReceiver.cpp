@@ -161,6 +161,7 @@ void MultiPathReceiver::registerToLocalSenders(UInt32 timeout_ms)
 
     for (auto * local_receiver : local_receivers)
     {
+        LOG_DEBUG(logger, "MultiPathReceiver {} register to local sender {},", name, local_receiver->getName());
         local_receiver->registerToSenders(timeout_ms);
     }
 
@@ -192,7 +193,7 @@ void MultiPathReceiver::registerToSenders(UInt32 timeout_ms)
                     auto * brpc_receiver = dynamic_cast<BrpcRemoteBroadcastReceiver *>(receiver_ptr);
                     if (unlikely(!brpc_receiver))
                     {
-                        throw Exception(ErrorCodes::LOGICAL_ERROR, "Unexpected SubReceiver Type: {}", typeid(receiver_ptr).name());
+                        throw Exception(ErrorCodes::LOGICAL_ERROR, "Register to senders, Unexpected SubReceiver Type: {}", typeid(receiver_ptr).name());
                     }
                     async_results.emplace_back(brpc_receiver->registerToSendersAsync(timeout_ms));
                 }
@@ -261,6 +262,8 @@ RecvDataPacket MultiPathReceiver::recv(TimePoint timeout_tp)
     }
     if (std::holds_alternative<DataPacket>(data_packet))
     {
+        LOG_TRACE(logger, "{} pop DataPacket, size {}", name, collector->size());
+
         auto & normal_packet = std::get<DataPacket>(data_packet);
         Chunk receive_chunk = std::move(normal_packet.chunk);
         if (enable_receiver_metrics)
@@ -276,6 +279,8 @@ RecvDataPacket MultiPathReceiver::recv(TimePoint timeout_tp)
     }
     else
     {
+        LOG_TRACE(logger, "{} pop SendDoneMark, size {}", name, collector->size());
+
         SendDoneMark receiver_name = std::get<SendDoneMark>(data_packet);
         bool all_receiver_done = false;
         {

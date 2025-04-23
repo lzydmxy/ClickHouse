@@ -33,6 +33,8 @@
 #include <Query/Exchange/DataTrans/MultiPathReceiver.h>
 #include <Query/Exchange/DataTrans/LocalBroadcastChannel.h>
 #include <Query/Exchange/bRPC/AsyncRegisterResult.h>
+#include <Query/Exchange/bRPC/BrpcRemoteBroadcastReceiver.h>
+#include <Query/Processors/Exchange/ExchangeSourceExt.h>
 #include <Query/Executor/PlanSegmentReport.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
 #include <Query/Processors/IQueryPlanStepExt.h>
@@ -698,7 +700,7 @@ void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSe
 
 void PlanSegmentExecutor::registerAllExchangeReceivers(LoggerPtr log, const QueryPipeline & pipeline, UInt32 register_timeout_ms)
 {
-    //const Processors & procesors = pipeline.getProcessors();
+    const Processors & processors = pipeline.getProcessors();
     std::vector<AsyncRegisterResult> async_results;
     std::vector<LocalBroadcastChannel *> local_receivers;
     std::vector<MultiPathReceiver *> multi_receivers;
@@ -706,33 +708,34 @@ void PlanSegmentExecutor::registerAllExchangeReceivers(LoggerPtr log, const Quer
 
     try
     {
-        // TODO: Wait ExchangeSourceExt class
-        // for (const auto & processor : procesors)
-        // {
-        //     auto exchange_source_ptr = std::dynamic_pointer_cast<ExchangeSource>(processor);
-        //     if (!exchange_source_ptr)
-        //         continue;
-        //     auto * receiver_ptr = exchange_source_ptr->getReceiver().get();
+        LOG_TRACE(log, "registerAllExchangeReceivers processors size {}, time out {}", processors.size(), register_timeout_ms);
 
-        //     if (auto * brpc_receiver = dynamic_cast<BrpcRemoteBroadcastReceiver *>(receiver_ptr))
-        //         async_results.emplace_back(brpc_receiver->registerToSendersAsync(register_timeout_ms));
-        //     else if (auto * local_receiver = dynamic_cast<LocalBroadcastChannel *>(receiver_ptr))
-        //         local_receivers.push_back(local_receiver);
-        //     else if (auto * multi_receiver = dynamic_cast<MultiPathReceiver *>(receiver_ptr))
-        //     {
-        //         multi_receiver->registerToSendersAsync(register_timeout_ms);
-        //         multi_receivers.push_back(multi_receiver);
-        //     }
+        for (const auto & processor : processors)
+        {
+            auto exchange_source_ptr = std::dynamic_pointer_cast<ExchangeSourceExt>(processor);
+            if (!exchange_source_ptr)
+                continue;
 
-        //     auto * receiver_ptr = exchange_source_ptr->getReceiver().get();
-        //     if (auto * local_receiver = dynamic_cast<LocalBroadcastChannel *>(receiver_ptr))
-        //         local_receivers.push_back(local_receiver);
-        //     else
-        //         throw Exception(ErrorCodes::LOGICAL_ERROR, "Unexpected SubReceiver Type: {}", typeid(receiver_ptr).name());
-        // }
+            auto * receiver_ptr = exchange_source_ptr->getReceiver().get();
+
+            if (auto * brpc_receiver = dynamic_cast<BrpcRemoteBroadcastReceiver *>(receiver_ptr))
+                async_results.emplace_back(brpc_receiver->registerToSendersAsync(register_timeout_ms));
+            else if (auto * local_receiver = dynamic_cast<LocalBroadcastChannel *>(receiver_ptr))
+                local_receivers.push_back(local_receiver);
+            else if (auto * multi_receiver = dynamic_cast<MultiPathReceiver *>(receiver_ptr))
+            {
+                multi_receiver->registerToSendersAsync(register_timeout_ms);
+                multi_receivers.push_back(multi_receiver);
+            }
+            else
+                throw Exception(ErrorCodes::LOGICAL_ERROR, "Register receivers, Unexpected SubReceiver Type: {}", typeid(receiver_ptr).name());
+        }
 
         for (auto * receiver_ptr : local_receivers)
+        {
+            LOG_TRACE(log, "registerAllExchangeReceivers localhost {} timeout {}", receiver_ptr->getName(), register_timeout_ms);
             receiver_ptr->registerToSenders(register_timeout_ms);
+        }
         for (auto * receiver_ptr : multi_receivers)
             receiver_ptr->registerToLocalSenders(register_timeout_ms);
         for (auto * receiver_ptr : multi_receivers)

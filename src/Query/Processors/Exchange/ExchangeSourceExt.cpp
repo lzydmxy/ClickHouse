@@ -71,8 +71,9 @@ String ExchangeSourceExt::getClassName() const
 
 IProcessor::Status ExchangeSourceExt::prepare()
 {
+    LOG_TRACE(logger, "{} begin prepare", getName());
     const auto & status = ISource::prepare();
-    LOG_TRACE(logger, "{} prepare, status is {}", getName(), ISource::statusToName(status));
+    LOG_TRACE(logger, "{} parent's prepare, status is {}", getName(), ISource::statusToName(status));
     if (status == Status::Finished)
     {
         receiver->finish(BroadcastStatusCode::RECV_REACH_LIMIT, "ExchangeSourceExt finished");

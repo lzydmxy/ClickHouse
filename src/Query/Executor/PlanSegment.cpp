@@ -3,9 +3,6 @@
 #include <sstream>
 #include <Core/ColumnNumbers.h>
 #include <Core/ColumnWithTypeAndName.h>
-//#include <DataStreams/NativeBlockInputStream.h>
-//#include <DataStreams/NativeBlockOutputStream.h>
-//#include <Query/QueryPlan/RemoteExchangeSourceStep.h>
 #include <DataTypes/DataTypesNumber.h>
 #include <Functions/FunctionFactory.h>
 #include <IO/ReadHelpers.h>
@@ -14,11 +11,12 @@
 #include <Interpreters/Context.h>
 #include <Parsers/IAST.h>
 #include <Parsers/queryToString.h>
-#include <Query/ProtosHelper/PlanSerDerHelper.h>
 #include <Processors/QueryPlan/QueryPlan.h>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
 #include <Query/ProtosHelper/QueryProto.h>
 #include <Query/ProtosHelper/ExchangeMode.h>
 #include <Query/ProtosHelper/RPCHelpers.h>
+#include <Query/Processors/QueryPlan/RemoteExchangeSourceStepExt.h>
 
 namespace DB
 {
@@ -250,20 +248,19 @@ String PlanSegmentOutput::toString(size_t indent) const
 }
 
 
-void PlanSegment::setPlanSegmentToQueryPlan(QueryPlan::Node * node, ContextPtr & /*context*/)
+void PlanSegment::setPlanSegmentToQueryPlan(QueryPlan::Node * node, ContextPtr & context)
 {
     if (!node)
         return;
-    // TODO: Need RemoteExchangeSourceStep
-    // if (auto * remote_step = dynamic_cast<RemoteExchangeSourceStep *>(node->step.get()))
-    //     remote_step->setPlanSegment(this, context);
-    // else
-    // {
-    //     for (auto & child : node->children)
-    //     {
-    //         setPlanSegmentToQueryPlan(child, context);
-    //     }
-    // }
+    if (auto * remote_step = dynamic_cast<RemoteExchangeSourceStepExt *>(node->step.get()))
+        remote_step->setPlanSegment(this, context);
+    else
+    {
+        for (auto & child : node->children)
+        {
+            setPlanSegmentToQueryPlan(child, context);
+        }
+    }
 }
 
 /*
@@ -457,16 +454,15 @@ String PlanSegment::toString()
     return ostr.str();
 }
 
-void PlanSegment::getRemoteSegmentId(const QueryPlan::Node * node, std::unordered_map<PlanNodeId, size_t> & exchange_to_segment)
-{
-    // TODO:Need Step
-    // auto * step = dynamic_cast<RemoteExchangeSourceStep *>(node->step.get());
-    // if (step)
-    //     exchange_to_segment[node->id] = step->getInput()[0]->getPlanSegmentId();
+// void PlanSegment::getRemoteSegmentId(const QueryPlan::Node * node, std::unordered_map<PlanNodeId, size_t> & exchange_to_segment)
+// {
+//     auto * step = dynamic_cast<RemoteExchangeSourceStepExt *>(node->step.get());
+//     if (step)
+//         exchange_to_segment[node->id] = step->getInput()[0]->getPlanSegmentId();
 
-    for (const auto & child : node->children)
-        getRemoteSegmentId(child, exchange_to_segment);
-}
+//     for (const auto & child : node->children)
+//         getRemoteSegmentId(child, exchange_to_segment);
+// }
 
 std::unordered_map<size_t, PlanSegmentPtr &> PlanSegmentTree::getPlanSegmentsMap()
 {

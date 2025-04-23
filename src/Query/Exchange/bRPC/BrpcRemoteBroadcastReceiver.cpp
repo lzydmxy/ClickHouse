@@ -153,6 +153,10 @@ void BrpcRemoteBroadcastReceiver::registerToSenders(UInt32 timeout_ms)
     request.set_parallel_id(trans_key->partition_id);
     request.set_parallel_index(trans_key->parallel_index);
     request.set_wait_timeout_ms(optimizer_context->getSettingsRef().exchange_wait_accept_max_timeout_ms);
+
+    LOG_DEBUG(log, "Receiver begin register sender: host {}, name {}, stream {}, timeout_ms {}",
+        registry_address, name, stream_id, timeout_ms);
+
     sendRegisterRPC(stub, cntl, &request, &response, nullptr);
 
     // if exchange_enable_force_remote_mode = 1, sender and receiver in same process and sender stream may close before rpc end

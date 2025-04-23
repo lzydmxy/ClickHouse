@@ -5,6 +5,7 @@
 #include <Query/Optimizer/SymbolTransformMap.h>
 #include <Interpreters/evaluateConstantExpression.h>
 #include <Planner/Utils.h>
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
 
 namespace DB
@@ -867,6 +868,7 @@ void TableScanStepExt::rewriteInForBucketTable(ContextPtr context) const
 
 void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, const BuildQueryPipelineSettings & build_settings, bool use_expand_pipe)
 {
+    const auto & build_settings_ext = BuildQueryPipelineSettingsExt::cast(build_settings);
 
     //todo: need to add  partition_filter to SelectQueryInfo
     ASTPtr partition_filter;
@@ -880,8 +882,8 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
         for (const auto & predicate : rf_filters)
             descriptions.emplace_back(RuntimeFilterUtils::extractDescription(predicate).value());
 
-        const auto & query_id = build_settings.getBuildQueryPipelineSettingsExt().distributed_settings.query_id;
-        const auto & setting = build_settings.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef();
+        const auto & query_id = build_settings_ext.distributed_settings.query_id;
+        const auto & setting = build_settings_ext.context->getOptimizerContext()->getSettingsRef();
         size_t wait_ms = use_expand_pipe ? 0 : setting.wait_runtime_filter_timeout;
         bool enable_bf_in_prewhere = setting.enable_rewrite_bf_into_prewhere;
         bool enable_range_cover = setting.enable_range_cover;
@@ -928,8 +930,8 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
             return lhs.filter_factor > rhs.filter_factor;
         });
 
-        const auto & query_id = build_settings.getBuildQueryPipelineSettingsExt().distributed_settings.query_id;
-        const auto & setting = build_settings.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef();
+        const auto & query_id = build_settings_ext.distributed_settings.query_id;
+        const auto & setting = build_settings_ext.context->getOptimizerContext()->getSettingsRef();
         bool enable_2stags_prewhere = setting.enable_two_stages_prewhere;
         size_t wait_ms = use_expand_pipe ? 0 : setting.wait_runtime_filter_timeout;
         bool enable_bf_in_prewhere = setting.enable_rewrite_bf_into_prewhere;
@@ -1061,8 +1063,11 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
         pipeline.init(Pipe(std::make_shared<NullSource>(output_stream->header)));
         return;
     }
+
+    const auto & build_context_ext = BuildQueryPipelineSettingsExt::cast(build_context);
+
     auto * query = query_info.query->as<ASTSelectQuery>();
-    bool use_expand_pipe = build_context.getBuildQueryPipelineSettingsExt().is_expand;
+    bool use_expand_pipe = build_context_ext.is_expand;
     if (!use_expand_pipe && (query->where() || query->prewhere()))
     {
         std::vector<RuntimeFilterId> ids;
@@ -1091,20 +1096,20 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     Stopwatch stage_watch, total_watch;
     total_watch.start();
     stage_watch.start();
-    storage = DatabaseCatalog::instance().getTable(storage_id, build_context.getBuildQueryPipelineSettingsExt().context);
-    initMetadataAndStorageSnapshot(build_context.getBuildQueryPipelineSettingsExt().context);
+    storage = DatabaseCatalog::instance().getTable(storage_id, build_context_ext.context);
+    initMetadataAndStorageSnapshot(build_context_ext.context);
     auto * merge_tree_storage = dynamic_cast<MergeTreeData *>(storage.get());
 
     //todo: need optimizer_index_projection_support settiings
     //bool is_merge_tree = merge_tree_storage != nullptr;
-    //bool use_projection_index = build_context.getBuildQueryPipelineSettingsExt().context->getSettingsRef().optimizer_index_projection_support && is_merge_tree && build_context.context->getSettingsRef().enable_ab_index_optimization;
+    //bool use_projection_index = build_context_ext.context->getSettingsRef().optimizer_index_projection_support && is_merge_tree && build_context.context->getSettingsRef().enable_ab_index_optimization;
     // && is_merge_tree && !use_projection_index;
     bool use_projection_index = false;
     bool use_optimizer_projection_selection = false;
     
     LOG_INFO(getLogger("test"), "initTableScan, limit={}, !empty={}", query->limitLength() ? serializeAST(*query->limitLength()) : "nothing", use_projection_index || use_optimizer_projection_selection);
 
-    rewriteInForBucketTable(build_context.getBuildQueryPipelineSettingsExt().context);
+    rewriteInForBucketTable(build_context_ext.context);
     stage_watch.start();
     /// Rewrite runtime filter
     rewriteDynamicFilter(query_info, build_context, use_expand_pipe);
@@ -1115,11 +1120,11 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     SelectQueryOptions options;
 
     stage_watch.restart();
-    auto interpreter = std::make_shared<InterpreterSelectQuery>(query_info.query, build_context.getBuildQueryPipelineSettingsExt().context, options);
+    auto interpreter = std::make_shared<InterpreterSelectQuery>(query_info.query, build_context_ext.context, options);
     interpreter->execute();
     auto backup_input_order_info = query_info.input_order_info;
     query_info = interpreter->getQueryInfo();
-    query_info = fillQueryInfo(build_context.getBuildQueryPipelineSettingsExt().context);
+    query_info = fillQueryInfo(build_context_ext.context);
 
     LOG_DEBUG(log, "init pipeline stage run time: make up query info, {} ms", stage_watch.elapsedMilliseconds());
 
@@ -1149,7 +1154,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             }
 
             msg += fmt::format(
-                "actions: {}\n", ProjectionStepExt::createActions(inline_expressions, input_columns, build_context.getBuildQueryPipelineSettingsExt().context)->dumpDAG());
+                "actions: {}\n", ProjectionStepExt::createActions(inline_expressions, input_columns, build_context_ext.context)->dumpDAG());
 
             // msg += fmt::format("output_columns: {}\n required_columns: {}", column_alias, required_columns.toString());
 
@@ -1170,12 +1175,12 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     stage_watch.restart();
     LOG_DEBUG(log, "init pipeline stage run time: projection match, {} ms", stage_watch.elapsedMilliseconds());
 
-    size_t max_streams = build_context.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_threads;
-    if (max_block_size < build_context.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_block_size)
+    size_t max_streams = build_context_ext.context->getSettingsRef().max_threads;
+    if (max_block_size < build_context_ext.context->getSettingsRef().max_block_size)
         max_streams = 1; // single block single stream.
 
     //todo: need to convet max_streams_to_max_threads_ratio
-    // auto max_streams_to_max_threads_ratio = build_context.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_streams_to_max_threads_ratio;
+    // auto max_streams_to_max_threads_ratio = build_context_ext.context->getSettingsRef().max_streams_to_max_threads_ratio;
     auto max_streams_to_max_threads_ratio = 1;
     if (max_streams > 1 && !storage->isRemote())
         max_streams *= max_streams_to_max_threads_ratio;
@@ -1196,7 +1201,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             getRequiredColumns(),
             storage_snapshot,
             query_info,
-            build_context.getBuildQueryPipelineSettingsExt().context,
+            build_context_ext.context,
             QueryProcessingStage::Enum::FetchColumns,
             max_block_size,
             max_streams);
@@ -1233,7 +1238,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             step = read_from_pipe;
         }
         else
-            step = std::make_shared<ReadFromStorageStep>(std::move(pipe), "ReadFromStorageStep", build_context.getBuildQueryPipelineSettingsExt().context, query_info);
+            step = std::make_shared<ReadFromStorageStep>(std::move(pipe), "ReadFromStorageStep", build_context_ext.context, query_info);
 
 
         if (auto * source = dynamic_cast<ISourceStep *>(step.get()))
@@ -1254,7 +1259,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     }
 
     MergeTreeDataSelectExecutor merge_tree_reader{*merge_tree_storage};
-    auto context = build_context.getBuildQueryPipelineSettingsExt().context;
+    auto context = build_context_ext.context;
     Pipes pipes;
 
     // num of pipes may be smaller than num of plan elements since MergeTreeDataSelectExecutor
@@ -1651,6 +1656,8 @@ void TableScanStepExt::aliasColumns(QueryPipelineBuilder & pipeline, const Build
     const auto & output_header = table_output_stream.header;
     LOG_TRACE(log, "aliasColumns({}), current header: {}, desired header: {}", pipeline_name, cur_header.dumpStructure(), output_header.dumpStructure());
 
+    const auto & build_context_ext = BuildQueryPipelineSettingsExt::cast(build_context);
+
     if (!blocksHaveEqualStructure(cur_header, output_header))
     {
         NamesWithAliases aliases;
@@ -1672,7 +1679,7 @@ void TableScanStepExt::aliasColumns(QueryPipelineBuilder & pipeline, const Build
             aliases.emplace_back(expr_col_name, inline_expr.first);
         }
 
-        auto actions = QueryPlanStepHelper::createExpressionActions(build_context.getBuildQueryPipelineSettingsExt().context, cur_header.getNamesAndTypesList(), aliases, select, true);
+        auto actions = QueryPlanStepHelper::createExpressionActions(build_context_ext.context, cur_header.getNamesAndTypesList(), aliases, select, true);
         // handle type mismatch
         auto header_after_alias = actions->updateHeader(cur_header);
         LOG_TRACE(log, "aliasColumns({}), alias actions: {}, header after alias: {}", pipeline_name, actions->dumpDAG(),header_after_alias.dumpStructure());
@@ -1697,7 +1704,8 @@ void TableScanStepExt::aliasColumns(QueryPipelineBuilder & pipeline, const Build
 
 void TableScanStepExt::setQuotaAndLimits(QueryPipelineBuilder & pipeline, const SelectQueryOptions & options, const BuildQueryPipelineSettings & build_context)
 {
-    auto context = build_context.getBuildQueryPipelineSettingsExt().context;
+    const auto & build_context_ext = BuildQueryPipelineSettingsExt::cast(build_context);
+    auto context = build_context_ext.context;
     const auto & settings = context->getSettingsRef();
 
     StreamLocalLimits limits;

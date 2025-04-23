@@ -9,7 +9,7 @@
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Common/JSONBuilder.h>
 #include <Common/logger_useful.h>
-
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
 namespace DB
 {
@@ -27,11 +27,13 @@ std::shared_ptr<IQueryPlanStep> FilterStepExt::copy(ContextPtr) const
 
 void FilterStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
+    const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(settings);
+
     ConstASTPtr rewrite_filter = filter;
     if (!actions_dag)
     {
         rewrite_filter = rewriteRuntimeFilter(filter, pipeline, settings);
-        actions_dag = QueryPlanStepHelper::createFilterExpressionActions(settings.getBuildQueryPipelineSettingsExt().context, rewrite_filter->clone(), input_streams[0].header);
+        actions_dag = QueryPlanStepHelper::createFilterExpressionActions(settings_ext.context, rewrite_filter->clone(), input_streams[0].header);
         filter_column_name = rewrite_filter->getColumnName();
     }
 
@@ -61,15 +63,17 @@ void FilterStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const Bui
 
 ConstASTPtr FilterStepExt::rewriteRuntimeFilter(const ConstASTPtr & filter, QueryPipelineBuilder &, const BuildQueryPipelineSettings & build_context)
 {
+    const auto & context_ext = BuildQueryPipelineSettingsExt::cast(build_context);
+
     auto filters = RuntimeFilterUtils::extractRuntimeFilters(filter);
     if (filters.first.empty())
         return filter;
 
-    bool only_bf = build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().enable_rewrite_bf_into_prewhere;
+    bool only_bf = context_ext.context->getOptimizerContext()->getSettingsRef().enable_rewrite_bf_into_prewhere;
 
     ASTs predicates = std::move(filters.second);
 
-    if (build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().enable_two_stages_prewhere)
+    if (context_ext.context->getOptimizerContext()->getSettingsRef().enable_two_stages_prewhere)
     {
         //skip all runtime_filters in FilterStepExt, since all runtime_filters has been moved into TableScanStep.
     }
@@ -79,7 +83,7 @@ ConstASTPtr FilterStepExt::rewriteRuntimeFilter(const ConstASTPtr & filter, Quer
         {
             auto description = RuntimeFilterUtils::extractDescription(runtime_filter).value();
             auto runtime_filters
-                = RuntimeFilterUtils::createRuntimeFilterForFilter(description, build_context.getBuildQueryPipelineSettingsExt().context->getInitialQueryId(), only_bf);
+                = RuntimeFilterUtils::createRuntimeFilterForFilter(description, context_ext.context->getInitialQueryId(), only_bf);
             predicates.insert(predicates.end(), runtime_filters.begin(), runtime_filters.end());
         }
     }

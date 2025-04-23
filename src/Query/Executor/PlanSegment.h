@@ -309,7 +309,8 @@ public:
     void addRuntimeFilter(RuntimeFilterId id) { runtime_filters.emplace(id); }
     const std::unordered_set<RuntimeFilterId> & getRuntimeFilters() const { return runtime_filters; }
 
-    static void getRemoteSegmentId(const QueryPlan::Node * node, std::unordered_map<PlanNodeId, size_t> & exchange_to_segment);
+    // This method is used to print query plan information. Need to add an id field to the Node of the QueryPlan and temporarily comment it.
+    // static void getRemoteSegmentId(const QueryPlan::Node * node, std::unordered_map<PlanNodeId, size_t> & exchange_to_segment);
 
     void setProfileType(const RReportProfileType::Enum & type) { profile_type = type; }
 

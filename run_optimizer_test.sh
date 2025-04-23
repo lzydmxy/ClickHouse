@@ -13,3 +13,5 @@
 ./build/src/unit_tests_dbms trace --gtest_filter="PlanSegmentTest*"
 ./build/src/unit_tests_dbms trace --gtest_filter="ProtobufTest*"
 ./build/src/unit_tests_dbms trace --gtest_filter="PlanSegmentProcessListTest*"
+./build/src/unit_tests_dbms trace --gtest_filter="ProfileLogHubTest*"
+./build/src/unit_tests_dbms trace --gtest_filter="ExchangeSourceStepTest*"

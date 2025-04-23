@@ -81,7 +81,7 @@ BroadcastStatus LocalBroadcastChannel::sendImpl(Chunk chunk)
     }
     if (receive_queue->tryEmplaceUntil(options.max_timeout_ts, MultiPathDataPacket(DataPacket{std::move(chunk)})))
     {
-        LOG_TRACE(log, "{} emplace success", name);
+        LOG_TRACE(log, "{} emplace success, size {}", name, receive_queue->size());
         return *broadcast_status.load(std::memory_order_acquire);
     }
 
@@ -140,6 +140,7 @@ BroadcastStatus LocalBroadcastChannel::finish(BroadcastStatusCode status_code, S
 
 void LocalBroadcastChannel::registerToSenders(UInt32 timeout_ms)
 {
+    LOG_TRACE(log, "Local broadcast channel register to senders, data_key {} timeout {}", *data_key, timeout_ms);
     Stopwatch s;
     auto sender_proxy = BroadcastSenderProxyRegistry::instance().getOrCreate(data_key);
     sender_proxy->waitAccept(timeout_ms);

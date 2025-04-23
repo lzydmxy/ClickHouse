@@ -18,6 +18,7 @@
 #include <Interpreters/JoinSwitcher.h>
 #include <Query/Interpreters/TableJoinExt.h>
 #include <Query/Common/SymbolsExtractor.h>
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
 
 
@@ -307,7 +308,8 @@ QueryPipelineBuilderPtr JoinStepExt::updatePipeline(QueryPipelineBuilders pipeli
 
     ExpressionActionsPtr filter_action;
 
-    const auto & settings_ext = settings.getBuildQueryPipelineSettingsExt();
+    // const auto & settings_ext = settings.getBuildQueryPipelineSettingsExt();
+    const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(settings);
 
     if (!join)
     {

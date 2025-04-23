@@ -47,6 +47,7 @@ void BrpcExchangeReceiverRegistryService::registry(
     /// this done_guard guarantee to call done->Run() in any situation
     brpc::ClosureGuard done_guard(done);
     auto accept_timeout_ms = request->wait_timeout_ms();
+    LOG_TRACE(getLogger("Service"), "registry key {} query {}", key->toString(), query_id);
     acceptStream(cntl, accept_timeout_ms, sender_proxy, request->query_id(), sender_stream_id);
 }
 
@@ -105,6 +106,7 @@ void BrpcExchangeReceiverRegistryService::acceptStream(
     brpc::StreamOptions stream_options;
     stream_options.max_buf_size = max_buf_size;
     auto key = sender->getDataKey();
+    LOG_TRACE(log, "acceptStream, key {}, query {}", key->toString(), query_id);
     try
     {
         sender->waitAccept(accept_timeout_ms);

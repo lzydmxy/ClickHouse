@@ -100,6 +100,9 @@ public:
 
     QueryExchangeLogPtr getQueryExchangeLog();
 
+    void setTransactionID(UInt64 txt_id_);
+    UInt64 getTransactionID();
+
 private:
     OptimizerSettings optimizer_settings;
     UInt32 query_max_execution_time;
@@ -115,6 +118,7 @@ private:
     std::function<void()> send_tcp_progress{nullptr};
     bool is_explain_query{false};
     QueryExchangeLogPtr query_exchange_log;
+    UInt64 txt_id{0};
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;

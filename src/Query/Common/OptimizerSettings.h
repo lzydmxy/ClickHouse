@@ -77,7 +77,7 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(UInt64, exchange_local_receiver_queue_size, 30, "Queue size for local exchange receiver",0) \
     M(UInt64, exchange_multi_path_receiver_queue_size, 20, "Queue size for multi path exchange receiver", 0) \
     M(UInt64, exchange_stream_back_pressure_max_wait_ms, 0, "Default 0, 0 means no control", 0) \
-    M(Bool, exchange_enable_multipath_reciever, true, "Whether enable exchange new mode ", 0) \
+    M(Bool, exchange_enable_multipath_receiver, true, "Whether enable exchange new mode ", 0) \
     M(UInt64, exchange_source_pipeline_threads, 16, "Recommend number of threads for pipeline which reading data from exchange, ingoned if exchange need keep data order", 0) \
     /** Runtime Filter settings */ \
     M(UInt64, wait_runtime_filter_timeout, 1000, "Execute filter wait for runtime filter timeout ms", 0) \
