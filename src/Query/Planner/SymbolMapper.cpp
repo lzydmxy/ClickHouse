@@ -462,6 +462,7 @@ std::shared_ptr<FinalSampleStepExt> SymbolMapper::map(const FinalSampleStepExt &
 }
 
 
+
 std::shared_ptr<IntersectOrExceptStep> SymbolMapper::map(const IntersectOrExceptStep & intersect_or_except)
 {
     return std::make_shared<IntersectOrExceptStep>(
@@ -579,15 +580,24 @@ std::shared_ptr<PartitionTopNStepExt> SymbolMapper::map(const PartitionTopNStepE
         partition_topn.getModel());
 }
 
-// ToDo @lizhuoyu5, add PartialSortingStep
-// std::shared_ptr<PartialSortingStep> SymbolMapper::map(const PartialSortingStep & partial_sorting)
-// {
-//     return std::make_shared<PartialSortingStep>(
-//         map(partial_sorting.getInputStreams()[0]),
-//         SortDescription{partial_sorting.getSortDescription()},
-//         partial_sorting.getLimit(),
-//         partial_sorting.getSizeLimits());
-// }
+std::shared_ptr<PartialSortingStepExt> SymbolMapper::map(const PartialSortingStepExt & partial_sorting)
+{
+    return std::make_shared<PartialSortingStepExt>(
+        map(partial_sorting.getInputStreams()[0]),
+        SortDescription{partial_sorting.getSortDescription()},
+        partial_sorting.getLimit(),
+        partial_sorting.getSizeLimits());
+}
+
+std::shared_ptr<FinishSortingStepExt> SymbolMapper::map(const FinishSortingStepExt & finish_sorting)
+{
+    return std::make_shared<FinishSortingStepExt>(
+        map(finish_sorting.getInputStreams()[0]),
+        SortDescription{map(finish_sorting.getPrefixDescription())},
+        SortDescription{map(finish_sorting.getResultDescription())},
+        finish_sorting.getMaxBlockSize(),
+        finish_sorting.getLimit());
+}
 
 
 std::shared_ptr<ProjectionStepExt> SymbolMapper::map(const ProjectionStepExt & projection)
@@ -627,13 +637,14 @@ std::shared_ptr<RemoteExchangeSourceStepExt> SymbolMapper::map(const RemoteExcha
         remote_exchange.isAddExtremes());
 }
 
-
-std::shared_ptr<SortingStep> SymbolMapper::map(const SortingStep & sorting)
+std::shared_ptr<SortingStepExt> SymbolMapper::map(const SortingStepExt & sorting)
 {
-    return std::make_shared<SortingStep>(
+    return std::make_shared<SortingStepExt>(
         map(sorting.getInputStreams()[0]),
         SortDescription{map(sorting.getSortDescription())},
-        sorting.getLimit());
+        sorting.getLimit(),
+        sorting.getStage(),
+        SortDescription{map(sorting.getPrefixDescription())});
 }
 
 std::shared_ptr<TopNFilteringStepExt> SymbolMapper::map(const TopNFilteringStepExt & topn_filter)

@@ -61,6 +61,9 @@ public:
     static void toProto(const Field & field, Protos::Field & proto);
     static std::shared_ptr<Field> fillFromProto(const Protos::Field & proto);
 
+    static void toProto(const SizeLimits & fill_column_description, Protos::SizeLimits & proto);
+    static void fillFromProto(SizeLimits & fill_column_description, const Protos::SizeLimits & proto);
+
 };
 
 }

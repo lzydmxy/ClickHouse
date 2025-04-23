@@ -314,7 +314,7 @@ message FillingStep {
     bool use_with_fill_by_sorting_prefix = 4;
 }
 
-message FinishSortingStep {
+message FinishSortingStepExt {
     ITransformingStep query_plan_base = 1;
     repeated SortColumnDescription prefix_description = 2;
     repeated SortColumnDescription result_description = 3;
@@ -359,7 +359,7 @@ message OffsetStep {
     uint64 offset = 2;
 }
 
-message SortingStep {
+message SortingStepExt {
     message Stage {
         enum Enum {
             FULL = 0;
@@ -373,7 +373,7 @@ message SortingStep {
     uint64 limit = 3; // deprecated, use limit_or_var instead
     bool partial = 4;
     repeated SortColumnDescription prefix_description = 5;
-    Stage.Enum stage = 6;
+    optional Stage.Enum stage = 6;
     SizeOrVariable limit_or_var = 7;
 }
 
@@ -424,7 +424,7 @@ message DistinctStep {
     bool pre_distinct = 5;
 }
 
-message PartialSortingStep {
+message PartialSortingStepExt {
     ITransformingStep query_plan_base = 1;
     repeated SortColumnDescription sort_description = 2;
     uint64 limit = 3;
@@ -823,7 +823,7 @@ message QueryPlanStep {
         FillingStep filling_step = 10;
         FilterStepExt filter_step_ext = 11;
         FinalSampleStep final_sample_step = 12;
-        FinishSortingStep finish_sorting_step = 13;
+        FinishSortingStepExt finish_sorting_step_ext = 13;
         IntersectStep intersect_step = 14;
         JoinStepExt join_step_ext = 15;
         LimitByStep limit_by_step = 16;
@@ -833,13 +833,13 @@ message QueryPlanStep {
         MergingAggregatedStep merging_aggregated_step = 20;
         MergingSortedStepExt merging_sorted_step_ext = 21;
         OffsetStep offset_step = 22;
-        PartialSortingStep partial_sorting_step = 23;
+        PartialSortingStepExt partial_sorting_step_ext = 23;
         PartitionTopNStepExt partition_top_n_step_ext = 24;
         ProjectionStepExt projection_step_ext = 25;
         ReadNothingStep read_nothing_step = 26;
         ReadStorageRowCountStep read_storage_row_count_step = 27;
         RemoteExchangeSourceStepExt remote_exchange_source_step_ext = 28;
-        SortingStep sorting_step = 29;
+        SortingStepExt sorting_step_ext = 29;
         TableFinishStep table_finish_step = 30;
         TableScanStep table_scan_step = 31;
         TableWriteStep table_write_step = 32;

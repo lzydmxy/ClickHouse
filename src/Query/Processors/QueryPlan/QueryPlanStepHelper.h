@@ -52,6 +52,9 @@
 #include <Query/Processors/QueryPlan/ReadStorageRowCountStepExt.h>
 #include <Query/Processors/QueryPlan/MergeSortingStepExt.h>
 #include <Query/Processors/QueryPlan/MergingSortedStepExt.h>
+#include <Query/Processors/QueryPlan/PartialSortingStepExt.h>
+#include <Query/Processors/QueryPlan/SortingStepExt.h>
+#include <Query/Processors/QueryPlan/FinishSortingStepExt.h>
 
 namespace DB
 {
@@ -88,7 +91,10 @@ class TableScanStepExt;
     M(LimitStepExt, limit_step_ext) \
     M(ReadStorageRowCountStepExt, read_storage_row_count_step_ext) \
     M(MergeSortingStepExt, merge_sorting_step_ext) \
-    M(MergingSortedStepExt, merging_sorted_step_ext)
+    M(MergingSortedStepExt, merging_sorted_step_ext) \
+    M(PartialSortingStepExt, partial_sorting_step_ext) \
+    M(SortingStepExt, sorting_step_ext) \
+    M(FinishSortingStepExt, finish_sorting_step_ext)
 
 // protobuf's types and names for Step with proto
 #define APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(M) \
@@ -102,7 +108,6 @@ class TableScanStepExt;
     M(MergingAggregatedStep, merging_aggregated_step) \
     M(OffsetStep, offset_step) \
     M(ReadNothingStep, read_nothing_step) \
-    M(SortingStep, sorting_step) \
     M(WindowStep, window_step)
 
 // types for StepExt without proto

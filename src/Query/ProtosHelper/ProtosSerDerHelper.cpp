@@ -283,4 +283,18 @@ std::shared_ptr<Field> ProtosSerDerHelper::fillFromProto(const Protos::Field & p
     return field;
 }
 
+void ProtosSerDerHelper::toProto(const SizeLimits & size_limits, Protos::SizeLimits & proto)
+{
+    proto.set_max_rows(size_limits.max_rows);
+    proto.set_max_bytes(size_limits.max_bytes);
+    proto.set_overflow_mode(OverflowModeConverter::toProto(size_limits.overflow_mode));
+}
+
+void ProtosSerDerHelper::fillFromProto(SizeLimits & size_limits, const Protos::SizeLimits & proto)
+{
+    size_limits.max_rows = proto.max_rows();
+    size_limits.max_bytes = proto.max_bytes();
+    size_limits.overflow_mode = OverflowModeConverter::fromProto(proto.overflow_mode());
+}
+
 }

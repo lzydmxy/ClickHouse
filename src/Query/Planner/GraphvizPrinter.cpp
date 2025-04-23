@@ -39,7 +39,7 @@ static std::unordered_map<QueryPlanStepType, std::string> NODE_COLORS = {
     {QueryPlanStepType::OffsetStep, "gray83"},
     {QueryPlanStepType::LimitStepExt, "gray83"},
     {QueryPlanStepType::FillingStep, "gray83"},
-    {QueryPlanStepType::SortingStep, "aliceblue"},
+    {QueryPlanStepType::SortingStepExt, "aliceblue"},
     {QueryPlanStepType::DistinctStepExt, "darkolivegreen4"},
     {QueryPlanStepType::ExtremesStep, "goldenrod4"},
     {QueryPlanStepType::TotalsHavingStepExt, "goldenrod4"},
