@@ -1,8 +1,13 @@
 #include <Query/Optimizer/Graph.h>
 
-// #include <Query/Optimizer/Cascades/Memo.h>
-// #include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
-#include <Query/Common/Utils.h>
+#include <Query/Optimizer/Cascades/Memo.h>
+#include <Query/Optimizer/JoinGraph.h>
+#include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
+// #include <Query/Optimizer/Signature/ExpressionReorderNormalizer.h>
+#include <Query/Optimizer/Utils.h>
+// #include <Parsers/ASTSerDerHelper.h>
+#include <Parsers/formatAST.h>
+// #include <QueryPlan/CTEInfo.h>
 
 namespace DB
 {
@@ -169,7 +174,7 @@ BitSet MinCutBranchAlg::neighbor(const BitSet & nodes)
     {
         if (!graph.getEdges().contains(pos))
         {
-            throw Exception(ErrorCodes::LOGICAL_ERROR, "Not found edge in graph");
+            throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Not found edge in graph");
         }
         for (const auto & item : graph.getEdges().at(pos))
         {

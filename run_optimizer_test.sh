@@ -8,3 +8,4 @@
 ./build/src/unit_tests_dbms trace --gtest_filter="JSONSuite*"
 ./build/src/unit_tests_dbms trace --gtest_filter="ASTEqualsTest*"
 ./build/src/unit_tests_dbms trace --gtest_filter="ProfileLogHubTest*"
+./build/src/unit_tests_dbms trace --gtest_filter="*FormatHiliting*Ext*:*Parser*Ext*"

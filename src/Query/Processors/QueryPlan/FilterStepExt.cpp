@@ -6,9 +6,11 @@
 #include <Query/Executor/RuntimeFilter/RuntimeFilterUtils.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/Transforms/FilterTransformExt.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Common/JSONBuilder.h>
 #include <Common/logger_useful.h>
+
 
 
 namespace DB
@@ -146,6 +148,27 @@ std::vector<ConstASTPtr> FilterStepExt::removeLargeInValueList(const std::vector
         removed_large_in_value_list.emplace_back(predicate);
     }
     return removed_large_in_value_list;
+}
+
+std::shared_ptr<FilterStep> FilterStepExt::fromProto(const Protos::FilterStepExt & proto, ContextPtr)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    auto filter = deserializeASTFromProto(proto.filter());
+    auto remove_filter_column = proto.remove_filter_column();
+    auto step = std::make_shared<FilterStepExt>(base_input_stream, filter, remove_filter_column);
+    step->setStepDescription(step_description);
+    return step;
+}
+
+void FilterStepExt::toProto(Protos::FilterStepExt & proto, bool) const
+{
+    if (actions_dag)
+    {
+        throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "actions dag is not supported in protobuf");
+    }
+    ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
+    serializeASTToProto(filter, *proto.mutable_filter());
+    proto.set_remove_filter_column(remove_filter_column);
 }
 
 }

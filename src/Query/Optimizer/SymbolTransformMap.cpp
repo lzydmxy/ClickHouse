@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/SymbolTransformMap.h>
 #include <Query/Parsers/ASTTableColumnReference.h>
 #include <Query/Common/SymbolsExtractor.h>

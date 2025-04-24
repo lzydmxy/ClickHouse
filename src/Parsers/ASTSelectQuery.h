@@ -2,6 +2,7 @@
 
 #include <Parsers/IAST.h>
 #include <Core/Names.h>
+#include <Query/Parsers/ASTType.h>
 
 namespace DB
 {
@@ -16,6 +17,7 @@ class ASTSelectQuery : public IAST
 {
 public:
     friend class ASTSelectQueryExt;
+    friend ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf);
 
     enum class Expression : uint8_t
     {

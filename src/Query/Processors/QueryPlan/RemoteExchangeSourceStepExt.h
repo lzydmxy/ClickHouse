@@ -52,6 +52,9 @@ public:
 
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
 
+    void toProto(Protos::RemoteExchangeSourceStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<RemoteExchangeSourceStepExt> fromProto(const Protos::RemoteExchangeSourceStepExt & proto, ContextPtr context);
+
     bool isAddTotals() const { return is_add_totals; }
     bool isAddExtremes() const  { return is_add_extremes; }
 

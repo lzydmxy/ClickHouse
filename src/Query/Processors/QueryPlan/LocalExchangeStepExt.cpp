@@ -3,6 +3,7 @@
 #include <Processors/ResizeProcessor.h>
 #include <Processors/Transforms/ScatterByPartitionTransform.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 
 namespace DB
 {
@@ -62,6 +63,24 @@ void LocalExchangeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, co
         return processors;
     });
 
+}
+
+void LocalExchangeStepExt::toProto(Protos::LocalExchangeStepExt & proto, bool /*for_hash_equals*/) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
+    proto.set_exchange_type(exchange_type);
+    //todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
+    // schema.toProto(*proto.mutable_schema());
+}
+
+std::shared_ptr<LocalExchangeStepExt> LocalExchangeStepExt::fromProto(const Protos::LocalExchangeStepExt & proto, ContextPtr /*context*/)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    //todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
+    // auto schema = Partitioning::fromProto(proto.schema());
+    auto step = std::make_shared<LocalExchangeStepExt>(base_input_stream, proto.exchange_type());
+    step->setStepDescription(step_description);
+    return step;
 }
 
 std::shared_ptr<IQueryPlanStep> LocalExchangeStepExt::copy(ContextPtr) const

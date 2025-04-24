@@ -50,56 +50,74 @@
 #include <Query/Processors/QueryPlan/ValuesStepExt.h>
 #include <Query/Processors/QueryPlan/LimitStepExt.h>
 #include <Query/Processors/QueryPlan/ReadStorageRowCountStepExt.h>
+#include <Query/Processors/QueryPlan/MergeSortingStepExt.h>
+#include <Query/Processors/QueryPlan/MergingSortedStepExt.h>
+#include <Query/Processors/QueryPlan/PartialSortingStepExt.h>
+#include <Query/Processors/QueryPlan/SortingStepExt.h>
+#include <Query/Processors/QueryPlan/FinishSortingStepExt.h>
 
 namespace DB
 {
 class TableScanStepExt;
 
-// Use for Optimizer
-#define APPLY_QUERY_PLAN_STEP_TYPES(M) \
-    M(AggregatingProjectionStep) \
-    M(AggregatingStepExt) \
-    M(AnyStepExt) \
-    M(ApplyStepExt) \
-    M(ArrayJoinStep) \
-    M(AssignUniqueIdStepExt) \
-    M(BufferStepExt) \
-    M(CTERefStepExt) \
-    M(DistinctStepExt) \
-    M(EnforceSingleRowStepExt) \
-    M(ExchangeStepExt) \
-    M(ExpandStepExt) \
-    M(ExplainAnalyzeStepExt) \
-    M(ExtremesStep) \
-    M(FillingStep) \
-    M(FilterStepExt) \
-    M(FinalSampleStepExt) \
-    M(IntermediateResultCacheStepExt) \
-    M(IntersectOrExceptStep) \
-    M(JoinStepExt) \
-    M(LimitByStep) \
-    M(LocalExchangeStepExt) \
-    M(MarkDistinctStepExt) \
-    M(MergingAggregatedStep) \
-    M(MultiJoinStepExt) \
-    M(OffsetStep) \
-    M(PartitionTopNStepExt) \
-    M(ProjectionStepExt) \
-    M(RemoteExchangeSourceStepExt) \
-    M(ReadNothingStep) \
-    M(SortingStep) \
-    M(TableScanStepExt) \
-    M(TopNFilteringStepExt) \
-    M(TotalsHavingStepExt) \
-    M(UnionStepExt) \
-    M(ValuesStepExt) \
-    M(WindowStep) \
-    M(LimitStepExt) \
-    M(ReadStorageRowCountStepExt) \
+// protobuf's types and names for StepExt with proto
+#define APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(M) \
+    M(AggregatingStepExt, aggregating_step_ext) \
+    M(AnyStepExt, any_step_ext) \
+    M(ApplyStepExt, apply_step_ext) \
+    M(AssignUniqueIdStepExt, assign_unique_id_step_ext) \
+    M(BufferStepExt, buffer_step_ext) \
+    M(CTERefStepExt, cte_ref_step_ext) \
+    M(DistinctStepExt, distinct_step_ext) \
+    M(EnforceSingleRowStepExt, enforce_single_row_step_ext) \
+    M(ExchangeStepExt, exchange_step_ext) \
+    M(ExpandStepExt, expand_step_ext) \
+    M(ExplainAnalyzeStepExt, explain_analyze_step_ext) \
+    M(FilterStepExt, filter_step_ext) \
+    M(FinalSampleStepExt, final_sample_step_ext) \
+    M(IntermediateResultCacheStepExt, intermediate_result_cache_step_ext) \
+    M(JoinStepExt, join_step_ext) \
+    M(LocalExchangeStepExt, local_exchange_step_ext) \
+    M(MarkDistinctStepExt, mark_distinct_step_ext) \
+    M(MultiJoinStepExt, multi_join_step_ext) \
+    M(PartitionTopNStepExt, partition_top_n_step_ext) \
+    M(ProjectionStepExt, projection_step_ext) \
+    M(RemoteExchangeSourceStepExt, remote_exchange_source_step_ext) \
+    M(TableScanStepExt, table_scan_step_ext) \
+    M(TopNFilteringStepExt, top_n_filtering_step_ext) \
+    M(TotalsHavingStepExt, totals_having_step_ext) \
+    M(UnionStepExt, union_step_ext) \
+    M(ValuesStepExt, values_step_ext) \
+    M(LimitStepExt, limit_step_ext) \
+    M(ReadStorageRowCountStepExt, read_storage_row_count_step_ext) \
+    M(MergeSortingStepExt, merge_sorting_step_ext) \
+    M(MergingSortedStepExt, merging_sorted_step_ext) \
+    M(PartialSortingStepExt, partial_sorting_step_ext) \
+    M(SortingStepExt, sorting_step_ext) \
+    M(FinishSortingStepExt, finish_sorting_step_ext)
 
-// All Steps
-#define APPLY_ALL_QUERY_PLAN_STEP_TYPES(M) \
-    APPLY_QUERY_PLAN_STEP_TYPES(M) \
+// protobuf's types and names for Step with proto
+#define APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(M) \
+    APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(M) \
+    M(AggregatingProjectionStep, aggregating_projection_step) \
+    M(ArrayJoinStep, array_join_step) \
+    M(ExtremesStep, extremes_step) \
+    M(FillingStep, filling_step) \
+    M(IntersectOrExceptStep, intersect_or_except_step) \
+    M(LimitByStep, limit_by_step) \
+    M(MergingAggregatedStep, merging_aggregated_step) \
+    M(OffsetStep, offset_step) \
+    M(ReadNothingStep, read_nothing_step) \
+    M(WindowStep, window_step)
+
+// types for StepExt without proto
+#define APPLY_NOPROTOBUF_STEP_TYPES_FOR_EXT(M) \
+    M(PlanSegmentSourceStepExt) \
+    M(SettingQuotaAndLimitsStepExt)
+
+// types for Step without proto
+#define APPLY_NOPROTOBUF_STEP_TYPES(M) \
+    APPLY_NOPROTOBUF_STEP_TYPES_FOR_EXT(M) \
     M(ReadFromMergeTree) \
     M(ReadFromPreparedSource) \
     M(CreatingSetStep) \
@@ -107,12 +125,29 @@ class TableScanStepExt;
     M(CubeStep) \
     M(ExpressionStep) \
     M(FilledJoinStep) \
-    M(PlanSegmentSourceStepExt) \
-    M(SettingQuotaAndLimitsStepExt) \
     M(ReadFromStorageStep) \
-    M(RollupStep) \
+    M(RollupStep)
 
+// macro helpers to convert MM(x, y) to M(x)
+#define IMPL_TUPLE_TO_FIRST(_x, _y) (_x)
+// extract types from StepExt and Step with proto
+#define IMPL_PROTOBUF_STEP_TYPES_FOR_EXT APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(IMPL_TUPLE_TO_FIRST)
+#define IMPL_PROTOBUF_STEP_TYPES APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(IMPL_TUPLE_TO_FIRST)
 
+// apply function
+#define IMPL_MACRO_FUNCTION_APPLY(_r, _data, _elem) _data(_elem)
+// apply function for elements in seq
+#define APPLY_PROTOBUF_STEP_TYPES_FOR_EXT(M) BOOST_PP_SEQ_FOR_EACH(IMPL_MACRO_FUNCTION_APPLY, M, IMPL_PROTOBUF_STEP_TYPES_FOR_EXT)
+#define APPLY_PROTOBUF_STEP_TYPES(M) BOOST_PP_SEQ_FOR_EACH(IMPL_MACRO_FUNCTION_APPLY, M, IMPL_PROTOBUF_STEP_TYPES)
+
+// all types for StepExt
+#define APPLY_ALL_STEP_TYPES_FOR_EXT(M) \
+    APPLY_PROTOBUF_STEP_TYPES_FOR_EXT(M) \
+    APPLY_NOPROTOBUF_STEP_TYPES_FOR_EXT(M)
+// all types for Step
+#define APPLY_ALL_STEP_TYPES(M) \
+    APPLY_PROTOBUF_STEP_TYPES(M) \
+    APPLY_NOPROTOBUF_STEP_TYPES(M)
 
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) ITEM,
 enum class QueryPlanStepType : UInt8
@@ -120,7 +155,7 @@ enum class QueryPlanStepType : UInt8
     Any = 0,
     // change this when order is changed to avoid conflicts
     StepBegin = 100,
-    APPLY_ALL_QUERY_PLAN_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE) UNDEFINED,
+    APPLY_ALL_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE) UNDEFINED,
 };
 #undef ENUM_QUERY_PLAN_STEP_TYPE
 
@@ -131,7 +166,7 @@ inline String toString(QueryPlanStepType type)
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) \
     case QueryPlanStepType::ITEM: \
         return #ITEM;
-        APPLY_ALL_QUERY_PLAN_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE)
+        APPLY_ALL_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE)
 #undef ENUM_QUERY_PLAN_STEP_TYPE
         default:
             return "UNDEFINED";
@@ -146,21 +181,21 @@ inline String toString(QueryPlanStepType type)
 
 inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStepPtr & query_plan_step)
 {
-    APPLY_ALL_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE)
+    APPLY_ALL_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE)
     return QueryPlanStepType::UNDEFINED;
 }
 #undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE
 
 #define CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF(type) \
-if (typeInfo == typeid(type)) \
-{ \
-return QueryPlanStepType::type; \
-}
+    if (typeInfo == typeid(type)) \
+    { \
+        return QueryPlanStepType::type; \
+    }
 
 inline QueryPlanStepType getQueryPlanStepType(const IQueryPlanStep & query_plan_step)
 {
-    const std::type_info& typeInfo = typeid(query_plan_step);
-    APPLY_ALL_QUERY_PLAN_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF)
+    const std::type_info & typeInfo = typeid(query_plan_step);
+    APPLY_ALL_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF)
     return QueryPlanStepType::UNDEFINED;
 }
 #undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF
@@ -188,181 +223,10 @@ public:
         return true;
     }
 
-    static QueryPlanStepPtr copyQueryPlanStep(const QueryPlanStepPtr & query_plan_step, ContextPtr context)
-    {
-        if (auto step_ptr = std::dynamic_pointer_cast<OffsetStep>(query_plan_step))
-            return std::make_shared<OffsetStep>(step_ptr->input_streams[0], step_ptr->offset);
-        else if (auto step_ptr = std::dynamic_pointer_cast<ArrayJoinStep>(query_plan_step))
-            return std::make_shared<ArrayJoinStep>(step_ptr->input_streams[0], step_ptr->array_join);
-        else if (auto step_ptr = std::dynamic_pointer_cast<CubeStep>(query_plan_step))
-            return std::make_shared<CubeStep>(step_ptr->input_streams[0], step_ptr->params, step_ptr->final, step_ptr->use_nulls);
-        else if (auto step_ptr = std::dynamic_pointer_cast<ExpressionStep>(query_plan_step))
-            return std::make_shared<ExpressionStep>(step_ptr->input_streams[0], step_ptr->actions_dag);
-        else if (auto step_ptr = std::dynamic_pointer_cast<ExtremesStep>(query_plan_step))
-            return std::make_shared<ExtremesStep>(step_ptr->input_streams[0]);
-        else if (auto step_ptr = std::dynamic_pointer_cast<LimitByStep>(query_plan_step))
-            return std::make_shared<LimitByStep>(step_ptr->input_streams[0], step_ptr->group_length, step_ptr->group_offset, step_ptr->columns);
-        else if (auto step_ptr = std::dynamic_pointer_cast<FilledJoinStep>(query_plan_step))
-            return std::make_shared<FilledJoinStep>(step_ptr->input_streams[0], step_ptr->join, step_ptr->max_block_size);
-        else if (auto step_ptr = std::dynamic_pointer_cast<ReadFromPreparedSource>(query_plan_step))
-            throw Exception(ErrorCodes::NOT_IMPLEMENTED, "ReadFromPreparedSource can not copy");
-        else if (auto step_ptr = std::dynamic_pointer_cast<ReadFromStorageStep>(query_plan_step))
-            throw Exception(ErrorCodes::NOT_IMPLEMENTED, "ReadFromStorageStep can not copy");
-        else if (auto step_ptr = std::dynamic_pointer_cast<RollupStep>(query_plan_step))
-            return std::make_shared<RollupStep>(step_ptr->input_streams[0], step_ptr->params, step_ptr->final, step_ptr->use_nulls);
-        else if (auto step_ptr = std::dynamic_pointer_cast<IntersectOrExceptStep>(query_plan_step))
-            return std::make_shared<IntersectOrExceptStep>(step_ptr->input_streams, step_ptr->current_operator, step_ptr->max_threads);
-        else if (auto step_ptr = std::dynamic_pointer_cast<CreatingSetStep>(query_plan_step))
-        {
-            auto set_and_key = std::make_shared<SetAndKey>();
-            set_and_key->key = step_ptr->set_and_key->key;
-            set_and_key->set = step_ptr->set_and_key->set;
+    static QueryPlanStepPtr copyQueryPlanStep(const QueryPlanStepPtr & query_plan_step, ContextPtr context);
 
-            return std::make_shared<CreatingSetStep>(
-                step_ptr->input_streams[0],
-                set_and_key,
-                step_ptr->external_table,
-                step_ptr->network_transfer_limits,
-                step_ptr->context);
-        }
-        else if (auto step_ptr = std::dynamic_pointer_cast<AggregatingStepExt>(query_plan_step))
-        {
-            return std::make_shared<AggregatingStepExt>(
-                step_ptr->input_streams[0],
-                step_ptr->keys,
-                step_ptr->keys_not_hashed,
-                step_ptr->params.aggregates,
-                step_ptr->grouping_sets_params,
-                step_ptr->final,
-                step_ptr->stage_policy,
-                step_ptr->group_by_sort_description,
-                step_ptr->groupings,
-                step_ptr->needOverflowRow(),
-                step_ptr->should_produce_results_in_order_of_bucket_number,
-                step_ptr->no_shuffle,
-                step_ptr->streaming_for_cache);
-        }
-        else if (auto step_ptr = std::dynamic_pointer_cast<MergingAggregatedStep>(query_plan_step))
-        {
-            return std::make_shared<MergingAggregatedStep>(
-                step_ptr->input_streams[0],
-                step_ptr->params,
-                step_ptr->final,
-                step_ptr->memory_efficient_aggregation,
-                step_ptr->max_threads,
-                step_ptr->memory_efficient_merge_threads,
-                step_ptr->should_produce_results_in_order_of_bucket_number,
-                step_ptr->max_block_size,
-                step_ptr->memory_bound_merging_max_block_bytes,
-                step_ptr->group_by_sort_description,
-                step_ptr->memory_bound_merging_of_aggregation_results_enabled);
-        }
-        else if (auto window_step = std::dynamic_pointer_cast<WindowStep>(query_plan_step))
-        {
-            return std::make_shared<WindowStep>(
-                window_step->input_streams[0],
-                window_step->window_description,
-                window_step->window_functions,
-                window_step->streams_fan_out);
-        }
-        else if (auto sorting_step = std::dynamic_pointer_cast<SortingStep>(query_plan_step))
-        {
-            switch (sorting_step->getType())
-            {
-                case SortingStep::Type::FinishSorting:
-                    return std::make_shared<SortingStep>(
-                        sorting_step->input_streams[0],
-                        sorting_step->prefix_description,
-                        sorting_step->result_description,
-                        sorting_step->sort_settings.max_block_size,
-                        sorting_step->limit);
-                case SortingStep::Type::Full:
-                    if (!sorting_step->partition_by_description.empty())
-                    {
-                        return std::make_shared<SortingStep>(
-                            sorting_step->input_streams[0],
-                            sorting_step->result_description,
-                            sorting_step->partition_by_description,
-                            sorting_step->limit,
-                            sorting_step->sort_settings,
-                            sorting_step->optimize_sorting_by_input_stream_properties);
-                    }
-                    else
-                    {
-                        return std::make_shared<SortingStep>(
-                            sorting_step->input_streams[0],
-                            sorting_step->result_description,
-                            sorting_step->limit,
-                            sorting_step->sort_settings,
-                            sorting_step->optimize_sorting_by_input_stream_properties);
-                    }
-                case SortingStep::Type::MergingSorted:
-                    return std::make_shared<SortingStep>(
-                        sorting_step->input_streams[0],
-                        sorting_step->result_description,
-                        sorting_step->sort_settings.max_block_size,
-                        sorting_step->always_read_till_end);
-            }
-        }
-        else if (auto filling_step = std::dynamic_pointer_cast<FillingStep>(query_plan_step))
-        {
-            return std::make_shared<FillingStep>(
-                filling_step->input_streams[0],
-                filling_step->sort_description,
-                filling_step->fill_description,
-                filling_step->interpolate_description,
-                filling_step->use_with_fill_by_sorting_prefix);
-        }
-        else if (auto aggregating_projection_step = std::dynamic_pointer_cast<AggregatingProjectionStep>(query_plan_step))
-        {
-            return std::make_shared<AggregatingProjectionStep>(
-                aggregating_projection_step->input_streams,
-                aggregating_projection_step->params,
-                aggregating_projection_step->final,
-                aggregating_projection_step->merge_threads,
-                aggregating_projection_step->temporary_data_merge_threads);
-        }
-        else if (auto step_ptr = std::dynamic_pointer_cast<CreatingSetsStep>(query_plan_step))
-            return std::make_shared<CreatingSetsStep>(step_ptr->getInputStreams());
-
-// steps end by Ext use macroc to copy
-#define CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT(type) \
-    if (auto step_ptr = std::dynamic_pointer_cast<type>(query_plan_step)) \
-    { \
-        return step_ptr->copy(context); \
-    }
-
-#define APPLY_QUERY_PLAN_STEP_TYPES_EXT(M) \
-    M(AnyStepExt) \
-    M(ApplyStepExt) \
-    M(AssignUniqueIdStepExt) \
-    M(BufferStepExt) \
-    M(CTERefStepExt) \
-    M(EnforceSingleRowStepExt) \
-    M(ExchangeStepExt) \
-    M(ExpandStepExt) \
-    M(ExplainAnalyzeStepExt) \
-    M(FilterStepExt) \
-    M(FinalSampleStepExt) \
-    M(IntermediateResultCacheStepExt) \
-    M(JoinStepExt) \
-    M(LocalExchangeStepExt) \
-    M(MarkDistinctStepExt) \
-    M(MultiJoinStepExt) \
-    M(PartitionTopNStepExt) \
-    M(PlanSegmentSourceStepExt) \
-    M(ProjectionStepExt) \
-    M(RemoteExchangeSourceStepExt) \
-    M(TopNFilteringStepExt) \
-    M(UnionStepExt) \
-    M(ValuesStepExt)
-
-        APPLY_QUERY_PLAN_STEP_TYPES_EXT(CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT)
-#undef CHECK_AND_COPY_QUERY_PLAN_STEP_TYPE_EXT
-#undef APPLY_QUERY_PLAN_STEP_TYPES_EXT
-
-        return nullptr;
-    }
+    static void toProto(const QueryPlanStepPtr & query_plan_step, Protos::QueryPlanStep & proto, bool for_hash_equals = false);
+    static QueryPlanStepPtr fromProto(Protos::QueryPlanStep & proto, ContextPtr context);
 
     static const Names & getLimitByStepColumns(const LimitByStep & limit) { return limit.columns; }
     static size_t getLimitByStepGroupLength(const LimitByStep & limit) { return limit.group_length; }
@@ -379,7 +243,6 @@ public:
 
 
 using DataStreamSortScope = DataStream::SortScope;
-
 ENUM_TO_PROTO_CONVERTER(
     DataStreamSortScope,
     Protos::DataStream::SortScope,
@@ -388,5 +251,52 @@ ENUM_TO_PROTO_CONVERTER(
     (Stream),
     (Global)
 );
+
+using WindowFrameType = WindowFrame::FrameType;
+ENUM_TO_PROTO_CONVERTER(
+    WindowFrameType, // enum name
+    Protos::WindowFrame::FrameType, // proto enum message
+    (ROWS),
+    (GROUPS),
+    (RANGE));
+
+using WindowFrameBoundaryType = WindowFrame::BoundaryType;
+ENUM_TO_PROTO_CONVERTER(
+    WindowFrameBoundaryType, // enum name
+    Protos::WindowFrame::BoundaryType, // proto enum message
+    (Unbounded),
+    (Current),
+    (Offset));
+
+/// diff bc has ExcludeType
+
+using FieldTypeWhich = Field::Types::Which;
+ENUM_TO_PROTO_CONVERTER(
+    FieldTypeWhich, // enum name
+    Protos::Field::FieldType, // proto enum message
+    (Null, 0),
+    (UInt64, 1),
+    (Int64, 2),
+    (Float64, 3),
+    (UInt128, 4),
+    (Int128, 5),
+
+    (String, 16),
+    (Array, 17),
+    (Tuple, 18),
+    (Decimal32, 19),
+    (Decimal64, 20),
+    (Decimal128, 21),
+    (AggregateFunctionState, 22),
+    (Decimal256, 23),
+    (UInt256, 24),
+    (Int256, 25),
+    (Map, 26),
+    (UUID, 27),
+    (Bool, 28),
+    (Object, 29),
+    (IPv4, 30),
+    (IPv6, 31),
+    (CustomType, 32));
 
 }

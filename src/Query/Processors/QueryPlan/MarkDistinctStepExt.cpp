@@ -8,7 +8,7 @@
 #include <QueryPipeline/QueryPipeline.h>
 #include <Query/Processors/Transforms/MarkDistinctTransformExt.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
-
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 namespace DB
 {
 MarkDistinctStepExt::MarkDistinctStepExt(const DataStream & input_stream_, String marker_symbol_, std::vector<String> distinct_symbols_)
@@ -33,5 +33,25 @@ void MarkDistinctStepExt::transformPipeline(QueryPipelineBuilder & pipeline, con
 std::shared_ptr<IQueryPlanStep> MarkDistinctStepExt::copy(ContextPtr) const
 {
     return std::make_shared<MarkDistinctStepExt>(input_streams[0], marker_symbol, distinct_symbols);
+}
+
+std::shared_ptr<MarkDistinctStepExt> MarkDistinctStepExt::fromProto(const Protos::MarkDistinctStep & proto, ContextPtr)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    auto marker_symbol = proto.marker_symbol();
+    std::vector<String> distinct_symbols;
+    for (const auto & element : proto.distinct_symbols())
+        distinct_symbols.emplace_back(element);
+    auto step = std::make_shared<MarkDistinctStepExt>(base_input_stream, marker_symbol, distinct_symbols);
+    step->setStepDescription(step_description);
+    return step;
+}
+
+void MarkDistinctStepExt::toProto(Protos::MarkDistinctStep & proto, bool) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this ,*proto.mutable_query_plan_base());
+    proto.set_marker_symbol(marker_symbol);
+    for (const auto & element : distinct_symbols)
+        proto.add_distinct_symbols(element);
 }
 }

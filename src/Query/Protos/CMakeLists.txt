@@ -4,6 +4,7 @@ PROTOBUF_GENERATE_CPP(dbms_query_proto_srcs dbms_query_proto_headers
     plan_segment_service.proto
     runtime_filter.proto
     registry.proto
+    optimizer_statistics.proto
 )
 
 # Ignore warnings while compiling protobuf-generated *.pb.h and *.pb.cpp files.

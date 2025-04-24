@@ -114,7 +114,7 @@ public:
     static std::pair<Nodes, QueryPlanResourceHolder> detachNodesAndResources(QueryPlan && plan);
 
 protected:
-
+    QueryPlanResourceHolder resources;
     Nodes nodes;
     Node * root = nullptr;
 
@@ -124,8 +124,6 @@ protected:
     size_t max_threads = 0;
 
 private:
-    QueryPlanResourceHolder resources;
-
     /// Those fields are passed to QueryPipeline.
     bool concurrency_control = false;
 };

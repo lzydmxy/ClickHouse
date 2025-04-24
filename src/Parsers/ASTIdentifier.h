@@ -55,8 +55,8 @@ public:
     String full_name;
     std::vector<String> name_parts;
 
-protected:
     std::shared_ptr<IdentifierSemanticImpl> semantic; /// pimpl
+protected:
 
     void formatImplWithoutAlias(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override;
     void appendColumnNameImpl(WriteBuffer & ostr) const override;

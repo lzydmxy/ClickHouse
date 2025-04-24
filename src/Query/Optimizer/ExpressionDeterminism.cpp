@@ -1,0 +1,116 @@
+#include <Query/Optimizer/ExpressionDeterminism.h>
+
+#include <AggregateFunctions/AggregateFunctionFactory.h>
+#include <Functions/FunctionFactory.h>
+#include <Query/Common/PredicateUtils.h>
+#include <Query/Common/OptimizerContext.h>
+
+namespace DB
+{
+std::set<String> ExpressionDeterminism::getDeterministicSymbols(const Assignments & assignments, ContextPtr context)
+{
+    std::set<String> deterministic_symbols;
+    for (const auto & assignment : assignments)
+    {
+        if (ExpressionDeterminism::isDeterministic(assignment.second, context))
+        {
+            deterministic_symbols.emplace(assignment.first);
+        }
+    }
+    return deterministic_symbols;
+}
+
+ConstASTPtr ExpressionDeterminism::filterDeterministicConjuncts(ConstASTPtr predicate, ContextPtr context)
+{
+    if (predicate == PredicateConst::TRUE_VALUE || predicate == PredicateConst::FALSE_VALUE)
+    {
+        return predicate;
+    }
+
+    std::vector<ConstASTPtr> predicates = PredicateUtils::extractConjuncts(predicate);
+    absl::InlinedVector<ConstASTPtr,PREDICATE_VECTOR_SIZE> deterministic;
+    for (auto & pre : predicates)
+    {
+        if (ExpressionDeterminism::isDeterministic(pre, context))
+        {
+            deterministic.emplace_back(pre);
+        }
+    }
+    return PredicateUtils::combineConjuncts(deterministic);
+}
+
+ConstASTPtr ExpressionDeterminism::filterNonDeterministicConjuncts(ConstASTPtr predicate, ContextPtr context)
+{
+    std::vector<ConstASTPtr> predicates = PredicateUtils::extractConjuncts(predicate);
+    absl::InlinedVector<ConstASTPtr,PREDICATE_VECTOR_SIZE> non_deterministic;
+    for (auto & pre : predicates)
+    {
+        if (!ExpressionDeterminism::isDeterministic(pre, context))
+        {
+            non_deterministic.emplace_back(pre);
+        }
+    }
+    return PredicateUtils::combineConjuncts(non_deterministic);
+}
+
+std::set<ConstASTPtr> ExpressionDeterminism::filterDeterministicPredicates(std::vector<ConstASTPtr> & predicates, ContextPtr context)
+{
+    std::set<ConstASTPtr> deterministic;
+    for (auto & predicate : predicates)
+    {
+        if (isDeterministic(predicate, context))
+        {
+            deterministic.emplace(predicate);
+        }
+    }
+    return deterministic;
+}
+
+bool ExpressionDeterminism::isDeterministic(ConstASTPtr expression, ContextPtr context)
+{
+    return getExpressionProperty(std::move(expression), std::move(context)).is_deterministic;
+}
+
+bool ExpressionDeterminism::canChangeOutputRows(ConstASTPtr expression, ContextPtr context)
+{
+    return getExpressionProperty(std::move(expression), std::move(context)).can_change_output_rows;
+}
+
+ExpressionDeterminism::ExpressionProperty ExpressionDeterminism::getExpressionProperty(ConstASTPtr expression, ContextPtr context)
+{
+    bool is_deterministic = true;
+    DeterminismVisitor visitor{is_deterministic};
+    ASTVisitorUtil::accept(expression, visitor, context);
+    return {.is_deterministic = visitor.isDeterministic(),
+            .can_change_output_rows = visitor.canChangeOutputRows()};
+}
+
+DeterminismVisitor::DeterminismVisitor(bool isDeterministic) : is_deterministic(isDeterministic)
+{
+}
+
+Void DeterminismVisitor::visitNode(const ConstASTPtr & node, ContextPtr & context)
+{
+    for (ConstASTPtr child : node->children)
+    {
+        ASTVisitorUtil::accept(child, *this, context);
+    }
+    return Void{};
+}
+
+Void DeterminismVisitor::visitASTFunction(const ConstASTPtr & node, ContextPtr & context)
+{
+    visitNode(node, context);
+    const auto & fun = node->as<const ASTFunction &>();
+    if (unlikely(context->getOptimizerContext()->isNonDeterministicFunction(fun.name)))
+    {
+        is_deterministic = false;
+    }
+    if (unlikely(fun.name == "arrayJoin"))
+    {
+        can_change_output_rows = true;
+    }
+    return Void{};
+}
+
+}

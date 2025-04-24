@@ -1,4 +1,5 @@
 #include <Query/Processors/QueryPlan/ExchangeStepExt.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 
 
 namespace DB
@@ -28,6 +29,34 @@ void ExchangeStepExt::updateOutputStream()
 QueryPipelineBuilderPtr ExchangeStepExt::updatePipeline(QueryPipelineBuilders pipelines, const BuildQueryPipelineSettings &)
 {
     return std::move(pipelines[0]);
+}
+
+std::shared_ptr<ExchangeStepExt> ExchangeStepExt::fromProto(const Protos::ExchangeStepExt & proto, ContextPtr)
+{
+    DataStreams input_streams;
+    for (const auto & proto_element : proto.input_streams())
+    {
+        DataStream element;
+        ProtosSerDerHelper::fillFromProto(element, proto_element);
+        input_streams.emplace_back(std::move(element));
+    }
+
+    // todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
+    // auto schema = Partitioning::fromProto(proto.schema());
+    auto keep_order = proto.keep_order();
+    auto step = std::make_shared<ExchangeStepExt>(input_streams, proto.exchange_type(), keep_order);
+
+    return step;
+}
+
+void ExchangeStepExt::toProto(Protos::ExchangeStepExt & proto, bool) const
+{
+    for (const auto & element : input_streams)
+        ProtosSerDerHelper::toProto(element, *proto.add_input_streams());
+    proto.set_exchange_type(exchange_type);
+    // todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
+    // schema.toProto(*proto.mutable_schema());
+    proto.set_keep_order(keep_order);
 }
 
 std::shared_ptr<IQueryPlanStep> ExchangeStepExt::copy(ContextPtr) const

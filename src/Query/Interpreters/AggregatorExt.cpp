@@ -3,7 +3,11 @@
 #include <DataTypes/DataTypeAggregateFunction.h>
 #include <DataTypes/DataTypeLowCardinality.h>
 #include <Interpreters/JIT/CompiledExpressionCache.h>
+#include <Query/Common/OptimizerContext.h>
 #include <Query/Interpreters/AggregatorExt.h>
+#include <Query/Protos/plan_node.pb.h>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <Common/CurrentMetrics.h>
 #include <Common/JSONBuilder.h>
 #include <Common/ProfileEvents.h>
@@ -159,84 +163,89 @@ void AggregatorExt::Params::explain(JSONBuilder::JSONMap & map) const
     }
 }
 
-// todo: hongzhigao1, implement proto
-// void Aggregator::Params::toProto(Protos::AggregatorParams & proto) const
-// {
-//     serializeHeaderToProto(src_header, *proto.mutable_src_header());
-//     serializeHeaderToProto(intermediate_header, *proto.mutable_intermediate_header());
-//     for (const auto & element : keys)
-//         proto.add_keys(element);
-//     for (const auto & element : aggregates)
-//         element.toProto(*proto.add_aggregates());
-//     proto.set_overflow_row(overflow_row);
-//     proto.set_max_rows_to_group_by(max_rows_to_group_by);
-//     proto.set_group_by_overflow_mode(OverflowModeConverter::toProto(group_by_overflow_mode));
-//     proto.set_group_by_two_level_threshold(group_by_two_level_threshold);
-//     proto.set_group_by_two_level_threshold_bytes(group_by_two_level_threshold_bytes);
-//     proto.set_max_bytes_before_external_group_by(max_bytes_before_external_group_by);
-//     proto.set_enable_adaptive_spill(enable_adaptive_spill);
-//     proto.set_spill_buffer_bytes_before_external_group_by(spill_buffer_bytes_before_external_group_by);
-//     proto.set_empty_result_for_aggregation_by_empty_set(empty_result_for_aggregation_by_empty_set);
+void AggregatorExt::Params::toProto(Protos::AggregatorExtParams & proto) const
+{
+    serializeHeaderToProto(src_header, *proto.mutable_src_header());
+    serializeHeaderToProto(intermediate_header, *proto.mutable_intermediate_header());
+    for (const auto & element : keys)
+        proto.add_keys(element);
+    for (const auto & element : aggregates)
+        ProtosSerDerHelper::toProto(element, *proto.add_aggregates());
+    proto.set_overflow_row(overflow_row);
+    proto.set_max_rows_to_group_by(max_rows_to_group_by);
+    proto.set_group_by_overflow_mode(OverflowModeConverter::toProto(group_by_overflow_mode));
+    proto.set_group_by_two_level_threshold(group_by_two_level_threshold);
+    proto.set_group_by_two_level_threshold_bytes(group_by_two_level_threshold_bytes);
+    proto.set_max_bytes_before_external_group_by(max_bytes_before_external_group_by);
+    proto.set_enable_adaptive_spill(enable_adaptive_spill);
+    proto.set_spill_buffer_bytes_before_external_group_by(spill_buffer_bytes_before_external_group_by);
+    proto.set_empty_result_for_aggregation_by_empty_set(empty_result_for_aggregation_by_empty_set);
 
-//     proto.set_max_threads(max_threads);
-//     proto.set_min_free_disk_space(min_free_disk_space);
-//     proto.set_compile_aggregate_expressions(compile_aggregate_expressions);
-//     proto.set_min_count_to_compile_aggregate_expression(min_count_to_compile_aggregate_expression);
-//     proto.set_enable_lc_group_by_opt(enable_lc_group_by_opt);
-// }
+    proto.set_max_threads(max_threads);
+    proto.set_min_free_disk_space(min_free_disk_space);
+    proto.set_compile_aggregate_expressions(compile_aggregate_expressions);
+    proto.set_min_count_to_compile_aggregate_expression(min_count_to_compile_aggregate_expression);
+    proto.set_enable_lc_group_by_opt(enable_lc_group_by_opt);
+}
 
-// Aggregator::Params Aggregator::Params::fromProto(const Protos::AggregatorParams & proto, ContextPtr context)
-// {
-//     auto src_header = deserializeHeaderFromProto(proto.src_header());
-//     auto intermediate_header = deserializeHeaderFromProto(proto.intermediate_header());
-//     ColumnNumbers keys;
-//     for (const auto & element : proto.keys())
-//         keys.emplace_back(element);
-//     AggregateDescriptions aggregates;
-//     for (const auto & proto_element : proto.aggregates())
-//     {
-//         AggregateDescription element;
-//         element.fillFromProto(proto_element);
-//         aggregates.emplace_back(std::move(element));
-//     }
-//     auto overflow_row = proto.overflow_row();
-//     auto max_rows_to_group_by = proto.max_rows_to_group_by();
-//     auto group_by_overflow_mode = OverflowModeConverter::fromProto(proto.group_by_overflow_mode());
-//     auto group_by_two_level_threshold = proto.group_by_two_level_threshold();
-//     auto group_by_two_level_threshold_bytes = proto.group_by_two_level_threshold_bytes();
-//     auto max_bytes_before_external_group_by = proto.max_bytes_before_external_group_by();
-//     auto enable_adaptive_spill = proto.enable_adaptive_spill();
-//     auto spill_buffer_bytes_before_external_group_by = proto.spill_buffer_bytes_before_external_group_by();
-//     auto empty_result_for_aggregation_by_empty_set = proto.empty_result_for_aggregation_by_empty_set();
-//     VolumePtr tmp_volume = context ? context->getTemporaryVolume() : nullptr;
-//     auto max_threads = proto.max_threads();
-//     auto min_free_disk_space = proto.min_free_disk_space();
-//     auto compile_aggregate_expressions = proto.compile_aggregate_expressions();
-//     auto min_count_to_compile_aggregate_expression = proto.min_count_to_compile_aggregate_expression();
-//     auto enable_lc_group_by_opt = proto.enable_lc_group_by_opt();
-//     auto step = Aggregator::Params(
-//         src_header,
-//         keys,
-//         aggregates,
-//         overflow_row,
-//         max_rows_to_group_by,
-//         group_by_overflow_mode,
-//         group_by_two_level_threshold,
-//         group_by_two_level_threshold_bytes,
-//         max_bytes_before_external_group_by,
-//         enable_adaptive_spill,
-//         spill_buffer_bytes_before_external_group_by,
-//         empty_result_for_aggregation_by_empty_set,
-//         tmp_volume,
-//         max_threads,
-//         min_free_disk_space,
-//         compile_aggregate_expressions,
-//         min_count_to_compile_aggregate_expression,
-//         intermediate_header,
-//         enable_lc_group_by_opt);
+AggregatorExt::Params AggregatorExt::Params::fromProto(const Protos::AggregatorExtParams & proto, ContextPtr context)
+{
+    auto src_header = deserializeHeaderFromProto(proto.src_header());
+    auto intermediate_header = deserializeHeaderFromProto(proto.intermediate_header());
+    ColumnNumbers keys;
+    for (const auto & element : proto.keys())
+        keys.emplace_back(element);
+    AggregateDescriptions aggregates;
+    for (const auto & proto_element : proto.aggregates())
+    {
+        AggregateDescription element;
+        ProtosSerDerHelper::fillFromProto(element, proto_element);
+        aggregates.emplace_back(std::move(element));
+    }
+    auto overflow_row = proto.overflow_row();
+    auto max_rows_to_group_by = proto.max_rows_to_group_by();
+    auto group_by_overflow_mode = OverflowModeConverter::fromProto(proto.group_by_overflow_mode());
+    auto group_by_two_level_threshold = proto.group_by_two_level_threshold();
+    auto group_by_two_level_threshold_bytes = proto.group_by_two_level_threshold_bytes();
+    auto max_bytes_before_external_group_by = proto.max_bytes_before_external_group_by();
+    auto enable_adaptive_spill = proto.enable_adaptive_spill();
+    auto spill_buffer_bytes_before_external_group_by = proto.spill_buffer_bytes_before_external_group_by();
+    auto empty_result_for_aggregation_by_empty_set = proto.empty_result_for_aggregation_by_empty_set();
+    TemporaryDataOnDiskScopePtr tmp_data_scope = context ? context->getTempDataOnDisk() : nullptr;
+    auto max_threads = proto.max_threads();
+    auto min_free_disk_space = proto.min_free_disk_space();
+    auto compile_aggregate_expressions = proto.compile_aggregate_expressions();
+    auto min_count_to_compile_aggregate_expression = proto.min_count_to_compile_aggregate_expression();
+    auto enable_lc_group_by_opt = proto.enable_lc_group_by_opt();
+    auto step = AggregatorExt::Params(
+        src_header,
+        keys,
+        aggregates,
+        overflow_row,
+        max_rows_to_group_by,
+        group_by_overflow_mode,
+        group_by_two_level_threshold,
+        group_by_two_level_threshold_bytes,
+        max_bytes_before_external_group_by,
+        enable_adaptive_spill,
+        spill_buffer_bytes_before_external_group_by,
+        empty_result_for_aggregation_by_empty_set,
+        tmp_data_scope,
+        max_threads,
+        min_free_disk_space,
+        compile_aggregate_expressions,
+        min_count_to_compile_aggregate_expression,
+        0,
+        false,
+        false,
+        true,
+        0.5,
+        {},
+        intermediate_header,
+        enable_lc_group_by_opt);
 
-//     return step;
-// }
+    return step;
+}
 
 #if USE_EMBEDDED_COMPILER
 
@@ -318,7 +327,7 @@ AggregatorExt::AggregatorExt(const Params & params_) : params(params_),
     /// implicit type conversion is not implmented for llvm compiled agg funcs
     /// therefore, do not use llvm compiled agg if implicit type convesion is required,
     /// i.e., IAggregateFunctionMySql is used
-    // todo: hongzhigao1, implement IAggregateFunctionMySql
+    // todo: hongzhigao1, other feat: implement IAggregateFunctionMySql
     // bool compile_agg = true;
     // for (size_t i = 0; i < params.aggregates_size; ++i)
     // {
@@ -932,7 +941,7 @@ void AggregatorExt::prepareAggregateInstructions(
     {
         for (size_t j = 0; j < aggregate_columns[i].size(); ++j)
         {
-            // todo: hongzhigao1, implement
+            // todo: hongzhigao1, other feat: implement mayAggStateVeryLarge
             // if (params.aggregates[i].function && params.aggregates[i].function->mayAggStateVeryLarge())
             //     delta_bytes_of_large_midstate_agg_inputs += columns.at(params.aggregates[i].arguments[j])->byteSize();
             materialized_columns.push_back(columns.at(params.aggregates[i].arguments[j])->convertToFullColumnIfConst());
@@ -1079,33 +1088,31 @@ bool AggregatorExt::executeOnBlock(
             current_memory_usage = memory_tracker->get();
 
     /// Here all the results in the sum are taken into account, from different threads.
-    // auto result_size_bytes = current_memory_usage - memory_usage_before_aggregation;
+    auto result_size_bytes = current_memory_usage - memory_usage_before_aggregation;
     double spill_triger_threshold = kDefaultSpillTrigerThreshold;
-    // todo: hongzhigao1, implement
-    // if (CurrentThread::isInitialized())
-    // {
-    //     const auto & cur_ctx = CurrentThread::get().getQueryContext();
-    //     if (cur_ctx)
-    //         spill_triger_threshold = cur_ctx->getSettingsRef().spill_triger_threshold.value;
-    // }
+    if (CurrentThread::isInitialized())
+    {
+        const auto & cur_ctx = CurrentThread::get().getQueryContext();
+        if (cur_ctx)
+            spill_triger_threshold = cur_ctx->getOptimizerContext()->getSettingsRef().spill_triger_threshold.value;
+    }
     bool adaptive_spill_trigered
         = params.enable_adaptive_spill && total_memory_tracker.getHardLimit() * spill_triger_threshold < total_memory_tracker.get();
 
-    // bool should_spill
-    //     = params.max_bytes_before_external_group_by && current_memory_usage > static_cast<Int64>(params.max_bytes_before_external_group_by);
+    bool should_spill
+        = params.max_bytes_before_external_group_by && current_memory_usage > static_cast<Int64>(params.max_bytes_before_external_group_by);
 
-    // bool bigkeys_worth_convert_to_two_level = (params.group_by_two_level_threshold && result_size >= params.group_by_two_level_threshold)
-    //     || (params.group_by_two_level_threshold_bytes
-    //         && result_size_bytes >= static_cast<Int64>(params.group_by_two_level_threshold_bytes));
+    bool bigkeys_worth_convert_to_two_level = (params.group_by_two_level_threshold && result_size >= params.group_by_two_level_threshold)
+        || (params.group_by_two_level_threshold_bytes
+            && result_size_bytes >= static_cast<Int64>(params.group_by_two_level_threshold_bytes));
 
-    // todo: hongzhigao1, implement
-    // bool worth_convert_to_two_level = adaptive_spill_trigered || (result.isSmallKeys() && should_spill)
-    //     || (!result.isSmallKeys() && bigkeys_worth_convert_to_two_level);
+    bool worth_convert_to_two_level = adaptive_spill_trigered || (AggregatorExtHelper::isSmallKeys(result) && should_spill)
+        || (!AggregatorExtHelper::isSmallKeys(result) && bigkeys_worth_convert_to_two_level);
 
     /** Converting to a two-level data structure. (Adaptive)
-       * It allows you to make, in the subsequent, an effective merge - either economical from memory or parallel.
-       */
-    if (params.two_level_mode == Params::TwoLevelMode::ADAPTIVE && result.isConvertibleToTwoLevel() /* && worth_convert_to_two_level */)
+      * It allows you to make, in the subsequent, an effective merge - either economical from memory or parallel.
+      */
+    if (params.two_level_mode == Params::TwoLevelMode::ADAPTIVE && result.isConvertibleToTwoLevel() && worth_convert_to_two_level)
         result.convertToTwoLevel();
 
     /** Converting to a two-level data structure. (Enforced) */
@@ -1117,17 +1124,16 @@ bool AggregatorExt::executeOnBlock(
         return false;
 
     /** Flush data to disk if too much RAM is consumed.
-       * Data can only be flushed to disk if a two-level aggregation structure is used.
-       */
+    * Data can only be flushed to disk if a two-level aggregation structure is used.
+    */
     if (result.isTwoLevel()
         && (spilled || adaptive_spill_trigered
             || (!params.enable_adaptive_spill && params.max_bytes_before_external_group_by
                 && current_memory_usage > static_cast<Int64>(params.max_bytes_before_external_group_by)))
-        /* && worth_convert_to_two_level */
-        && (/* result.getVariantsBufferSizeInBytes() > params.spill_buffer_bytes_before_external_group_by
-            || */
-            delta_bytes_of_large_midstate_agg_inputs
-            > params.spill_buffer_bytes_before_external_group_by * large_midstate_estimate_by_input_ratio))
+        && worth_convert_to_two_level
+        && (AggregatorExtHelper::getVariantsBufferSizeInBytes(result) > params.spill_buffer_bytes_before_external_group_by
+            || delta_bytes_of_large_midstate_agg_inputs
+                > params.spill_buffer_bytes_before_external_group_by * large_midstate_estimate_by_input_ratio))
     {
         size_t size = current_memory_usage + params.min_free_disk_space;
         writeToTemporaryFile(result, size);
@@ -1358,11 +1364,13 @@ void AggregatorExt::convertToBlockImpl(
     }
     /// In order to release memory early.
     /// For agg streaming need to reuse the memory
-    // if (is_agg_streaming || is_agg_converting_for_cache)
-    //     data.clear();
-    // else
-    //     data.clearAndShrink();
-    data.clearAndShrink();
+    if (is_agg_streaming || is_agg_converting_for_cache)
+    {
+        // todo: hongzhigao1, other feat: implement clear in StringHashTable later, no cache now
+        // data.clear();
+    }
+    else
+        data.clearAndShrink();
 }
 
 template <typename Mapped>
@@ -1938,58 +1946,6 @@ void NO_INLINE AggregatorExt::mergeDataNullKey(Table & table_dst, Table & table_
     }
 }
 
-
-// template <typename Method, bool use_compiled_functions, typename Table>
-// void NO_INLINE AggregatorExt::mergeDataImpl(Table & table_dst, Table & table_src, Arena * arena) const
-// {
-//     if constexpr (Method::low_cardinality_optimization)
-//         mergeDataNullKey<Method, Table>(table_dst, table_src, arena);
-
-//     table_src.mergeToViaEmplace(
-//         table_dst,
-//         [&](AggregateDataPtr & __restrict dst, AggregateDataPtr & __restrict src, bool inserted)
-//         {
-//             if (!inserted)
-//             {
-// #if USE_EMBEDDED_COMPILER
-//                 if constexpr (use_compiled_functions)
-//                 {
-//                     const auto & compiled_functions = compiled_aggregate_functions_holder->compiled_aggregate_functions;
-//                     compiled_functions.merge_aggregate_states_function(dst, src);
-
-//                     if (compiled_aggregate_functions_holder->compiled_aggregate_functions.functions_count != params.aggregates_size)
-//                     {
-//                         for (size_t i = 0; i < params.aggregates_size; ++i)
-//                             if (!is_aggregate_function_compiled[i])
-//                                 aggregate_functions[i]->merge(
-//                                     dst + offsets_of_aggregate_states[i], src + offsets_of_aggregate_states[i], arena);
-
-//                         for (size_t i = 0; i < params.aggregates_size; ++i)
-//                             if (!is_aggregate_function_compiled[i])
-//                                 aggregate_functions[i]->destroy(src + offsets_of_aggregate_states[i]);
-//                     }
-//                 }
-//                 else
-// #endif
-//                 {
-//                     for (size_t i = 0; i < params.aggregates_size; ++i)
-//                         aggregate_functions[i]->merge(dst + offsets_of_aggregate_states[i], src + offsets_of_aggregate_states[i], arena);
-
-//                     for (size_t i = 0; i < params.aggregates_size; ++i)
-//                         aggregate_functions[i]->destroy(src + offsets_of_aggregate_states[i]);
-//                 }
-//             }
-//             else
-//             {
-//                 dst = src;
-//             }
-
-//             src = nullptr;
-//         });
-
-//     table_src.clearAndShrink();
-// }
-
 template <typename Method, typename Table>
 void NO_INLINE AggregatorExt::mergeDataImpl(
     Table & table_dst, Table & table_src, Arena * arena, bool use_compiled_functions [[maybe_unused]], bool prefetch) const
@@ -2281,6 +2237,7 @@ void NO_INLINE AggregatorExt::mergeStreamsImplCase(
     {
         const auto & aggregate_column_name = params.aggregates[i].column_name;
         aggregate_columns[i] = &typeid_cast<const ColumnAggregateFunction &>(*block.getByName(aggregate_column_name).column).getData();
+        // todo: hongzhigao1, other feat: implement mayAggStateVeryLarge
         // if (params.aggregates[i].function && params.aggregates[i].function->mayAggStateVeryLarge())
         // {
         //     delta_bytes_of_large_midstate_agg_inputs
@@ -2416,33 +2373,31 @@ bool AggregatorExt::mergeOnBlock(Block block, AggregatedDataVariants & result, b
             current_memory_usage = memory_tracker->get();
 
     /// Here all the results in the sum are taken into account, from different threads.
-    // auto result_size_bytes = current_memory_usage - memory_usage_before_aggregation;
+    auto result_size_bytes = current_memory_usage - memory_usage_before_aggregation;
     double spill_triger_threshold = kDefaultSpillTrigerThreshold;
-    // todo: hongzhigao1, implement
-    // if (CurrentThread::isInitialized())
-    // {
-    //     const auto & cur_ctx = CurrentThread::get().getQueryContext();
-    //     if (cur_ctx)
-    //         spill_triger_threshold = cur_ctx->getSettingsRef().spill_triger_threshold.value;
-    // }
+    if (CurrentThread::isInitialized())
+    {
+        const auto & cur_ctx = CurrentThread::get().getQueryContext();
+        if (cur_ctx)
+            spill_triger_threshold = cur_ctx->getOptimizerContext()->getSettingsRef().spill_triger_threshold.value;
+    }
     bool adaptive_spill_trigered
         = params.enable_adaptive_spill && total_memory_tracker.getHardLimit() * spill_triger_threshold < total_memory_tracker.get();
 
-    // bool should_spill
-    //     = params.max_bytes_before_external_group_by && current_memory_usage > static_cast<Int64>(params.max_bytes_before_external_group_by);
+    bool should_spill
+        = params.max_bytes_before_external_group_by && current_memory_usage > static_cast<Int64>(params.max_bytes_before_external_group_by);
 
-    // bool bigkeys_worth_convert_to_two_level = (params.group_by_two_level_threshold && result_size >= params.group_by_two_level_threshold)
-    //     || (params.group_by_two_level_threshold_bytes
-    //         && result_size_bytes >= static_cast<Int64>(params.group_by_two_level_threshold_bytes));
+    bool bigkeys_worth_convert_to_two_level = (params.group_by_two_level_threshold && result_size >= params.group_by_two_level_threshold)
+        || (params.group_by_two_level_threshold_bytes
+            && result_size_bytes >= static_cast<Int64>(params.group_by_two_level_threshold_bytes));
 
-    // todo: hongzhigao1, imeplement
-    // bool worth_convert_to_two_level = adaptive_spill_trigered || (result.isSmallKeys() && should_spill)
-    //     || (!result.isSmallKeys() && bigkeys_worth_convert_to_two_level);
+    bool worth_convert_to_two_level = adaptive_spill_trigered || (AggregatorExtHelper::isSmallKeys(result) && should_spill)
+        || (!AggregatorExtHelper::isSmallKeys(result) && bigkeys_worth_convert_to_two_level);
 
     /** Converting to a two-level data structure. (Adaptive)
-       * It allows you to make, in the subsequent, an effective merge - either economical from memory or parallel.
-       */
-    if (params.two_level_mode == Params::TwoLevelMode::ADAPTIVE && result.isConvertibleToTwoLevel() /* && worth_convert_to_two_level*/)
+          * It allows you to make, in the subsequent, an effective merge - either economical from memory or parallel.
+          */
+    if (params.two_level_mode == Params::TwoLevelMode::ADAPTIVE && result.isConvertibleToTwoLevel() && worth_convert_to_two_level)
         result.convertToTwoLevel();
 
     /** Converting to a two-level data structure. (Enforced) */
@@ -2454,17 +2409,16 @@ bool AggregatorExt::mergeOnBlock(Block block, AggregatedDataVariants & result, b
         return false;
 
     /** Flush data to disk if too much RAM is consumed.
-       * Data can only be flushed to disk if a two-level aggregation structure is used.
-       */
+          * Data can only be flushed to disk if a two-level aggregation structure is used.
+          */
     if (result.isTwoLevel()
         && (spilled || adaptive_spill_trigered
             || (!params.enable_adaptive_spill && params.max_bytes_before_external_group_by
                 && current_memory_usage > static_cast<Int64>(params.max_bytes_before_external_group_by)))
-        /* && worth_convert_to_two_level */
-        && (/* result.getVariantsBufferSizeInBytes() > params.spill_buffer_bytes_before_external_group_by
-            || */
-            delta_bytes_of_large_midstate_agg_inputs
-            > params.spill_buffer_bytes_before_external_group_by * large_midstate_estimate_by_input_ratio))
+        && worth_convert_to_two_level
+        && (AggregatorExtHelper::getVariantsBufferSizeInBytes(result) > params.spill_buffer_bytes_before_external_group_by
+            || delta_bytes_of_large_midstate_agg_inputs
+                > params.spill_buffer_bytes_before_external_group_by * large_midstate_estimate_by_input_ratio))
     {
         size_t size = current_memory_usage + params.min_free_disk_space;
         writeToTemporaryFile(result, size);

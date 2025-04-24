@@ -462,6 +462,7 @@ std::shared_ptr<FinalSampleStepExt> SymbolMapper::map(const FinalSampleStepExt &
 }
 
 
+
 std::shared_ptr<IntersectOrExceptStep> SymbolMapper::map(const IntersectOrExceptStep & intersect_or_except)
 {
     return std::make_shared<IntersectOrExceptStep>(
@@ -531,32 +532,31 @@ std::shared_ptr<LimitByStep> SymbolMapper::map(const LimitByStep & limit)
     return std::make_shared<LimitByStep>(map(limit.getInputStreams()[0]), QueryPlanStepHelper::getLimitByStepGroupLength(limit), QueryPlanStepHelper::getLimitByStepGroupOffset(limit), map(names));
 }
 
-// std::shared_ptr<MergingSortedStep> SymbolMapper::map(const MergingSortedStep & sorted)
-// {
-//     return std::make_shared<MergingSortedStep>(
-//         map(sorted.getInputStreams()[0]), SortDescription{map(sorted.getSortDescription())}, sorted.getMaxBlockSize(), sorted.getLimit());
-// }
-//
+std::shared_ptr<MergingSortedStepExt> SymbolMapper::map(const MergingSortedStepExt & sorted)
+{
+    return std::make_shared<MergingSortedStepExt>(
+        map(sorted.getInputStreams()[0]), SortDescription{map(sorted.getSortDescription())}, sorted.getMaxBlockSize(), sorted.getLimit());
+}
+
 std::shared_ptr<MergingAggregatedStep> SymbolMapper::map(const MergingAggregatedStep & merging_agg)
 {
     throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Need Imp AggregatingStep first");
 }
-//
-//
-// std::shared_ptr<MergeSortingStep> SymbolMapper::map(const MergeSortingStep & sorting)
-// {
-//     return std::make_shared<MergeSortingStep>(
-//         map(sorting.getInputStreams()[0]),
-//         SortDescription{map(sorting.getSortDescription())},
-//         sorting.getMaxMergedBlockSize(),
-//         sorting.getLimit(),
-//         sorting.getMaxBytesBeforeRemerge(),
-//         sorting.getRemergeLoweredMemoryBytesRatio(),
-//         sorting.getMaxBytesBeforeExternalSort(),
-//         sorting.getVolumPtr(),
-//         sorting.getMinFreeDiskSpace(),
-//         sorting.isAdaptiveSpillEnabled());
-// }
+
+
+std::shared_ptr<MergeSortingStepExt> SymbolMapper::map(const MergeSortingStepExt & sorting)
+{
+    return std::make_shared<MergeSortingStepExt>(
+        map(sorting.getInputStreams()[0]),
+        SortDescription{map(sorting.getSortDescription())},
+        sorting.getMaxMergedBlockSize(),
+        sorting.getLimit(),
+        sorting.getMaxBytesBeforeRemerge(),
+        sorting.getRemergeLoweredMemoryBytesRatio(),
+        sorting.getMaxBytesBeforeExternalSort(),
+        sorting.getTmpData(),
+        sorting.getMinFreeDiskSpace());
+}
 
 std::shared_ptr<MarkDistinctStepExt> SymbolMapper::map(const MarkDistinctStepExt & mark_distinct)
 {
@@ -580,15 +580,24 @@ std::shared_ptr<PartitionTopNStepExt> SymbolMapper::map(const PartitionTopNStepE
         partition_topn.getModel());
 }
 
-// ToDo @lizhuoyu5, add PartialSortingStep
-// std::shared_ptr<PartialSortingStep> SymbolMapper::map(const PartialSortingStep & partial_sorting)
-// {
-//     return std::make_shared<PartialSortingStep>(
-//         map(partial_sorting.getInputStreams()[0]),
-//         SortDescription{partial_sorting.getSortDescription()},
-//         partial_sorting.getLimit(),
-//         partial_sorting.getSizeLimits());
-// }
+std::shared_ptr<PartialSortingStepExt> SymbolMapper::map(const PartialSortingStepExt & partial_sorting)
+{
+    return std::make_shared<PartialSortingStepExt>(
+        map(partial_sorting.getInputStreams()[0]),
+        SortDescription{partial_sorting.getSortDescription()},
+        partial_sorting.getLimit(),
+        partial_sorting.getSizeLimits());
+}
+
+std::shared_ptr<FinishSortingStepExt> SymbolMapper::map(const FinishSortingStepExt & finish_sorting)
+{
+    return std::make_shared<FinishSortingStepExt>(
+        map(finish_sorting.getInputStreams()[0]),
+        SortDescription{map(finish_sorting.getPrefixDescription())},
+        SortDescription{map(finish_sorting.getResultDescription())},
+        finish_sorting.getMaxBlockSize(),
+        finish_sorting.getLimit());
+}
 
 
 std::shared_ptr<ProjectionStepExt> SymbolMapper::map(const ProjectionStepExt & projection)
@@ -628,13 +637,14 @@ std::shared_ptr<RemoteExchangeSourceStepExt> SymbolMapper::map(const RemoteExcha
         remote_exchange.isAddExtremes());
 }
 
-
-std::shared_ptr<SortingStep> SymbolMapper::map(const SortingStep & sorting)
+std::shared_ptr<SortingStepExt> SymbolMapper::map(const SortingStepExt & sorting)
 {
-    return std::make_shared<SortingStep>(
+    return std::make_shared<SortingStepExt>(
         map(sorting.getInputStreams()[0]),
         SortDescription{map(sorting.getSortDescription())},
-        sorting.getLimit());
+        sorting.getLimit(),
+        sorting.getStage(),
+        SortDescription{map(sorting.getPrefixDescription())});
 }
 
 std::shared_ptr<TopNFilteringStepExt> SymbolMapper::map(const TopNFilteringStepExt & topn_filter)
@@ -768,7 +778,7 @@ class SymbolMapper::SymbolMapperVisitor : public StepVisitor<QueryPlanStepPtr, S
 protected:
 #define VISITOR_DEF(TYPE) \
     QueryPlanStepPtr visit##TYPE(const TYPE & step, SymbolMapper & mapper) override { return mapper.map(step); }
-    APPLY_QUERY_PLAN_STEP_TYPES(VISITOR_DEF)
+    APPLY_PROTOBUF_STEP_TYPES(VISITOR_DEF)
 #undef VISITOR_DEF
 };
 

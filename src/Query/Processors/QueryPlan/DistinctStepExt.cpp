@@ -25,7 +25,7 @@ DistinctStepExt::DistinctStepExt(
     : DistinctStep(input_stream_, set_size_limits_, limit_hint_, columns_, pre_distinct_, optimize_distinct_in_order_)
     , can_to_agg(can_to_agg_)
 {
-    //todo: wujianchao5, other feat:  need to implement distinct_columns
+    // diff: byconity has distinct_columns
     /*
     if (!output_stream->distinct_columns.empty() && (!pre_distinct || input_stream_.has_single_port))
     {
@@ -37,7 +37,7 @@ DistinctStepExt::DistinctStepExt(
 
 void DistinctStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &)
 {
-    //todo: wujianchao5, other feat:  need to implement distinct_columns
+    // diff: byconity has distinct_columns
     //if (checkColumnsAlreadyDistinct(columns, input_streams.front().distinct_columns))
     //    return;
 

@@ -36,7 +36,7 @@ ASTs deserializeASTs(ReadBuffer & buf);
 ASTPtr deserializeASTWithChildren(ASTs & children, ReadBuffer & buf);
 
 
-String queryToString(const ASTPtr & query, bool always_quote_identifiers = false);
-String queryToString(const IAST & query, bool always_quote_identifiers = false);
+String queryToString(const ASTPtr & query, bool always_quote_identifiers);
+String queryToString(const IAST & query, bool always_quote_identifiers);
 
 }

@@ -84,6 +84,7 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(Bool, adaptive_type_cast, true, "Performs type cast operations adaptively, according to the value", 0) \
     M(Bool, parse_literal_as_decimal, false, "Parse numeric literal as decimal instead of float", 0) \
     M(Int64, final_order_by_all_direction, 0, "Sorting the most 'end' result for select query, default 0 means no sorting, > 1 for ASC, < -1 for DESC", 0) \
+    M(Bool, enable_memory_catalog, false, "Enable memory catalog for unittest", 0) \
     M(Bool, print_graphviz, false, "Whether print graphviz", 0) \
     M(String, graphviz_path, "/tmp/plan/", "The path of graphviz plan", 0) \
     M(Bool, print_graphviz_ast, false, "Whether print graphviz", 0) \
@@ -152,6 +153,9 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(Bool, fallback_to_simple_query, false, "Enable fallback if there is any syntax error", 0)\
     M(Bool, send_plan_segment_by_brpc_join_per_stage, false, "Whether to send plan segment by BRPC and join async rpc request per stage", 0)\
     M(Bool, send_plan_segment_by_brpc_join_at_last, true, "Whether to send plan segment by BRPC and join async rpc request at last", 0)\
+    M(Double, spill_triger_threshold, 0.7, "Threshold to triger spill then memory usage reach a certain ratio of memory quota", 0) \
+    /** Optimizer relative settings, statistics */ \
+    M(String, statistics_exclude_tables_regex, "", "Regex to exclude tables for statistics operations", 0) \
     /** Just for compatible, maybe removed or implemented later */ \
     M(UInt64, max_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a query segment can consume.", 0) \
     M(UInt64, max_distributed_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a distribute query can consume.", 0) \
@@ -167,7 +171,6 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(Bool, bsp_mode, false, "If enabled, query will execute in bsp mode", 0) \
     M(String, exchange_shuffle_method_name, "cityHash64V2", "Shuffle method name used in exchange", 0) \
     M(UInt64, distributed_max_parallel_size, false, "Max distributed execution parallel size", 0) \
-    M(Bool, enable_memory_catalog, false, "Enable memory catalog for unittest", 0) \
     M(UInt64, max_plan_segment_num, 500, "maximum plan segments allowed, 0 means no restriction", 0)\
     M(Bool, log_optimizer_run_time, false, "Whether Log optimizer runtime", 0) \
     M(Bool, log_query_plan, 0, "Log json format query plan to the system query_log table.", 0) \

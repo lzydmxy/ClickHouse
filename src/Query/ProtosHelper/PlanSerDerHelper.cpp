@@ -24,7 +24,6 @@
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <Query/ProtosHelper/ProgressHelper.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
-
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 
 //#include <Protos/ReadWriteProtobuf.h>
@@ -219,27 +218,27 @@ void serializePlanStep(const QueryPlanStepPtr & step, WriteBuffer & buf)
     writeBinary(blob, buf);
 }
 
-// void serializeAssignmentsToProto(const Assignments & assignments, RAssignments & proto)
-// {
-//     for (const auto & [k, v] : assignments)
-//     {
-//         auto pair = proto.add_pairs();
-//         pair->set_key(k);
-//         serializeASTToProto(v, *pair->mutable_value());
-//     }
-// }
+void serializeAssignmentsToProto(const Assignments & assignments, RAssignments & proto)
+{
+    for (const auto & [k, v] : assignments)
+    {
+        auto *pair = proto.add_pairs();
+        pair->set_key(k);
+        serializeASTToProto(v, *pair->mutable_value());
+    }
+}
 
-// Assignments deserializeAssignmentsFromProto(const RAssignments & proto)
-// {
-//     Assignments res;
-//     for (const auto & pair : proto.pairs())
-//     {
-//         auto k = pair.key();
-//         auto v = deserializeASTFromProto(pair.value());
-//         res.emplace_back(k, v);
-//     }
-//     return res;
-// }
+Assignments deserializeAssignmentsFromProto(const RAssignments & proto)
+{
+    Assignments res;
+    for (const auto & pair : proto.pairs())
+    {
+        auto k = pair.key();
+        auto v = deserializeASTFromProto(pair.value());
+        res.emplace_back(k, v);
+    }
+    return res;
+}
 
 void serializeAggregateFunctionToProto(
     AggregateFunctionPtr function, const Array & parameters, const DataTypes & arg_types, RAggregateFunction & proto)
@@ -286,24 +285,31 @@ inline void serializeQueryPlanStepToProtoImpl(const QueryPlanStepPtr & origin_st
     step->toProto(proto);
 }
 
-void serializeQueryPlanStepToProto(const QueryPlanStepPtr & /*step*/, RQueryPlanStep & /*proto*/)
+void serializeQueryPlanStepToProto(const QueryPlanStepPtr & step, RQueryPlanStep & proto)
 {
-//TODO: Wait to add Type for QueryPlanStep
-//     switch (step->getType())
-//     {
+    switch (getQueryPlanStepType(step))
+    {
+        case QueryPlanStepType::JoinStepExt: {
+            serializeQueryPlanStepToProtoImpl<JoinStepExt, Protos::JoinStepExt>(step, *proto.mutable_join_step_ext());
+            return;
+        }
+        case QueryPlanStepType::AggregatingStepExt: {
+            serializeQueryPlanStepToProtoImpl<AggregatingStepExt, Protos::AggregatingStepExt>(step, *proto.mutable_aggregating_step_ext());
+            return;
+        }
+        default:
+            break;
 // #define CASE_DEF(TYPE, VAR_NAME) \
-//     case IQueryPlanStep::Type::TYPE: { \
-//         serializeQueryPlanStepToProtoImpl<TYPE##Step, Protos::TYPE##Step>(step, *proto.mutable_##VAR_NAME##_step()); \
+//     case QueryPlanStepType::TYPE: { \
+//         serializeQueryPlanStepToProtoImpl<TYPE, Protos::TYPE>(step, *proto.mutable_##VAR_NAME##_step()); \
 //         return; \
 //     }
-
-//         APPLY_STEP_PROTOBUF_TYPES_AND_NAMES(CASE_DEF)
+//             APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
 // #undef CASE_DEF
-
 //         default: {
-//             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Not implemented step: {}"), static_cast<int>(step->getType());
+//             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Not implemented step: {}"), static_cast<int>(getQueryPlanStepType(step));
 //         }
-//     }
+    }
 }
 
 template <typename Step, typename ProtoType>
@@ -313,21 +319,26 @@ inline QueryPlanStepPtr deserializeQueryPlanStepFromProtoImpl(const ProtoType & 
     return step;
 }
 
-QueryPlanStepPtr deserializeQueryPlanStepFromProto(const RQueryPlanStep & /*proto*/, ContextPtr /*context*/)
+QueryPlanStepPtr deserializeQueryPlanStepFromProto(const RQueryPlanStep & proto, ContextPtr context)
 {
-// TODO:: Need type's definition in IQueryPlanStep
-//     switch (proto.step_case())
-//     {
+    switch (proto.step_case())
+    {
+        case RQueryPlanStep::StepCase::kAggregatingStepExt: {
+            return deserializeQueryPlanStepFromProtoImpl<AggregatingStepExt, Protos::AggregatingStepExt>(
+                proto.aggregating_step_ext(), context);
+        }
+        default:
+            break;
 // #define CASE_DEF(TYPE, VAR_NAME) \
 //     case RQueryPlanStep::StepCase::k##TYPE##Step: { \
 //         return deserializeQueryPlanStepFromProtoImpl<TYPE##Step, Protos::TYPE##Step>(proto.VAR_NAME##_step(), context); \
 //     }
-//         APPLY_STEP_PROTOBUF_TYPES_AND_NAMES(CASE_DEF)
+//             APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
 // #undef CASE_DEF
 //         default: {
 //             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Not implemented protobuf step: {}"), static_cast<int>(proto.step_case());
 //         }
-//     }
+    }
     return nullptr;
 }
 
@@ -358,7 +369,7 @@ bool isPlanStepEqual(const IQueryPlanStep & /*a*/, const IQueryPlanStep & /*b*/)
 //         return isPlanStepEqualImpl<TYPE##Step, Protos::TYPE##Step>(a, b); \
 //     }
 
-//         APPLY_STEP_PROTOBUF_TYPES_AND_NAMES(CASE_DEF)
+//         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
 
 //         default:
 //             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Unsupported step {}", a.getName());
@@ -388,7 +399,7 @@ UInt64 hashPlanStep(const IQueryPlanStep & /*step*/, bool /*ignore_output_stream
 //         return hashPlanStepImpl<TYPE##Step, Protos::TYPE##Step>(step, ignore_output_stream); \
 //     }
 
-//         APPLY_STEP_PROTOBUF_TYPES_AND_NAMES(CASE_DEF)
+//         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
 
 //         default:
 //             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Unsupported step");
@@ -423,30 +434,6 @@ Block deserializeHeaderFromProto(const Protos::Block & proto)
         data.emplace_back(item.type, item.name);
     }
     return Block(std::move(data));
-}
-
-void toProto(const DataStream & data_stream, Protos::DataStream & proto)
-{
-    serializeHeaderToProto(data_stream.header, *proto.mutable_header());
-    std::sort(proto.mutable_distinct_columns()->begin(), proto.mutable_distinct_columns()->end());
-    proto.set_has_single_port(data_stream.has_single_port);
-    for (const auto & element : data_stream.sort_description)
-        ProtosSerDerHelper::toProto(element, *proto.add_sort_description());
-
-    proto.set_sort_scope(DataStreamSortScopeConverter::toProto(data_stream.sort_scope));
-}
-
-void fillFromProto(DataStream & data_stream, const Protos::DataStream & proto)
-{
-    data_stream.header = deserializeHeaderFromProto(proto.header());
-    data_stream.has_single_port = proto.has_single_port();
-    for (const auto & proto_element : proto.sort_description())
-    {
-        SortColumnDescription element;
-        ProtosSerDerHelper::fillFromProto(element, proto_element);
-        data_stream.sort_description.emplace_back(std::move(element));
-    }
-    data_stream.sort_scope = DataStreamSortScopeConverter::fromProto(proto.sort_scope());
 }
 
 }

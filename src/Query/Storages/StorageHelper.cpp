@@ -27,4 +27,13 @@ NamesAndTypesList getSubcolumnsOfAllPhysical(const ColumnsDescription & columns_
     return result;
 }
 
+Names getNamesOfOrdinary(const ColumnsDescription & columns_description)
+{
+    Names ret;
+    for (const auto & col : columns_description.columns)
+        if (col.default_desc.kind == ColumnDefaultKind::Default)
+            ret.emplace_back(col.name);
+    return ret;
+}
+
 }

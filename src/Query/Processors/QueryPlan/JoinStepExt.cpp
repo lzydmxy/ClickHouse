@@ -11,7 +11,7 @@
 #include <Query/Pipeline/QueryPipelineBuilderHelper.h>
 
 #include <Query/ProtosHelper/ASTSerDerHelper.h>
-#include <Query/ProtosHelper/PlanSerDerHelper.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Interpreters/ConcurrentHashJoin.h>
@@ -508,8 +508,8 @@ void JoinStepExt::toProto(Protos::JoinStepExt & proto, bool for_hash_equals) con
     else if (output_stream.has_value())
             {
         for (const auto & element : input_streams)
-            DB::toProto(element, *proto.add_input_streams());
-        DB::toProto(*output_stream, *proto.mutable_output_stream());
+            ProtosSerDerHelper::toProto(element, *proto.add_input_streams());
+        ProtosSerDerHelper::toProto(*output_stream, *proto.mutable_output_stream());
     }
     else
         throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "required to have output stream");
@@ -550,12 +550,12 @@ std::shared_ptr<JoinStepExt> JoinStepExt::fromProto(const Protos::JoinStepExt & 
     for (const auto & proto_element : proto.input_streams())
     {
         DataStream element;
-        DB::fillFromProto(element, proto_element);
+        ProtosSerDerHelper::fillFromProto(element, proto_element);
         input_streams.emplace_back(std::move(element));
     }
     DataStream output_stream;
     if (proto.has_output_stream())
-        DB::fillFromProto(output_stream, proto.output_stream());
+        ProtosSerDerHelper::fillFromProto(output_stream, proto.output_stream());
     else
         throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "required to have output stream");
     const auto & step_description = proto.step_description();

@@ -1,7 +1,6 @@
 #if 0
 // TODO: reenable this test when sync mode is ready
 #include <Parsers/parseQuery.h>
-#include <Query/Parsers/ASTPartitionExt.h>
 #include <Query/Parsers/ParserQueryWithOutputExt.h>
 #include <Query/Parsers/ParserStatsQueryExt.h>
 #include <Query/Parsers/ASTReplaceVisitor.h>
@@ -457,8 +456,8 @@ TEST_F(StatsQueryTest, CreateStatsASTClone)
     ptr1->sample_rows = 4;
     ptr1->sample_ratio = 0.01;
     ptr1->if_not_exists = true;
-    ptr1->partition = std::make_shared<ASTPartitionExt>();
-    // ptr1->partition->as<ASTPartitionExt>()->id = "xxx";
+    ptr1->partition = std::make_shared<ASTPartition>();
+    // ptr1->partition->as<ASTPartition>()->id = "xxx";
 
     ASTPtr cloned = ptr1->clone();
     std::shared_ptr<ASTCreateStatsQueryExt> ptr2 = std::dynamic_pointer_cast<ASTCreateStatsQueryExt>(cloned);
@@ -474,7 +473,7 @@ TEST_F(StatsQueryTest, CreateStatsASTClone)
     ASSERT_TRUE(ptr2->sample_rows == 4);
     ASSERT_TRUE(ptr2->sample_ratio == 0.01);
     ASSERT_TRUE(ptr2->partition != ptr1->partition);
-    ASSERT_TRUE(ptr2->partition->as<ASTPartitionExt>()->id == ptr1->partition->as<ASTPartitionExt>()->id);
+    ASSERT_TRUE(ptr2->partition->as<ASTPartition>()->id == ptr1->partition->as<ASTPartition>()->id);
     ASSERT_TRUE(ptr2->children.size() == 1);
     ASSERT_TRUE(ptr2->children[0] == ptr2->partition);
 }

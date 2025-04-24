@@ -1,10 +1,13 @@
 
 
-#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
 #include <Query/Processors/QueryPlan/PlanNode.h>
 #include <Query/Processors/QueryPlan/QueryPlanExt.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/QueryPlan/TableScanStepExt.h>
+#include <Query/Protos/EnumMacros.h>
+#include <Query/Protos/plan_node.pb.h>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 
 #include <cstddef>
@@ -18,11 +21,11 @@ namespace ErrorCodes
 extern const int LOGICAL_ERROR;
 }
 
-// ENUM_WITH_PROTO_CONVERTER(
-//     QueryPlanMode, // enum name
-//     Protos::QueryPlan::PlanMode, // protobuf enum message
-//     (TreeLike, 1),
-//     (Flatten, 2));
+ENUM_WITH_PROTO_CONVERTER(
+    QueryPlanMode, // enum name
+    Protos::QueryPlanExt::PlanMode, // protobuf enum message
+    (TreeLike, 0),
+    (Flatten, 1));
 
 QueryPlanExt::QueryPlanExt() = default;
 QueryPlanExt::~QueryPlanExt() = default;
@@ -260,9 +263,7 @@ QueryPipelineBuilderPtr QueryPlanExt::buildQueryPipeline(
             stack.push(Frame{.node = frame.node->children[next_child], .pipelines = {}});
     }
 
-    //todo: hongzhigao, other feat: add context in QueryPipelineBuilder (use globalContext instead now)
-    // for (auto & context : interpreter_context)
-    //     last_pipeline->addInterpreterContext(std::move(context));
+    last_pipeline->addResources(std::move(resources));
 
     LOG_DEBUG(log, "Build pipeline takes: {}ms", watch.elapsedMilliseconds());
     return last_pipeline;
@@ -346,161 +347,158 @@ void QueryPlanExt::explainPipeline(WriteBuffer & buffer, const ExplainPipelineOp
     }
 }
 
-//todo: hongzhigao, other feat: need impl toProto/fromProto
 // handle when plan is tree-like, i.e., plan_node + cte_info
-// void QueryPlanExt::toProto(Protos::QueryPlan & proto) const
-// {
-//     if (plan_node)
-//     {
-//         proto.set_mode(QueryPlanModeConverter::toProto(QueryPlanMode::TreeLike));
-//         toProtoTreeLike(proto);
-//     }
-//     else if (root)
-//     {
-//         proto.set_mode(QueryPlanModeConverter::toProto(QueryPlanMode::Flatten));
-//         toProtoFlatten(proto);
-//     }
-//     else
-//     {
-//         throw Exception("Invalid QueryPlan", ErrorCodes::LOGICAL_ERROR);
-//     }
-// }
+void QueryPlanExt::toProto(Protos::QueryPlanExt & proto)
+{
+    if (plan_node)
+    {
+        proto.set_mode(QueryPlanModeConverter::toProto(QueryPlanMode::TreeLike));
+        toProtoTreeLike(proto);
+    }
+    else if (root)
+    {
+        proto.set_mode(QueryPlanModeConverter::toProto(QueryPlanMode::Flatten));
+        toProtoFlatten(proto);
+    }
+    else
+    {
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Invalid QueryPlan");
+    }
+}
 
-// void QueryPlanExt::fromProto(const Protos::QueryPlan & proto)
-// {
-//     auto mode = QueryPlanModeConverter::fromProto(proto.mode());
-//     switch (mode)
-//     {
-//         case QueryPlanMode::TreeLike:
-//             this->fromProtoTreeLike(proto);
-//             break;
-//         case QueryPlanMode::Flatten:
-//             this->fromProtoFlatten(proto);
-//             break;
-//         default: {
-//             throw Exception("Invalid QueryPlan Proto", ErrorCodes::LOGICAL_ERROR);
-//         }
-//     }
-// }
+void QueryPlanExt::fromProto(const Protos::QueryPlanExt & proto)
+{
+    auto mode = QueryPlanModeConverter::fromProto(proto.mode());
+    switch (mode)
+    {
+        case QueryPlanMode::TreeLike:
+            this->fromProtoTreeLike(proto);
+            break;
+        case QueryPlanMode::Flatten:
+            this->fromProtoFlatten(proto);
+            break;
+    }
+}
 
 // handle when plan is flatten, i.e., root + nodes + cte_nodes
-// void QueryPlanExt::toProtoFlatten(Protos::QueryPlan & proto) const
-// {
-//     if (!root)
-//         throw Exception("QueryPlan::toProtoFlatten() failed", ErrorCodes::LOGICAL_ERROR);
+void QueryPlanExt::toProtoFlatten(Protos::QueryPlanExt & proto)
+{
+    if (!root)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "QueryPlan::toProtoFlatten() failed");
 
-//     if (reset_step_id)
-//     {
-//         size_t id = 0;
-//         for (const auto & node : nodes)
-//             node.id = id++; // this is mutable field
-//     }
+    if (reset_step_id)
+    {
+        size_t id = 0;
+        for (auto & node : nodes)
+            node_id_map[&node] = id++;
+    }
 
-//     for (const auto & node : nodes)
-//     {
-//         auto id = node.id;
-//         auto & node_proto = (*proto.mutable_plan_nodes())[id];
-//         node_proto.set_plan_id(id);
-//         serializeQueryPlanStepToProto(node.step, *node_proto.mutable_step());
-//         for (const auto & child : node.children)
-//             node_proto.add_children(child->id);
-//     }
+    for (const auto & node : nodes)
+    {
+        auto id = getNodeId(&node);
+        auto & node_proto = (*proto.mutable_plan_nodes())[id];
+        node_proto.set_plan_id(id);
+        serializeQueryPlanStepToProto(node.step, *node_proto.mutable_step());
+        for (const auto & child : node.children)
+            node_proto.add_children(getNodeId(child));
+    }
 
-//     proto.set_root_id(root->id);
-// }
+    proto.set_root_id(getNodeId(root));
+}
 
-// void QueryPlanExt::fromProtoFlatten(const Protos::QueryPlan & proto)
-// {
-//     std::unordered_map<size_t, Node *> id_to_node;
-//     const auto & id_to_node_proto = proto.plan_nodes();
+void QueryPlanExt::fromProtoFlatten(const Protos::QueryPlanExt & proto)
+{
+    std::unordered_map<size_t, Node *> id_to_node;
+    const auto & id_to_node_proto = proto.plan_nodes();
 
-//     auto context = !interpreter_context.empty() ? interpreter_context.back() : nullptr;
+    auto context = !interpreter_context.empty() ? interpreter_context.back() : nullptr;
 
-//     for (const auto & [id, node_proto] : id_to_node_proto)
-//     {
-//         if (node_proto.plan_id() != id)
-//             throw Exception("Invalid Proto", ErrorCodes::LOGICAL_ERROR);
-//         auto step = deserializeQueryPlanStepFromProto(node_proto.step(), context);
-//         nodes.emplace_back(Node{step, {}, id});
-//         id_to_node[id] = &nodes.back();
-//     }
+    for (const auto & [id, node_proto] : id_to_node_proto)
+    {
+        if (node_proto.plan_id() != id)
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "Invalid Proto");
+        auto step = deserializeQueryPlanStepFromProto(node_proto.step(), context);
+        nodes.emplace_back(Node{step, {}});
+        node_id_map[&nodes.back()] = id;
+        id_to_node[id] = &nodes.back();
+    }
 
-//     for (auto & node : nodes)
-//     {
-//         auto id = node.id;
-//         for (auto child_id : id_to_node_proto.at(id).children())
-//         {
-//             auto * child = id_to_node[child_id];
-//             node.children.emplace_back(child);
-//         }
-//     }
+    for (auto & node : nodes)
+    {
+        auto id = getNodeId(&node);
+        for (auto child_id : id_to_node_proto.at(id).children())
+        {
+            auto * child = id_to_node[child_id];
+            node.children.emplace_back(child);
+        }
+    }
 
-//     auto root_id = proto.root_id();
-//     root = id_to_node[root_id];
-// }
+    auto root_id = proto.root_id();
+    root = id_to_node[root_id];
+}
 
 // support optimizer mode
-// void QueryPlanExt::toProtoTreeLike(Protos::QueryPlan & proto) const
-// {
-//     if (!plan_node)
-//         throw Exception("QueryPlan::toProtoTreeLike() failed", ErrorCodes::LOGICAL_ERROR);
+void QueryPlanExt::toProtoTreeLike(Protos::QueryPlanExt & proto) const
+{
+    if (!plan_node)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "QueryPlan::toProtoTreeLike() failed");
 
-//     std::queue<PlanNodePtr> queue;
-//     queue.push(plan_node);
+    std::queue<PlanNodePtr> queue;
+    queue.push(plan_node);
 
-//     proto.set_root_id(plan_node->getId());
-//     for (const auto & [cte_id, ptr] : this->cte_info.getCTEs())
-//     {
-//         queue.push(ptr);
-//         (*proto.mutable_cte_id_mapping())[cte_id] = ptr->getId();
-//     }
+    proto.set_root_id(plan_node->getId());
+    for (const auto & [cte_id, ptr] : this->cte_info.getCTEs())
+    {
+        queue.push(ptr);
+        (*proto.mutable_cte_id_mapping())[cte_id] = ptr->getId();
+    }
 
-//     while (!queue.empty())
-//     {
-//         auto cur = queue.front();
+    while (!queue.empty())
+    {
+        auto cur = queue.front();
 
-//         auto plan_id = cur->getId();
-//         auto * cur_pb = &(*proto.mutable_plan_nodes())[plan_id];
+        auto plan_id = cur->getId();
+        auto * cur_pb = &(*proto.mutable_plan_nodes())[plan_id];
 
-//         cur_pb->set_plan_id(plan_id);
-//         serializeQueryPlanStepToProto(cur->getStep(), *cur_pb->mutable_step());
-//         for (const auto & child : cur->getChildren())
-//         {
-//             queue.push(child);
-//             cur_pb->add_children(child->getId());
-//         }
+        cur_pb->set_plan_id(plan_id);
+        serializeQueryPlanStepToProto(cur->getStep(), *cur_pb->mutable_step());
+        for (const auto & child : cur->getChildren())
+        {
+            queue.push(child);
+            cur_pb->add_children(child->getId());
+        }
 
-//         queue.pop();
-//     }
-// }
+        queue.pop();
+    }
+}
 
-// void QueryPlanExt::fromProtoTreeLike(const Protos::QueryPlan & proto)
-// {
-//     std::unordered_map<Int64, PlanNodePtr> id_to_plan;
-//     ContextPtr context = interpreter_context.empty() ? nullptr : interpreter_context.back();
-//     for (const auto & [plan_id, plan_pb] : proto.plan_nodes())
-//     {
-//         if (plan_pb.plan_id() != plan_id)
-//             throw Exception("Invalid Proto", ErrorCodes::LOGICAL_ERROR);
-//         auto step = deserializeQueryPlanStepFromProto(plan_pb.step(), context);
-//         auto plan = PlanNodeBase::createPlanNode(plan_id, step);
-//         id_to_plan[plan_id] = std::move(plan);
-//     }
+void QueryPlanExt::fromProtoTreeLike(const Protos::QueryPlanExt & proto)
+{
+    std::unordered_map<Int64, PlanNodePtr> id_to_plan;
+    ContextPtr context = interpreter_context.empty() ? nullptr : interpreter_context.back();
+    for (const auto & [plan_id, plan_pb] : proto.plan_nodes())
+    {
+        if (plan_pb.plan_id() != plan_id)
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "Invalid Proto");
+        auto step = deserializeQueryPlanStepFromProto(plan_pb.step(), context);
+        auto plan = PlanNodeBase::createPlanNode(plan_id, step);
+        id_to_plan[plan_id] = std::move(plan);
+    }
 
-//     // set children
-//     for (const auto & [plan_id, plan_pb] : proto.plan_nodes())
-//     {
-//         PlanNodes children;
-//         for (auto child_id : plan_pb.children())
-//             children.emplace_back(id_to_plan.at(child_id));
-//         id_to_plan.at(plan_id)->replaceChildren(children);
-//     }
+    // set children
+    for (const auto & [plan_id, plan_pb] : proto.plan_nodes())
+    {
+        PlanNodes children;
+        for (auto child_id : plan_pb.children())
+            children.emplace_back(id_to_plan.at(child_id));
+        id_to_plan.at(plan_id)->replaceChildren(children);
+    }
 
-//     for (auto [cte_id, plan_id] : proto.cte_id_mapping())
-//         this->cte_info.add(cte_id, id_to_plan.at(plan_id));
-//     auto root_id = proto.root_id();
-//     this->setPlanNode(id_to_plan.at(root_id));
-// }
+    for (auto [cte_id, plan_id] : proto.cte_id_mapping())
+        this->cte_info.add(cte_id, id_to_plan.at(plan_id));
+    auto root_id = proto.root_id();
+    this->setPlanNode(id_to_plan.at(root_id));
+}
 
 std::set<StorageID> QueryPlanExt::allocateLocalTable(ContextPtr context)
 {
@@ -537,9 +535,7 @@ static PlanNodePtr copyPlanNode(const PlanNodePtr & plan, ContextMutablePtr & co
     PlanNodes children;
     for (auto & child : plan->getChildren())
         children.emplace_back(copyPlanNode(child, context));
-    //todo: hongzhigao, other feat:  implement PlanNode
-    // return PlanNodeBase::createPlanNode(plan->getId(), plan->getStep()->copy(context), children, plan->getStatistics());
-    return {};
+    return PlanNodeBase::createPlanNode(plan->getId(), QueryPlanStepHelper::copyQueryPlanStep(plan->getStep(), context), children);
 }
 
 QueryPlanExtPtr QueryPlanExt::copy(ContextMutablePtr context)

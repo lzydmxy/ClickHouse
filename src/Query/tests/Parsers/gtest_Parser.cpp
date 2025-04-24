@@ -31,6 +31,7 @@ static constexpr size_t kDummyMaxParserDepth = 256;
 static constexpr size_t kDummyMaxParserBacktracks = 1000000;
 
 
+
 TEST_P(ParserTest, parseQueryExt)
 {
     const auto & parser = std::get<0>(GetParam());
@@ -48,7 +49,7 @@ TEST_P(ParserTest, parseQueryExt)
         {
             ASTPtr ast;
             ASSERT_NO_THROW(ast = parseQuery(*parser, input_text.begin(), input_text.end(), 0, 0, 0));
-            DB::ASTReplaceVisitor::replace(ast);
+            // DB::ASTReplaceVisitor::replace(ast);
             if (std::string("CREATE USER or ALTER USER query") != parser->getName()
                 && std::string("ATTACH access entity query") != parser->getName())
             {
@@ -469,3 +470,4 @@ INSTANTIATE_TEST_SUITE_P(
                     "DESC\nLIMIT 20",
                 },
             })));
+

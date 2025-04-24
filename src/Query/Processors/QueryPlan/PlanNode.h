@@ -69,7 +69,7 @@ public:
             throw Exception(ErrorCodes::LOGICAL_ERROR, "Type cast failed for {}", #TYPE); \
         plan_node = std::dynamic_pointer_cast<PlanNodeBase>(std::make_shared<PlanNode<TYPE>>(id_, std::move(spec_step), children_)); \
     }
-        APPLY_QUERY_PLAN_STEP_TYPES(CREATE_PLAN_NODE)
+        APPLY_PROTOBUF_STEP_TYPES(CREATE_PLAN_NODE)
         // CREATE_PLAN_NODE(Any)
         // CREATE_PLAN_NODE(MultiJoin)
 #undef CREATE_PLAN_NODE
@@ -176,7 +176,8 @@ private:
     extern template class PlanNode<TYPE>; \
     using TYPE##Node = PlanNode<TYPE>;
 
-APPLY_QUERY_PLAN_STEP_TYPES(PLAN_NODE_DEF)
+APPLY_PROTOBUF_STEP_TYPES(PLAN_NODE_DEF)
+// PLAN_NODE_DEF(APPLY_STEP_TYPES)
 // PLAN_NODE_DEF(Any)
 // PLAN_NODE_DEF(MultiJoin)
 #undef PLAN_NODE_DEF

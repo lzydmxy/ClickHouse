@@ -3,11 +3,13 @@
 #include <Functions/grouping.h>
 #include <Processors/Transforms/CopyTransform.h>
 #include <Processors/Transforms/ExpressionTransform.h>
+#include <Query/Interpreters/AggregatorExt.h>
+#include <Query/Processors/Merges/FinishAggregatingInOrderTransformExt.h>
 #include <Query/Processors/QueryPlan/AggregatingStepExt.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
-#include <Query/Processors/Transforms/AggregatingTransformExt.h>
 #include <Query/Processors/Transforms/AggregatingInOrderTransformExt.h>
-#include <Query/Processors/Merges/FinishAggregatingInOrderTransformExt.h>
+#include <Query/Processors/Transforms/AggregatingTransformExt.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 
 namespace DB
 {
@@ -40,7 +42,6 @@ static ITransformingStep::Traits getTraits(bool should_produce_results_in_order_
 {
     return ITransformingStep::Traits{
         {
-            // // .preserves_distinct_columns = false, /// Actually, we may check that distinct names are in aggregation keys
             .returns_single_stream
             = should_produce_results_in_order_of_bucket_number, /// Actually, may also return single stream if should_produce_results_in_order_of_bucket_number = false
             .preserves_number_of_streams = false,
@@ -61,11 +62,11 @@ void computeGroupingFunctions(
     if (groupings.empty())
         return;
 
-    // // const bool ansi_mode = build_settings.context->getSettingsRef().dialect_type != DialectType::CLICKHOUSE;
+    const bool ansi_mode = build_settings.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().dialect_type != DialectType::CLICKHOUSE;
     bool force_grouping_standard_compatibility
         = build_settings.getBuildQueryPipelineSettingsExt().context->getSettingsRef().force_grouping_standard_compatibility;
-    // // if (ansi_mode)
-    // //     force_grouping_standard_compatibility = true;
+    if (ansi_mode)
+        force_grouping_standard_compatibility = true;
 
     auto actions = std::make_shared<ActionsDAG>(pipeline.getHeader().getColumnsWithTypeAndName());
     ActionsDAG::NodeRawConstPtrs outputs = actions->getOutputs();
@@ -296,15 +297,35 @@ AggregatingStepExt::AggregatingStepExt(
     updateInputStreams(input_streams);
 }
 
+std::shared_ptr<IQueryPlanStep> AggregatingStepExt::copy(ContextPtr) const
+{
+    return std::make_shared<AggregatingStepExt>(
+        input_streams[0],
+        keys,
+        keys_not_hashed,
+        params.aggregates,
+        grouping_sets_params,
+        final,
+        stage_policy,
+        group_by_sort_description,
+        groupings,
+        needOverflowRow(),
+        should_produce_results_in_order_of_bucket_number,
+        no_shuffle,
+        streaming_for_cache);
+}
+
+
 void AggregatingStepExt::updateOutputStream()
 {
-    //todo: wujianchao5, other feat: what if input_streams and params->getHeader() are inconsistent?
+    //todo: bc, other feat: what if input_streams and params->getHeader() are inconsistent?
     output_stream->header = appendGroupingColumns(params.getHeader(final), grouping_sets_params, groupings, final);
 }
 
 void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & build_settings)
 {
-    // todo: hongzhigao1, implement
+    // todo: hongzhigao1, other feat: implement AggregatingStreamingTransform for cache later, no cache now
+    streaming_for_cache = false;
     // auto cache_holder = pipeline.getCacheHolder();
     // if (!cache_holder || cache_holder->all_part_in_storage)
     //     streaming_for_cache = false;
@@ -603,15 +624,14 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
         {
             if (pipeline.getNumStreams() > 1)
             {
-                // todo: hongzhigao1, implement
-                // auto many_data = std::make_shared<ManyAggregatedData>(pipeline.getNumStreams());
-                // size_t counter = 0;
-                // pipeline.addSimpleTransform(
-                //     [&](const Block & header)
-                //     {
-                //         return std::make_shared<AggregatingInOrderTransform>(
-                //             header, transform_params, group_by_sort_description, max_block_size, many_data, counter++);
-                //     });
+                auto many_data = std::make_shared<ManyAggregatedData>(pipeline.getNumStreams());
+                size_t counter = 0;
+                pipeline.addSimpleTransform(
+                    [&](const Block & header)
+                    {
+                        return std::make_shared<AggregatingInOrderTransformExt>(
+                            header, transform_params, group_by_sort_description, max_block_size, many_data, counter++);
+                    });
 
                 aggregating_in_order = collector.detachProcessors(0);
 
@@ -619,7 +639,7 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                 {
                     if (!column_description.base.column_name.empty())
                     {
-                        // column_description.column_number = pipeline.getHeader().getPositionByName(column_description.column_name);
+                        column_description.column_number = pipeline.getHeader().getPositionByName(column_description.base.column_name);
                         column_description.base.column_name.clear();
                     }
                 }
@@ -664,108 +684,81 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
             }
             else
             {
-                 pipeline.addSimpleTransform(
-                     [&](const Block & header) {
-                         return std::make_shared<AggregatingInOrderTransformExt>(
-                             header, transform_params, group_by_sort_description, max_block_size);
-                     });
+                pipeline.addSimpleTransform(
+                    [&](const Block & header) {
+                        return std::make_shared<AggregatingInOrderTransformExt>(
+                            header, transform_params, group_by_sort_description, max_block_size);
+                    });
 
                 aggregating_in_order = collector.detachProcessors(0);
             }
 
-             pipeline.addSimpleTransform([&](const Block & header)
-                                         { return std::make_shared<FinalizingSimpleTransformExt>(header, transform_params); });
+            pipeline.addSimpleTransform([&](const Block & header)
+                                        { return std::make_shared<FinalizingSimpleTransformExt>(header, transform_params); });
 
             finalizing = collector.detachProcessors(2);
             return;
         }
     }
-    // todo: hongzhigao1, open when support cache
-    // bool can_streaming_agg = streaming_for_cache && !transform_params->only_merge;
+    bool can_streaming_agg = streaming_for_cache && !transform_params->only_merge;
     // If there are several sources, then we perform parallel aggregation
-    // if (pipeline.getNumStreams() > 1)
-    // {
-    //     /// Add resize transform to uniformly distribute data between aggregating streams.
-    //     if (!storage_has_evenly_distributed_read && !can_streaming_agg)
-    //         pipeline.resize(pipeline.getNumStreams(), true, true);
-    //     if (can_streaming_agg)
-    //     {
-    //         pipeline.addSimpleTransform([&](const Block & header) {
-    //             return std::make_shared<AggregatingStreamingTransform>(
-    //                 header,
-    //                 transform_params,
-    //                 settings.streaming_agg_local_ratio,
-    //                 false,
-    //                 settings.enable_intermediate_result_cache_streaming,
-    //                 streaming_for_cache,
-    //                 false,
-    //                 final);
-    //         });
-    //     }
-    //     else
-    //     {
-    //         auto many_data = std::make_shared<ManyAggregatedData>(pipeline.getNumStreams());
-    //
-    //         size_t counter = 0;
-    //         pipeline.addSimpleTransform([&](const Block & header) {
-    //             return std::make_shared<AggregatingTransform>(
-    //                 header, transform_params, many_data, counter++, merge_max_threads, temporary_data_merge_threads);
-    //         });
-    //     }
-    //     /// Streaming agg no need resize here
-    //     if (!can_streaming_agg)
-    //     {
-    //         /// We add the explicit resize here, but not in case of aggregating in order, since AIO don't use two-level hash tables and thus returns only buckets with bucket_number = -1.
-    //         pipeline.resize(should_produce_results_in_order_of_bucket_number ? 1 : pipeline.getNumStreams(), true /* force */);
-    //     }
-    //     aggregating = collector.detachProcessors(0);
-    // }
-    // else
-    // {
-    //     pipeline.resize(1);
-    //
-    //     if (can_streaming_agg)
-    //         pipeline.addSimpleTransform([&](const Block & header) {
-    //             return std::make_shared<AggregatingStreamingTransform>(
-    //                 header,
-    //                 transform_params,
-    //                 settings.streaming_agg_local_ratio,
-    //                 false,
-    //                 settings.enable_intermediate_result_cache_streaming,
-    //                 streaming_for_cache);
-    //         });
-    //     else
-    //         pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<AggregatingTransform>(header, transform_params); });
-    //
-    //     aggregating = collector.detachProcessors(0);
-    // }
-
-    /// If there are several sources, then we perform parallel aggregation
     if (pipeline.getNumStreams() > 1)
     {
-        // todo: hongzhigao1, change to AggregatingStreamingTransform when support cache
-        // Add resize transform to uniformly distribute data between aggregating streams.
-        if (!storage_has_evenly_distributed_read)
+        /// Add resize transform to uniformly distribute data between aggregating streams.
+        if (!storage_has_evenly_distributed_read && !can_streaming_agg)
             pipeline.resize(pipeline.getNumStreams(), true, true);
-
-        auto many_data = std::make_shared<ManyAggregatedData>(pipeline.getNumStreams());
-
-        size_t counter = 0;
-        pipeline.addSimpleTransform([&](const Block & header) {
-            return std::make_shared<AggregatingTransformExt>(
-                header, transform_params, many_data, counter++, merge_max_threads, temporary_data_merge_threads);
-        });
-
-        /// We add the explicit resize here, but not in case of aggregating in order, since AIO don't use two-level hash tables and thus returns only buckets with bucket_number = -1.
-        pipeline.resize(should_produce_results_in_order_of_bucket_number ? 1 : pipeline.getNumStreams(), true /* force */);
-
+        if (can_streaming_agg)
+        {
+            // todo: hongzhigao1, other feat: implement AggregatingStreamingTransform for cache later
+            // pipeline.addSimpleTransform([&](const Block & header) {
+            //     return std::make_shared<AggregatingStreamingTransform>(
+            //         header,
+            //         transform_params,
+            //         settings.streaming_agg_local_ratio,
+            //         false,
+            //         settings.enable_intermediate_result_cache_streaming,
+            //         streaming_for_cache,
+            //         false,
+            //         final);
+            // });
+        }
+        else
+        {
+            auto many_data = std::make_shared<ManyAggregatedData>(pipeline.getNumStreams());
+    
+            size_t counter = 0;
+            pipeline.addSimpleTransform([&](const Block & header) {
+                return std::make_shared<AggregatingTransformExt>(
+                    header, transform_params, many_data, counter++, merge_max_threads, temporary_data_merge_threads);
+            });
+        }
+        /// Streaming agg no need resize here
+        if (!can_streaming_agg)
+        {
+            /// We add the explicit resize here, but not in case of aggregating in order, since AIO don't use two-level hash tables and thus returns only buckets with bucket_number = -1.
+            pipeline.resize(should_produce_results_in_order_of_bucket_number ? 1 : pipeline.getNumStreams(), true /* force */);
+        }
         aggregating = collector.detachProcessors(0);
     }
     else
     {
         pipeline.resize(1);
-
-        pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<AggregatingTransformExt>(header, transform_params); });
+    
+        if (can_streaming_agg)
+        {
+            // todo: hongzhigao1, other feat: implement AggregatingStreamingTransform for cache later
+            // pipeline.addSimpleTransform([&](const Block & header) {
+            //     return std::make_shared<AggregatingStreamingTransform>(
+            //         header,
+            //         transform_params,
+            //         settings.streaming_agg_local_ratio,
+            //         false,
+            //         settings.enable_intermediate_result_cache_streaming,
+            //         streaming_for_cache);
+            // });
+        }
+        else
+            pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<AggregatingTransformExt>(header, transform_params); });
 
         aggregating = collector.detachProcessors(0);
     }
@@ -797,135 +790,134 @@ void AggregatingStepExt::describePipeline(FormatSettings & settings) const
     }
 }
 
-// todo: hongzhigao1, implement proto
-// void GroupingSetsParams::toProto(Protos::GroupingSetsParams & proto) const
-// {
-//     for (const auto & element : used_key_names)
-//         proto.add_used_key_names(element);
-//     for (const auto & element : used_keys)
-//         proto.add_used_keys(element);
-//     for (const auto & element : missing_keys)
-//         proto.add_missing_keys(element);
-// }
+void GroupingSetsParamsExt::toProto(Protos::GroupingSetsParamsExt & proto) const
+{
+    for (const auto & element : used_key_names)
+        proto.add_used_key_names(element);
+    for (const auto & element : used_keys)
+        proto.add_used_keys(element);
+    for (const auto & element : missing_keys)
+        proto.add_missing_keys(element);
+}
 
-// void GroupingSetsParams::fillFromProto(const Protos::GroupingSetsParams & proto)
-// {
-//     for (const auto & element : proto.used_key_names())
-//         used_key_names.emplace_back(element);
-//     for (const auto & element : proto.used_keys())
-//         used_keys.emplace_back(element);
-//     for (const auto & element : proto.missing_keys())
-//         missing_keys.emplace_back(element);
-// }
+void GroupingSetsParamsExt::fillFromProto(const Protos::GroupingSetsParamsExt & proto)
+{
+    for (const auto & element : proto.used_key_names())
+        used_key_names.emplace_back(element);
+    for (const auto & element : proto.used_keys())
+        used_keys.emplace_back(element);
+    for (const auto & element : proto.missing_keys())
+        missing_keys.emplace_back(element);
+}
 
-// void GroupingDescription::toProto(Protos::GroupingDescription & proto) const
-// {
-//     for (const auto & element : argument_names)
-//         proto.add_argument_names(element);
-//     proto.set_output_name(output_name);
-// }
+void GroupingDescription::toProto(Protos::GroupingDescription & proto) const
+{
+    for (const auto & element : argument_names)
+        proto.add_argument_names(element);
+    proto.set_output_name(output_name);
+}
 
-// void GroupingDescription::fillFromProto(const Protos::GroupingDescription & proto)
-// {
-//     for (const auto & element : proto.argument_names())
-//         argument_names.emplace_back(element);
-//     output_name = proto.output_name();
-// }
+void GroupingDescription::fillFromProto(const Protos::GroupingDescription & proto)
+{
+    for (const auto & element : proto.argument_names())
+        argument_names.emplace_back(element);
+    output_name = proto.output_name();
+}
 
-// void AggregatingStep::toProto(Protos::AggregatingStep & proto, bool) const
-// {
-//     ITransformingStep::serializeToProtoBase(*proto.mutable_query_plan_base());
-//     for (const auto & element : keys)
-//         proto.add_keys(element);
+void AggregatingStepExt::toProto(Protos::AggregatingStepExt & proto, bool) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
+    for (const auto & element : keys)
+        proto.add_keys(element);
 
-//     Names ordered_keys_not_hashed(keys_not_hashed.begin(), keys_not_hashed.end());
-//     std::sort(ordered_keys_not_hashed.begin(), ordered_keys_not_hashed.end());
-//     for (const auto & element : ordered_keys_not_hashed)
-//         proto.add_keys_not_hashed(element);
+    Names ordered_keys_not_hashed(keys_not_hashed.begin(), keys_not_hashed.end());
+    std::sort(ordered_keys_not_hashed.begin(), ordered_keys_not_hashed.end());
+    for (const auto & element : ordered_keys_not_hashed)
+        proto.add_keys_not_hashed(element);
 
-//     params.toProto(*proto.mutable_params());
-//     for (const auto & element : grouping_sets_params)
-//         element.toProto(*proto.add_grouping_sets_params());
-//     proto.set_final(final);
-//     proto.set_max_block_size(max_block_size);
-//     proto.set_merge_threads(merge_threads);
-//     proto.set_temporary_data_merge_threads(temporary_data_merge_threads);
-//     proto.set_storage_has_evenly_distributed_read(storage_has_evenly_distributed_read);
+    params.toProto(*proto.mutable_params());
+    for (const auto & element : grouping_sets_params)
+        element.toProto(*proto.add_grouping_sets_params());
+    proto.set_final(final);
+    proto.set_max_block_size(max_block_size);
+    proto.set_merge_threads(merge_threads);
+    proto.set_temporary_data_merge_threads(temporary_data_merge_threads);
+    proto.set_storage_has_evenly_distributed_read(storage_has_evenly_distributed_read);
 
-//     if (group_by_info)
-//         group_by_info->toProto(*proto.mutable_group_by_info());
-//     for (const auto & element : group_by_sort_description)
-//         element.toProto(*proto.add_group_by_sort_description());
-//     for (const auto & element : groupings)
-//         element.toProto(*proto.add_groupings());
-//     proto.set_should_produce_results_in_order_of_bucket_number(should_produce_results_in_order_of_bucket_number);
-//     proto.set_streaming_for_cache(streaming_for_cache);
-// }
+    if (group_by_info)
+        ProtosSerDerHelper::toProto(*group_by_info, *proto.mutable_group_by_info());
+    for (const auto & element : group_by_sort_description)
+        ProtosSerDerHelper::toProto(element, *proto.add_group_by_sort_description());
+    for (const auto & element : groupings)
+        element.toProto(*proto.add_groupings());
+    proto.set_should_produce_results_in_order_of_bucket_number(should_produce_results_in_order_of_bucket_number);
+    proto.set_streaming_for_cache(streaming_for_cache);
+}
 
-// std::shared_ptr<AggregatingStep> AggregatingStep::fromProto(const Protos::AggregatingStep & proto, ContextPtr context)
-// {
-//     auto [step_description, base_input_stream] = ITransformingStep::deserializeFromProtoBase(proto.query_plan_base());
-//     Names keys;
-//     for (const auto & element : proto.keys())
-//         keys.emplace_back(element);
-//     NameSet keys_not_hashed;
-//     for (const auto & element : proto.keys_not_hashed())
-//         keys_not_hashed.emplace(element);
-//     auto params = Aggregator::Params::fromProto(proto.params(), context);
-//     GroupingSetsParamsList grouping_sets_params;
-//     for (const auto & proto_element : proto.grouping_sets_params())
-//     {
-//         GroupingSetsParams element;
-//         element.fillFromProto(proto_element);
-//         grouping_sets_params.emplace_back(std::move(element));
-//     }
-//     auto final = proto.final();
-//     auto max_block_size = proto.max_block_size();
-//     auto merge_threads = proto.merge_threads();
-//     auto temporary_data_merge_threads = proto.temporary_data_merge_threads();
-//     auto storage_has_evenly_distributed_read = proto.storage_has_evenly_distributed_read();
+std::shared_ptr<AggregatingStepExt> AggregatingStepExt::fromProto(const Protos::AggregatingStepExt & proto, ContextPtr context)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    Names keys;
+    for (const auto & element : proto.keys())
+        keys.emplace_back(element);
+    NameSet keys_not_hashed;
+    for (const auto & element : proto.keys_not_hashed())
+        keys_not_hashed.emplace(element);
+    auto params = AggregatorExt::Params::fromProto(proto.params(), context);
+    GroupingSetsParamsExtList grouping_sets_params;
+    for (const auto & proto_element : proto.grouping_sets_params())
+    {
+        GroupingSetsParamsExt element;
+        element.fillFromProto(proto_element);
+        grouping_sets_params.emplace_back(std::move(element));
+    }
+    auto final = proto.final();
+    auto max_block_size = proto.max_block_size();
+    auto merge_threads = proto.merge_threads();
+    auto temporary_data_merge_threads = proto.temporary_data_merge_threads();
+    auto storage_has_evenly_distributed_read = proto.storage_has_evenly_distributed_read();
 
-//     InputOrderInfoPtr group_by_info = nullptr;
-//     if (proto.has_group_by_info())
-//         group_by_info = InputOrderInfo::fromProto(proto.group_by_info());
-//     SortDescription group_by_sort_description;
-//     for (const auto & proto_element : proto.group_by_sort_description())
-//     {
-//         SortColumnDescription element;
-//         element.fillFromProto(proto_element);
-//         group_by_sort_description.emplace_back(std::move(element));
-//     }
-//     GroupingDescriptions groupings;
-//     for (const auto & proto_element : proto.groupings())
-//     {
-//         GroupingDescription element;
-//         element.fillFromProto(proto_element);
-//         groupings.emplace_back(std::move(element));
-//     }
-//     auto should_produce_results_in_order_of_bucket_number = proto.should_produce_results_in_order_of_bucket_number();
-//     auto streaming_for_cache = proto.streaming_for_cache();
+    InputOrderInfoPtr group_by_info = nullptr;
+    if (proto.has_group_by_info())
+        group_by_info = ProtosSerDerHelper::fillFromProto(proto.group_by_info());
+    SortDescriptionWithPositions group_by_sort_description;
+    for (const auto & proto_element : proto.group_by_sort_description())
+    {
+        SortColumnDescriptionWithColumnIndex element{SortColumnDescription{}, 0};
+        ProtosSerDerHelper::fillFromProto(element, proto_element);
+        group_by_sort_description.emplace_back(std::move(element));
+    }
+    GroupingDescriptions groupings;
+    for (const auto & proto_element : proto.groupings())
+    {
+        GroupingDescription element;
+        element.fillFromProto(proto_element);
+        groupings.emplace_back(std::move(element));
+    }
+    auto should_produce_results_in_order_of_bucket_number = proto.should_produce_results_in_order_of_bucket_number();
+    auto streaming_for_cache = proto.streaming_for_cache();
 
-//     auto step = std::make_shared<AggregatingStep>(
-//         base_input_stream,
-//         keys,
-//         keys_not_hashed,
-//         params,
-//         grouping_sets_params,
-//         final,
-//         AggregateStagePolicy::DEFAULT,
-//         max_block_size,
-//         merge_threads,
-//         temporary_data_merge_threads,
-//         storage_has_evenly_distributed_read,
-//         group_by_info,
-//         group_by_sort_description,
-//         groupings,
-//         false,
-//         should_produce_results_in_order_of_bucket_number,
-//         false,
-//         streaming_for_cache);
-//     step->setStepDescription(step_description);
-//     return step;
-// }
+    auto step = std::make_shared<AggregatingStepExt>(
+        base_input_stream,
+        keys,
+        keys_not_hashed,
+        params,
+        grouping_sets_params,
+        final,
+        AggregateStagePolicy::DEFAULT,
+        max_block_size,
+        merge_threads,
+        temporary_data_merge_threads,
+        storage_has_evenly_distributed_read,
+        group_by_info,
+        group_by_sort_description,
+        groupings,
+        false,
+        should_produce_results_in_order_of_bucket_number,
+        false,
+        streaming_for_cache);
+    step->setStepDescription(step_description);
+    return step;
+}
 
 }

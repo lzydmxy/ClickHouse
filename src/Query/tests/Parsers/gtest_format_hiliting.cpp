@@ -49,7 +49,7 @@ void compareExt(const String & expected, const String & query)
     using namespace DB;
     ParserQueryExt parser(query.data() + query.size());
     ASTPtr ast = parseQuery(parser, query, 0, 0, 0);
-    DB::ASTReplaceVisitor::replace(ast);
+    // DB::ASTReplaceVisitor::replace(ast);
     WriteBufferFromOwnString write_buffer;
     IAST::FormatSettings settings(write_buffer, true, true);
     ast->format(settings);

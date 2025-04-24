@@ -39,36 +39,35 @@ message Block {
 }
 
 message Field {
-    enum Enum {
-        Null = 0;
-        UInt64 = 1;
-        Int64 = 2;
-        Float64 = 3;
-        UInt128 = 4;
-        Int128 = 5;
-        String = 16;
-        Array = 17;
-        Tuple = 18;
-        Decimal32 = 19;
-        Decimal64 = 20;
-        Decimal128 = 21;
-        AggregateFunctionState = 22;
-        Decimal256 = 23;
-        UInt256 = 24;
-        Int256 = 25;
-        Map = 26;
-        UUID = 27;
-        ByteMap = 28;
-        BitMap64 = 29;
-        SketchBinary = 30;
-        IPv4 = 31;
-        IPv6 = 32;
-        Object = 33;
-        JSONB= 34;
-        NegativeInfinity = 254;
-        PositiveInfinity = 255;
+    message FieldType {
+        enum Enum {
+            Null    = 0;
+            UInt64  = 1;
+            Int64   = 2;
+            Float64 = 3;
+            UInt128 = 4;
+            Int128  = 5;
+
+            String  = 16;
+            Array   = 17;
+            Tuple   = 18;
+            Decimal32  = 19;
+            Decimal64  = 20;
+            Decimal128 = 21;
+            AggregateFunctionState = 22;
+            Decimal256 = 23;
+            UInt256 = 24;
+            Int256  = 25;
+            Map = 26;
+            UUID = 27;
+            Bool = 28;
+            Object = 29;
+            IPv4 = 30;
+            IPv6 = 31;
+            CustomType = 32;
+        }
     }
-    Field.Enum type = 1;
+    Field.FieldType.Enum type = 1;
     bytes blob = 2;
 }  
 
@@ -130,6 +129,11 @@ message SortColumnDescription {
     optional Collator collator = 5;
     bool with_fill = 6;
     FillColumnDescription fill_description = 7;
+}
+
+message SortColumnDescriptionWithColumnIndex {
+    SortColumnDescription base = 1;
+    uint64 column_number = 2;
 }
 
 message DataStream {
@@ -217,7 +221,7 @@ message Assignments {
     repeated KV pairs = 1;
 }
 
-message GroupingSetsParams {
+message GroupingSetsParamsExt {
     repeated string used_key_names = 1;
     repeated uint64 used_keys = 2;
     repeated uint64 missing_keys = 3;
@@ -242,7 +246,7 @@ message AggregateDescription {
     string mask_column = 6;
 }
 
-message AggregatorParams {
+message AggregatorExtParams {
     Block src_header = 1;
     Block intermediate_header = 2;
     repeated uint64 keys = 3;
@@ -263,8 +267,8 @@ message AggregatorParams {
     bool enable_adaptive_spill = 18;
 }
 
-message AggregatingTransformParams {
-    AggregatorParams params = 1;
+message AggregatingTransformParamsExt {
+    AggregatorExtParams params = 1;
     bool final = 2;
 }
 
@@ -295,7 +299,7 @@ message AssignUniqueIdStep {
     string unique_id = 2;
 }
 
-message EnforceSingleRowStep {
+message EnforceSingleRowStepExt {
     ITransformingStep query_plan_base = 1;
 }
 
@@ -306,9 +310,11 @@ message ExtremesStep {
 message FillingStep {
     ITransformingStep query_plan_base = 1;
     repeated SortColumnDescription sort_description = 2;
+    repeated SortColumnDescription fill_description = 3;
+    bool use_with_fill_by_sorting_prefix = 4;
 }
 
-message FinishSortingStep {
+message FinishSortingStepExt {
     ITransformingStep query_plan_base = 1;
     repeated SortColumnDescription prefix_description = 2;
     repeated SortColumnDescription result_description = 3;
@@ -341,7 +347,7 @@ message MarkDistinctStep {
     repeated string distinct_symbols = 3;
 }
 
-message MergingSortedStep {
+message MergingSortedStepExt {
     ITransformingStep query_plan_base = 1;
     repeated SortColumnDescription sort_description = 2;
     uint64 max_block_size = 3;
@@ -353,7 +359,7 @@ message OffsetStep {
     uint64 offset = 2;
 }
 
-message SortingStep {
+message SortingStepExt {
     message Stage {
         enum Enum {
             FULL = 0;
@@ -367,7 +373,7 @@ message SortingStep {
     uint64 limit = 3; // deprecated, use limit_or_var instead
     bool partial = 4;
     repeated SortColumnDescription prefix_description = 5;
-    Stage.Enum stage = 6;
+    optional Stage.Enum stage = 6;
     SizeOrVariable limit_or_var = 7;
 }
 
@@ -387,13 +393,16 @@ message IntersectStep {
     bool distinct = 2;
 }
 
-message UnionStep {
-    SetOperationStep query_plan_base = 1;
-    uint64 max_threads = 2;
-    bool local = 3;
+message UnionStepExt {
+    repeated DataStream input_streams = 1;
+    DataStream output_stream = 2;
+    map<string, StringVec> output_to_inputs = 3;
+    Block header = 4;
+    uint64 max_threads = 5;
+    bool local = 6;
 }
 
-message ExchangeStep {
+message ExchangeStepExt {
     repeated DataStream input_streams = 1;
     ExchangeMode.Enum exchange_type = 2;
     Partitioning schema = 3;
@@ -415,14 +424,14 @@ message DistinctStep {
     bool pre_distinct = 5;
 }
 
-message PartialSortingStep {
+message PartialSortingStepExt {
     ITransformingStep query_plan_base = 1;
     repeated SortColumnDescription sort_description = 2;
     uint64 limit = 3;
     SizeLimits size_limits = 4;
 }
  
-message PartitionTopNStep {
+message PartitionTopNStepExt {
     ITransformingStep query_plan_base = 1;
     repeated string partition = 2;
     repeated string order_by = 3;
@@ -434,7 +443,7 @@ message ReadNothingStep {
     ISourceStep query_plan_base = 1;
 }
 
-message ApplyStep {
+message ApplyStepExt {
     message ApplyType {
         enum Enum {
             CROSS = 0;
@@ -499,13 +508,13 @@ message OutfileWriteStep {
 
 message OutfileFinishStep {}
 
-message FilterStep {
+message FilterStepExt {
     ITransformingStep query_plan_base = 1;
     AST filter = 2;
     bool remove_filter_column = 3;
 }
 
-message ProjectionStep {
+message ProjectionStepExt {
     ITransformingStep query_plan_base = 1;
     Assignments assignments = 2;
     map<string, DataType> name_to_type = 3;
@@ -541,7 +550,7 @@ message JoinStepExt {
     repeated bool key_ids_null_safe = 25;
 }
 
-message MergeSortingStep {
+message MergeSortingStepExt {
     ITransformingStep query_plan_base = 1;
     repeated SortColumnDescription description = 2;
     uint64 max_merged_block_size = 3;
@@ -550,37 +559,36 @@ message MergeSortingStep {
     double remerge_lowered_memory_bytes_ratio = 6;
     uint64 max_bytes_before_external_sort = 7;
     uint64 min_free_disk_space = 8;
-    bool enable_adaptive_spill = 9;
 }
 
 message MergingAggregatedStep {
     ITransformingStep query_plan_base = 1;
     repeated string keys = 2;
-    repeated GroupingSetsParams grouping_sets_params = 3;
+    repeated GroupingSetsParamsExt grouping_sets_params = 3;
     repeated GroupingDescription groupings = 4;
-    AggregatingTransformParams params = 5;
+    AggregatingTransformParamsExt params = 5;
     bool memory_efficient_aggregation = 6;
     uint64 max_threads = 7;
     uint64 memory_efficient_merge_threads = 8;
 }
 
 message InputOrderInfo {
-    repeated SortColumnDescription order_key_prefix_descr = 1;
+    repeated SortColumnDescription sort_description_for_merging = 1;
     int32 direction = 2;
 }
 
-message AggregatingStep {
+message AggregatingStepExt {
     ITransformingStep query_plan_base = 1;
     repeated string keys = 2;
-    AggregatorParams params = 3;
-    repeated GroupingSetsParams grouping_sets_params = 4;
+    AggregatorExtParams params = 3;
+    repeated GroupingSetsParamsExt grouping_sets_params = 4;
     bool final = 5;
     uint64 max_block_size = 6;
     uint64 merge_threads = 7;
     uint64 temporary_data_merge_threads = 8;
     bool storage_has_evenly_distributed_read = 9;
     InputOrderInfo group_by_info = 10;
-    repeated SortColumnDescription group_by_sort_description = 11;
+    repeated SortColumnDescriptionWithColumnIndex group_by_sort_description = 11;
     repeated GroupingDescription groupings = 12;
     bool should_produce_results_in_order_of_bucket_number = 13;
     repeated string keys_not_hashed = 14;
@@ -637,20 +645,20 @@ message TableScanStep {
     repeated NameWithAliasPair column_alias = 2;
     SelectQueryInfo query_info = 3;
     uint64 max_block_size = 4;
-    AggregatingStep pushdown_aggregation = 5;
-    ProjectionStep pushdown_projection = 6;
-    FilterStep pushdown_filter = 7;
+    AggregatingStepExt pushdown_aggregation = 5;
+    ProjectionStepExt pushdown_projection = 6;
+    FilterStepExt pushdown_filter = 7;
     Assignments inline_expressions = 14;
     DataStream output_stream = 15;
     DataStream table_output_stream = 16;
 }
 
-message RemoteExchangeSourceStep {
+message RemoteExchangeSourceStepExt {
     DataStream input_stream = 1;
     string step_description = 2;
     repeated PlanSegmentInput inputs = 3;
-    bool is_add_totals = 4;
-    bool is_add_extremes = 5;
+    optional bool is_add_totals = 4;
+    optional bool is_add_extremes = 5;
 }
 
 message FinalSampleStepExt {
@@ -669,28 +677,33 @@ message ReadStorageRowCountStep {
 }
 
 message WindowFrame {
-    enum FrameType {
-        Rows = 0;
-        Groups = 1;
-        Range = 2;
+    message FrameType {
+        enum Enum {
+            ROWS = 0;
+            GROUPS = 1;
+            RANGE = 2;
+        }
     }
-    enum BoundaryType {
-        Unbounded = 0;
-        Current = 1;
-        Offset = 2;
+    message BoundaryType {
+        enum Enum {
+            Unbounded = 0;
+            Current = 1;
+            Offset = 2;
+        }
     }
-    enum ExcludeType {
-        NoOthers = 0;
-        CurrentRow = 1;
-        Group = 2;
-        Tie = 3;
-    }
+    // diff bc have ExcludeType
+    // enum ExcludeType {
+    //    NoOthers = 0;
+    //    CurrentRow = 1;
+    //    Group = 2;
+    //    Tie = 3;
+    // }
     bool is_default = 1;
-    FrameType type = 2;
-    BoundaryType begin_type = 3;
+    FrameType.Enum type = 2;
+    BoundaryType.Enum begin_type = 3;
     Field begin_offset = 4;
     bool begin_preceding = 5;
-    BoundaryType end_type = 6;
+    BoundaryType.Enum end_type = 6;
     Field end_offset = 7;
     bool end_preceding = 8;
   }
@@ -714,8 +727,7 @@ message WindowStep {
     ITransformingStep query_plan_base = 1;
     WindowDescription window_description = 2;
     repeated WindowFunctionDescription window_functions = 3;
-    bool need_sort = 4;
-    repeated SortColumnDescription prefix_description = 5;
+    bool streams_fan_out = 4;
 }
 
 message IntersectOrExceptStep {
@@ -724,11 +736,11 @@ message IntersectOrExceptStep {
     uint64 max_threads = 3;
 }
 
-message BufferStep {
+message BufferStepExt {
     ITransformingStep query_plan_base = 1;
 }
 
-message ExplainAnalyzeStep {}
+message ExplainAnalyzeStepExt {}
 
 message CacheParam {
     bytes digest = 1;
@@ -738,14 +750,14 @@ message CacheParam {
     repeated StorageID dependent_tables = 5;
 }
 
-message IntermediateResultCacheStep {
+message IntermediateResultCacheStepExt {
     string step_description = 1;
     DataStream input_stream = 2;
     CacheParam cache_param = 3;
-    AggregatorParams aggregator_params = 4;
+    AggregatorExtParams aggregator_params = 4;
 }
 
-message LocalExchangeStep {
+message LocalExchangeStepExt {
     ITransformingStep query_plan_base = 1;
     ExchangeMode.Enum exchange_type = 2;
     Partitioning schema = 3;
@@ -773,7 +785,7 @@ message SettingsChanges {
     repeated SettingChange settings_changes = 1;
 }
 
-message MultiJoinStep {
+message MultiJoinStepExt {
     Graph graph = 1;
 }
 
@@ -791,7 +803,7 @@ message ExpandStep {
     map<uint32, StringVec> group_id_non_null_symbol = 6;
 }
   
-// this must be identical to APPLY_STEP_PROTOBUF_TYPES_AND_NAMES
+// this must be identical to APPLY_PROTOBUF_STEP_TYPES_AND_NAMES
 //    with Step/_step postfix
 //    in src/QueryPlan/IQueryPlanStep.h
 // due to Protobuf will generate 'oneof' EnumName
@@ -799,52 +811,52 @@ message ExpandStep {
 // the CamelCase and underscore name must be perfectly matched
 message QueryPlanStep {
     oneof step {
-        AggregatingStep aggregating_step = 1;
+        AggregatingStepExt aggregating_step_ext = 1;
         ArrayJoinStep array_join_step = 2;
         AssignUniqueIdStep assign_unique_id_step = 3;
         CTERefStep c_t_e_ref_step = 4;  // must be perfectly matched
         DistinctStep distinct_step = 5;
-        EnforceSingleRowStep enforce_single_row_step = 6;
+        EnforceSingleRowStepExt enforce_single_row_step_ext = 6;
         ExceptStep except_step = 7;
-        ExchangeStep exchange_step = 8;
+        ExchangeStepExt exchange_step_ext = 8;
         ExtremesStep extremes_step = 9;
         FillingStep filling_step = 10;
-        FilterStep filter_step = 11;
-        FinalSampleStepExt final_sample_step = 12;
-        FinishSortingStep finish_sorting_step = 13;
+        FilterStepExt filter_step_ext = 11;
+        FinalSampleStepExt final_sample_step_ext = 12;
+        FinishSortingStepExt finish_sorting_step_ext = 13;
         IntersectStep intersect_step = 14;
-        JoinStepExt join_step = 15;
+        JoinStepExt join_step_ext = 15;
         LimitByStep limit_by_step = 16;
         LimitStep limit_step = 17;
         MarkDistinctStep mark_distinct_step = 18;
-        MergeSortingStep merge_sorting_step = 19;
+        MergeSortingStepExt merge_sorting_step_ext = 19;
         MergingAggregatedStep merging_aggregated_step = 20;
-        MergingSortedStep merging_sorted_step = 21;
+        MergingSortedStepExt merging_sorted_step_ext = 21;
         OffsetStep offset_step = 22;
-        PartialSortingStep partial_sorting_step = 23;
-        PartitionTopNStep partition_top_n_step = 24;
-        ProjectionStep projection_step = 25;
+        PartialSortingStepExt partial_sorting_step_ext = 23;
+        PartitionTopNStepExt partition_top_n_step_ext = 24;
+        ProjectionStepExt projection_step_ext = 25;
         ReadNothingStep read_nothing_step = 26;
         ReadStorageRowCountStep read_storage_row_count_step = 27;
-        RemoteExchangeSourceStep remote_exchange_source_step = 28;
-        SortingStep sorting_step = 29;
+        RemoteExchangeSourceStepExt remote_exchange_source_step_ext = 28;
+        SortingStepExt sorting_step_ext = 29;
         TableFinishStep table_finish_step = 30;
         TableScanStep table_scan_step = 31;
         TableWriteStep table_write_step = 32;
         TopNFilteringStep top_n_filtering_step = 33;
-        UnionStep union_step = 34;
+        UnionStepExt union_step_ext = 34;
         WindowStep window_step = 35;
         ValuesStep values_step = 36;
         IntersectOrExceptStep intersect_or_except_step = 37;
-        BufferStep buffer_step = 38;
-        ApplyStep apply_step = 39;
+        BufferStepExt buffer_step_ext = 38;
+        ApplyStepExt apply_step_ext = 39;
         OutfileWriteStep outfile_write_step = 40;
         OutfileFinishStep outfile_finish_step = 41;
-        ExplainAnalyzeStep explain_analyze_step = 44;
+        ExplainAnalyzeStepExt explain_analyze_step_ext = 44;
         TotalsHavingStep totals_having_step = 50;
-        IntermediateResultCacheStep intermediate_result_cache_step = 53;
-        LocalExchangeStep local_exchange_step = 54;
-        MultiJoinStep multi_join_step = 55;
+        IntermediateResultCacheStepExt intermediate_result_cache_step_ext = 53;
+        LocalExchangeStepExt local_exchange_step_ext = 54;
+        MultiJoinStepExt multi_join_step_ext = 55;
         SampleRatioStep sample_ratio_step = 56;
         ExpandStep expand_step = 57;
     }
@@ -856,14 +868,16 @@ message QueryPlanNode {
     QueryPlanStep step = 3;
 }
 
-message QueryPlan {
-    enum Enum {
-        TreeLike = 0;
-        Flatten = 1;
+message QueryPlanExt {
+    message PlanMode {
+        enum Enum{
+            TreeLike = 0;
+            Flatten = 1;
+        }
     }
     uint64 root_id = 1;
     map<uint64, QueryPlanNode> plan_nodes = 2;
     // CteId -> plan_id
     map<uint64, uint64> cte_id_mapping = 3;
-    QueryPlan.Enum mode = 4;
+    PlanMode.Enum mode = 4;
 }

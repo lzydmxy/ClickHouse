@@ -30,6 +30,8 @@ public:
 
     void initializePipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
+
 private:
     ASTPtr query;
     AggregateDescription agg_desc;

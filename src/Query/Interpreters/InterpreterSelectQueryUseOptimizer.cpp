@@ -257,7 +257,7 @@ void InterpreterSelectQueryUseOptimizer::setUnsupportedSettings(ContextMutablePt
 void InterpreterSelectQueryUseOptimizer::fillQueryPlan(ContextPtr context, QueryPlanExt & query_plan)
 {
     WriteBufferFromOwnString buffer;
-    Protos::QueryPlan plan_pb;
+    Protos::QueryPlanExt plan_pb;
     //todo: liyang453, other feat: need add toProto for query_plan
     //query_plan.toProto(plan_pb);
     String json_msg;
@@ -431,7 +431,7 @@ void ExplainAnalyzeVisitor::visitExplainAnalyzeNode(QueryPlanExt::Node * node, P
     {
         if (explain->getKind() == ASTExplainQueryExt::ExplainKindExt::DistributedAnalyze
             || explain->getKind() == ASTExplainQueryExt::ExplainKindExt::LogicalAnalyze)
-            segment_node.plan_segment->setProfileType(RReportProfileType::Enum::ReportProfileType_Enum_QueryPlan);
+            segment_node.plan_segment->setProfileType(RReportProfileType::Enum::ReportProfileType_Enum_QueryPlanExt);
         else if (explain->getKind() == ASTExplainQueryExt::ExplainKindExt::PipelineAnalyze)
             segment_node.plan_segment->setProfileType(RReportProfileType::Enum::ReportProfileType_Enum_QueryPipeline);
 

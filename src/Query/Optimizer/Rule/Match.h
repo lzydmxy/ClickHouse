@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QueryPlan/PlanNode.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
 
 #include <any>
 #include <atomic>
