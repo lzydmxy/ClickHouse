@@ -327,7 +327,7 @@ AggregatorExt::AggregatorExt(const Params & params_) : params(params_),
     /// implicit type conversion is not implmented for llvm compiled agg funcs
     /// therefore, do not use llvm compiled agg if implicit type convesion is required,
     /// i.e., IAggregateFunctionMySql is used
-    // todo: hongzhigao1, implement IAggregateFunctionMySql
+    // todo: hongzhigao1, other feat: implement IAggregateFunctionMySql
     // bool compile_agg = true;
     // for (size_t i = 0; i < params.aggregates_size; ++i)
     // {
@@ -941,7 +941,7 @@ void AggregatorExt::prepareAggregateInstructions(
     {
         for (size_t j = 0; j < aggregate_columns[i].size(); ++j)
         {
-            // todo: hongzhigao1, implement mayAggStateVeryLarge
+            // todo: hongzhigao1, other feat: implement mayAggStateVeryLarge
             // if (params.aggregates[i].function && params.aggregates[i].function->mayAggStateVeryLarge())
             //     delta_bytes_of_large_midstate_agg_inputs += columns.at(params.aggregates[i].arguments[j])->byteSize();
             materialized_columns.push_back(columns.at(params.aggregates[i].arguments[j])->convertToFullColumnIfConst());
@@ -1366,7 +1366,7 @@ void AggregatorExt::convertToBlockImpl(
     /// For agg streaming need to reuse the memory
     if (is_agg_streaming || is_agg_converting_for_cache)
     {
-        // todo: hongzhigao1, implement clear in StringHashTable
+        // todo: hongzhigao1, other feat: implement clear in StringHashTable later, no cache now
         // data.clear();
     }
     else
@@ -2237,7 +2237,7 @@ void NO_INLINE AggregatorExt::mergeStreamsImplCase(
     {
         const auto & aggregate_column_name = params.aggregates[i].column_name;
         aggregate_columns[i] = &typeid_cast<const ColumnAggregateFunction &>(*block.getByName(aggregate_column_name).column).getData();
-        // todo: hongzhigao1, implement mayAggStateVeryLarge
+        // todo: hongzhigao1, other feat: implement mayAggStateVeryLarge
         // if (params.aggregates[i].function && params.aggregates[i].function->mayAggStateVeryLarge())
         // {
         //     delta_bytes_of_large_midstate_agg_inputs
