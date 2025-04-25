@@ -5,7 +5,7 @@
 #include <DataTypes/DataTypeNullable.h>
 #include <DataTypes/IDataType.h>
 #include <Parsers/ASTLiteral.h>
-//#include <Statistics/Histogram.h>
+#include <Query/Statistics/Histogram.h>
 
 #include <Poco/JSON/Object.h>
 
@@ -15,13 +15,13 @@ class SymbolStatistics;
 using SymbolStatisticsPtr = std::shared_ptr<SymbolStatistics>;
 
 // export symbols
-using Statistics::Bucket;
-using Statistics::Buckets;
-using Statistics::Histogram;
-using Statistics::OverlappedRange;
-using Statistics::OverlappedRanges;
+using QueryStatistics::Bucket;
+using QueryStatistics::Buckets;
+using QueryStatistics::Histogram;
+using QueryStatistics::OverlappedRange;
+using QueryStatistics::OverlappedRanges;
 
-namespace Statistics
+namespace QueryStatistics
 {
     class StatisticsCollector;
     template <typename T>
@@ -36,9 +36,9 @@ class SymbolStatistics
 public:
     static SymbolStatisticsPtr UNKNOWN;
 
-    friend class Statistics::StatisticsCollector;
+    friend class QueryStatistics::StatisticsCollector;
     template <typename T>
-    friend class Statistics::StatsNdvBucketsImpl;
+    friend class QueryStatistics::StatsNdvBucketsImpl;
 
     explicit SymbolStatistics(
         UInt64 ndv = 0,

@@ -6,11 +6,11 @@
 
 namespace DB::QueryStatistics
 {
-    using SerdeDataType = Protos::SerdeDataType;
-    static_assert(sizeof(SerdeDataType) == 4);
+using SerdeDataType = Protos::SerdeDataType;
+static_assert(sizeof(SerdeDataType) == 4);
 
-    template <typename T>
-    inline constexpr SerdeDataType SerdeDataTypeFrom = SerdeDataType::Nothing;
+template <typename T>
+inline constexpr SerdeDataType SerdeDataTypeFrom = SerdeDataType::Nothing;
 
 #define CASE(TYPE) \
     template <> \

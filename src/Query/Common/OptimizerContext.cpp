@@ -201,4 +201,16 @@ SegmentSchedulerPtr OptimizerContext::getSegmentScheduler() const
     return segment_scheduler;
 }
 
+StatisticsMemoryStorePtr OptimizerContext::getStatisticsMemoryStore()
+{
+    //todo: zhangdongdong92, other feat: need a part shared lock
+    // auto lock = getLocalLock();
+
+    if (!this->stats_memory_store)
+    {
+        this->stats_memory_store = std::make_shared<QueryStatistics::StatisticsMemoryStore>();
+    }
+    return stats_memory_store;
+}
+
 }

@@ -10,6 +10,7 @@
 #include <Query/Optimizer/OptimizerMetrics.h>
 #include <Query/Processors/QueryPlan/PlanCache.h>
 #include <Query/Optimizer/OptimizerProfile.h>
+#include <Query/Statistics/StatisticsMemoryStore.h>
 
 namespace DB
 {
@@ -52,6 +53,7 @@ class PlanCacheManager;
 struct Settings;
 struct PlanSegmentInstanceID;
 
+using  StatisticsMemoryStorePtr = std::shared_ptr<QueryStatistics::StatisticsMemoryStore>;
 class OptimizerContextData;
 
 enum ServiceType
@@ -144,6 +146,10 @@ public:
     void initOptimizerProfile() { optimizer_profile = std::make_unique<OptimizerProfile>(); }
     PlanCacheManager* getPlanCacheManager();
     const SymbolAllocatorPtr & getSymbolAllocator() { return symbol_allocator; }
+    StatisticsMemoryStorePtr getStatisticsMemoryStore();
+
+protected:
+    std::shared_ptr<QueryStatistics::StatisticsMemoryStore> stats_memory_store = nullptr;
 
 private:
     OptimizerSettings optimizer_settings;

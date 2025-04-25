@@ -45,6 +45,16 @@ IMPLEMENT_SETTING_ENUM(DialectType, ErrorCodes::BAD_ARGUMENTS,
      {"ANSI",       DialectType::ANSI},
      {"MYSQL",      DialectType::MYSQL}})
 
+IMPLEMENT_SETTING_ENUM(StatisticsAccurateSampleNdvMode, ErrorCodes::BAD_ARGUMENTS,
+    {{"NEVER", StatisticsAccurateSampleNdvMode::NEVER},
+     {"AUTO", StatisticsAccurateSampleNdvMode::AUTO},
+     {"ALWAYS", StatisticsAccurateSampleNdvMode::ALWAYS}})
+
+IMPLEMENT_SETTING_ENUM(StatisticsCachePolicy, ErrorCodes::BAD_ARGUMENTS,
+    {{"default", StatisticsCachePolicy::Default},
+     {"cache", StatisticsCachePolicy::Cache},
+     {"catalog", StatisticsCachePolicy::Catalog}})
+
 void OptimizerSettings::loadFromConfig(const String & config_elem, const Poco::Util::AbstractConfiguration & config)
 {
     if (!config.has(config_elem))

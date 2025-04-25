@@ -612,6 +612,8 @@ if (TARGET ch_contrib::datasketches)
     target_link_libraries (clickhouse_aggregate_functions PRIVATE ch_contrib::datasketches)
 endif ()
 
+target_link_libraries (dbms PRIVATE ch_contrib::datasketches)
+
 target_link_libraries (clickhouse_common_io PRIVATE ch_contrib::lz4)
 
 if (TARGET ch_contrib::qpl)

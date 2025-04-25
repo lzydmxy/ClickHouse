@@ -2,7 +2,7 @@
 
 #include <Query/Optimizer/CardinalityEstimate/SymbolStatistics.h>
 
-#include <Statistics/TypeUtils.h>
+#include <Query/Statistics/TypeUtils.h>
 #include <Common/FieldVisitorConvertToNumber.h>
 #include <Common/FieldVisitorToString.h>
 
@@ -45,13 +45,13 @@ size_t SymbolStatistics::getOutputSizeInBytes()
 
 bool SymbolStatistics::isNumber() const
 {
-    auto tmp_type = Statistics::decayDataType(type);
+    auto tmp_type = QueryStatistics::decayDataType(type);
     return tmp_type->isValueRepresentedByNumber();
 }
 
 bool SymbolStatistics::isString() const
 {
-    auto tmp_type = Statistics::decayDataType(type);
+    auto tmp_type = QueryStatistics::decayDataType(type);
     return tmp_type->getTypeId() == TypeIndex::String || tmp_type->getTypeId() == TypeIndex::FixedString;
 }
 
@@ -60,7 +60,7 @@ void SymbolStatistics::normalize()
     // correct ndv
     if (type)
     {
-        auto tmp_type = Statistics::decayDataType(type);
+        auto tmp_type = QueryStatistics::decayDataType(type);
         if (tmp_type->isValueRepresentedByInteger() && (!(min == 0 && max == 0)))
         {
             if (ndv > max - min + 1)
@@ -73,7 +73,7 @@ void SymbolStatistics::normalize()
 
 bool SymbolStatistics::isImplicitConvertableFromString()
 {
-    auto tmp_type = Statistics::decayDataType(type);
+    auto tmp_type = QueryStatistics::decayDataType(type);
     // currently support date, date32, datetime32/64
     return isDateOrDateTime(tmp_type) || isTime(tmp_type);
 }

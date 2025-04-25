@@ -1,7 +1,6 @@
 #pragma once
 
 #define INTEGER_TYPE_ITERATE(X_) \
-    X_(Int8) \
     X_(Int16) \
     X_(Int32) \
     X_(Int64) \

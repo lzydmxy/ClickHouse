@@ -1,0 +1,179 @@
+#pragma once
+
+#include <DataTypes/IDataType.h>
+#include <Query/Statistics/StatisticsBase.h>
+#include <Query/Statistics/StatsNdvBucketsExtend.h>
+#include <Query/Statistics/StatsNdvBucketsResultImpl.h>
+#include <Common/Exception.h>
+
+#include <IO/WriteHelpers.h>
+#include <Query/Protos/optimizer_statistics.pb.h>
+#include <Query/Statistics/Base64.h>
+#include <Query/Statistics/BucketBoundsImpl.h>
+#include <Query/Statistics/DataSketchesHelper.h>
+#include <Query/Statistics/StatsHllSketch.h>
+#include <Query/Statistics/StatsKllSketchImpl.h>
+#include <boost/algorithm/string/join.hpp>
+
+#include <algorithm>
+
+namespace DB::QueryStatistics
+{
+template <typename T>
+class StatsNdvBucketsExtendImpl : public StatsNdvBucketsExtend
+{
+public:
+    StatsNdvBucketsExtendImpl() = default;
+
+    String serialize() const override;
+    void deserialize(std::string_view blob) override;
+
+    void update(const T & value, UInt64 mark_id)
+    {
+        auto bucket_id = bounds_.binarySearchBucket(value);
+        counts_[bucket_id] += 1;
+        hll_sketches_[bucket_id].update(value);
+        if (block_mark_id != mark_id)
+        {
+            block_mark_id = mark_id;
+            block_filter.clear();
+        }
+
+        // ok means a new unique value
+        auto [_, ok] = block_filter.insert(value);
+        block_ndv_counts_[bucket_id] += ok;
+    }
+
+    void merge(const StatsNdvBucketsExtendImpl & rhs)
+    {
+        if (!bounds_.equals(rhs.bounds_))
+        {
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "Mismatch Bounds");
+        }
+
+        for (size_t i = 0; i < numBuckets(); ++i)
+        {
+            counts_[i] += rhs.counts_[i];
+            hll_sketches_[i].merge(rhs.hll_sketches_[i]);
+            block_ndv_counts_[i] += rhs.block_ndv_counts_[i];
+        }
+    }
+
+    void initialize(BucketBoundsImpl<T> bounds)
+    {
+        counts_.clear();
+        hll_sketches_.clear();
+        auto num_buckets = bounds.numBuckets();
+        counts_.resize(num_buckets);
+        hll_sketches_.resize(num_buckets);
+        block_ndv_counts_.resize(num_buckets);
+        bounds_ = std::move(bounds);
+    }
+
+    SerdeDataType getSerdeDataType() const override { return SerdeDataTypeFrom<T>; }
+
+    auto numBuckets() const { return bounds_.numBuckets(); }
+
+    void checkValid() const;
+
+    const BucketBounds & getBucketBounds() const override { return bounds_; }
+
+    std::vector<UInt64> getCounts() const override { return counts_; }
+    std::vector<double> getNdvs() const override { return hllToNdv(hll_sketches_); }
+    std::vector<double> getBlockNdvs() const override { return block_ndv_counts_; }
+
+private:
+    static std::vector<double> hllToNdv(const std::vector<StatsHllSketch> & hlls)
+    {
+        std::vector<double> result;
+        for (auto & hll : hlls)
+        {
+            result.emplace_back(hll.getEstimate());
+        }
+        return result;
+    }
+
+private:
+    BucketBoundsImpl<T> bounds_;
+    std::vector<UInt64> counts_; // of size buckets
+    std::vector<StatsHllSketch> hll_sketches_; // of size buckets
+    std::vector<double> block_ndv_counts_; // of size buckets
+    //
+    UInt64 block_mark_id = 0;
+    std::unordered_set<T> block_filter;
+};
+
+template <typename T>
+void StatsNdvBucketsExtendImpl<T>::checkValid() const
+{
+    bounds_.checkValid();
+
+    if (counts_.size() != numBuckets() || hll_sketches_.size() != numBuckets())
+    {
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "counts/hll size mismatch");
+    }
+}
+
+
+template <typename T>
+String StatsNdvBucketsExtendImpl<T>::serialize() const
+{
+    checkValid();
+    std::ostringstream ss;
+    auto serde_data_type = getSerdeDataType();
+    ss.write(reinterpret_cast<const char *>(&serde_data_type), sizeof(serde_data_type));
+    Protos::StatsNdvBucketsExtend pb;
+    pb.set_bounds_blob(bounds_.serialize());
+
+    for (const auto & count : counts_)
+    {
+        pb.add_counts(count);
+    }
+    for (auto & hll : hll_sketches_)
+    {
+        pb.add_hll_sketch_blobs(hll.serialize());
+    }
+    for (auto & block_ndv_count : block_ndv_counts_) { pb.add_block_ndv_counts(block_ndv_count); }
+    pb.SerializeToOstream(&ss);
+    return ss.str();
+}
+
+template <typename T>
+void StatsNdvBucketsExtendImpl<T>::deserialize(std::string_view raw_blob)
+{
+    std::tie(bounds_, counts_, hll_sketches_, block_ndv_counts_) = [raw_blob] {
+        if (raw_blob.size() <= sizeof(SerdeDataType))
+        {
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "corrupted blob");
+        }
+        SerdeDataType serde_data_type;
+        memcpy(&serde_data_type, raw_blob.data(), sizeof(serde_data_type));
+
+        checkSerdeDataType<T>(serde_data_type);
+
+        auto blob = raw_blob.substr(sizeof(serde_data_type), raw_blob.size() - sizeof(serde_data_type));
+        Protos::StatsNdvBucketsExtend pb;
+        ASSERT_PARSE(pb.ParseFromArray(blob.data(), blob.size()));
+        BucketBoundsImpl<T> bounds;
+        bounds.deserialize(pb.bounds_blob());
+        int64_t num_buckets = bounds.numBuckets();
+        if (pb.counts_size() != num_buckets || pb.hll_sketch_blobs_size() != num_buckets)
+        {
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "Corrupted blob");
+        }
+        decltype(counts_) counts(num_buckets);
+        decltype(hll_sketches_) hll_sketches(num_buckets);
+        decltype(block_ndv_counts_) block_ndv_counts(num_buckets);
+        for (int64_t i = 0; i < num_buckets; ++i)
+        {
+            counts[i] = pb.counts(i);
+            hll_sketches[i].deserialize(pb.hll_sketch_blobs(i));
+            block_ndv_counts[i] = pb.block_ndv_counts(i);
+        }
+        return std::tuple{std::move(bounds), std::move(counts), std::move(hll_sketches), std::move(block_ndv_counts)};
+    }();
+    checkValid();
+}
+
+
+}
