@@ -1,0 +1,31 @@
+Projection
+│     Expressions: [o_orderpriority], order_count:=`expr#count()`
+└─ Sorting
+   │     Order by: {o_orderpriority ASC NULLS LAST}
+   └─ Gather Exchange
+      └─ Sorting
+         │     Order by: {o_orderpriority ASC NULLS LAST}
+         └─ MergingAggregated
+            └─ Repartition Exchange
+               │     Partition by: {o_orderpriority}
+               └─ Aggregating
+                  │     Group by: {o_orderpriority}
+                  │     Aggregates: expr#count():=AggNull(count)()
+                  └─ Right Semi (PARALLEL_HASH) Join
+                     │     Condition: l_orderkey == o_orderkey
+                     │     Runtime Filters Builder: {o_orderkey}
+                     ├─ Projection
+                     │  │     Expressions: [l_orderkey]
+                     │  └─ Filter
+                     │     │     Condition: l_commitdate < l_receiptdate Runtime Filters: {l_orderkey}
+                     │     └─ TableScan tpch1000.lineitem
+                     │              Where: l_commitdate < l_receiptdate Runtime Filters: {l_orderkey}
+                     │              Outputs: [l_orderkey, l_commitdate, l_receiptdate]
+                     └─ Projection
+                        │     Expressions: [o_orderkey, o_orderpriority]
+                        └─ Filter
+                           │     Condition: (o_orderdate >= cast(8582, 'Date')) AND (o_orderdate < cast(8674, 'Date'))
+                           └─ TableScan tpch1000.orders
+                                    Where: (o_orderdate >= cast(8582, 'Date')) AND (o_orderdate < cast(8674, 'Date'))
+                                    Outputs: [o_orderkey, o_orderdate, o_orderpriority]
+note: Runtime Filter is applied for 1 times.
