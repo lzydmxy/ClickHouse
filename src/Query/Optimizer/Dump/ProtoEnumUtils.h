@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Protos/optimizer_statistics.pb.h>
-#include <Statistics/StatisticsBase.h>
+#include <Query/Protos/optimizer_statistics.pb.h>
+#include <Query/Statistics/StatisticsBase.h>
 
 namespace DB
 {
@@ -20,14 +20,14 @@ public:
         return google::protobuf::GetEnumDescriptor<Protos::SerdeDataType>()->FindValueByNumber(data_type)->name();
     }
 
-    static Statistics::StatisticsTag statisticsTagFromString(const String & str)
+    static QueryStatistics::StatisticsTag statisticsTagFromString(const String & str)
     {
         Protos::StatisticsType statistics_type = static_cast<Protos::StatisticsType>(
             google::protobuf::GetEnumDescriptor<Protos::StatisticsType>()->FindValueByName(str)->number());
-        return static_cast<Statistics::StatisticsTag>(statistics_type);
+        return static_cast<QueryStatistics::StatisticsTag>(statistics_type);
     }
 
-    static String statisticsTagToString(Statistics::StatisticsTag tag)
+    static String statisticsTagToString(QueryStatistics::StatisticsTag tag)
     {
         Protos::StatisticsType statistics_type = static_cast<Protos::StatisticsType>(tag);
         return google::protobuf::GetEnumDescriptor<Protos::StatisticsType>()->FindValueByNumber(statistics_type)->name();
