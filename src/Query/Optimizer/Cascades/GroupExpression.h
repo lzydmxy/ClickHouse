@@ -4,7 +4,7 @@
 #include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
 #include <Query/Optimizer/Property/Property.h>
 #include <Query/Optimizer/Rule/Rule.h>
-#include <QueryPlan/IQueryPlanStep.h>
+#include <Query/Processors/IQueryPlanStepExt.h>
 
 #include <memory>
 #include <utility>
@@ -87,13 +87,13 @@ private:
 class GroupExpression
 {
 public:
-    GroupExpression(QueryPlanStepPtr step_, std::vector<GroupId> child_groups_,
+    GroupExpression(QueryPlanStepExtPtr step_, std::vector<GroupId> child_groups_,
                     RuleType produce_rule_ = RuleType::UNDEFINED, GroupId group_id_ = UNDEFINED_GROUP)
         : step(std::move(step_)), group_id(group_id_), child_groups(std::move(child_groups_)), produce_rule(produce_rule_)
     {
     }
 
-    QueryPlanStepPtr & getStep() { return step; }
+    QueryPlanStepExtPtr & getStep() { return step; }
 
     void setGroupId(GroupId group_id_) { group_id = group_id_; }
     GroupId getGroupId() const { return group_id; }
@@ -144,7 +144,7 @@ public:
     }
 
 private:
-    QueryPlanStepPtr step;
+    QueryPlanStepExtPtr step;
     GroupId group_id;
 
     /**

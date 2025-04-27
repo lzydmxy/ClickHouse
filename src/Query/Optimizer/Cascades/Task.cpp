@@ -12,10 +12,11 @@
 #include <Query/Optimizer/Property/PropertyEnforcer.h>
 #include <Query/Optimizer/Property/PropertyMatcher.h>
 #include <Query/Optimizer/Rule/Rule.h>
-#include <QueryPlan/JoinStep.h>
-#include <common/logger_useful.h>
+#include <Query/Processors/QueryPlan/JoinStepExt.h>
+#include <Common/logger_useful.h>
 #include <Interpreters/Context_fwd.h>
-#include <QueryPlan/IQueryPlanStep.h>
+#include <Query/Processors/IQueryPlanStepExt.h>
+#include <Query/Common/StopwatchExt.h>
 
 #include <algorithm>
 
@@ -99,7 +100,7 @@ void OptimizeExpression::execute()
         {
             // If child_pattern has any more children (i.e non-leaf), then we will explore the
             // child before applying the rule. (assumes task pool is effectively a stack)
-            if (!child_pattern->getChildrenPatterns().empty() || child_pattern->getTargetType() == IQueryPlanStep::Type::Tree)
+            if (!child_pattern->getChildrenPatterns().empty() || child_pattern->getTargetType() == QueryPlanStepType::Tree)
             {
                 auto group = context->getMemo().getGroupById(group_expr->getChildrenGroups()[child_group_idx]);
                 if (!group->hasExplored())
@@ -153,7 +154,7 @@ void ExploreExpression::execute()
         {
             // Only need to explore non-leaf children before applying rule to the
             // current group. this condition is important for early-pruning
-            if (!child_pattern->getChildrenPatterns().empty() || child_pattern->getTargetType() == IQueryPlanStep::Type::Tree)
+            if (!child_pattern->getChildrenPatterns().empty() || child_pattern->getTargetType() == QueryPlanStepType::Tree)
             {
                 auto group = context->getMemo().getGroupById(group_expr->getChildrenGroups()[child_group_idx]);
                 if (!group->hasExplored())
@@ -300,7 +301,7 @@ void OptimizeInput::execute()
         }
 
         // Forward to OptimizeCTE
-        if (group_expr->getStep()->getType() == IQueryPlanStep::Type::CTERef)
+        if (getQueryPlanStepType(group_expr->getStep()) == QueryPlanStepType::CTERefStepExt)
         {
             pushTask(std::make_shared<OptimizeCTE>(group_expr, context));
             return;
@@ -406,7 +407,7 @@ void OptimizeInput::execute()
                     single_count++;
             }
 
-            if (group_expr->getStep()->getType() == IQueryPlanStep::Type::Union && single_count > 0
+            if (getQueryPlanStepType(group_expr->getStep()) == QueryPlanStepType::UnionStepExt && single_count > 0
                 && single_count < group_expr->getChildrenGroups().size())
             {
                 auto new_child_requires = input_props;
@@ -423,7 +424,7 @@ void OptimizeInput::execute()
                 continue;
             }
 
-            bool vaild = group_expr->getStep()->getType() == IQueryPlanStep::Type::Join
+            bool vaild = getQueryPlanStepType(group_expr->getStep()) == QueryPlanStepType::JoinStepExt
                 ? checkJoinInputProperties(input_props, actual_input_props)
                 : true;
             if (vaild)
@@ -763,7 +764,7 @@ void OptimizeInput::enforcePropertyAndUpdateWinner(
         auto it = cte_actual_props.emplace(cte_prop);
 
         // increase cost if the cte exists both join side. disable q11 & q74 cte for tpcds.
-        if (!it.second && group_expr->getStep()->getType() == IQueryPlanStep::Type::Join)
+        if (!it.second && getQueryPlanStepType(group_expr->getStep()) == QueryPlanStepType::JoinStepExt)
         {
             auto coefficient
                 = opt_context->getOptimizerContext().getContext()->getSettingsRef().cost_calculator_cte_weight_for_join_build_side;

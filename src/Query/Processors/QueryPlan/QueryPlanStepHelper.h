@@ -151,6 +151,7 @@ namespace DB
 enum class QueryPlanStepType : UInt8
 {
     Any = 0,
+    Tree = 1,
     // change this when order is changed to avoid conflicts
     StepBegin = 100,
     APPLY_ALL_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE) UNDEFINED,

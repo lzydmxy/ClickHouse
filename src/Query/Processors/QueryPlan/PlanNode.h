@@ -3,6 +3,7 @@
 #include <Core/Types.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <Query/Optimizer/CardinalityEstimate/PlanNodeStatisticsEstimate.h>
 
 namespace DB
 {
@@ -29,9 +30,8 @@ public:
     PlanNodes & getChildren() { return children; }
     const PlanNodes & getChildren() const { return children; }
     void replaceChildren(const PlanNodes & children_) { replaceChildrenImpl(children_); }
-    //todo: hongzhigao, need optimizer: Statistics
-    // void setStatistics(const PlanNodeStatisticsEstimate & statistics_) { statistics = statistics_; }
-    // const PlanNodeStatisticsEstimate & getStatistics() const { return statistics; }
+    void setStatistics(const PlanNodeStatisticsEstimate & statistics_) { statistics = statistics_; }
+    const PlanNodeStatisticsEstimate & getStatistics() const { return statistics; }
     QueryPlanStepPtr getStep() const { return getStepImpl(); }
     void setStep(QueryPlanStepPtr & step_) { setStepImpl(step_); }
 
@@ -55,7 +55,7 @@ public:
 
     static PlanNodePtr createPlanNode(
         [[maybe_unused]] PlanNodeId id_, [[maybe_unused]] QueryPlanStepPtr step_, [[maybe_unused]] const PlanNodes & children_ = {}
-        // [[maybe_unused]] const PlanNodeStatisticsEstimate & statistics_ = {}
+        [[maybe_unused]] const PlanNodeStatisticsEstimate & statistics_ = {}
     )
     {
 
@@ -73,17 +73,16 @@ public:
         // CREATE_PLAN_NODE(MultiJoin)
 #undef CREATE_PLAN_NODE
 
-        //PlanNodePtr plan_node;
+        // PlanNodePtr plan_node;
         //todo: hongzhigao, need optimizer: Statistics
-        //plan_node->setStatistics(statistics_);
+        // plan_node->setStatistics(statistics_);
         return plan_node;
     }
 
 protected:
     PlanNodeId id;
     PlanNodes children;
-    //todo: hongzhigao, need optimizer: Statistics
-    //PlanNodeStatisticsEstimate statistics;
+    PlanNodeStatisticsEstimate statistics;
 
 private:
     virtual QueryPlanStepPtr getStepImpl() const = 0;
