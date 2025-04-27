@@ -13,7 +13,7 @@ namespace ErrorCodes
     extern const int NO_COMMON_TYPE;
 }
 
-DataTypePtr getCommonType(const DataTypes & types, bool enable_implicit_arg_type_convert)
+DataTypePtr getCommonType(const DataTypes & types, bool enable_implicit_arg_type_convert, bool)
 {
     if (enable_implicit_arg_type_convert)
         return getLeastSupertype<LeastSupertypeOnError::String>(types);

@@ -3,8 +3,7 @@
 #include <Query/Parsers/ASTHelper.h>
 #include <Parsers/IAST_fwd.h>
 #include <Analyzer/JoinNode.h>
-
-#include <Query/Common/PredicateConst.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
 
 namespace DB
 {
@@ -75,14 +74,14 @@ public:
      */
     static ConstASTPtr distributePredicate(ConstASTPtr or_predicate, ContextMutablePtr & context);
 
-    template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combineConjuncts(const absl::InlinedVector<T,PREDICATE_VECTOR_SIZE> & predicates);
-    template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combineDisjuncts(const absl::InlinedVector<T,PREDICATE_VECTOR_SIZE> & predicates);
-    template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combineDisjunctsWithDefault(const absl::InlinedVector<T,PREDICATE_VECTOR_SIZE> & predicates, const ASTPtr & default_ast);
-    template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combinePredicates(const String & fun, absl::InlinedVector<T,PREDICATE_VECTOR_SIZE> predicates);
+    template <bool flatten = true, typename VectorType, enable_if_ast<typename VectorType::value_type> = true>
+    static ASTPtr combineConjuncts(const VectorType & predicates);
+    template <bool flatten = true, typename VectorType, enable_if_ast<typename VectorType::value_type> = true>
+    static ASTPtr combineDisjuncts(const VectorType & predicates);
+    template <bool flatten = true, typename VectorType, enable_if_ast<typename VectorType::value_type> = true>
+    static ASTPtr combineDisjunctsWithDefault(const VectorType & predicates, const ASTPtr & default_ast);
+    template <bool flatten = true, typename VectorType, enable_if_ast<typename VectorType::value_type> = true>
+    static ASTPtr combinePredicates(const String & fun, VectorType predicates);
 
     template <typename T, enable_if_ast<T> = true>
     static bool isTruePredicate(const T & predicate);
@@ -92,8 +91,8 @@ public:
     static bool containsAll(const Strings & partition_symbols, const std::set<String> & unique_symbols);
     static bool containsAny(const Strings & partition_symbols, const std::set<String> & unique_symbols);
 
-    // static bool isInliningCandidate(ConstASTPtr & predicate, ProjectionNode & node);
-    static ASTPtr extractJoinPredicate(JoinNode &);
+    static bool isInliningCandidate(ConstASTPtr & predicate, ProjectionStepExtNode & node);
+    static ASTPtr extractJoinPredicate(JoinStepExtNode &);
     static bool isJoinClause(ConstASTPtr expression, std::set<String> & left_symbols, std::set<String> & right_symbols, ContextMutablePtr & context);
     static bool
     isJoinClauseUnmodified(std::set<std::pair<String, String>> & join_clauses, const Names & left_keys, const Names & right_keys);

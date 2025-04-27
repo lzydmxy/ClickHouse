@@ -447,7 +447,7 @@ std::shared_ptr<ExtremesStep> SymbolMapper::map(const ExtremesStep & extremes)
 std::shared_ptr<ExchangeStepExt> SymbolMapper::map(const ExchangeStepExt & exchange)
 {
     return std::make_shared<ExchangeStepExt>(
-        map(exchange.getInputStreams()), exchange.getExchangeMode(), exchange.needKeepOrder());
+        map(exchange.getInputStreams()), exchange.getExchangeMode(), exchange.getSchema(), exchange.needKeepOrder());
 }
 
 std::shared_ptr<FillingStep> SymbolMapper::map(const FillingStep & filling)
@@ -538,7 +538,7 @@ std::shared_ptr<MergingSortedStepExt> SymbolMapper::map(const MergingSortedStepE
         map(sorted.getInputStreams()[0]), SortDescription{map(sorted.getSortDescription())}, sorted.getMaxBlockSize(), sorted.getLimit());
 }
 
-std::shared_ptr<MergingAggregatedStep> SymbolMapper::map(const MergingAggregatedStep & merging_agg)
+std::shared_ptr<MergingAggregatedStepExt> SymbolMapper::map(const MergingAggregatedStepExt & merging_agg)
 {
     throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Need Imp AggregatingStep first");
 }
@@ -707,8 +707,7 @@ std::shared_ptr<ExplainAnalyzeStepExt> SymbolMapper::map(const ExplainAnalyzeSte
 
 std::shared_ptr<LocalExchangeStepExt> SymbolMapper::map(const LocalExchangeStepExt & step)
 {
-    //todo: lizhuoyu, other feat:  need Partitioning
-    return std::make_shared<LocalExchangeStepExt>(map(step.getInputStreams()[0]), step.getExchangeMode()/*, map(step.getSchema())*/);
+    return std::make_shared<LocalExchangeStepExt>(map(step.getInputStreams()[0]), step.getExchangeMode(), map(step.getSchema()));
 }
 
 std::shared_ptr<ReadStorageRowCountStepExt> SymbolMapper::map(const ReadStorageRowCountStepExt & step)

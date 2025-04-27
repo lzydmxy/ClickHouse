@@ -57,7 +57,6 @@
 
 namespace DB
 {
-class TableScanStepExt;
 
 // protobuf's types and names for StepExt with proto
 #define APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(M) \
@@ -235,6 +234,14 @@ public:
 
     static const std::vector<WindowFunctionDescription> & getWindowStepFunctions(const WindowStep & window) {return window.window_functions;}
     static bool getWindowStepStreamsFanOut(const WindowStep & window) {return window.streams_fan_out;}
+    static const WindowDescription & getWindowStepWindow(const WindowStep & window) {return window.window_description;}
+
+    static void setSortingStepPrefixDescription(SortingStep & sorting_step, const SortDescription & prefix_description_) {sorting_step.prefix_description = prefix_description_;}
+    static const SortDescription & getSortingStepPrefixDescription(const SortingStep & sorting_step) {return sorting_step.prefix_description;}
+
+    static const SortDescription & getFillingStepFillDescription(const FillingStep & filling_step) {return filling_step.fill_description;}
+    static bool getFillingStepUseWithFillBySortingPrefix(const FillingStep & filling_step) {return filling_step.use_with_fill_by_sorting_prefix;}
+
 
     static const ASTSelectIntersectExceptQuery::Operator & getIntersectOrExceptStepOperator(const IntersectOrExceptStep & intersect_or_except) {return intersect_or_except.current_operator;}
     static size_t getIntersectOrExceptStepMaxThreads(const IntersectOrExceptStep & intersect_or_except) {return intersect_or_except.max_threads;}

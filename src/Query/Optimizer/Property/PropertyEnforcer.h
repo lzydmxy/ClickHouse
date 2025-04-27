@@ -2,7 +2,7 @@
 
 #include <Interpreters/Context.h>
 #include <Query/Optimizer/Property/Property.h>
-#include <QueryPlan/PlanNode.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
 
 namespace DB
 {

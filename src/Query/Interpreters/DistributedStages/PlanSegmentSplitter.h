@@ -27,8 +27,6 @@ using PlanSegmentInputPtr = std::shared_ptr<PlanSegmentInput>;
 using PlanSegmentInputs = std::vector<PlanSegmentInputPtr>;
 struct PlanSegmentContext;
 
-using PartitioningHandle = RPartitioningHandle;
-using Component = RPartitioningComponent;
 
 class PlanSegmentSplitter
 {
@@ -36,9 +34,7 @@ public:
     static void split(QueryPlanExt & query_plan, PlanSegmentContext & plan_segment_context);
 };
 
-class Void
-{
-};
+class Void;
 
 struct PlanSegmentContext
 {
@@ -91,20 +87,20 @@ private:
     std::unordered_map<CTEId, std::pair<PlanSegment *, ExchangeStepExt *>> cte_plan_segments{};
 };
 
-class SourceNodeFinder : public NodeVisitor<std::vector<std::optional<PartitioningHandle>>, const Context>
+class SourceNodeFinder : public NodeVisitor<std::vector<std::optional<PartitioningHandle::Enum>>, const Context>
 {
 public:
     explicit SourceNodeFinder(CTENodes & cte_nodes_) : cte_nodes(cte_nodes_) { }
-    static std::vector<PartitioningHandle> find(QueryPlanExt::Node * node, CTENodes & cte_nodes, const Context & context);
+    static std::vector<PartitioningHandle::Enum> find(QueryPlanExt::Node * node, CTENodes & cte_nodes, const Context & context);
 
-    std::vector<std::optional<PartitioningHandle>> visitNode(QueryPlanExt::Node * node, const Context & context) override;
-    std::vector<std::optional<PartitioningHandle>> visitValuesStepExtNode(QueryPlanExt::Node * node, const Context & context) override;
-    std::vector<std::optional<PartitioningHandle>> visitReadNothingStepNode(QueryPlanExt::Node * node, const Context & context) override;
-    std::vector<std::optional<PartitioningHandle>> visitTableScanStepExtNode(QueryPlanExt::Node * node, const Context & context) override;
-    std::vector<std::optional<PartitioningHandle>> visitRemoteExchangeSourceStepExtNode(QueryPlanExt::Node * node, const Context & context) override;
-    std::vector<std::optional<PartitioningHandle>> visitExchangeStepExtNode(QueryPlanExt::Node * node, const Context & context) override;
-    std::vector<std::optional<PartitioningHandle>> visitCTERefStepExtNode(QueryPlanExt::Node * node, const Context & context) override;
-    std::vector<std::optional<PartitioningHandle>> visitReadStorageRowCountStepExtNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<std::optional<PartitioningHandle::Enum>> visitNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<std::optional<PartitioningHandle::Enum>> visitValuesStepExtNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<std::optional<PartitioningHandle::Enum>> visitReadNothingStepNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<std::optional<PartitioningHandle::Enum>> visitTableScanStepExtNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<std::optional<PartitioningHandle::Enum>> visitRemoteExchangeSourceStepExtNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<std::optional<PartitioningHandle::Enum>> visitExchangeStepExtNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<std::optional<PartitioningHandle::Enum>> visitCTERefStepExtNode(QueryPlanExt::Node * node, const Context & context) override;
+    std::vector<std::optional<PartitioningHandle::Enum>> visitReadStorageRowCountStepExtNode(QueryPlanExt::Node * node, const Context & context) override;
 
 private:
     CTENodes & cte_nodes;

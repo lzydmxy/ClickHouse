@@ -440,8 +440,7 @@ PlanNodePtr UnifyNullableVisitor::visitExchangeStepExtNodeImpl(ExchangeStepExtNo
     }
 
     // update it's input/output stream types.
-    //todo: zhangwanyun, need optimizer: need Partitioning from Optimizer/Property/Property.h
-    auto exchange_step_set_null = std::make_unique<ExchangeStepExt>(inputs, step.getExchangeMode()/*, step.getSchema()*/, step.needKeepOrder());
+    auto exchange_step_set_null = std::make_unique<ExchangeStepExt>(inputs, step.getExchangeMode(), step.getSchema(), step.needKeepOrder());
     auto exchange_node_set_null
         = ExchangeStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(exchange_step_set_null), children/*, node.getStatistics()*/);
     return exchange_node_set_null;

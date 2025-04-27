@@ -1,9 +1,8 @@
 #pragma once
 
 #include <Query/Optimizer/Property/Property.h>
-#include <QueryPlan/PlanVisitor.h>
-#include <QueryPlan/TableWriteStep.h>
-#include <QueryPlan/TotalsHavingStep.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/TotalsHavingStepExt.h>
 
 #include <utility>
 
@@ -32,14 +31,14 @@ class DeterminerVisitor : public StepVisitor<PropertySets, DeterminerContext>
 public:
     PropertySets visitStep(const IQueryPlanStep &, DeterminerContext &) override;
 
-#define VISITOR_DEF(TYPE) PropertySets visit##TYPE##Step(const TYPE##Step &, DeterminerContext &) override;
-    APPLY_STEP_TYPES(VISITOR_DEF)
+#define VISITOR_DEF(TYPE) PropertySets visit##TYPE(const TYPE &, DeterminerContext &) override;
+    APPLY_PROTOBUF_STEP_TYPES(VISITOR_DEF)
 #undef VISITOR_DEF
 
 private:
     static PropertySet single()
     {
-        return {Property{Partitioning{Partitioning::Handle::SINGLE}, Partitioning{Partitioning::Handle::SINGLE}}};
+        return {Property{Partitioning{PartitioningHandle::SINGLE}, Partitioning{PartitioningHandle::SINGLE}}};
     }
 };
 

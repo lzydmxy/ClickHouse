@@ -1,6 +1,6 @@
 #include <Functions/FunctionFactory.h>
 #include <Query/Optimizer/ExpressionRewriter.h>
-#include <Parsers/ASTVisitor.h>
+#include <Query/Parsers/ASTVisitor.h>
 
 namespace DB
 {

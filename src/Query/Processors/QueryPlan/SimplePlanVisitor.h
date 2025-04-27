@@ -2,6 +2,7 @@
 
 #include <Query/Processors/QueryPlan/CTEVisitHelper.h>
 #include <Query/Processors/QueryPlan/PlanVisitor.h>
+#include <Query/Common/Void.h>
 
 namespace DB
 {
@@ -18,9 +19,9 @@ public:
         return Void{};
     }
 
-    Void visitCTERefNode(CTERefNode & node, C & c) override
+    Void visitCTERefStepExtNode(CTERefStepExtNode & node, C & c) override
     {
-        const auto *cte_step = dynamic_cast<const CTERefStep *>(node.getStep().get());
+        const auto *cte_step = dynamic_cast<const CTERefStepExt *>(node.getStep().get());
         auto cte_id = cte_step->getId();
         cte_helper.accept(cte_id, *this, c);
         return Void{};

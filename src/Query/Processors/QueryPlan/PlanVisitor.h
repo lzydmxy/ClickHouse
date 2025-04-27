@@ -4,6 +4,7 @@
 #include <Processors/QueryPlan/QueryPlan.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/QueryPlan/PlanNode.h>
+#include <Query/Common/Void.h>
 
 namespace DB
 {

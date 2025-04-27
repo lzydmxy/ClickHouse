@@ -28,6 +28,7 @@ DistinctStepExt(
     const Names & getColumns() const { return columns; }
     bool preDistinct() const { return pre_distinct; }
     bool canToAgg() const { return can_to_agg; }
+    bool getOptimizeDistinctInOrder() const { return optimize_distinct_in_order; }
     const SizeLimits & getSetSizeLimits() const { return set_size_limits; }
     void setLimitHint(UInt64 limit_hint_) { limit_hint = limit_hint_; }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;

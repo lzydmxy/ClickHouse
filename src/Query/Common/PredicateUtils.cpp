@@ -1,4 +1,6 @@
 #include <Query/Common/PredicateUtils.h>
+
+#include <Query/Common/SymbolsExtractor.h>
 #include <Query/Analyzer/ASTEquals.h>
 #include <Query/Parsers/ASTHelper.h>
 
@@ -240,22 +242,22 @@ std::vector<std::vector<ConstASTPtr>> PredicateUtils::extractSubPredicates(Const
 //     return PredicateUtils::combinePredicates(flip(or_fun.name), combined_cross_product);
 // }
 
-template <bool flatten, typename T, enable_if_ast<T>>
-ASTPtr PredicateUtils::combineConjuncts(const absl::InlinedVector<T,PREDICATE_VECTOR_SIZE> & predicates)
+template <bool flatten, typename VectorType, enable_if_ast<typename VectorType::value_type>>
+ASTPtr PredicateUtils::combineConjuncts(const VectorType & predicates)
 {
     if (predicates.empty())
     {
         return PredicateConst::TRUE_VALUE;
     }
 
-    ASTSet<T> distinct; // todo: templatize EqualityASTSet
+    ASTSet<typename VectorType::value_type> distinct; // todo: templatize EqualityASTSet
     ASTs conjuncts;
     for (const auto & predicate : predicates)
     {
         assert(predicate.get() && "predicate can't be null");
         if constexpr (flatten)
         {
-            std::vector<T> extract_predicates = extractConjuncts<T>(predicate);
+            std::vector<typename VectorType::value_type> extract_predicates = extractConjuncts<typename VectorType::value_type>(predicate);
             for (auto & extract : extract_predicates)
             {
                 if (!isTruePredicate(extract) && distinct.emplace(extract).second)
@@ -294,21 +296,21 @@ ASTPtr PredicateUtils::combineConjuncts(const absl::InlinedVector<T,PREDICATE_VE
     return makeASTFunction(PredicateConst::AND, conjuncts);
 }
 
-template <bool flatten, typename T, enable_if_ast<T>>
-ASTPtr PredicateUtils::combineDisjuncts(const absl::InlinedVector<T,PREDICATE_VECTOR_SIZE> & predicates)
+template <bool flatten, typename VectorType, enable_if_ast<typename VectorType::value_type>>
+ASTPtr PredicateUtils::combineDisjuncts(const VectorType & predicates)
 {
     return combineDisjunctsWithDefault<flatten>(predicates, PredicateConst::FALSE_VALUE);
 }
 
-template <bool /* flatten */, typename T, enable_if_ast<T>>
-ASTPtr PredicateUtils::combineDisjunctsWithDefault(const absl::InlinedVector<T,PREDICATE_VECTOR_SIZE> & predicates, const ASTPtr & default_ast)
+template <bool /* flatten */, typename VectorType, enable_if_ast<typename VectorType::value_type>>
+ASTPtr PredicateUtils::combineDisjunctsWithDefault(const VectorType & predicates, const ASTPtr & default_ast)
 {
     if (predicates.empty())
         return default_ast;
     if (predicates.size() == 1)
         return predicates[0]->clone(); // TODO: remove clone, check tpcds correctness
 
-    ASTSet<T> distinct; // todo: templatize EqualityASTSet
+    ASTSet<typename VectorType::value_type> distinct; // todo: templatize EqualityASTSet
     ASTs args;
     for (auto & arg : predicates)
     {
@@ -328,8 +330,8 @@ ASTPtr PredicateUtils::combineDisjunctsWithDefault(const absl::InlinedVector<T,P
     return makeASTFunction(PredicateConst::OR, args);
 }
 
-template <bool flatten, typename T, enable_if_ast<T>>
-ASTPtr PredicateUtils::combinePredicates(const String & fun, absl::InlinedVector<T,PREDICATE_VECTOR_SIZE> predicates)
+template <bool flatten, typename VectorType, enable_if_ast<typename VectorType::value_type>>
+ASTPtr PredicateUtils::combinePredicates(const String & fun, VectorType predicates)
 {
     if (fun == PredicateConst::AND)
     {
@@ -391,90 +393,89 @@ bool PredicateUtils::containsAny(const Strings & partition_symbols, const std::s
     return false;
 }
 
-// todo: lizhuoyu5, need optimizer
-// bool PredicateUtils::isInliningCandidate(ConstASTPtr & predicate, ProjectionNode & node)
-// {
-//     // candidate symbols for inlining are
-//     //   1. references to simple constants or symbol references
-//     //   2. references to complex expressions that appear only once
-//     // which come from the node, as opposed to an enclosing scope.
-//     std::set<String> child_output_set;
-//     for (const auto & output : node.getStep()->getOutputStream().header)
-//     {
-//         child_output_set.emplace(output.name);
-//     }
-//     std::unordered_map<String, UInt64> dependencies;
-//     for (const auto & symbol : SymbolsExtractor::extract(predicate))
-//     {
-//         if (child_output_set.contains(symbol))
-//         {
-//             if (dependencies.contains(symbol))
-//             {
-//                 UInt64 & count = dependencies[symbol];
-//                 count++;
-//             }
-//             else
-//             {
-//                 dependencies[symbol] = 1;
-//             }
-//         }
-//     }
-//
-//     const auto & step = *node.getStep();
-//     const auto & assignments = step.getAssignments();
-//
-//     bool all_match = true;
-//     for (auto & dependency : dependencies)
-//     {
-//         String symbol = dependency.first;
-//         UInt64 count = dependency.second;
-//
-//         bool symbol_reference_or_literal = false;
-//
-//
-//         auto & expr = assignments.at(symbol);
-//         if (expr->as<const ASTLiteral>() || expr->as<const ASTIdentifier>())
-//         {
-//             symbol_reference_or_literal = true;
-//         }
-//
-//         if (!(count == 1 || symbol_reference_or_literal))
-//         {
-//             all_match = false;
-//         }
-//     }
-//     return all_match;
-// }
+bool PredicateUtils::isInliningCandidate(ConstASTPtr & predicate, ProjectionStepExtNode & node)
+{
+    // candidate symbols for inlining are
+    //   1. references to simple constants or symbol references
+    //   2. references to complex expressions that appear only once
+    // which come from the node, as opposed to an enclosing scope.
+    std::set<String> child_output_set;
+    for (const auto & output : node.getStep()->getOutputStream().header)
+    {
+        child_output_set.emplace(output.name);
+    }
+    std::unordered_map<String, UInt64> dependencies;
+    for (const auto & symbol : SymbolsExtractor::extract(predicate))
+    {
+        if (child_output_set.contains(symbol))
+        {
+            if (dependencies.contains(symbol))
+            {
+                UInt64 & count = dependencies[symbol];
+                count++;
+            }
+            else
+            {
+                dependencies[symbol] = 1;
+            }
+        }
+    }
 
-// ASTPtr PredicateUtils::extractJoinPredicate(JoinNode & node)
-// {
-//     const auto & step = *node.getStep();
-//     const Names & left_keys = step.getLeftKeys();
-//     const Names & right_keys = step.getRightKeys();
-//     if (left_keys.empty() && right_keys.empty() && PredicateUtils::isTruePredicate(step.getFilter()))
-//     {
-//         return PredicateConst::TRUE_VALUE;
-//     }
-//
-//     ASTs join_predicates;
-//     for (size_t i = 0; i < left_keys.size(); ++i)
-//     {
-//         ASTPtr join_predicate = makeASTFunction(
-//             "equals", ASTs{std::make_shared<ASTIdentifier>(left_keys.at(i)), std::make_shared<ASTIdentifier>(right_keys.at(i))});
-//         join_predicates.emplace_back(join_predicate);
-//     }
-//
-//     join_predicates.emplace_back(step.getFilter()->clone());
-//
-//     if (join_predicates.size() == 1)
-//     {
-//         return join_predicates[0];
-//     }
-//     else
-//     {
-//         return makeASTFunction(PredicateConst::AND, join_predicates);
-//     }
-// }
+    const auto & step = *node.getStep();
+    const auto & assignments = step.getAssignments();
+
+    bool all_match = true;
+    for (auto & dependency : dependencies)
+    {
+        String symbol = dependency.first;
+        UInt64 count = dependency.second;
+
+        bool symbol_reference_or_literal = false;
+
+
+        auto & expr = assignments.at(symbol);
+        if (expr->as<const ASTLiteral>() || expr->as<const ASTIdentifier>())
+        {
+            symbol_reference_or_literal = true;
+        }
+
+        if (!(count == 1 || symbol_reference_or_literal))
+        {
+            all_match = false;
+        }
+    }
+    return all_match;
+}
+
+ASTPtr PredicateUtils::extractJoinPredicate(JoinStepExtNode & node)
+{
+    const auto & step = *node.getStep();
+    const Names & left_keys = step.getLeftKeys();
+    const Names & right_keys = step.getRightKeys();
+    if (left_keys.empty() && right_keys.empty() && PredicateUtils::isTruePredicate(step.getFilter()))
+    {
+        return PredicateConst::TRUE_VALUE;
+    }
+
+    ASTs join_predicates;
+    for (size_t i = 0; i < left_keys.size(); ++i)
+    {
+        ASTPtr join_predicate = makeASTFunction(
+            "equals", ASTs{std::make_shared<ASTIdentifier>(left_keys.at(i)), std::make_shared<ASTIdentifier>(right_keys.at(i))});
+        join_predicates.emplace_back(join_predicate);
+    }
+
+    join_predicates.emplace_back(step.getFilter()->clone());
+
+    if (join_predicates.size() == 1)
+    {
+        return join_predicates[0];
+    }
+    else
+    {
+        return makeASTFunction(PredicateConst::AND, join_predicates);
+    }
+}
 
 // bool PredicateUtils::isJoinClause(
 //     ConstASTPtr expression, std::set<String> & left_symbols, std::set<String> & right_symbols, ContextMutablePtr & context)
@@ -686,28 +687,31 @@ PredicateUtils::extractEqualPredicates(const std::vector<ConstASTPtr> & predicat
 //     left.erase(std::remove_if(left.begin(), left.end(), [&](const auto & ast) -> bool { return set.count(ast); }), left.end());
 // }
 
-template ASTPtr PredicateUtils::combineConjuncts<true, ASTPtr>(const absl::InlinedVector<ASTPtr,PREDICATE_VECTOR_SIZE> & predicates);
-template ASTPtr PredicateUtils::combineConjuncts<false, ASTPtr>(const absl::InlinedVector<ASTPtr,PREDICATE_VECTOR_SIZE> & predicates);
-template ASTPtr PredicateUtils::combineConjuncts<true, ConstASTPtr>(const absl::InlinedVector<ConstASTPtr,PREDICATE_VECTOR_SIZE> & predicates);
-template ASTPtr PredicateUtils::combineConjuncts<false, ConstASTPtr>(const absl::InlinedVector<ConstASTPtr,PREDICATE_VECTOR_SIZE> & predicates);
-template ASTPtr PredicateUtils::combineDisjuncts<true, ASTPtr>(const absl::InlinedVector<ASTPtr,PREDICATE_VECTOR_SIZE> & predicates);
-template ASTPtr PredicateUtils::combineDisjuncts<false, ASTPtr>(const absl::InlinedVector<ASTPtr,PREDICATE_VECTOR_SIZE> & predicates);
-template ASTPtr PredicateUtils::combineDisjuncts<true, ConstASTPtr>(const absl::InlinedVector<ConstASTPtr,PREDICATE_VECTOR_SIZE> & predicates);
-template ASTPtr PredicateUtils::combineDisjuncts<false, ConstASTPtr>(const absl::InlinedVector<ConstASTPtr,PREDICATE_VECTOR_SIZE> & predicates);
 
-template ASTPtr PredicateUtils::combineDisjunctsWithDefault<true, ASTPtr>(const absl::InlinedVector<ASTPtr,PREDICATE_VECTOR_SIZE> & predicates,
+using InlineASTs = absl::InlinedVector<ASTPtr, PREDICATE_VECTOR_SIZE>;
+using InlineConstASTs = absl::InlinedVector<ConstASTPtr, PREDICATE_VECTOR_SIZE>;
+template ASTPtr PredicateUtils::combineConjuncts<true, InlineASTs>(const InlineASTs & predicates);
+template ASTPtr PredicateUtils::combineConjuncts<false, InlineASTs>(const InlineASTs & predicates);
+template ASTPtr PredicateUtils::combineConjuncts<true, InlineConstASTs>(const InlineConstASTs & predicates);
+template ASTPtr PredicateUtils::combineConjuncts<false, InlineConstASTs>(const InlineConstASTs & predicates);
+template ASTPtr PredicateUtils::combineDisjuncts<true, InlineASTs>(const InlineASTs & predicates);
+template ASTPtr PredicateUtils::combineDisjuncts<false, InlineASTs>(const InlineASTs & predicates);
+template ASTPtr PredicateUtils::combineDisjuncts<true, InlineConstASTs>(const InlineConstASTs & predicates);
+template ASTPtr PredicateUtils::combineDisjuncts<false, InlineConstASTs>(const InlineConstASTs & predicates);
+
+template ASTPtr PredicateUtils::combineDisjunctsWithDefault<true, InlineASTs>(const InlineASTs & predicates,
     const ASTPtr & default_ast);
-template ASTPtr PredicateUtils::combineDisjunctsWithDefault<false, ASTPtr>(const absl::InlinedVector<ASTPtr,PREDICATE_VECTOR_SIZE> & predicates,
+template ASTPtr PredicateUtils::combineDisjunctsWithDefault<false, InlineASTs>(const InlineASTs & predicates,
     const ASTPtr & default_ast);
-template ASTPtr PredicateUtils::combineDisjunctsWithDefault<true, ConstASTPtr>(const absl::InlinedVector<ConstASTPtr,PREDICATE_VECTOR_SIZE> & predicates,
+template ASTPtr PredicateUtils::combineDisjunctsWithDefault<true, InlineConstASTs>(const InlineConstASTs & predicates,
     const ASTPtr & default_ast);
-template ASTPtr PredicateUtils::combineDisjunctsWithDefault<false, ConstASTPtr>(const absl::InlinedVector<ConstASTPtr,PREDICATE_VECTOR_SIZE> & predicates,
+template ASTPtr PredicateUtils::combineDisjunctsWithDefault<false, InlineConstASTs>(const InlineConstASTs & predicates,
     const ASTPtr & default_ast);
 
-template ASTPtr PredicateUtils::combinePredicates<true, ASTPtr>(const String & fun, absl::InlinedVector<ASTPtr,PREDICATE_VECTOR_SIZE> predicates);
-template ASTPtr PredicateUtils::combinePredicates<false, ASTPtr>(const String & fun, absl::InlinedVector<ASTPtr,PREDICATE_VECTOR_SIZE> predicates);
-template ASTPtr PredicateUtils::combinePredicates<true, ConstASTPtr>(const String & fun, absl::InlinedVector<ConstASTPtr,PREDICATE_VECTOR_SIZE> predicates);
-template ASTPtr PredicateUtils::combinePredicates<false, ConstASTPtr>(const String & fun, absl::InlinedVector<ConstASTPtr,PREDICATE_VECTOR_SIZE> predicates);
+template ASTPtr PredicateUtils::combinePredicates<true, InlineASTs>(const String & fun, InlineASTs predicates);
+template ASTPtr PredicateUtils::combinePredicates<false, InlineASTs>(const String & fun, InlineASTs predicates);
+template ASTPtr PredicateUtils::combinePredicates<true, InlineConstASTs>(const String & fun, InlineConstASTs predicates);
+template ASTPtr PredicateUtils::combinePredicates<false, InlineConstASTs>(const String & fun, InlineConstASTs predicates);
 template bool PredicateUtils::isTruePredicate<ASTPtr>(const ASTPtr & predicate);
 template bool PredicateUtils::isTruePredicate<ConstASTPtr>(const ConstASTPtr & predicate);
 template bool PredicateUtils::isFalsePredicate<ASTPtr>(const ASTPtr & predicate);

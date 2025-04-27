@@ -20,7 +20,6 @@
 #include <Processors/Transforms/AggregatingTransform.h>
 #include <Processors/Transforms/ExpressionTransform.h>
 #include <Query/Common/LinkedHashSet.h>
-#include <Query/Common/PredicateUtils.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterUtils.h>
 #include <Query/Parsers/ASTTableColumnReference.h>
 #include <Query/Processors/QueryPlan/DistributedPipelineSettings.h>

@@ -93,6 +93,9 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_jd_optimizer, true, "Whether enable jd query optimizer", 0) \
     M(Bool, rewrite_like_function, true, "Rewrite simple pattern like function", 0) \
     M(Bool, enable_legacy_optimizer, false, "Whether enable query optimizer", 0) \
+    M(Bool, enable_use_node_property, true, "Whether enable node property rule", 0) \
+    M(Bool, enable_shuffle_before_state_func, true, "Whether shuffle when agg func is state func.", 0) \
+    M(Bool, enable_merge_require_property, false, "Whether enable merge required property in aggregation", 0) \
     M(UInt64, exchange_buffer_send_threshold_in_bytes, 1000000, "The minimum bytes when exchange will flush send buffer ", 0) \
     M(UInt64, exchange_buffer_send_threshold_in_row, 65505, "The minimum row num when exchange will flush send buffer", 0) \
     M(Bool, exchange_enable_force_remote_mode, false, "Force exchange data transfer through network", 0) \
@@ -105,15 +108,19 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, print_graphviz, false, "Whether print graphviz", 0) \
     M(String, graphviz_path, "/tmp/plan/", "The path of graphviz plan", 0) \
     M(Bool, print_graphviz_ast, false, "Whether print graphviz", 0) \
+    M(UInt64, max_expand_join_key_size, 3, "Whether enable using equivalences when property match", 0) \
+    M(UInt64, max_expand_agg_key_size, 3, "Max allowed agg/window keys number when expand powerset when property match", 0) \
     M(UInt64, plan_optimizer_rule_warning_time, 1000, "Send warning if a optimize rule optimize time exceed timeout", 0) \
     M(Bool, group_by_two_level_for_grouping_set, true, "Adaptive two-level aggregation is not valid for grouping set queries. Setting 1 to enforce two-level aggregation, 0 to enforce single-level aggregation.", 0) \
     /** Exchange settings */ \
+    M(Bool, enable_add_exchange, true, "Whether to enable AddExchange rule", 0) \
     M(UInt64, exchange_timeout_ms, 1000000, "Exchange request timeout ms",0) \
     M(UInt64, exchange_queue_bytes, 209715200, "Queue size(bytes) for exchange queue, 0 means disable", 0) \
     M(Bool, exchange_use_query_memory_tracker, true, "Use query-level memory tracker", 0) \
     M(UInt64, exchange_parallel_size, 1, "Exchange parallel size", 0) \
     M(UInt64, distributed_query_wait_exception_ms, 2000,"Wait final planSegment exception from segmentScheduler.", 0) \
     M(Bool, enable_wait_for_post_processing, false, "Whether a query needs to wait for post processing rpcs done before end", 0) \
+    M(Bool, enforce_round_robin, false, "Whether add round robin exchange node", 0) \
     M(UInt64, wait_for_post_processing_timeout_ms, 1000, "Timeout for waiting post processing rpc from workers.", 0) \
     M(UInt64, exchange_wait_accept_max_timeout_ms, 20000, "Exchange receiver wait accept max timeout ms",0) \
     M(UInt64, exchange_unordered_output_parallel_size, 8, \
@@ -123,6 +130,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, disk_shuffle_advisory_partition_size, 104857600, "Disk shuffle files's advisory partition size(including all files in a partition), used by partition coalescing", 0) \
     M(Bool, enable_disk_shuffle_partition_coalescing, true, "If enabled, sheduler will try to coalesce overly-small partitions, thus avoid small plan segments and I/O waste", 0) \
     M(Bool, enable_batch_send_plan_segment, true, "Whether enable combined sending plan segments to reduce rpc calls", 0) \
+    M(Bool, enable_add_local_exchange, false, "Whether to add local exchange", 0) \
     M(UInt64, exchange_remote_receiver_queue_size, 10, "Queue size for remote exchange receiver",0) \
     M(UInt64, exchange_stream_max_buf_size, 20971520, "Default 20M, -1 means no limit", 0) \
     M(Bool, exchange_enable_block_compress, true, "Whether enable exchange block compress ", 0) \
@@ -132,6 +140,12 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, exchange_enable_multipath_reciever, true, "Whether enable exchange new mode ", 0) \
     M(UInt64, exchange_source_pipeline_threads, 16, "Recommend number of threads for pipeline which reading data from exchange, ingoned if exchange need keep data order", 0) \
     /** Runtime Filter settings */ \
+    M(String, runtime_filter_black_list, "", "Runtime filter ids need be blocked", 0) \
+    M(UInt64, runtime_filter_min_filter_rows, 10000, "Set minimum row to enable runtime filter", 0) \
+    M(Float, runtime_filter_min_filter_factor, 0.4f, "Set minimum filter factor to enable runtime filter", 0) \
+    M(Float, runtime_filter_min_filter_factor_for_non_table_scan, 0.9f, "Set minimum filter factor to enable runtime filter if runtime filter can not pushdown", 0) \
+    M(Bool, enable_runtime_filter, true, "Whether enable runtime filter for join", 0) \
+    M(Bool, enable_runtime_filter_pipeline_poll, true, "No additional segment needed for the left side during broadcast join, polling time bounded", 0) \
     M(UInt64, wait_runtime_filter_timeout, 1000, "Execute filter wait for runtime filter timeout ms", 0) \
     M(Bool, enable_range_cover, true, "Whether use range rather than bloom or values set for runtime filter", 0) \
     M(UInt64, clean_rf_time_limit, 300000, "Threshold to clean runtime filters in manager to prevent memory leak", 0) \
@@ -139,6 +153,15 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, runtime_filter_bloom_build_threshold, RUNTIME_FILTER_BLOOM_BUILD_THRESHOLD, "The threshold of right table to build bloom filter", 0) \
     M(UInt64, runtime_filter_in_build_threshold, RUNTIME_FILTER_IN_BUILD_THRESHOLD, "The threshold of right table to build value set filter", 0) \
     M(Double, adjust_range_set_filter_rate, 0.10, "If the prewhere is not range or set, adjust use this value as priority to bloom filter ", 0) \
+    /** Settings for intermediate result cache */ \
+    M(Bool, enable_intermediate_result_cache, false, "Whether to enable intermediate result cache.", 0) \
+    M(Bool, enable_join_intermediate_result_cache, false, "Whether to enable join intermediate result cache.", 0) \
+    M(Bool, enable_intermediate_result_cache_ignore_partition_filter, true, "Whether to ignore parition filter in intermediate result cache.", 0) \
+    M(Bool, enable_intermediate_result_cache_streaming, false, "Whether to enable streaming agg for intermediate result cache.", 0) \
+    M(Seconds, wait_intermediate_result_cache, 60, "Time to wait for enable intermediate result cache per part, 0 means disable.", 0) \
+    M(UInt64, intermediate_result_cache_max_bytes, 100000000, "Intermediate result cache entry max bytes, 0 means disable.", 0) \
+    M(UInt64, intermediate_result_cache_max_rows, 100000, "Intermediate result cache entry max rows, 0 means disable.", 0) \
+    \
     /** Optimizer join settings */ \
     M(Bool, enforce_all_join_to_any_join, false, "Whether enforce all join to any join", 0) \
     M(Bool, enable_nested_loop_join, false, "Whether enable nest loop join for outer join with filter", 0)\
@@ -161,6 +184,48 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(CTEMode, cte_mode, CTEMode::AUTO, "CTE mode: SHARED|INLINED|AUTO|ENFORCED", 0) \
     M(SpillMode, spill_mode, SpillMode::MANUAL, "SpillMode: MANUAL(default)|AUTO", 0) \
     M(QueryDryRunMode, query_dry_run_mode, QueryDryRunMode::NONE, "Whether to choose a query debug mode, in order to skip some workloads", 0) \
+    M(Bool, enable_group_by_keys_pruning, false, "Whether to enable RBO -- group by keys pruning optimization", 0) \
+    M(Bool, enable_eliminate_complicated_pk_fk_join, false, "Whether to eliminate complicated join by fk optimization", 0) \
+    M(Bool, enable_eliminate_complicated_pk_fk_join_without_top_join, false, "Whether to allow eliminate complicated join by fk pull through pass the multi-child node even if no top join", 0) \
+    M(Bool, enable_distinct_remove, true, "Whether to eliminate redundancy during execution", 0) \
+    M(UInt64, execute_uncorrelated_in_subquery_size, 10000, "Size of execute uncorrelated in subquery", 0) \
+    M(Bool, enable_execute_uncorrelated_subquery, false, "Whether enable execute uncorrelated subquery", 0) \
+    M(Bool, enable_remove_uncorrelated_exists_subquery, true, "Whether enable remove uncorrelated exists subquery", 0) \
+    M(Bool, enable_remove_correlated_quantified_comparison_subquery, true, "Whether enable remove correlated quantified comparison subquery", 0) \
+    M(Bool, enable_remove_correlated_exists_subquery, true, "Whether enable remove correlated exists subquery", 0) \
+    M(Bool, enable_unnesting_subquery_with_window, true, "Whether enable unnesting subquery with window", 0) \
+    M(Bool, enable_unnesting_subquery_with_semi_anti_join, true, "Whether enable unnesting subquery with semi anti join", 0) \
+    M(Bool, enable_remove_uncorrelated_in_subquery, true, "Whether enable remove uncorrelated in subquery", 0) \
+    M(Bool, enable_remove_correlated_in_subquery, true, "Whether enable remove correlated in subquery", 0) \
+    M(Bool, enable_remove_uncorrelated_scalar_subquery, true, "Whether enable remove uncorrelated scalar subquery", 0) \
+    M(Bool, enable_remove_correlated_scalar_subquery, true, "Whether enable remove correlated scalar subquery", 0) \
+    M(Bool, enable_remove_uncorrelated_quantified_comparison_subquery, true, "Whether enable remove correlated quantified comparison subquery", 0) \
+    M(Bool, enable_join_reorder, true, "Whether enable join reorder", 0) \
+    M(UInt64 , max_graph_reorder_size, 6, "Max tables join order enum on graph", 0) \
+    M(UInt64 , heuristic_join_reorder_enumeration_times, 3, "Heuristic times in CardinalityBased Join Reorder algorithm", 0) \
+    M(Bool, enable_share_common_plan_node, true, "Whether enable share common plan node using cte", 0) \
+    M(Bool, enable_common_expression_sharing, true, "Whether to share common expression between steps", 0) \
+    M(Bool, enable_common_expression_sharing_for_prewhere, true, "Whether to share common expression between steps and PREWHERE", 0) \
+    M(UInt64, common_expression_sharing_threshold, 3, "The minimal cost to share a common expression, the cost is defined by (complexity * (occurrence - 1))", 0) \
+    M(Bool, enable_injective_in_property, false, "Whether enable using injective function when property match", 0) \
+    M(Bool, enable_bitmap_index_splitter, true, "Whether to enable BitMapIndexSplitter", 0) \
+    M(Bool, enable_sorting_property, true, "Whether enable sorting property rule", 0) \
+    M(Bool, enable_case_when_prop, false, "Whether enable case when prop", 0) \
+    M(Bool, enable_unify_join_outputs, true, "Whether enable unify join output ", 0) \
+    M(Bool, enable_column_pruning, true, "Whether to enable ColumnPruning", 0) \
+    M(Bool, enable_remove_unused_cte, true, "Whether enable remove unused cte", 0) \
+    M(Bool, enable_add_projection_to_pruning, true, "Whether add projection when column pruning", 0) \
+    M(Bool, enable_distinct_to_aggregate, true, "Whether enable convert distinct to group by", 0) \
+    M(Bool, enable_filter_window_to_sorting_limit, true, "Filter window to sorting limit", 0) \
+    M(Bool, enable_redundant_sort_removal, true, "Whether enable ignore redundant sort in subquery", 0) \
+    M(Bool, enable_predicate_pushdown_rewrite, true, "Whether to enable PredicatePushdown", 0) \
+    M(Bool, enable_pushdown_filter_through_stateful, false, "Whether to enable push predicate through projection with stateful functions", 0) \
+    M(Bool, enable_unalias_symbol_references, true, "Whether to enable unalias symbol references", 0) \
+    M(Bool, enable_buffer_for_deadlock_cte, true, "Whether to buffer data for deadlock cte", 0) \
+    M(Bool, enable_remove_remove_unnecessary_buffer, false, "Whether to only add buffer for cte consumer that may cause deadlock", 0) \
+    M(Int64, max_buffer_size_for_deadlock_cte, 13000000000, "Inline CTE if buffer is oversized, set 0 to inline all cte, set -1 to buffer data for all cte even no stats", 0) \
+    M(UInt64, max_in_value_list_to_pushdown, 10000, "Max size of in value list in filter", 0) \
+    M(Bool, offloading_with_query_plan, false, "utilize query plan to offload the computation completely to worker", 0) \
     M(Bool, enable_shuffle_with_order, false, "Whether enable keep data order when shuffle", 0) \
     M(Bool, execute_subquery_in_lambda, true, "Whether to execute subquery in lambda", 0) \
     M(Bool, early_execute_scalar_subquery, false, "Whether to early execute scalar subquery", 0) \
@@ -208,7 +273,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     /** Just for compatible, maybe removed or implemented later */ \
     M(UInt64, max_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a query segment can consume.", 0) \
     M(UInt64, max_distributed_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a distribute query can consume.", 0) \
-    M(Float, streaming_agg_local_ratio, 0.25, "The ratio of local streaming agg, 0-all streaming, 1-all local merged", 0) \
+    M(Float, streaming_agg_local_ratio, 0.25f, "The ratio of local streaming agg, 0-all streaming, 1-all local merged", 0) \
     M(OverflowMode, timeout_overflow_mode, OverflowMode::THROW, "What to do when the limit is exceeded.", 0) \
     M(Bool, optimize_read_in_partition_order, false, "In optimize_read_in_order mode, whether to read parts partition-by-partition if applicable, it will also delay inverted index evaluation till pipeline execution", 0) \
     M(UInt64, early_limit_for_map_virtual_columns, 0, "Enable early limit while quering _map_column_keys column", 0)\

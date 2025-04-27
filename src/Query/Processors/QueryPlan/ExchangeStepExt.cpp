@@ -4,8 +4,8 @@
 
 namespace DB
 {
-ExchangeStepExt::ExchangeStepExt(DataStreams input_streams_, const RExchangeMode::Enum & mode_, bool keep_order_)
-    : exchange_type(mode_), keep_order(keep_order_)
+ExchangeStepExt::ExchangeStepExt(DataStreams input_streams_, const RExchangeMode::Enum & mode_, Partitioning schema_, bool keep_order_)
+    : exchange_type(mode_), schema(std::move(schema_)), keep_order(keep_order_)
 {
     updateInputStreams(input_streams_);
 }
@@ -41,10 +41,9 @@ std::shared_ptr<ExchangeStepExt> ExchangeStepExt::fromProto(const Protos::Exchan
         input_streams.emplace_back(std::move(element));
     }
 
-    // todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
-    // auto schema = Partitioning::fromProto(proto.schema());
+    auto schema = Partitioning::fromProto(proto.schema());
     auto keep_order = proto.keep_order();
-    auto step = std::make_shared<ExchangeStepExt>(input_streams, proto.exchange_type(), keep_order);
+    auto step = std::make_shared<ExchangeStepExt>(input_streams, proto.exchange_type(), schema, keep_order);
 
     return step;
 }
@@ -54,15 +53,14 @@ void ExchangeStepExt::toProto(Protos::ExchangeStepExt & proto, bool) const
     for (const auto & element : input_streams)
         ProtosSerDerHelper::toProto(element, *proto.add_input_streams());
     proto.set_exchange_type(exchange_type);
-    // todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
-    // schema.toProto(*proto.mutable_schema());
+    schema.toProto(*proto.mutable_schema());
     proto.set_keep_order(keep_order);
 }
 
 std::shared_ptr<IQueryPlanStep> ExchangeStepExt::copy(ContextPtr) const
 {
     //todo: zhangwanyun, other feat: need Partitioning
-    return std::make_shared<ExchangeStepExt>(input_streams, exchange_type, keep_order);
+    return std::make_shared<ExchangeStepExt>(input_streams, exchange_type, schema, keep_order);
 }
 
 

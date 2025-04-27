@@ -133,7 +133,18 @@ public:
         return nondeterministic_functions_out_of_query_scope.contains(fun_name);
     }
 
+    void setExecuteSubQueryPath(String path) { graphviz_sub_query_path = std::move(path); }
+    String getExecuteSubQueryPath() const
+    {
+        return graphviz_sub_query_path;
+    }
+    void removeExecuteSubQueryPath()
+    {
+        graphviz_sub_query_path = "";
+    }
+
     PlanNodeIdAllocatorPtr & getPlanNodeIdAllocator() { return id_allocator; }
+    int incAndGetSubQueryId() { return ++sub_query_id; }
     UInt32 nextNodeId() { return id_allocator->nextId(); }
     void logOptimizerProfile(LoggerPtr log, String prefix, String name, UInt64 time, bool is_rule = false);
     void addQueryPlanInfo(String & query_plan_) { this->query_plan = query_plan_; }
@@ -181,7 +192,9 @@ private:
     std::shared_ptr<SegmentScheduler> segment_scheduler = nullptr;
     std::shared_ptr<OptimizerProfile> optimizer_profile = nullptr;
 
+    int sub_query_id = 0;
     int rule_id = 3000;
+    String graphviz_sub_query_path;
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;

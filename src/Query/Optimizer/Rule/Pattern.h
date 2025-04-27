@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Query/Optimizer/Rule/Match.h>
-#include "QueryPlan/IQueryPlanStep.h"
 
 #include <functional>
 #include <memory>

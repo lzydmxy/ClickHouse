@@ -169,29 +169,33 @@ message AST {
 }
 
 message Partitioning {
-    enum Handle {
-        SINGLE = 0;
-        HCOORDINATOR = 1;
-        FIXED_HASH = 2;
-        FIXED_ARBITRARY = 3;
-        FIXED_BROADCAST = 4;
-        SCALED_WRITER = 5;
-        BUCKET_TABLE = 6;
-        ARBITRARY = 7;
-        FIXED_PASSTHROUGH = 8;
-        UNKNOWN = 9;
+    message Handle {
+        enum Enum{
+            SINGLE = 0;
+            COORDINATOR = 1;
+            FIXED_HASH = 2;
+            FIXED_ARBITRARY = 3;
+            FIXED_BROADCAST = 4;
+            SCALED_WRITER = 5;
+            BUCKET_TABLE = 6;
+            ARBITRARY = 7;
+            FIXED_PASSTHROUGH = 8;
+            UNKNOWN = 9;
+        }
     }
-    enum Component {
-        ANY = 0;
-        CCOORDINATOR = 1;
-        WORKER = 2;
+    message Component {
+        enum Enum{
+            ANY = 0;
+            COORDINATOR = 1;
+            WORKER = 2;
+        }
     }
-    Handle handle = 1;
+    Handle.Enum handle = 1;
     repeated string columns = 2;
     bool require_handle = 3;
     uint64 buckets = 4;
     bool enforce_round_robin = 5;
-    Component component = 6;
+    Component.Enum component = 6;
     bool exactly_match = 7;
     AST bucket_expr = 8;
 }

@@ -7,8 +7,8 @@
 
 namespace DB
 {
-LocalExchangeStepExt::LocalExchangeStepExt(const DataStream & input_stream_, const RExchangeMode::Enum & mode_)
-    : ITransformingStep(input_stream_, input_stream_.header, {}), exchange_type(mode_)
+LocalExchangeStepExt::LocalExchangeStepExt(const DataStream & input_stream_, const RExchangeMode::Enum & mode_, Partitioning schema_)
+    : ITransformingStep(input_stream_, input_stream_.header, {}), exchange_type(mode_), schema(std::move(schema_))
 {
 }
 
@@ -32,10 +32,10 @@ void LocalExchangeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, co
     }
 
     ColumnNumbers key_columns;
-    //todo: zhangwanyun1, other feat: need Partitioning
-    // key_columns.reserve(schema.getColumns().size());
-    // for (const auto & name : schema.getColumns())
-    //     key_columns.push_back(stream_header.getPositionByName(name));
+
+    key_columns.reserve(schema.getColumns().size());
+    for (const auto & name : schema.getColumns())
+        key_columns.push_back(stream_header.getPositionByName(name));
 
     pipeline.transform([&](OutputPortRawPtrs ports) {
         Processors processors;
@@ -69,24 +69,21 @@ void LocalExchangeStepExt::toProto(Protos::LocalExchangeStepExt & proto, bool /*
 {
     ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
     proto.set_exchange_type(exchange_type);
-    //todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
-    // schema.toProto(*proto.mutable_schema());
+    schema.toProto(*proto.mutable_schema());
 }
 
 std::shared_ptr<LocalExchangeStepExt> LocalExchangeStepExt::fromProto(const Protos::LocalExchangeStepExt & proto, ContextPtr /*context*/)
 {
     auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
-    //todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
-    // auto schema = Partitioning::fromProto(proto.schema());
-    auto step = std::make_shared<LocalExchangeStepExt>(base_input_stream, proto.exchange_type());
+    auto schema = Partitioning::fromProto(proto.schema());
+    auto step = std::make_shared<LocalExchangeStepExt>(base_input_stream, proto.exchange_type(), schema);
     step->setStepDescription(step_description);
     return step;
 }
 
 std::shared_ptr<IQueryPlanStep> LocalExchangeStepExt::copy(ContextPtr) const
 {
-    //todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
-    return std::make_shared<LocalExchangeStepExt>(input_streams[0], exchange_type);
+    return std::make_shared<LocalExchangeStepExt>(input_streams[0], exchange_type, schema);
 }
 
 }

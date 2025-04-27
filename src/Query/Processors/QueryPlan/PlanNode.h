@@ -3,7 +3,6 @@
 #include <Core/Types.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
-#include <Query/Processors/IQueryPlanStepExt.h>
 
 namespace DB
 {

@@ -5,6 +5,7 @@ set (SRCS
 
 add_library(xxHash ${SRCS})
 target_include_directories(xxHash SYSTEM BEFORE INTERFACE "${LIBRARY_DIR}")
+target_compile_options(xxHash PRIVATE -Wno-implicit-fallthrough)
 
 # XXH_INLINE_ALL - Make all functions inline, with implementations being directly included within xxhash.h. Inlining functions is beneficial for speed on small keys.
 # https://github.com/Cyan4973/xxHash/tree/v0.8.2#build-modifiers

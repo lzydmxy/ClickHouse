@@ -7,6 +7,7 @@
 #include <Query/Optimizer/SymbolTransformMap.h>
 #include <Interpreters/evaluateConstantExpression.h>
 #include <Planner/Utils.h>
+#include <Query/Common/PredicateUtils.h>
 #include <Storages/StorageDistributed.h>
 #include <Interpreters/misc.h>
 
