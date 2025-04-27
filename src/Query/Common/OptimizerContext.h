@@ -56,6 +56,9 @@ struct PlanSegmentInstanceID;
 using  StatisticsMemoryStorePtr = std::shared_ptr<QueryStatistics::StatisticsMemoryStore>;
 class OptimizerContextData;
 
+using ExcludedRules = std::unordered_set<UInt32>;
+using ExcludedRulesMap = std::unordered_map<PlanNodeId, ExcludedRules>;
+
 enum ServiceType
 {
     standalone,
@@ -159,6 +162,7 @@ public:
     const SymbolAllocatorPtr & getSymbolAllocator() { return symbol_allocator; }
     StatisticsMemoryStorePtr getStatisticsMemoryStore();
 
+    ExcludedRulesMap & getExcludedRulesMap() { return exclude_rules_map; }
 protected:
     std::shared_ptr<QueryStatistics::StatisticsMemoryStore> stats_memory_store = nullptr;
 
@@ -195,6 +199,8 @@ private:
     int sub_query_id = 0;
     int rule_id = 3000;
     String graphviz_sub_query_path;
+
+    ExcludedRulesMap exclude_rules_map;
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;

@@ -1,6 +1,7 @@
 #include <Query/Optimizer/Iterative/IterativeRewriter.h>
 #include <Query/Optimizer/Rule/Patterns.h>
-#include <QueryPlan/GraphvizPrinter.h>
+#include <Query/Planner/GraphvizPrinter.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 
 namespace DB
 {
@@ -31,14 +32,14 @@ IterativeRewriter::IterativeRewriter(const std::vector<RulePtr> & rules_, std::s
     {
         for (auto target_type : rule->getTargetTypes())
         {
-            if (target_type != IQueryPlanStep::Type::Any)
+            if (target_type != QueryPlanStepType::Any)
                 rules[target_type].emplace_back(rule);
             else
             {
                 // for rules targeted to arbitrary type, copy them into each specific type's index
-#define ADD_RULE_TO_INDEX(ITEM) rules[IQueryPlanStep::Type::ITEM].emplace_back(rule);
+#define ADD_RULE_TO_INDEX(ITEM) rules[QueryPlanStepType::ITEM].emplace_back(rule);
 
-                APPLY_STEP_TYPES(ADD_RULE_TO_INDEX)
+                APPLY_ALL_STEP_TYPES(ADD_RULE_TO_INDEX)
 
 #undef ADD_RULE_TO_INDEX
             }
@@ -46,13 +47,13 @@ IterativeRewriter::IterativeRewriter(const std::vector<RulePtr> & rules_, std::s
     }
 }
 
-bool IterativeRewriter::rewrite(QueryPlan & plan, ContextMutablePtr ctx) const
+bool IterativeRewriter::rewrite(QueryPlanExt & plan, ContextMutablePtr ctx) const
 {
     IterativeRewriterContext context{
         .globalContext = ctx,
         .cte_info = plan.getCTEInfo(),
-        .optimizer_timeout = ctx->getSettingsRef().iterative_optimizer_timeout,
-        .excluded_rules_map = &ctx->getExcludedRulesMap(),
+        .optimizer_timeout = ctx->getOptimizerContext()->getSettingsRef().iterative_optimizer_timeout,
+        .excluded_rules_map = &ctx->getOptimizerContext()->getExcludedRulesMap(),
         .plan = plan};
 
     bool rewriten = false;
@@ -172,14 +173,13 @@ bool IterativeRewriter::exploreChildren(PlanNodePtr & plan, IterativeRewriterCon
 
 void IterativeRewriter::checkTimeoutNotExhausted(const String & rule_name, const IterativeRewriterContext & context)
 {
-    double duration = context.watch.elapsedMillisecondsAsDouble();
+    double duration = context.watch.elapsedMilliseconds();
 
     if (duration >= context.optimizer_timeout)
     {
-        throw Exception(
+        throw Exception(ErrorCodes::OPTIMIZER_TIMEOUT,
             "The optimizer with rule [ " + rule_name + " ] exhausted the time limit of " + std::to_string(context.optimizer_timeout)
-                + " ms",
-            ErrorCodes::OPTIMIZER_TIMEOUT);
+                + " ms");
     }
 }
 

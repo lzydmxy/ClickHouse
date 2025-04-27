@@ -112,6 +112,8 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, max_expand_agg_key_size, 3, "Max allowed agg/window keys number when expand powerset when property match", 0) \
     M(UInt64, plan_optimizer_rule_warning_time, 1000, "Send warning if a optimize rule optimize time exceed timeout", 0) \
     M(Bool, group_by_two_level_for_grouping_set, true, "Adaptive two-level aggregation is not valid for grouping set queries. Setting 1 to enforce two-level aggregation, 0 to enforce single-level aggregation.", 0) \
+    M(Bool, enable_cascades_optimizer, true, "Whether to enable CascadesOptimizer", 0) \
+    M(Bool, enable_iterative_rewriter, true, "Whether to enable InterativeRewriter", 0) \
     /** Exchange settings */ \
     M(Bool, enable_add_exchange, true, "Whether to enable AddExchange rule", 0) \
     M(UInt64, exchange_timeout_ms, 1000000, "Exchange request timeout ms",0) \
