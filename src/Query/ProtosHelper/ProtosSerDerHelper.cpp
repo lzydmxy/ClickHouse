@@ -297,4 +297,32 @@ void ProtosSerDerHelper::fillFromProto(SizeLimits & size_limits, const Protos::S
     size_limits.overflow_mode = OverflowModeConverter::fromProto(proto.overflow_mode());
 }
 
+void ProtosSerDerHelper::toProto(const SettingChange & setting_change, Protos::SettingChange & proto)
+{
+    proto.set_name(setting_change.name);
+    toProto(setting_change.value, *proto.mutable_value());
+}
+
+void ProtosSerDerHelper::fillFromProto(SettingChange & setting_change, const Protos::SettingChange & proto)
+{
+    setting_change.name = proto.name();
+    setting_change.value = *fillFromProto(proto.value());
+}
+
+void ProtosSerDerHelper::toProto(const SettingsChanges & settings_changes, Protos::SettingsChanges & proto)
+{
+    for (const auto & element : settings_changes)
+        toProto(element, *proto.add_settings_changes());
+}
+
+void ProtosSerDerHelper::fillFromProto(SettingsChanges & settings_changes, const Protos::SettingsChanges & proto)
+{
+    for (const auto & proto_element : proto.settings_changes())
+    {
+        SettingChange element;
+        fillFromProto(element, proto_element);
+        settings_changes.emplace_back(std::move(element));
+    }
+}
+
 }

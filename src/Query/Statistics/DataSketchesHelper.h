@@ -14,6 +14,10 @@
 #pragma clang diagnostic ignored "-Wcast-align"
 #pragma clang diagnostic ignored "-Wshadow-uncaptured-local"
 #pragma clang diagnostic ignored "-Wcovered-switch-default"
+
+#pragma push_macro("IS_BIG_ENDIAN")
+#undef IS_BIG_ENDIAN
+
 #include <hll.hpp>
 #include <cpc_sketch.hpp>
 #include <cpc_union.hpp>
@@ -22,5 +26,7 @@
 #include <theta_intersection.hpp>
 #include <theta_sketch.hpp>
 #include <theta_union.hpp>
-//#include <serde_extend.h>
+
+#pragma pop_macro("IS_BIG_ENDIAN")
+
 #pragma clang diagnostic pop
