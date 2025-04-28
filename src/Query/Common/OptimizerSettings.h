@@ -250,7 +250,6 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, early_execute_scalar_subquery, false, "Whether to early execute scalar subquery", 0) \
     M(Bool, early_execute_in_subquery, false, "Whether to early execute in subquery", 0) \
     M(Bool, enable_equivalences, true, "Whether enable using equivalences when property match", 0) \
-    M(UInt64 , max_graph_reorder_size, 6, "Max tables join order enum on graph", 0) \
     /** Complex query settings **/\
     M(Milliseconds, send_plan_segment_timeout_ms, 10000, "Default timeout for send plan segment by rpc", 0) \
     M(Bool, enable_distributed_stages, false, "Enable complex query mode to split plan to distributed stages", 0)\
@@ -319,78 +318,6 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_pk_fk, true, "Whether enable PK-FK join estimation", 0) \
     M(Bool, enable_real_pk_fk, true, "Whether enable Real PK-FK join estimation", 0) \
     M(Float, pk_selectivity, 1.0, "PK selectivity for join estimation", 0) \
-    /** Optimizer relative settings, CBO, CTE, MagicSet, MV */ \
-    M(Bool, enable_join_reorder, true, "Whether enable join reorder", 0) \
-    M(UInt64, max_predicate_text_length, 5000, "Max length of predicate text", 0) \
-    M(UInt64, cascades_optimizer_timeout, 10000, "Max running time of a single cascades optimizer in ms", 0) \
-    M(UInt64 , max_graph_reorder_size, 6, "Max tables join order enum on graph", 0) \
-    M(UInt64 , heuristic_join_reorder_enumeration_times, 3, "Heuristic times in CardinalityBased Join Reorder algorithm", 0) \
-    M(Bool, enable_cbo, true, "Whether enable CBO", 0) \
-    M(Bool, enable_cascades_pruning, true, "Whether enable cascades pruning", 0) \
-    M(Bool, enum_replicate, true, "Enum replicate join", 0) \
-    M(Bool, enum_repartition, true, "Enum repartition join", 0) \
-    M(Bool, enum_replicate_no_stats, true, "Enum replicate join when statistics not exists", 0) \
-    M(UInt64, max_replicate_build_size, 200000, "Max join build size, when enum replicate", 0) \
-    M(UInt64, max_replicate_shuffle_size, 50000000, "Max join build size, when enum replicate", 0) \
-    M(UInt64, parallel_join_threshold, 2000000, "Parallel join right source rows threshold", 0) \
-    M(UInt64, parallel_join_rows_batch_threshold, 4096, "Rows that concurrent hash join wait data reach, then to build hashtable or join block", 0) \
-    M(Bool, add_parallel_after_join, false, "Add parallel after join", 0) \
-    M(Bool, enforce_round_robin, false, "Whether add round robin exchange node", 0) \
-    M(Bool, enable_shuffle_with_order, false, "Whether enable keep data order when shuffle", 0) \
-    M(Bool, enable_merge_require_property, false, "Whether enable merge required property in aggregation", 0) \
-    M(Bool, enable_join_graph_support_filter, true, "Whether enable join graph support filter", 0) \
-    M(Bool, enable_equivalences, true, "Whether enable using equivalences when property match", 0) \
-    M(Bool, enable_injective_in_property, false, "Whether enable using injective function when property match", 0) \
-    M(Bool, enable_case_when_prop, false, "Whether enable case when prop", 0) \
-    M(UInt64, max_expand_join_key_size, 3, "Whether enable using equivalences when property match", 0) \
-    M(UInt64, max_expand_agg_key_size, 3, "Max allowed agg/window keys number when expand powerset when property match", 0) \
-    M(Bool, enable_sharding_optimize, false, "Whether enable sharding optimization, eg. local join", 0) \
-    M(Bool, enable_bucket_shuffle, false, "Whether enable bucket shuffle", 0) \
-    M(Bool, enable_magic_set, true, "Whether enable magic set rewriting for join aggregation", 0) \
-    M(Float, magic_set_filter_factor, 0.5, "The minimum filter factor of magic set, used for early pruning", 0) \
-    M(UInt64, magic_set_max_search_tree, 2, "The maximum table scans in magic set, used for early pruning", 0) \
-    M(UInt64, magic_set_source_min_rows, 10000, "The minimum rows of source node in magic set, used for early pruning", 0) \
-    M(Float, magic_set_rows_factor, 0.6, "The minimum rows of source node in magic set, used for early pruning", 0) \
-    M(Bool, enable_magic_set_cte, true, "Whether enable magic set rewriting build as cte", 0) \
-    M(CTEMode, cte_mode, CTEMode::AUTO, "CTE mode: SHARED|INLINED|AUTO|ENFORCED", 0) \
-    M(SpillMode, spill_mode, SpillMode::MANUAL, "SpillMode: MANUAL(default)|AUTO", 0) \
-    M(UInt64, max_allowed_mem_size_in_join_spill, 512000000, "Max allowed memory-size(estimated) in join spill", 0) \
-    M(Float, spill_triger_threshold, 0.7, "Threshold to triger spill then memory usage reach a certain ratio of memory quota", 0) \
-    M(Bool, enable_cte_property_enum, false, "Whether enumerate all possible properties for cte", 0) \
-    M(Bool, enable_cte_common_property, true, "Whether search common property for cte", 0) \
-    M(Bool, enable_windows_parallel, false, "Whether run windows in parallel", 0) \
-    M(Bool, enable_view_based_query_rewrite, false, "Whether enable materialized view based rewriter for query, compatible for  enable_materialized_view_rewrite", 0) \
-    M(Bool, enable_non_equijoin_reorder, true, "Whether enable no equi join reorder", 0) \
-    M(Bool, enable_materialized_view_rewrite, true, "Whether enable materialized view based rewriter for query", 0) \
-    M(Bool, enable_sync_materialized_view_rewrite, true, "Whether enable materialized view based rewriter for sync materialized view", 0) \
-    M(Bool, enforce_materialized_view_rewrite, false, "Whether throw exception if materialized view is not applied", 0) \
-    M(String, enable_push_partial_block_list, "", "Aggregate names who can push partial agg, split by ',' => axxx,bxxx,cxxx", 0) \
-    M(Bool, enable_materialized_view_ast_rewrite, false, "Whether enable materialized view based rewriter for query", 0) \
-    M(Bool, enable_materialized_view_rewrite_verbose_log, false, "Whether enable materialized view based rewriter for query", 0) \
-    M(Bool, enable_materialized_view_empty_grouping_rewriting, true, "Whether enable materialized view based rewriter for query", 0) \
-    M(Bool, enable_materialized_view_join_rewriting, true, "Whether enable materialized view based rewriter for query using join materialized views", 0) \
-    M(Bool, enable_materialized_view_union_rewriting, false, "Whether enable materialized view based rewriter for query using union", 0) \
-    M(Bool, enforce_materialized_view_union_rewriting, false, "Enforce enable materialized view based rewriter for query using union, used for testing", 0) \
-    M(MaterializedViewConsistencyCheckMethod, materialized_view_consistency_check_method, MaterializedViewConsistencyCheckMethod::PARTITION, "The method to check whether a materialized view is consistent with the base table for a query", 0) \
-    M(QueryDryRunMode, query_dry_run_mode, QueryDryRunMode::NONE, "Whether to choose a query debug mode, in order to skip some workloads", 0) \
-    M(UInt64, max_plan_segment_num, 500, "maximum plan segments allowed, 0 means no restriction", 0)\
-    M(Bool, force_create_foreign_key, false, "Whether to create inexistent foreign key when creating a table", 0) \
-    M(Bool, enable_group_by_keys_pruning, false, "Whether to enable RBO -- group by keys pruning optimization", 0) \
-    M(Bool, enable_eager_aggregation, false, "Whether to enable RBO -- eager aggregation optimization", 0) \
-    M(Bool, only_push_agg_with_functions, false, "Only use eager aggregation with functions", 0) \
-    M(Float, agg_push_down_threshold, 40.0, "Which ratio is greater than threshold can be push down", 0) \
-    M(Bool, agg_push_down_every_join, false, "Below every join can insert one agg instead of bottom jion", 0) \
-    M(String, eager_agg_join_id_blocklist, "", "Which join in blocklist can't be push down through", 0) \
-    M(String, eager_agg_join_id_whitelist, "", "Which join in blocklist can be push down through", 0) \
-    M(Bool, enable_sum_if_to_count_if, false, "Whether enable rewrite sumIf to countIf", 0) \
-    M(Bool, enable_eliminate_join_by_fk, false, "Whether to enable RBO -- eliminate join by fk optimization", 0) \
-    M(Bool, enable_eliminate_complicated_pk_fk_join, false, "Whether to eliminate complicated join by fk optimization", 0) \
-    M(Bool, enable_eliminate_complicated_pk_fk_join_without_top_join, false, "Whether to allow eliminate complicated join by fk pull through pass the multi-child node even if no top join", 0) \
-    M(Bool, enable_filtered_pk_selectivity, 1, "Enable the selectivity of filtered pk table", 0) \
-    M(Bool, execute_subquery_in_lambda, true, "Whether to execute subquery in lambda", 0) \
-    M(Bool, early_execute_scalar_subquery, false, "Whether to early execute scalar subquery", 0) \
-    M(Bool, early_execute_in_subquery, false, "Whether to early execute in subquery", 0) \
-    M(String, prewhere_skip_functions, "", "A collection of functions which are not choosen as prewhere, use ',' to seperate", 0) \
     /** Just for compatible, maybe removed or implemented later */ \
     M(UInt64, max_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a query segment can consume.", 0) \
     M(UInt64, max_distributed_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a distribute query can consume.", 0) \
