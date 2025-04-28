@@ -57,6 +57,7 @@ public:
 
     /// milliseconds
     UInt32 getQueryMaxExecutionTime() const;
+    void setQueryMaxExecutionTime(UInt32 milli_second);
     TimePoint getQueryExpirationTimeStamp() const;
     void initQueryExpirationTimeStamp();
 

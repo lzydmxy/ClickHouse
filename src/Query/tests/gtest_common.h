@@ -23,4 +23,6 @@ void setQueryDuration(DB::ContextMutablePtr context);
 
 DB::ContextMutablePtr getInitContext();
 
+DB::ContextMutablePtr createQueryContext(const String & query_id, const std::unordered_map<std::string, DB::Field> & settings);
+
 }

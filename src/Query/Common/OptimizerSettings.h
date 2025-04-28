@@ -56,7 +56,7 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(Bool, exchange_force_use_buffer, false, "Force exchange use buffer as possible", 0) \
     M(Bool, enable_prune_source_plan_segment, false, "Whether prune source plan segment", 0) \
     /** Exchange settings */ \
-    M(UInt64, exchange_timeout_ms, 1000000, "Exchange request timeout ms",0) \
+    M(UInt64, exchange_timeout_ms, 300000, "Exchange request timeout ms",0) \
     M(UInt64, exchange_queue_bytes, 209715200, "Queue size(bytes) for exchange queue, 0 means disable", 0) \
     M(Bool, exchange_use_query_memory_tracker, true, "Use query-level memory tracker", 0) \
     M(UInt64, exchange_parallel_size, 1, "Exchange parallel size", 0) \

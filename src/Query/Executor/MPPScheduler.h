@@ -14,7 +14,14 @@ public:
     MPPScheduler(const String & query_id_, const std::string & cluster_name, ContextPtr query_context_
         , std::shared_ptr<DAGGraph> dag_graph_ptr_, bool batch_schedule_)
         : Scheduler(query_id_, query_context_, ClusterNodes(cluster_name, query_context_), dag_graph_ptr_
-        , batch_schedule_)
+        , batch_schedule_, false)
+    {
+    }
+
+    // Only for unit test
+    MPPScheduler(const String & query_id_, ClusterNodes cluster_nodes_, ContextPtr query_context_
+        , std::shared_ptr<DAGGraph> dag_graph_ptr_, bool batch_schedule_, bool unit_test_)
+        : Scheduler(query_id_, query_context_, cluster_nodes_, dag_graph_ptr_, batch_schedule_, unit_test_)
     {
     }
 

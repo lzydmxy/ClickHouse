@@ -3,6 +3,8 @@
 #include <Query/Protos/common.pb.h>
 #include <Query/Protos/plan_node.pb.h>
 #include <Query/Protos/plan_segment_service.pb.h>
+#include <Query/Protos/registry.pb.h>
+
 
 namespace DB
 {
@@ -72,6 +74,10 @@ using RProgressResponse = Protos::ProgressResponse;
 using RProcessorProfileRequest = Protos::ProcessorProfileRequest;
 using RProcessorsProfileRequest = Protos::ProcessorsProfileRequest;
 using RProcessorProfileResponse = Protos::ProcessorProfileResponse;
+
+using RRegistryRequest = Protos::RegistryRequest;
+using RRegistryResponse = Protos::RegistryResponse;
+using RRegistryService = Protos::RegistryService;
 
 
 String planSegmentTypeToString(const RIPlanSegment::Enum & type);

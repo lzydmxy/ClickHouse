@@ -90,12 +90,8 @@ class Scheduler
     using PlanSegmentTopology = std::unordered_map<size_t, std::unordered_set<size_t>>;
 
 public:
-    Scheduler(
-        const String & query_id_,
-        ContextPtr query_context_,
-        ClusterNodes cluster_nodes_,
-        std::shared_ptr<DAGGraph> dag_graph_ptr_,
-        bool batch_schedule_ = false)
+    Scheduler(const String & query_id_, ContextPtr query_context_, ClusterNodes cluster_nodes_, DAGGraphPtr dag_graph_ptr_,
+        bool batch_schedule_, bool unit_test_)
         : query_id(query_id_)
         , query_context(query_context_)
         , dag_graph_ptr(dag_graph_ptr_)
@@ -103,6 +99,7 @@ public:
         , node_selector(cluster_nodes, query_context, dag_graph_ptr)
         , local_address(getLocalAddress(query_context))
         , batch_schedule(batch_schedule_)
+        , unit_test(unit_test_)
         , log(getLogger("Scheduler"))
     {
         cluster_nodes.all_workers.emplace_back(local_address, NodeType::Local, "");
@@ -149,6 +146,7 @@ protected:
 
     bool batch_schedule = false;
     BatchPlanSegmentHeaders batch_segment_headers;
+    bool unit_test;
 
     LoggerPtr log;
     SendPlanSegmentToAddressFunc send_plan_segment_func = sendPlanSegmentToAddress;

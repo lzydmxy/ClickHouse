@@ -29,7 +29,10 @@ void Scheduler::dispatchOrCollectTask(PlanSegment * plan_segment_ptr, const Segm
     if (worker_node.type != NodeType::Local)
     {
         address = worker_node.address;
+        worker_id.cluster = cluster_nodes.cluster_name;
+        worker_id.id = worker_node.id;
     }
+
     if (batch_schedule)
     {
         PlanSegmentHeader header
@@ -44,8 +47,8 @@ void Scheduler::dispatchOrCollectTask(PlanSegment * plan_segment_ptr, const Segm
         send_plan_segment_func(address, plan_segment_ptr, execution_info, query_context, dag_graph_ptr, plan_segment_buf_ptr, worker_id);
     }
 
-    if (const auto & id_to_addr_iter = dag_graph_ptr->id_to_address.find(task.segment_id);
-        id_to_addr_iter != dag_graph_ptr->id_to_address.end())
+    const auto & id_to_addr_iter = dag_graph_ptr->id_to_address.find(task.segment_id);
+    if (id_to_addr_iter != dag_graph_ptr->id_to_address.end())
     {
         id_to_addr_iter->second.at(idx) = worker_node.address;
     }
@@ -55,6 +58,7 @@ void Scheduler::dispatchOrCollectTask(PlanSegment * plan_segment_ptr, const Segm
         dag_graph_ptr->id_to_address.emplace(task.segment_id, std::move(infos));
         dag_graph_ptr->id_to_address[task.segment_id].at(idx) = worker_node.address;
     }
+    LOG_TRACE(log, "dispatchOrCollectTask segment id {}, parallel index {}", task.segment_id, task.parallel_index);
 }
 
 TaskResult Scheduler::scheduleTask(PlanSegment * plan_segment_ptr, const SegmentTask & task)
@@ -65,6 +69,9 @@ TaskResult Scheduler::scheduleTask(PlanSegment * plan_segment_ptr, const Segment
     prepareTask(plan_segment_ptr, selector_info, task);
     dag_graph_ptr->scheduled_segments.emplace(task.segment_id);
     dag_graph_ptr->segment_parallel_size_map[task.segment_id] = selector_info.worker_nodes.size();
+
+    LOG_TRACE(log, "ScheduleTask, segment id {}, nodes size {}, query common buf is empty {}",
+        task.segment_id, selector_info.worker_nodes.size(), dag_graph_ptr->query_common_buf.empty());
 
     std::shared_ptr<butil::IOBuf> plan_segment_buf_ptr;
     if (!dag_graph_ptr->query_common_buf.empty())
@@ -87,7 +94,9 @@ TaskResult Scheduler::scheduleTask(PlanSegment * plan_segment_ptr, const Segment
 
     submitTasks(plan_segment_ptr, task);
 
-    dag_graph_ptr->joinAsyncRpcPerStage();
+    if (!unit_test)
+        dag_graph_ptr->joinAsyncRpcPerStage();
+
     res.status = TaskStatus::Success;
     return res;
 }
@@ -95,7 +104,10 @@ TaskResult Scheduler::scheduleTask(PlanSegment * plan_segment_ptr, const Segment
 void Scheduler::batchScheduleTasks()
 {
     for (const auto & iter : batch_segment_headers)
-        sendPlanSegmentsToAddress(iter.first.address_info, iter.second, query_context, dag_graph_ptr, iter.first.worker_id);
+    {
+        if (!unit_test)
+            sendPlanSegmentsToAddress(iter.first.address_info, iter.second, query_context, dag_graph_ptr, iter.first.worker_id);
+    }
     batch_segment_headers.clear();
 }
 

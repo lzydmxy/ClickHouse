@@ -174,7 +174,7 @@ void prepareQueryCommonBuf(
 
     query_common.set_is_internal_query(context->isInternalQuery());
 
-    butil::IOBuf query_common_buf;
+    // butil::IOBuf query_common_buf;
     butil::IOBufAsZeroCopyOutputStream wrapper(&common_buf);
     query_common.SerializeToZeroCopyStream(&wrapper);
 }

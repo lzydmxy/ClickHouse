@@ -38,9 +38,16 @@ OptimizerContext::OptimizerContext(const Settings & settings_, OptimizerSettings
     else if (optimizer_settings.exchange_timeout_ms != 0)
         query_max_execution_time = std::min(UInt64(optimizer_settings.exchange_timeout_ms), UInt64(UINT32_MAX));
     else
-        query_max_execution_time = 100 * 60 * 1000; // default as 100min
+        query_max_execution_time = 300 * 1000; // default 300 seconds
+    initQueryExpirationTimeStamp();
     data = std::make_shared<OptimizerContextData>();
     plan_segment_process_list = std::make_shared<PlanSegmentProcessList>();
+}
+
+void OptimizerContext::setQueryMaxExecutionTime(UInt32 milli_second)
+{
+    query_max_execution_time = milli_second;
+    initQueryExpirationTimeStamp();
 }
 
 UInt32 OptimizerContext::getQueryMaxExecutionTime() const
