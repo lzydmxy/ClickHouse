@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Optimizer/ExpressionDeterminism.h>
-#include <QueryPlan/PlanVisitor.h>
-#include <QueryPlan/QueryPlan.h>
+#include <Query/Optimizer/ExpressionDeterminism.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
 
 namespace DB
 {
@@ -31,14 +31,14 @@ public:
 protected:
     bool visitStep(const IQueryPlanStep &, ContextPtr &) override { return false; }
 
-    bool visitAggregatingStep(const AggregatingStep & step, ContextPtr &) override
+    bool visitAggregatingStepExt(const AggregatingStepExt & step, ContextPtr &) override
     {
         return !step.isGroupingSet();
     }
 
-    bool visitTableScanStep(const TableScanStep &, ContextPtr &) override { return true; }
+    bool visitTableScanStepExt(const TableScanStepExt &, ContextPtr &) override { return true; }
 
-    bool visitProjectionStep(const ProjectionStep & step, ContextPtr & context) override
+    bool visitProjectionStepExt(const ProjectionStepExt & step, ContextPtr & context) override
     {
         for (const auto & assigment : step.getAssignments())
             if (!ExpressionDeterminism::isDeterministic(assigment.second, context))
@@ -46,12 +46,12 @@ protected:
         return !step.isFinalProject();
     }
 
-    bool visitFilterStep(const FilterStep & step, ContextPtr & context) override
+    bool visitFilterStepExt(const FilterStepExt & step, ContextPtr & context) override
     {
         return ExpressionDeterminism::isDeterministic(step.getFilter(), context);
     }
 
-    bool visitJoinStep(const JoinStep &, ContextPtr &) override { return true; }
+    bool visitJoinStepExt(const JoinStepExt &, ContextPtr &) override { return true; }
 };
 
 class MaterializedViewPlanChecker : public PlanNodeVisitor<void, ContextPtr>
@@ -74,12 +74,12 @@ protected:
         visitChildren(node, context);
     }
 
-    void visitAggregatingNode(AggregatingNode & node, ContextPtr & context) override
+    void visitAggregatingStepExtNode(AggregatingStepExtNode & node, ContextPtr & context) override
     {
         if (!allow_aggregate_node)
             throw Exception(
                 ErrorCodes::QUERY_IS_NOT_SUPPORTED_IN_MATERIALIZED_VIEW,
-                "materialized view query don't support nested aggregate or aggregate inside join",
+                "materialized view query don't support nested aggregate or aggregate inside join {}",
                 node.getStep()->getName());
 
         has_having_filter = has_filter;
@@ -96,16 +96,16 @@ protected:
             VisitorUtil::accept(*child, *this, context);
     }
 
-    void visitSortingNode(SortingNode & node, ContextPtr & context) override
+    void visitSortingStepExtNode(SortingStepExtNode & node, ContextPtr & context) override
     {
-        if (dynamic_cast<const SortingStep *>(node.getStep().get())->getLimitValue() != 0)
+        if (dynamic_cast<const SortingStepExt *>(node.getStep().get())->getLimitValue() != 0)
             throw Exception(
                 ErrorCodes::QUERY_IS_NOT_SUPPORTED_IN_MATERIALIZED_VIEW,
                 "materialized view query don't support limit");
         visitChildren(node, context);
     }
 
-    void visitFilterNode(FilterNode & node, ContextPtr & context) override
+    void visitFilterStepExtNode(FilterStepExtNode & node, ContextPtr & context) override
     {
         has_filter = true;
         visitChildren(node, context);

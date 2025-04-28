@@ -1,8 +1,9 @@
 #pragma once
 
-#include <QueryPlan/PlanNode.h>
-#include <QueryPlan/PlanVisitor.h>
-#include <QueryPlan/QueryPlan.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
+#include <Query/Common/Void.h>
 
 #include <memory>
 #include <vector>
@@ -34,26 +35,26 @@ protected:
         return res;
     }
 
-    PlanNodes visitTableScanNode(TableScanNode & node, Void &) override { return {node.shared_from_this()}; }
+    PlanNodes visitTableScanStepExtNode(TableScanStepExtNode & node, Void &) override { return {node.shared_from_this()}; }
 
-    PlanNodes visitJoinNode(JoinNode & node, Void & c) override
+    PlanNodes visitJoinStepExtNode(JoinStepExtNode & node, Void & c) override
     {
         auto & step = node.getStep();
-        if (step->getKind() == ASTTableJoin::Kind::Inner)
+        if (step->getKind() == JoinKind::Inner)
         {
             auto left = VisitorUtil::accept(*node.getChildren()[0], *this, c);
             auto right = VisitorUtil::accept(*node.getChildren()[1], *this, c);
             left.insert(left.end(), right.begin(), right.end());
             return left;
         }
-        else if (step->getKind() == ASTTableJoin::Kind::Left)
+        else if (step->getKind() == JoinKind::Left)
         {
             auto left = VisitorUtil::accept(*node.getChildren()[0], *this, c);
             auto right = VisitorUtil::accept(*node.getChildren()[1], *this, c);
             outer_sources.insert(outer_sources.end(), right.begin(), right.end());
             return left;
         }
-        else if (step->getKind() == ASTTableJoin::Kind::Right)
+        else if (step->getKind() == JoinKind::Right)
         {
             auto left_result = VisitorUtil::accept(*node.getChildren()[0], *this, c);
             outer_sources.insert(outer_sources.end(), left_result.begin(), left_result.end());

@@ -5,8 +5,8 @@
 #include <Query/Optimizer/Utils.h>
 #include <Parsers/ASTFunction.h>
 #include <Parsers/ASTLiteral.h>
-#include <QueryPlan/JoinStep.h>
-#include <QueryPlan/ProjectionStep.h>
+#include <Query/Processors/QueryPlan/JoinStepExt.h>
+#include <Query/Processors/QueryPlan/ProjectionStepExt.h>
 
 namespace DB
 {

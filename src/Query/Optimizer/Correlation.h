@@ -3,7 +3,7 @@
 #include <Interpreters/Context.h>
 #include <Parsers/ASTFunction.h>
 #include <Parsers/ASTIdentifier.h>
-#include <QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
 
 namespace DB
 {
@@ -23,8 +23,8 @@ public:
 struct DecorrelationResult
 {
     PlanNodePtr node;
-    std::set<String> symbols_to_propagate{};
-    std::vector<ConstASTPtr> correlation_predicates{};
+    std::set<String> symbols_to_propagate;
+    std::vector<ConstASTPtr> correlation_predicates;
     bool at_most_single_row = false;
     std::pair<Names, Names> extractCorrelations(Names & correlation);
     std::pair<Names, Names> buildJoinClause(PlanNodePtr & query_node, PlanNodePtr & subquery_node, const Names & correlation,
@@ -44,10 +44,10 @@ public:
 class DecorrelationVisitor : public PlanNodeVisitor<std::optional<DecorrelationResult>, Context>
 {
 public:
-    DecorrelationVisitor(Names & correlation_) : correlation(correlation_) { }
+    explicit DecorrelationVisitor(Names & correlation_) : correlation(correlation_) { }
     std::optional<DecorrelationResult> visitPlanNode(PlanNodeBase & node, Context & context) override;
-    std::optional<DecorrelationResult> visitFilterNode(FilterNode & node, Context & context) override;
-    std::optional<DecorrelationResult> visitProjectionNode(ProjectionNode & node, Context & context) override;
+    std::optional<DecorrelationResult> visitFilterStepExtNode(FilterStepExtNode & node, Context & context) override;
+    std::optional<DecorrelationResult> visitProjectionStepExtNode(ProjectionStepExtNode & node, Context & context) override;
 
 private:
     Names correlation;

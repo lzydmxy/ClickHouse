@@ -36,10 +36,6 @@ public:
     static void split(QueryPlanExt & query_plan, PlanSegmentContext & plan_segment_context);
 };
 
-class Void
-{
-};
-
 struct PlanSegmentContext
 {
     ContextMutablePtr context;

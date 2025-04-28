@@ -14,7 +14,7 @@ class ConstHashAST
 public:
     ConstHashAST(UInt64 hashcode_, ConstASTPtr ptr_) : hashcode(hashcode_), ptr(std::move(ptr_)) { }
     ConstHashAST() : hashcode(0), ptr(nullptr) { }
-    ConstHashAST(nullptr_t) : hashcode(0), ptr(nullptr) { }
+    explicit ConstHashAST(nullptr_t) : hashcode(0), ptr(nullptr) { }
 
     static ConstHashAST make(ConstASTPtr ptr_)
     {
@@ -28,7 +28,7 @@ public:
     const IAST * get() const { return ptr.get(); }
     const IAST & operator*() const { return *ptr; }
     const IAST * operator->() const { return ptr.get(); }
-    operator ConstASTPtr() const { return ptr; }
+    explicit operator ConstASTPtr() const { return ptr; }
 
     bool operator==(const ConstHashAST & x) const { return ptr == x.ptr; }
     bool operator!=(const ConstHashAST & x) const { return ptr != x.ptr; }

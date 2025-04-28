@@ -1,9 +1,9 @@
 #pragma once
 
 #include <unordered_set>
-#include <QueryPlan/PlanVisitor.h>
-#include <QueryPlan/QueryPlan.h>
-#include <QueryPlan/SimplePlanVisitor.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
+#include <Query/Processors/QueryPlan/SimplePlanVisitor.h>
 #include "Interpreters/StorageID.h"
 
 namespace DB
@@ -22,12 +22,12 @@ struct RelatedMaterializedViews
 class RelatedMaterializedViewsExtractor : public SimplePlanVisitor<Void>
 {
 public:
-    static RelatedMaterializedViews extract(QueryPlan & plan, ContextMutablePtr context_);
+    static RelatedMaterializedViews extract(QueryPlanExt & plan, ContextMutablePtr context_);
 
 protected:
     RelatedMaterializedViewsExtractor(ContextMutablePtr context_, CTEInfo & cte_info_) : SimplePlanVisitor(cte_info_), context(context_) { }
 
-    Void visitTableScanNode(TableScanNode & node, Void &) override;
+    Void visitTableScanStepExtNode(TableScanStepExtNode & node, Void &) override;
 
 private:
     ContextMutablePtr context;

@@ -5,6 +5,7 @@
 #include <Parsers/IAST_fwd.h>
 #include <Common/ErrorCodes.h>
 #include <Common/Exception.h>
+#include <Query/Parsers/ASTHelper.h>
 //#include <boost/hana.hpp>
 #include <functional>
 #include <initializer_list>
@@ -21,9 +22,6 @@ namespace ErrorCodes
 {
     extern const ErrorCode LOGICAL_ERROR;
 }
-
-using ConstASTPtr = std::shared_ptr<const IAST>;
-using ConstASTs = std::vector<ConstASTPtr>;
 
 // this append only
 template <typename Key, typename Value, typename Hash = std::hash<Key>, typename Equal = std::equal_to<Key>>

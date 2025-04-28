@@ -1,17 +1,17 @@
-#include <Optimizer/MaterializedView/PartitionConsistencyChecker.h>
+#include <Query/Optimizer/MaterializedView/PartitionConsistencyChecker.h>
 
 #include <Interpreters/Context_fwd.h>
-#include <Optimizer/MaterializedView/MaterializedViewStructure.h>
-#include <Optimizer/PredicateConst.h>
-#include <Optimizer/PredicateUtils.h>
-#include <Optimizer/SelectQueryInfoHelper.h>
-#include <Optimizer/SymbolTransformMap.h>
+#include <Query/Optimizer/MaterializedView/MaterializedViewStructure.h>
+#include <Query/Optimizer/PredicateConst.h>
+#include <Query/Optimizer/PredicateUtils.h>
+#include <Query/Optimizer/SelectQueryInfoHelper.h>
+#include <Query/Optimizer/SymbolTransformMap.h>
 #include <Parsers/ASTLiteral.h>
-#include <Parsers/ASTTableColumnReference.h>
+#include <Query/Parsers/ASTTableColumnReference.h>
 #include <Parsers/IAST_fwd.h>
 #include <Parsers/queryToString.h>
-#include <QueryPlan/PlanVisitor.h>
-#include <QueryPlan/QueryPlan.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
 #include <Storages/StorageMaterializedView.h>
 
 #include <memory>
@@ -25,7 +25,7 @@ checkMaterializedViewPartitionConsistency(MaterializedViewStructurePtr structure
 {
     static PartitionCheckResult freshness = PartitionCheckResult{nullptr, 0, PredicateConst::FALSE_VALUE, PredicateConst::TRUE_VALUE};
 
-    if (context->getSettingsRef().materialized_view_consistency_check_method == MaterializedViewConsistencyCheckMethod::NONE)
+    if (context->getOptimizerContext()->getSettingsRef().materialized_view_consistency_check_method == MaterializedViewConsistencyCheckMethod::NONE)
         return freshness;
 
     auto storage = DatabaseCatalog::instance().tryGetTable(structure->view_storage_id, context);
@@ -35,6 +35,7 @@ checkMaterializedViewPartitionConsistency(MaterializedViewStructurePtr structure
     auto * mview = dynamic_cast<StorageMaterializedView *>(storage.get());
     if (!mview)
         return {};
+    // todo: hongzhigao1, need storage
     auto partition_transformer = std::make_shared<PartitionTransformer>(mview->getInnerQuery()->clone(), mview->getTargetTableId(), mview->async());
     try
     {

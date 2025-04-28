@@ -1,20 +1,23 @@
-#include <Optimizer/MaterializedView/ExpressionSubstitution.h>
+#include <Query/Optimizer/MaterializedView/ExpressionSubstitution.h>
 
 #include <AggregateFunctions/AggregateFunctionFactory.h>
-#include <Analyzers/TypeAnalyzer.h>
-#include <Core/NameToType.h>
+#include <Query/Analyzer/TypeAnalyzer.h>
 #include <Core/Names.h>
 #include <Interpreters/Context_fwd.h>
-#include <Optimizer/EqualityASTMap.h>
-#include <Optimizer/SymbolTransformMap.h>
-#include <Parsers/ASTTableColumnReference.h>
+#include <Query/Optimizer/EqualityASTMap.h>
+#include <Query/Optimizer/SymbolTransformMap.h>
+#include <Query/Parsers/ASTTableColumnReference.h>
 #include <Parsers/IAST_fwd.h>
-#include <QueryPlan/PlanNode.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
+#include <Common/AlignedBuffer.h>
+#include <Query/Optimizer/Utils.h>
 
 #include <unordered_map>
 
 namespace DB
 {
+
+using NameToType = std::map<String, DataTypePtr>;
 
 namespace MaterializedView
 {
@@ -73,7 +76,7 @@ namespace MaterializedView
             auto storage_ptr = (const_cast<IStorage *>(table_column_ref.storage))->shared_from_this();
             TableInputRef ref{std::move(storage_ptr), table_column_ref.unique_id};
             if (!context.contains(ref))
-                throw Exception("table ref not exists: " + ref.toString(), ErrorCodes::LOGICAL_ERROR);
+                throw Exception(ErrorCodes::LOGICAL_ERROR, "table ref not exists: {}", ref.toString());
             const auto & replace_table_ref = context.at(ref);
             return std::make_shared<ASTTableColumnReference>(
                 replace_table_ref.storage.get(), replace_table_ref.unique_id, table_column_ref.column_name);
@@ -156,7 +159,7 @@ namespace MaterializedView
 
             bool visitASTIdentifier(const ConstASTPtr & node, bool &) override
             {
-                return output_columns.count(node->as<const ASTIdentifier &>().name());
+                return output_columns.contains(node->as<const ASTIdentifier &>().name());
             }
 
             bool visitASTFunction(const ConstASTPtr & node, bool & allow_aggregate) override
@@ -215,7 +218,7 @@ namespace MaterializedView
 
             AggregateFunctionProperties properties;
             auto aggregate_function
-                = AggregateFunctionFactory::instance().tryGet(aggregate_ast_function.name, agg_argument_types, parameters, properties);
+                = AggregateFunctionFactory::instance().get(aggregate_ast_function.name, aggregate_ast_function.nulls_action, agg_argument_types, parameters, properties);
             if (!aggregate_function)
             {
                 return {};
@@ -225,7 +228,7 @@ namespace MaterializedView
             AggregateDataPtr place = place_buffer.data();
             aggregate_function->create(place);
 
-            auto column = aggregate_function->getReturnType()->createColumn();
+            auto column = aggregate_function->getResultType()->createColumn();
             auto arena = std::make_unique<Arena>();
             aggregate_function->insertResultInto(place, *column, arena.get());
             Field default_value;
@@ -397,13 +400,13 @@ namespace MaterializedView
                 const ASTFunction & original_aggregate_function,
                 AggregateDefaultValueProvider & default_value_provider)
             {
-                if (rewrite->getType() == ASTType::ASTFunction && getFunctionName(rewrite) == original_aggregate_function.name)
+                if (getAstType(rewrite) == ASTType::ASTFunction && getFunctionName(rewrite) == original_aggregate_function.name)
                 {
                     return rewrite;
                 }
 
                 ASTPtr any_aggregate_function;
-                if (rewrite->getType() == ASTType::ASTFunction
+                if (getAstType(rewrite) == ASTType::ASTFunction
                     && AggregateFunctionFactory::instance().isAggregateFunctionName(getFunctionName(rewrite)))
                 {
                     any_aggregate_function = rewrite;
