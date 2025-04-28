@@ -1,6 +1,6 @@
 #pragma once
 #include <Query/Optimizer/CostModel/PlanNodeCost.h>
-#include <QueryPlan/JoinStep.h>
+#include <Query/Processors/QueryPlan/JoinStepExt.h>
 
 namespace DB
 {
@@ -9,7 +9,7 @@ struct CostContext;
 class JoinCost
 {
 public:
-    static PlanNodeCost calculate(const JoinStep & step, CostContext & context);
+    static PlanNodeCost calculate(const JoinStepExt & step, CostContext & context);
 };
 
 }

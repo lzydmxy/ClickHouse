@@ -17,6 +17,7 @@
 #include <Interpreters/Context_fwd.h>
 #include <Query/Processors/IQueryPlanStepExt.h>
 #include <Query/Common/StopwatchExt.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 
 #include <algorithm>
 
@@ -211,7 +212,7 @@ void ApplyRule::execute()
         {
             GroupExprPtr new_group_expr = nullptr;
             auto g_id = group_expr->getGroupId();
-            auto logical_rule = new_expr->getStep()->isLogical() ? rule->getType() : group_expr->getProduceRule();
+            auto logical_rule = QueryPlanStepHelper::isPhysicalQueryPlanStep(new_expr->getStep()) ? rule->getType() : group_expr->getProduceRule();
             if (context->getOptimizerContext().recordPlanNodeIntoGroup(new_expr, new_group_expr, logical_rule, g_id))
             {
                 // LOG_TRACE(log, "Success Apply Rule For Expression In Group {}; Rule Type: {}", group_expr->getGroupId(), rule->getType());

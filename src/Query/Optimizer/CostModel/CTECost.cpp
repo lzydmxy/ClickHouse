@@ -5,7 +5,7 @@
 
 namespace DB
 {
-PlanNodeCost CTECost::calculate(const CTERefStep &, CostContext & context)
+PlanNodeCost CTECost::calculate(const CTERefStepExt &, CostContext & context)
 {
     PlanNodeStatisticsPtr stats = context.stats;
     if (!stats)

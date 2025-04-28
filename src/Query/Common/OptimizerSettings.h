@@ -272,6 +272,34 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Int64, statistics_ignore_modified_timestamp_older_than, 0, "Ignore partitions whose modified_time older than this Unix timestamp. 0 for unlimited, negative value for now() - abs(value)", 0) \
     M(UInt64, statistics_max_partitions, 0, "Max partitions in total to collect partitioned stats, 0 for unlimited", 0) \
     M(Bool, statistics_query_cnch_parts_for_row_count, true, "Use cnch parts instead of count(*) for row count to speed up test", 0) \
+    /** Optimizer relative settings, cost model and estimation */ \
+    M(Float, cost_calculator_cpu_cost_ratio, 0.74, "Table scan cost weight for cost calculator", 0) \
+    M(Float, cost_calculator_mem_cost_ratio, 0.16, "Table scan cost weight for cost calculator", 0) \
+    M(Float, cost_calculator_net_cost_ratio, 1.0, "Table scan cost weight for cost calculator", 0) \
+    M(Float, cost_calculator_table_scan_weight, 3.8, "Table scan cost weight for cost calculator", 0) \
+    M(Float, cost_calculator_aggregating_weight, 7, "Aggregate output weight for cost calculator", 0) \
+    M(Float, cost_calculator_join_probe_weight, 0.5, "Join probe side weight for cost calculator", 0) \
+    M(Float, cost_calculator_join_build_weight, 1.5, "Join build side weight for cost calculator", 0) \
+    M(Float, cost_calculator_join_output_weight, 0.5, "Join output weight for cost calculator", 0) \
+    M(Float, cost_calculator_cte_weight, 1, "CTE output weight for cost calculator", 0) \
+    M(Float, cost_calculator_cte_weight_for_join_build_side, 1.3, "Join build side weight for cost calculator", 0) \
+    M(Float, cost_calculator_projection_weight, 0.1, "CTE output weight for cost calculator", 0) \
+    M(Bool, cost_calculator_use_size, true, "Whether use byte size to calc cost", 0) \
+    M(Bool, cost_calculator_use_size_in_join, true, "Whether use byte size to calc cost in join", 0) \
+    M(Float, cost_calculator_byte_size_weight, 1, " Byte size weight for cost calculator", 0) \
+    M(Float, stats_estimator_join_filter_selectivity, 0.5, "Join filter selectivity", 0) \
+    M(Bool, stats_estimator_join_use_histogram, true, "Estimate join use histogram", 0) \
+    M(Float, stats_estimator_anti_join_filter_coefficient, 0.6, "Anti Join filter coefficient", 0) \
+    M(Float, stats_estimator_first_agg_key_filter_coefficient, 0.3, "First agg key coefficient", 0) \
+    M(Float, stats_estimator_remaining_agg_keys_filter_coefficient, 1.5, "Remaining agg key coefficient", 0) \
+    M(Float, stats_estimator_unknown_filter_selectivity, 0.25, "Join filter selectivity", 0) \
+    M(Float, stats_estimator_unknown_in_filter_selectivity, 0.5, "In filter selectivity", 0) \
+    M(Float, stats_estimator_like_selectivity, 0.15, "Like filter selectivity", 0) \
+    M(Bool, enable_estimate_without_symbol_statistics, false, "Try to estimiate cardinality even if no symbol statistics", 0) \
+    M(Bool, enable_left_deep_join_reorder, false, "Try to do join reorder without accurate statistics", 0) \
+    M(Bool, enable_pk_fk, true, "Whether enable PK-FK join estimation", 0) \
+    M(Bool, enable_real_pk_fk, true, "Whether enable Real PK-FK join estimation", 0) \
+    M(Float, pk_selectivity, 1.0, "PK selectivity for join estimation", 0) \
     /** Just for compatible, maybe removed or implemented later */ \
     M(UInt64, max_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a query segment can consume.", 0) \
     M(UInt64, max_distributed_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a distribute query can consume.", 0) \
