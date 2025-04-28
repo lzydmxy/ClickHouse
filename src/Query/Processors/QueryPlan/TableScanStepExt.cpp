@@ -6,6 +6,7 @@
 #include <Query/Optimizer/SymbolTransformMap.h>
 #include <Interpreters/evaluateConstantExpression.h>
 #include <Planner/Utils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 
 
 namespace DB

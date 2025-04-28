@@ -2,7 +2,7 @@
 
 #include <AggregateFunctions/AggregateFunctionFactory.h>
 #include <Functions/FunctionFactory.h>
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Common/OptimizerContext.h>
 
 namespace DB

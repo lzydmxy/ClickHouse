@@ -7,7 +7,7 @@
 #include <Parsers/formatAST.h>
 #include <Query/Parsers/ASTHelper.h>
 #include <Query/Common/Utils.h>
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
 //#include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
 //#include <Functions/FunctionsRuntimeFilter.h>

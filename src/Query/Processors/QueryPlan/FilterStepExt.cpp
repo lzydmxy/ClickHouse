@@ -2,7 +2,7 @@
 #include <IO/Operators.h>
 #include <Interpreters/ExpressionActions.h>
 #include <Processors/Transforms/ExpressionTransform.h>
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterUtils.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/Transforms/FilterTransformExt.h>

@@ -6,11 +6,12 @@
 #include <Interpreters/ActionsVisitor.h>
 
 #include <Query/Common/LinkedHashMap.h>
-#include <Query/Common/PredicateConst.h>
+// #include <Query/Optimizer/PredicateConst.h>
 #include <Query/Core/JoinsExt.h>
 #include <Query/Parsers/ASTHelper.h>
 
 #include <Query/Executor/RuntimeFilter/RuntimeFilterBuilder.h>
+#include "Query/Optimizer/PredicateConst.h"
 
 namespace DB
 {

@@ -2,7 +2,7 @@
 
 #include <Query/Analyzer/ExpressionVisitor.h>
 #include <AggregateFunctions/AggregateFunctionFactory.h>
-#include <Query/Common/PredicateConst.h>
+#include <Query/Optimizer/PredicateConst.h>
 
 
 namespace DB

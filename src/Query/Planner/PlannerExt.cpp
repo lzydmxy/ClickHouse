@@ -36,7 +36,8 @@
 #include <Query/Processors/QueryPlan/MergingAggregatedStepExt.h>
 #include <Query/Common/Void.h>
 
-#include <Query/Common/SymbolsExtractor.h>
+#include <Query/Optimizer/SymbolsExtractor.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Common/makeCastFunction.h>
 #include <Query/Common/getLeastSupertypeExt.h>
 

@@ -1,8 +1,8 @@
 #include <Query/Processors/QueryPlan/JoinStepExt.h>
 
 #include <Query/Common/OptimizerContext.h>
-#include <Query/Common/PredicateUtils.h>
-#include <Query/Common/SymbolsExtractor.h>
+#include <Query/Optimizer/PredicateUtils.h>
+#include <Query/Optimizer/SymbolsExtractor.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterConsumer.h>
 #include <Query/Executor/PlanSegmentInstance.h>
 #include <Query/Interpreters/TableJoinExt.h>

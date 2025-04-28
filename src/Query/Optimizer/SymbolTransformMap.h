@@ -5,7 +5,7 @@
 #include <Query/Parsers/ASTHelper.h>
 #include <Query/Optimizer/SimpleExpressionRewriter.h>
 #include <Query/Analyzer/ASTEquals.h>
-#include <Query/Common/SymbolsExtractor.h>
+#include <Query/Optimizer/SymbolsExtractor.h>
 
 #include <optional>
 #include <unordered_map>

@@ -1,6 +1,6 @@
 #include <Query/Optimizer/ExpressionExtractor.h>
 
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Processors/QueryPlan/AggregatingStepExt.h>
 #include <Query/Processors/QueryPlan/ApplyStepExt.h>
 #include <Query/Processors/QueryPlan/FilterStepExt.h>
