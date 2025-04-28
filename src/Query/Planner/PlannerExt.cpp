@@ -19,7 +19,7 @@
 
 #include <Planner/Utils.h>
 
-#include <Processors/QueryPlan/AggregatingStep.h>
+#include <Query/Common/PredicateUtils.h>
 
 #include <Query/Planner/PlannerCommon.h>
 #include <Query/Planner/TranslationMap.h>

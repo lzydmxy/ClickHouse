@@ -1,10 +1,8 @@
-
-
 #include <Query/Optimizer/CardinalityEstimate/EnforceSingleRowEstimator.h>
 
 namespace DB
 {
-PlanNodeStatisticsPtr EnforceSingleRowEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const EnforceSingleRowStep &)
+PlanNodeStatisticsPtr EnforceSingleRowEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const EnforceSingleRowStepExt &)
 {
     if (!child_stats)
     {

@@ -1,14 +1,12 @@
 #include <Query/Optimizer/Rule/Transformation/JoinReorderUtils.h>
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>
-#include <Query/Optimizer/PredicateUtils.h>
+#include <Query/Common/PredicateUtils.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
 #include <Query/Optimizer/SymbolsExtractor.h>
-#include <Parsers/ASTIdentifier.h>
-#include <Parsers/IAST_fwd.h>
-#include <QueryPlan/AnyStep.h>
-#include <QueryPlan/MultiJoinStep.h>
-#include <Query/Optimizer/JoinGraph.h>
+#include <Query/Processors/QueryPlan/AnyStepExt.h>
+#include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
+#include <Query/Common/NameToTypeExt.h>
 #include <boost/range/adaptor/map.hpp>
 #include <boost/range/algorithm/copy.hpp>
 #include <Query/Optimizer/CardinalityEstimate/JoinEstimator.h>
@@ -124,11 +122,11 @@ namespace JoinReorderUtils
             output.emplace_back(NameAndTypePair{item.name, item.type});
         }
 
-        auto join_step = std::make_shared<JoinStep>(
+        auto join_step = std::make_shared<JoinStepExt>(
             DataStreams{left->getStep()->getOutputStream(), right->getStep()->getOutputStream()},
-            DataStream{output},
-            ASTTableJoin::Kind::Inner,
-            ASTTableJoin::Strictness::All,
+            DataStream{ToColumnsWithTypeAndName(output)},
+            JoinKind::Inner,
+            JoinStrictness::All,
             rule_context.context->getSettingsRef().max_threads,
             rule_context.context->getSettingsRef().optimize_read_in_order,
             join_keys.first,
@@ -136,17 +134,17 @@ namespace JoinReorderUtils
             std::vector<bool>{},
             join_filter);
 
-        return PlanNodeBase::createPlanNode(rule_context.context->nextNodeId(), std::move(join_step), {left, right});
+        return PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), std::move(join_step), {left, right});
     }
 
     double computeFilterSelectivity(GroupId child, const Memo & memo)
     {
-        if (memo.getGroupById(child)->getLogicalOtherwisePhysicalExpressions()[0]->getStep()->getType() == IQueryPlanStep::Type::Filter)
+        if (getQueryPlanStepType(memo.getGroupById(child)->getLogicalOtherwisePhysicalExpressions()[0]->getStep()) == QueryPlanStepType::FilterStepExt)
         {
             if (memo.getGroupById(child)->getLogicalOtherwisePhysicalExpressions()[0]->getChildrenGroups().size() == 1)
             {
                 auto filter_child = memo.getGroupById(child)->getLogicalOtherwisePhysicalExpressions()[0]->getChildrenGroups()[0];
-                if (memo.getGroupById(filter_child)->getLogicalOtherwisePhysicalExpressions()[0]->getStep()->getType() == IQueryPlanStep::Type::TableScan
+                if (getQueryPlanStepType(memo.getGroupById(filter_child)->getLogicalOtherwisePhysicalExpressions()[0]->getStep()) == QueryPlanStepType::TableScanStepExt
                     && memo.getGroupById(child)->getStatistics().has_value()
                     && memo.getGroupById(filter_child)->getStatistics().has_value())
                 {

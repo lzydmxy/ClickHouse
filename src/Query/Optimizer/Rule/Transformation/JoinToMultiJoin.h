@@ -3,7 +3,7 @@
 #include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/Property/Equivalences.h>
 #include <Query/Optimizer/Rule/Rule.h>
-#include <QueryPlan/JoinStep.h>
+#include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <boost/dynamic_bitset.hpp>
 
 #include <unordered_set>
@@ -18,14 +18,14 @@ class JoinToMultiJoin : public Rule
 public:
     RuleType getType() const override { return RuleType::JOIN_TO_MULTI_JOIN; }
     String getName() const override { return "JOIN_TO_MULTI_JOIN"; }
-    bool isEnabled(ContextPtr context) const override { return context->getSettingsRef().enable_join_to_multi_join; }
+    bool isEnabled(ContextPtr context) const override { return context->getOptimizerContext()->getSettingsRef().enable_join_to_multi_join; }
     ConstRefPatternPtr getPattern() const override;
-    static bool isSupport(const JoinStep & s) { return s.supportReorder(true) && !s.isSimpleReordered() && !s.isOrdered(); }
+    static bool isSupport(const JoinStepExt & s) { return s.supportReorder(true) && !s.isSimpleReordered() && !s.isOrdered(); }
 
     static PlanNodes createMultiJoin(
         ContextMutablePtr context,
         CascadesContext & optimizer_context,
-        const JoinStep * join_step,
+        const JoinStepExt * join_step,
         GroupId group_id,
         GroupId left_group_id,
         GroupId right_group_id);

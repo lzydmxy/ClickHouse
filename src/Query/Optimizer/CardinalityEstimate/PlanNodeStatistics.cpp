@@ -1,5 +1,3 @@
-
-
 #include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
 
 #include <utility>

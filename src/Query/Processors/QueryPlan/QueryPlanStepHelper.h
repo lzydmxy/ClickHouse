@@ -11,8 +11,6 @@
 #include <Processors/QueryPlan/IntersectOrExceptStep.h>
 #include <Processors/QueryPlan/JoinStep.h>
 #include <Processors/QueryPlan/LimitByStep.h>
-#include <Processors/QueryPlan/LimitStep.h>
-#include <Processors/QueryPlan/MergingAggregatedStep.h>
 #include <Processors/QueryPlan/OffsetStep.h>
 #include <Processors/QueryPlan/ReadFromPreparedSource.h>
 #include <Processors/QueryPlan/RollupStep.h>
@@ -50,6 +48,7 @@
 #include <Query/Processors/QueryPlan/ValuesStepExt.h>
 #include <Query/Processors/QueryPlan/LimitStepExt.h>
 #include <Query/Processors/QueryPlan/ReadStorageRowCountStepExt.h>
+#include <Query/Processors/QueryPlan/MergingAggregatedStepExt.h>
 #include <Query/Processors/QueryPlan/MergeSortingStepExt.h>
 #include <Query/Processors/QueryPlan/MergingSortedStepExt.h>
 #include <Query/Processors/QueryPlan/PartialSortingStepExt.h>
@@ -58,12 +57,10 @@
 
 namespace DB
 {
-class TableScanStepExt;
 
 // protobuf's types and names for StepExt with proto
 #define APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(M) \
     M(AggregatingStepExt, aggregating_step_ext) \
-    M(AnyStepExt, any_step_ext) \
     M(ApplyStepExt, apply_step_ext) \
     M(AssignUniqueIdStepExt, assign_unique_id_step_ext) \
     M(BufferStepExt, buffer_step_ext) \
@@ -80,6 +77,7 @@ class TableScanStepExt;
     M(LocalExchangeStepExt, local_exchange_step_ext) \
     M(MarkDistinctStepExt, mark_distinct_step_ext) \
     M(MultiJoinStepExt, multi_join_step_ext) \
+    M(MergingAggregatedStepExt, merging_aggregated_step_ext) \
     M(PartitionTopNStepExt, partition_top_n_step_ext) \
     M(ProjectionStepExt, projection_step_ext) \
     M(RemoteExchangeSourceStepExt, remote_exchange_source_step_ext) \
@@ -105,15 +103,14 @@ class TableScanStepExt;
     M(FillingStep, filling_step) \
     M(IntersectOrExceptStep, intersect_or_except_step) \
     M(LimitByStep, limit_by_step) \
-    M(MergingAggregatedStep, merging_aggregated_step) \
     M(OffsetStep, offset_step) \
     M(ReadNothingStep, read_nothing_step) \
-    M(WindowStep, window_step)
+    M(WindowStep, window_step) \
 
 // types for StepExt without proto
 #define APPLY_NOPROTOBUF_STEP_TYPES_FOR_EXT(M) \
     M(PlanSegmentSourceStepExt) \
-    M(SettingQuotaAndLimitsStepExt)
+    M(SettingQuotaAndLimitsStepExt) \
 
 // types for Step without proto
 #define APPLY_NOPROTOBUF_STEP_TYPES(M) \
@@ -126,7 +123,7 @@ class TableScanStepExt;
     M(ExpressionStep) \
     M(FilledJoinStep) \
     M(ReadFromStorageStep) \
-    M(RollupStep)
+    M(RollupStep) \
 
 // macro helpers to convert MM(x, y) to M(x)
 #define IMPL_TUPLE_TO_FIRST(_x, _y) (_x)
@@ -152,10 +149,11 @@ class TableScanStepExt;
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) ITEM,
 enum class QueryPlanStepType : UInt8
 {
-    Any = 0,
+    AnyStepExt = 0,
     // change this when order is changed to avoid conflicts
     StepBegin = 100,
     APPLY_ALL_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE) UNDEFINED,
+    Tree,
 };
 #undef ENUM_QUERY_PLAN_STEP_TYPE
 
@@ -236,6 +234,14 @@ public:
 
     static const std::vector<WindowFunctionDescription> & getWindowStepFunctions(const WindowStep & window) {return window.window_functions;}
     static bool getWindowStepStreamsFanOut(const WindowStep & window) {return window.streams_fan_out;}
+    static const WindowDescription & getWindowStepWindow(const WindowStep & window) {return window.window_description;}
+
+    static void setSortingStepPrefixDescription(SortingStep & sorting_step, const SortDescription & prefix_description_) {sorting_step.prefix_description = prefix_description_;}
+    static const SortDescription & getSortingStepPrefixDescription(const SortingStep & sorting_step) {return sorting_step.prefix_description;}
+
+    static const SortDescription & getFillingStepFillDescription(const FillingStep & filling_step) {return filling_step.fill_description;}
+    static bool getFillingStepUseWithFillBySortingPrefix(const FillingStep & filling_step) {return filling_step.use_with_fill_by_sorting_prefix;}
+
 
     static const ASTSelectIntersectExceptQuery::Operator & getIntersectOrExceptStepOperator(const IntersectOrExceptStep & intersect_or_except) {return intersect_or_except.current_operator;}
     static size_t getIntersectOrExceptStepMaxThreads(const IntersectOrExceptStep & intersect_or_except) {return intersect_or_except.max_threads;}

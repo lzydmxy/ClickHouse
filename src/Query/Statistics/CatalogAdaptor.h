@@ -4,6 +4,7 @@
 #include <Query/Statistics/StatsTableIdentifier.h>
 #include <Query/Statistics/TypeUtils.h>
 #include <Storages/IStorage.h>
+#include <Query/Common/OptimizerContext.h>
 
 #include <memory>
 #include <unordered_map>
@@ -40,7 +41,10 @@ public:
     virtual StoragePtr tryGetStorageByUUID(const UUID & uuid) = 0;
     virtual UInt64 getUpdateTime() = 0;
     ColumnDescVector getAllCollectableColumns(const StatsTableIdentifier & identifier);
-    virtual const Settings & getSettingsRef() = 0;
+    virtual const OptimizerSettings & getSettingsRef()
+    {
+        return context->getOptimizerContext()->getSettingsRef();
+    }
 
     virtual UInt64 fetchAddUdiCount(const StatsTableIdentifier & table, UInt64 count) = 0;
     virtual void removeUdiCount(const StatsTableIdentifier & table) = 0;

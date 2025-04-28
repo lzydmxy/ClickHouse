@@ -64,6 +64,12 @@ public:
     static void toProto(const SizeLimits & fill_column_description, Protos::SizeLimits & proto);
     static void fillFromProto(SizeLimits & fill_column_description, const Protos::SizeLimits & proto);
 
+    static void toProto(const SettingChange & fill_column_description, Protos::SettingChange & proto);
+    static void fillFromProto(SettingChange & fill_column_description, const Protos::SettingChange & proto);
+
+    static void toProto(const SettingsChanges & fill_column_description, Protos::SettingsChanges & proto);
+    static void fillFromProto(SettingsChanges & fill_column_description, const Protos::SettingsChanges & proto);
+
 };
 
 }

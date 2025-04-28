@@ -10,6 +10,7 @@
 #include <Query/Optimizer/OptimizerMetrics.h>
 #include <Query/Processors/QueryPlan/PlanCache.h>
 #include <Query/Optimizer/OptimizerProfile.h>
+#include <Query/Statistics/StatisticsMemoryStore.h>
 
 namespace DB
 {
@@ -52,7 +53,11 @@ class PlanCacheManager;
 struct Settings;
 struct PlanSegmentInstanceID;
 
+using  StatisticsMemoryStorePtr = std::shared_ptr<QueryStatistics::StatisticsMemoryStore>;
 class OptimizerContextData;
+
+using ExcludedRules = std::unordered_set<UInt32>;
+using ExcludedRulesMap = std::unordered_map<PlanNodeId, ExcludedRules>;
 
 enum ServiceType
 {
@@ -131,7 +136,18 @@ public:
         return nondeterministic_functions_out_of_query_scope.contains(fun_name);
     }
 
+    void setExecuteSubQueryPath(String path) { graphviz_sub_query_path = std::move(path); }
+    String getExecuteSubQueryPath() const
+    {
+        return graphviz_sub_query_path;
+    }
+    void removeExecuteSubQueryPath()
+    {
+        graphviz_sub_query_path = "";
+    }
+
     PlanNodeIdAllocatorPtr & getPlanNodeIdAllocator() { return id_allocator; }
+    int incAndGetSubQueryId() { return ++sub_query_id; }
     UInt32 nextNodeId() { return id_allocator->nextId(); }
     void logOptimizerProfile(LoggerPtr log, String prefix, String name, UInt64 time, bool is_rule = false);
     void addQueryPlanInfo(String & query_plan_) { this->query_plan = query_plan_; }
@@ -144,6 +160,15 @@ public:
     void initOptimizerProfile() { optimizer_profile = std::make_unique<OptimizerProfile>(); }
     PlanCacheManager* getPlanCacheManager();
     const SymbolAllocatorPtr & getSymbolAllocator() { return symbol_allocator; }
+    StatisticsMemoryStorePtr getStatisticsMemoryStore();
+
+    ExcludedRulesMap & getExcludedRulesMap() { return exclude_rules_map; }
+
+    int getRuleId() const { return rule_id; }
+    void setRuleId(int rule_id_) { rule_id = rule_id_; }
+    void incRuleId() { ++rule_id; }
+protected:
+    std::shared_ptr<QueryStatistics::StatisticsMemoryStore> stats_memory_store = nullptr;
 
 private:
     OptimizerSettings optimizer_settings;
@@ -170,6 +195,12 @@ private:
     std::unique_ptr<PlanCacheManager> plan_cache_manager = nullptr;
     std::shared_ptr<SegmentScheduler> segment_scheduler = nullptr;
     std::shared_ptr<OptimizerProfile> optimizer_profile = nullptr;
+
+    int sub_query_id = 0;
+    int rule_id = 3000;
+    String graphviz_sub_query_path;
+
+    ExcludedRulesMap exclude_rules_map;
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;

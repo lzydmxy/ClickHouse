@@ -99,7 +99,6 @@ PlanNodePtr PlanCacheManager::getNewPlanNode(PlanNodePtr node, ContextMutablePtr
 
 void PlanCacheManager::invalidate(ContextMutablePtr)
 {
-    //todo: liyang453, other feat: need to impl
 }
 
 QueryPlanExtPtr PlanCacheManager::getPlanFromCache(UInt128 query_hash, ContextMutablePtr & context)

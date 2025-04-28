@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Query/Optimizer/Rule/Rule.h>
-#include <QueryPlan/JoinStep.h>
+#include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <Query/Optimizer/Rule/Transformation/JoinReorderUtils.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 
@@ -22,12 +22,12 @@ class CardinalityBasedJoinReorder : public Rule
 public:
     explicit CardinalityBasedJoinReorder(size_t max_join_size_): max_join_size(max_join_size_) {
         pattern = Patterns::multiJoin()
-            .matchingStep<MultiJoinStep>([&](const MultiJoinStep & s) { return s.getGraph().getNodes().size() > max_join_size; })
+            .matchingStep<MultiJoinStepExt>([&](const MultiJoinStepExt & s) { return s.getGraph().getNodes().size() > max_join_size; })
             .result();
     }
     RuleType getType() const override { return RuleType::CARDILALITY_BASED_JOIN_REORDER; }
     String getName() const override { return "CARDILALITY_BASED_JOIN_REORDER"; }
-    bool isEnabled(ContextPtr context) const override {return context->getSettingsRef().enable_cardinality_based_join_reorder; }
+    bool isEnabled(ContextPtr context) const override {return context->getOptimizerContext()->getSettingsRef().enable_cardinality_based_join_reorder; }
 
     const std::vector<RuleType> & blockRules() const override;
     ConstRefPatternPtr getPattern() const override;

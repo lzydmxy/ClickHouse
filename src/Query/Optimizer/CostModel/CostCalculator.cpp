@@ -13,7 +13,7 @@
 namespace DB
 {
 
-PlanNodeCost CostCalculator::calculatePlanCost(QueryPlan & plan, const Context & context)
+PlanNodeCost CostCalculator::calculatePlanCost(QueryPlanExt & plan, const Context & context)
 {
     PlanCostMap plan_cost_map;
     if (!plan.getPlanNode()->getStatistics())
@@ -24,7 +24,7 @@ PlanNodeCost CostCalculator::calculatePlanCost(QueryPlan & plan, const Context &
     return VisitorUtil::accept(plan.getPlanNode(), visitor, plan_cost_map).cost;
 }
 
-PlanCostMap CostCalculator::calculate(QueryPlan & plan, const Context & context)
+PlanCostMap CostCalculator::calculate(QueryPlanExt & plan, const Context & context)
 {
     PlanCostMap plan_cost_map;
     if (!plan.getPlanNode()->getStatistics())
@@ -37,16 +37,17 @@ PlanCostMap CostCalculator::calculate(QueryPlan & plan, const Context & context)
 }
 
 PlanNodeCost CostCalculator::calculate(
-    QueryPlanStepPtr & step,
+    QueryPlanStepExtPtr & step,
     const PlanNodeStatisticsPtr & stats,
     const std::vector<PlanNodeStatisticsPtr> & children_stats,
     const Context & context,
     size_t worker_size)
 {
+    QueryPlanStepPtr step_without_ext = std::dynamic_pointer_cast<IQueryPlanStep>(step);
     static CostVisitor visitor;
     CostContext cost_context{
         .cost_model = CostModel{context}, .stats = stats, .children_stats = children_stats, .worker_size = worker_size};
-    return VisitorUtil::accept(step, visitor, cost_context);
+    return VisitorUtil::accept(step_without_ext, visitor, cost_context);
 }
 
 PlanNodeCost CostVisitor::visitStep(const IQueryPlanStep &, CostContext &)
@@ -54,17 +55,17 @@ PlanNodeCost CostVisitor::visitStep(const IQueryPlanStep &, CostContext &)
     return PlanNodeCost::ZERO;
 }
 
-PlanNodeCost CostVisitor::visitProjectionStep(const ProjectionStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitProjectionStepExt(const ProjectionStepExt & step, CostContext & context)
 {
     return ProjectionCost::calculate(step, context);
 }
 
-PlanNodeCost CostVisitor::visitFilterStep(const FilterStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitFilterStepExt(const FilterStepExt & step, CostContext & context)
 {
     return FilterCost::calculate(step, context);
 }
 
-PlanNodeCost CostVisitor::visitJoinStep(const JoinStep & step, CostContext & cost_context)
+PlanNodeCost CostVisitor::visitJoinStepExt(const JoinStepExt & step, CostContext & cost_context)
 {
     return JoinCost::calculate(step, cost_context);
 }
@@ -74,12 +75,12 @@ PlanNodeCost CostVisitor::visitArrayJoinStep(const ArrayJoinStep & step, CostCon
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitAggregatingStep(const AggregatingStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitAggregatingStepExt(const AggregatingStepExt & step, CostContext & context)
 {
     return AggregatingCost::calculate(step, context);
 }
 
-PlanNodeCost CostVisitor::visitReadStorageRowCountStep(const ReadStorageRowCountStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitReadStorageRowCountStepExt(const ReadStorageRowCountStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }
@@ -89,7 +90,7 @@ PlanNodeCost CostVisitor::visitWindowStep(const WindowStep & step, CostContext &
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitMergingAggregatedStep(const MergingAggregatedStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitMergingAggregatedStepExt(const MergingAggregatedStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }
@@ -99,28 +100,28 @@ PlanNodeCost CostVisitor::visitUnionStep(const UnionStep & step, CostContext & c
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitIntersectStep(const IntersectStep & step, CostContext & context)
-{
-    return visitStep(step, context);
-}
+// PlanNodeCost CostVisitor::visitIntersectStep(const IntersectStep & step, CostContext & context)
+// {
+//     return visitStep(step, context);
+// }
+//
+// PlanNodeCost CostVisitor::visitExceptStep(const ExceptStep & step, CostContext & context)
+// {
+//     return visitStep(step, context);
+// }
 
-PlanNodeCost CostVisitor::visitExceptStep(const ExceptStep & step, CostContext & context)
-{
-    return visitStep(step, context);
-}
-
-PlanNodeCost CostVisitor::visitExchangeStep(const ExchangeStep & step, CostContext & cost_context)
+PlanNodeCost CostVisitor::visitExchangeStepExt(const ExchangeStepExt & step, CostContext & cost_context)
 {
     return ExchangeCost::calculate(step, cost_context);
 }
 
 
-PlanNodeCost CostVisitor::visitRemoteExchangeSourceStep(const RemoteExchangeSourceStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitRemoteExchangeSourceStepExt(const RemoteExchangeSourceStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitTableScanStep(const TableScanStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitTableScanStepExt(const TableScanStepExt & step, CostContext & context)
 {
     return TableScanCost::calculate(step, context);
 }
@@ -130,7 +131,7 @@ PlanNodeCost CostVisitor::visitReadNothingStep(const ReadNothingStep & step, Cos
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitValuesStep(const ValuesStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitValuesStepExt(const ValuesStepExt & step, CostContext & context)
 {
     return ValuesCost::calculate(step, context);
 }
@@ -144,27 +145,27 @@ PlanNodeCost CostVisitor::visitLimitByStep(const LimitByStep & step, CostContext
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitSortingStep(const SortingStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitSortingStepExt(const SortingStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitMergeSortingStep(const MergeSortingStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitMergeSortingStepExt(const MergeSortingStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitPartialSortingStep(const PartialSortingStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitPartialSortingStepExt(const PartialSortingStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitMergingSortedStep(const MergingSortedStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitMergingSortedStepExt(const MergingSortedStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitDistinctStep(const DistinctStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitDistinctStepExt(const DistinctStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }
@@ -174,32 +175,32 @@ PlanNodeCost CostVisitor::visitExtremesStep(const ExtremesStep & step, CostConte
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitApplyStep(const ApplyStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitApplyStepExt(const ApplyStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitEnforceSingleRowStep(const EnforceSingleRowStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitEnforceSingleRowStepExt(const EnforceSingleRowStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitAssignUniqueIdStep(const AssignUniqueIdStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitAssignUniqueIdStepExt(const AssignUniqueIdStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitCTERefStep(const CTERefStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitCTERefStepExt(const CTERefStepExt & step, CostContext & context)
 {
     return CTECost::calculate(step, context);
 }
 
-PlanNodeCost CostVisitor::visitExplainAnalyzeStep(const ExplainAnalyzeStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitExplainAnalyzeStepExt(const ExplainAnalyzeStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitTopNFilteringStep(const TopNFilteringStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitTopNFilteringStepExt(const TopNFilteringStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }
@@ -209,10 +210,10 @@ PlanNodeCost CostVisitor::visitFillingStep(const FillingStep & step, CostContext
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitIntermediateResultCacheStep(const IntermediateResultCacheStep & step, CostContext & context)
-{
-    return visitStep(step, context);
-}
+// PlanNodeCost CostVisitor::visitIntermediateResultCacheStep(const IntermediateResultCacheStep & step, CostContext & context)
+// {
+//     return visitStep(step, context);
+// }
 
 CostWithCTEReferenceCounts PlanCostVisitor::visitPlanNode(PlanNodeBase & node, PlanCostMap & plan_cost_map)
 {
@@ -254,7 +255,7 @@ CostWithCTEReferenceCounts PlanCostVisitor::visitPlanNode(PlanNodeBase & node, P
 
 CostWithCTEReferenceCounts PlanCostVisitor::visitCTERefNode(CTERefNode & node, PlanCostMap & plan_cost_map)
 {
-    const auto * cte_step = dynamic_cast<const CTERefStep *>(node.getStep().get());
+    const auto * cte_step = dynamic_cast<const CTERefStepExt *>(node.getStep().get());
     auto res = visitPlanNode(node, plan_cost_map);
     res.cte_reference_counts[cte_step->getId()] += 1;
     return res;

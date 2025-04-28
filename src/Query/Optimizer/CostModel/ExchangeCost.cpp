@@ -1,11 +1,10 @@
 #include <Query/Optimizer/CostModel/ExchangeCost.h>
 
 #include <Query/Optimizer/CostModel/CostCalculator.h>
-#include <QueryPlan/ExchangeStep.h>
 
 namespace DB
 {
-PlanNodeCost ExchangeCost::calculate(const ExchangeStep & step, CostContext & context)
+PlanNodeCost ExchangeCost::calculate(const ExchangeStepExt & step, CostContext & context)
 {
     // if shuffle cost is bigger then no shuffle.
     double base_cost = 1;

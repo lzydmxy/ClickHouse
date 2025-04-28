@@ -1,12 +1,10 @@
 #pragma once
 
-#include <Analyzers/ASTEquals.h>
-#include <Analyzers/TypeAnalyzer.h>
+#include <Query/Analyzer/TypeAnalyzer.h>
 #include <Interpreters/Context_fwd.h>
-#include <Query/Optimizer/EqualityASTMap.h>
 #include <Query/Optimizer/SimpleExpressionRewriter.h>
-#include <Query/Optimizer/Utils.h>
-#include <Parsers/ASTVisitor.h>
+#include <Query/Optimizer/EqualityASTMap.h>
+#include <Query/Parsers/ASTVisitor.h>
 #include <Parsers/IAST_fwd.h>
 
 #include <unordered_map>

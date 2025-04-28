@@ -2,19 +2,17 @@
 
 #include <Query/Optimizer/Rewriter/Rewriter.h>
 #include <Query/Optimizer/Rule/Rule.h>
-#include <QueryPlan/CTEInfo.h>
-#include <QueryPlan/IQueryPlanStep.h>
+#include <Query/Processors/QueryPlan/CTEInfo.h>
 
 #include <unordered_map>
 #include <vector>
-#include <chrono>
 #include <map>
 
 namespace DB
 {
 
 // use a linked multi map to make rule application process more reasonable
-using RuleIndex = std::unordered_map<IQueryPlanStep::Type, std::vector<RulePtr>>;
+using RuleIndex = std::unordered_map<QueryPlanStepType, std::vector<RulePtr>>;
 
 struct IterativeRewriterContext
 {
@@ -39,8 +37,8 @@ public:
     static std::map<std::underlying_type_t<RuleType>, size_t> getRuleCallTimes();
     String name() const override { return names; }
 private:
-    bool isEnabled(ContextMutablePtr context) const override { return context->getSettingsRef().enable_iterative_rewriter; }
-    bool rewrite(QueryPlan & plan, ContextMutablePtr context) const override;
+    bool isEnabled(ContextMutablePtr context) const override { return context->getOptimizerContext()->getSettingsRef().enable_iterative_rewriter; }
+    bool rewrite(QueryPlanExt & plan, ContextMutablePtr context) const override;
 
     String names;
     RuleIndex rules;

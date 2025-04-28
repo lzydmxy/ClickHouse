@@ -1,13 +1,14 @@
 #pragma once
+
 #include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
-#include <Processors/QueryPlan/FinalSampleStep.h>
+#include <Query/Processors/QueryPlan/FinalSampleStepExt.h>
 
 namespace DB
 {
 class SampleEstimator
 {
 public:
-    static PlanNodeStatisticsPtr estimate(PlanNodeStatisticsPtr & child_stats, const FinalSampleStep &);
+    static PlanNodeStatisticsPtr estimate(PlanNodeStatisticsPtr & child_stats, const FinalSampleStepExt &);
 };
 
 }

@@ -142,7 +142,7 @@ public:
     /// Adjust the parallel replicas settings (enabled, disabled) based on the query analysis
     bool adjustParallelReplicasAfterAnalysis();
 
-
+    std::optional<UInt64> getTrivialCount(UInt64 max_parallel_replicas);
 private:
     InterpreterSelectQuery(
         const ASTPtr & query_ptr_,
@@ -198,7 +198,6 @@ private:
     void executeExtremes(QueryPlan & query_plan);
     void executeSubqueriesInSetsAndJoins(QueryPlan & query_plan);
     bool autoFinalOnQuery(ASTSelectQuery & select_query);
-    std::optional<UInt64> getTrivialCount(UInt64 max_parallel_replicas);
     /// Check if we can limit block size to read based on LIMIT clause
     UInt64 maxBlockSizeByLimit() const;
 

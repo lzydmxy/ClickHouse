@@ -12,10 +12,12 @@
 #include <Query/Optimizer/Property/PropertyEnforcer.h>
 #include <Query/Optimizer/Property/PropertyMatcher.h>
 #include <Query/Optimizer/Rule/Rule.h>
-#include <QueryPlan/JoinStep.h>
-#include <common/logger_useful.h>
+#include <Query/Processors/QueryPlan/JoinStepExt.h>
+#include <Common/logger_useful.h>
 #include <Interpreters/Context_fwd.h>
-#include <QueryPlan/IQueryPlanStep.h>
+#include <Query/Processors/IQueryPlanStepExt.h>
+#include <Query/Common/StopwatchExt.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 
 #include <algorithm>
 
@@ -99,7 +101,7 @@ void OptimizeExpression::execute()
         {
             // If child_pattern has any more children (i.e non-leaf), then we will explore the
             // child before applying the rule. (assumes task pool is effectively a stack)
-            if (!child_pattern->getChildrenPatterns().empty() || child_pattern->getTargetType() == IQueryPlanStep::Type::Tree)
+            if (!child_pattern->getChildrenPatterns().empty() || child_pattern->getTargetType() == QueryPlanStepType::Tree)
             {
                 auto group = context->getMemo().getGroupById(group_expr->getChildrenGroups()[child_group_idx]);
                 if (!group->hasExplored())
@@ -153,7 +155,7 @@ void ExploreExpression::execute()
         {
             // Only need to explore non-leaf children before applying rule to the
             // current group. this condition is important for early-pruning
-            if (!child_pattern->getChildrenPatterns().empty() || child_pattern->getTargetType() == IQueryPlanStep::Type::Tree)
+            if (!child_pattern->getChildrenPatterns().empty() || child_pattern->getTargetType() == QueryPlanStepType::Tree)
             {
                 auto group = context->getMemo().getGroupById(group_expr->getChildrenGroups()[child_group_idx]);
                 if (!group->hasExplored())
@@ -210,7 +212,7 @@ void ApplyRule::execute()
         {
             GroupExprPtr new_group_expr = nullptr;
             auto g_id = group_expr->getGroupId();
-            auto logical_rule = new_expr->getStep()->isLogical() ? rule->getType() : group_expr->getProduceRule();
+            auto logical_rule = QueryPlanStepHelper::isPhysicalQueryPlanStep(new_expr->getStep()) ? rule->getType() : group_expr->getProduceRule();
             if (context->getOptimizerContext().recordPlanNodeIntoGroup(new_expr, new_group_expr, logical_rule, g_id))
             {
                 // LOG_TRACE(log, "Success Apply Rule For Expression In Group {}; Rule Type: {}", group_expr->getGroupId(), rule->getType());
@@ -300,7 +302,7 @@ void OptimizeInput::execute()
         }
 
         // Forward to OptimizeCTE
-        if (group_expr->getStep()->getType() == IQueryPlanStep::Type::CTERef)
+        if (getQueryPlanStepType(group_expr->getStep()) == QueryPlanStepType::CTERefStepExt)
         {
             pushTask(std::make_shared<OptimizeCTE>(group_expr, context));
             return;
@@ -406,7 +408,7 @@ void OptimizeInput::execute()
                     single_count++;
             }
 
-            if (group_expr->getStep()->getType() == IQueryPlanStep::Type::Union && single_count > 0
+            if (getQueryPlanStepType(group_expr->getStep()) == QueryPlanStepType::UnionStepExt && single_count > 0
                 && single_count < group_expr->getChildrenGroups().size())
             {
                 auto new_child_requires = input_props;
@@ -423,7 +425,7 @@ void OptimizeInput::execute()
                 continue;
             }
 
-            bool vaild = group_expr->getStep()->getType() == IQueryPlanStep::Type::Join
+            bool vaild = getQueryPlanStepType(group_expr->getStep()) == QueryPlanStepType::JoinStepExt
                 ? checkJoinInputProperties(input_props, actual_input_props)
                 : true;
             if (vaild)
@@ -499,7 +501,7 @@ void OptimizeInput::exploreInputProperties()
         auto & cte_def_required_properties = context->getOptimizerContext().getCTEDefPropertyRequirements()[cte_id];
         if (!cte_def_required_properties.empty())
         {
-            if (context->getOptimizerContext().getContext()->getSettingsRef().enable_cte_property_enum)
+            if (context->getOptimizerContext().getContext()->getOptimizerContext()->getSettingsRef().enable_cte_property_enum)
             {
                 // CTERef may require identical properties. These properties can be enforced in the CTEDef to
                 // avoid repeated work.
@@ -507,7 +509,7 @@ void OptimizeInput::exploreInputProperties()
                     addInputPropertiesForCTE(cte_id, CTEDescription::from(winner));
             }
 
-            if (context->getOptimizerContext().getContext()->getSettingsRef().enable_cte_common_property)
+            if (context->getOptimizerContext().getContext()->getOptimizerContext()->getSettingsRef().enable_cte_common_property)
             {
                 // It is too expensive to enumerate all possible properties, especially if there are lots CTERef.
                 // We can only optimize for common property instead.
@@ -573,7 +575,7 @@ static PropertySets makeHandleSame(const PropertySet & input_props, const Proper
     }
     result.emplace_back(new_child_requires);
 
-    if (actual_props[0].getNodePartitioning().isExchangeSchema(context->getSettingsRef().enable_bucket_shuffle)
+    if (actual_props[0].getNodePartitioning().isExchangeSchema(context->getOptimizerContext()->getSettingsRef().enable_bucket_shuffle)
         && actual_props[0].getNodePartitioning().getHandle() == Partitioning::Handle::BUCKET_TABLE)
     {
         auto other_new_child_requires = new_child_requires;
@@ -586,7 +588,7 @@ static PropertySets makeHandleSame(const PropertySet & input_props, const Proper
         result.emplace_back(other_new_child_requires);
     }
 
-    if (actual_props[1].getNodePartitioning().isExchangeSchema(context->getSettingsRef().enable_bucket_shuffle)
+    if (actual_props[1].getNodePartitioning().isExchangeSchema(context->getOptimizerContext()->getSettingsRef().enable_bucket_shuffle)
         && actual_props[1].getNodePartitioning().getHandle() == Partitioning::Handle::BUCKET_TABLE)
     {
         auto other_new_child_requires = new_child_requires;
@@ -625,7 +627,7 @@ bool OptimizeInput::checkJoinInputProperties(const PropertySet & requried_input_
 
         NameToNameSetMap right_join_key_to_left;
         DefaultTMap<String> before_left_rep_map, before_right_rep_map;
-        if (const auto * join_step = dynamic_cast<const JoinStep *>(group_expr->getStep().get()))
+        if (const auto * join_step = dynamic_cast<const JoinStepExt *>(group_expr->getStep().get()))
         {
             auto left_rep_map = left_equivalences->representMap();
             auto right_rep_map = right_equivalences->representMap();
@@ -739,7 +741,7 @@ void OptimizeInput::enforcePropertyAndUpdateWinner(
             output_prop.getStreamPartitioning(),
             *equivalences,
             constants,
-            opt_context->getOptimizerContext().getContext()->getSettingsRef().enable_add_local_exchange))
+            opt_context->getOptimizerContext().getContext()->getOptimizerContext()->getSettingsRef().enable_add_local_exchange))
     {
         // add local exchange
         local_exchange = PropertyEnforcer::enforceStreamPartitioning(
@@ -763,10 +765,10 @@ void OptimizeInput::enforcePropertyAndUpdateWinner(
         auto it = cte_actual_props.emplace(cte_prop);
 
         // increase cost if the cte exists both join side. disable q11 & q74 cte for tpcds.
-        if (!it.second && group_expr->getStep()->getType() == IQueryPlanStep::Type::Join)
+        if (!it.second && getQueryPlanStepType(group_expr->getStep()) == QueryPlanStepType::JoinStepExt)
         {
             auto coefficient
-                = opt_context->getOptimizerContext().getContext()->getSettingsRef().cost_calculator_cte_weight_for_join_build_side;
+                = opt_context->getOptimizerContext().getContext()->getOptimizerContext()->getSettingsRef().cost_calculator_cte_weight_for_join_build_side;
             it.first->second.second = std::max(it.first->second.second, cte_prop.second.second) * coefficient;
         }
     }

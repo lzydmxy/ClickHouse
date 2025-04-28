@@ -30,7 +30,7 @@ PatternRawPtrs Pattern::getChildrenPatterns() const
 
     if (const auto * type_of_pattern = dynamic_cast<const TypeOfPattern *>(pattern))
     {
-        if (type_of_pattern->type == IQueryPlanStep::Type::Tree)
+        if (type_of_pattern->type == QueryPlanStepType::Tree)
             return {type_of_pattern};
     }
     return children_patterns;
@@ -38,7 +38,7 @@ PatternRawPtrs Pattern::getChildrenPatterns() const
 
 // By convention, the head pattern is a TypeOfPattern,
 // which indicates which plan node type this pattern is targeted to
-std::unordered_set<IQueryPlanStep::Type> Pattern::getTargetTypes() const
+std::unordered_set<QueryPlanStepType> Pattern::getTargetTypes() const
 {
     PatternRawPtr pattern = this;
     while (pattern->getPrevious())
@@ -48,7 +48,7 @@ std::unordered_set<IQueryPlanStep::Type> Pattern::getTargetTypes() const
         return {type_of_pattern->type};
     else if (const auto * or_pattern = dynamic_cast<const OneOfPattern *>(pattern))
     {
-        std::unordered_set<IQueryPlanStep::Type> result;
+        std::unordered_set<QueryPlanStepType> result;
         for (const auto & sub_pat : or_pattern->getSubPatterns())
         {
             auto sub_res = sub_pat->getTargetTypes();
@@ -58,10 +58,10 @@ std::unordered_set<IQueryPlanStep::Type> Pattern::getTargetTypes() const
     }
     else
         throw Exception(
-            "Head pattern must be a TypeOfPattern or OneOfPattern, illegal pattern found: " + toString(), ErrorCodes::LOGICAL_ERROR);
+            ErrorCodes::LOGICAL_ERROR, "Head pattern must be a TypeOfPattern or OneOfPattern, illegal pattern found: {}", toString());
 }
 
-IQueryPlanStep::Type Pattern::getTargetType() const
+QueryPlanStepType Pattern::getTargetType() const
 {
     auto types = getTargetTypes();
     if (types.size() != 1)
@@ -79,7 +79,7 @@ String Pattern::toString() const
 
 std::optional<Match> TypeOfPattern::accept(const PlanNodePtr & node, Captures & captures) const
 {
-    if (type == IQueryPlanStep::Type::Any || type == IQueryPlanStep::Type::Tree || type == node->getStep()->getType())
+    if (type == QueryPlanStepType::AnyStepExt || type == QueryPlanStepType::Tree || type == getQueryPlanStepType(node->getStep()))
     {
         if (attaching_predicate && !attaching_predicate(node->getStep(), captures))
             return {};
@@ -221,7 +221,7 @@ void PatternPrinter::visitWithPattern(const WithPattern & pattern)
                 return "all";
         }
 
-        throw Exception("Unknown with type", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Unknown with type");
     })(pattern);
 
     appendLine("with " + withType + ":");
@@ -238,16 +238,16 @@ void PatternPrinter::visitTypeOfPattern(const TypeOfPattern & pattern)
 {
     visitPrevious(pattern);
 #define PRINT_STEP_TYPE(ITEM) \
-    case IQueryPlanStep::Type::ITEM: \
+    case QueryPlanStepType::ITEM: \
         appendLine("typeOf: " #ITEM); \
         break;
 
     switch (pattern.type)
     {
-        case IQueryPlanStep::Type::Any:
+        case QueryPlanStepType::AnyStepExt:
             appendLine("typeOf: Any");
             break;
-            APPLY_STEP_TYPES(PRINT_STEP_TYPE)
+            APPLY_PROTOBUF_STEP_TYPES(PRINT_STEP_TYPE)
         default:
             break;
     }

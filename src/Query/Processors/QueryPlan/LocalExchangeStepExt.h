@@ -2,6 +2,7 @@
 
 #include <Processors/QueryPlan/ITransformingStep.h>
 #include <Query/ProtosHelper/ExchangeMode.h>
+#include <Query/Optimizer/Property/Property.h>
 
 
 namespace DB
@@ -10,9 +11,7 @@ namespace DB
     class LocalExchangeStepExt : public ITransformingStep
     {
     public:
-        //todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
-        // explicit LocalExchangeStep(const DataStream & input_stream_, const ExchangeMode & mode_, Partitioning schema_);
-        explicit LocalExchangeStepExt(const DataStream & input_stream_, const RExchangeMode::Enum & mode_);
+        explicit LocalExchangeStepExt(const DataStream & input_stream_, const RExchangeMode::Enum & mode_, Partitioning schema_);
 
         String getName() const override
         {
@@ -23,8 +22,7 @@ namespace DB
 
         const RExchangeMode::Enum & getExchangeMode() const { return exchange_type; }
 
-        //todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
-        // const Partitioning & getSchema() const { return schema; }
+        const Partitioning & getSchema() const { return schema; }
 
         Block getHeader() const
         {
@@ -39,8 +37,7 @@ namespace DB
 
     private:
         RExchangeMode::Enum exchange_type = RExchangeMode::UNKNOWN;
-        //todo: zhangwanyun1, need optimizer: need Partitioning from Optimizer/Property/Property.h
-        // Partitioning schema;
+        Partitioning schema;
     };
 
 

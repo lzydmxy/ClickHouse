@@ -1,8 +1,8 @@
 #pragma once
 #include <Interpreters/Context.h>
 #include <Query/Optimizer/Rule/Pattern.h>
-#include <QueryPlan/CTEInfo.h>
-#include <QueryPlan/PlanNode.h>
+#include <Query/Processors/QueryPlan/CTEInfo.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
 
 #include <utility>
 
@@ -207,7 +207,7 @@ public:
         return empty;
     }
 
-    const std::unordered_set<IQueryPlanStep::Type> & getTargetTypes()
+    const std::unordered_set<QueryPlanStepType> & getTargetTypes()
     {
         if (target_types.empty())
         {
@@ -225,7 +225,7 @@ protected:
     virtual TransformResult transformImpl(PlanNodePtr node, const Captures & captures, RuleContext & context) = 0;
 
 private:
-    std::unordered_set<IQueryPlanStep::Type> target_types;
+    std::unordered_set<QueryPlanStepType> target_types;
 };
 
 class TransformResult final

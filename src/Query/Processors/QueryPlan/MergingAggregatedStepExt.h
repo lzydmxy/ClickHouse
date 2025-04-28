@@ -42,10 +42,16 @@ public:
         return memory_efficient_aggregation;
     }
     size_t getMaxThreads() const { return max_threads; }
+    size_t getMaxBlockSize() const { return max_block_size; }
+    size_t getMemoryBoundMergingMaxBlockBytes() const { return memory_bound_merging_max_block_bytes; }
+
+    bool isFinal() const { return final; }
     size_t getMemoryEfficientMergeThreads() const { return memory_efficient_merge_threads; }
     bool isShouldProduceResultsInOrderOfBucketNumber() const { return should_produce_results_in_order_of_bucket_number; }
     void setShouldProduceResultsInOrderOfBucketNumber(bool value) { should_produce_results_in_order_of_bucket_number = value; }
     void setMemoryEfficientAggregation(bool value) { memory_efficient_aggregation = value; }
+    bool getMemoryBoundMergingOfAggregationResultsEnabled() const {return memory_bound_merging_of_aggregation_results_enabled;}
+    const SortDescription & getGroupBySortDescription() const {return group_by_sort_description;}
 
     void updateOutputStream() override;
 private:

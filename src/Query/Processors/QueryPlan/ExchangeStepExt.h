@@ -13,9 +13,7 @@ class ReadBuffer;
 class ExchangeStepExt : public IQueryPlanStep
 {
 public:
-    //todo: zhangwanyun, need optimizer: need Partitioning from Optimizer/Property/Property.h
-    // explicit ExchangeStepExt(DataStreams input_streams_, const RExchangeMode & mode_,  Partitioning schema_, bool keep_order_ = false);
-    explicit ExchangeStepExt(DataStreams input_streams_, const RExchangeMode::Enum & mode_, bool keep_order_ = false);
+    explicit ExchangeStepExt(DataStreams input_streams_, const RExchangeMode::Enum & mode_, Partitioning schema_, bool keep_order_ = false);
 
     String getName() const override { return "ExchangeStepExt"; }
 

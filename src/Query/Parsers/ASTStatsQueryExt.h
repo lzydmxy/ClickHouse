@@ -8,6 +8,7 @@
 #include <Common/quoteString.h>
 #include <Common/SettingsChanges.h>
 #include <Query/Parsers/ASTType.h>
+#include <Query/Common/OptimizerSettings.h>
 
 
 namespace DB
@@ -25,12 +26,6 @@ enum class StatsQueryKind
     ALL_STATS
 };
 
-enum class StatisticsCachePolicy
-{
-    Default,
-    Cache,
-    Catalog,
-};
 
 String formatStatsQueryKind(StatsQueryKind kind);
 struct CreateStatsQueryInfoExt;

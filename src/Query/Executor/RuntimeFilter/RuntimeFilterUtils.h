@@ -36,7 +36,7 @@ public:
         RuntimeFilterId id, const std::string & symbol, const std::vector<String> & partition_columns, double filter_factor);
     static ConstASTPtr createRuntimeFilterExpression(const RuntimeFilterDescription & description);
 
-    static RuntimeFilterId extractId(const ASTPtr & runtime_filter);
+    static RuntimeFilterId extractId(const ConstASTPtr & runtime_filter);
     static std::optional<RuntimeFilterDescription> extractDescription(const ASTPtr & runtime_filter);
 
     /* runtime_filters, static_filters */
@@ -62,7 +62,7 @@ public:
 
     static ASTs generateFunctionArgs(const RuntimeFilterDescription & description, const String & query_id);
     static bool containsRuntimeFilters(ConstASTPtr filter);
-    static std::vector<RuntimeFilterId> extractRuntimeFilterId(const ASTPtr & conjuncts);
+    static std::vector<RuntimeFilterId> extractRuntimeFilterId(const ConstASTPtr & conjuncts);
 
     static ASTPtr removeAllInternalRuntimeFilters(ASTPtr expr);
 };

@@ -31,5 +31,4 @@ public:
 protected:
     SimpleCTEVisitHelper<void> cte_helper;
 };
-
 }

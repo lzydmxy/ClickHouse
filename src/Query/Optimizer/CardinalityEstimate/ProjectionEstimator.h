@@ -1,16 +1,15 @@
-
-
 #pragma once
+
 #include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
-#include <Parsers/ASTVisitor.h>
-#include <Processors/QueryPlan/ProjectionStep.h>
+#include <Query/Parsers/ASTVisitor.h>
+#include <Query/Processors/QueryPlan/ProjectionStepExt.h>
 
 namespace DB
 {
 class ProjectionEstimator
 {
 public:
-    static PlanNodeStatisticsPtr estimate(PlanNodeStatisticsPtr & child_stats, const ProjectionStep & step);
+    static PlanNodeStatisticsPtr estimate(PlanNodeStatisticsPtr & child_stats, const ProjectionStepExt & step);
 };
 
 // calculate expression stats

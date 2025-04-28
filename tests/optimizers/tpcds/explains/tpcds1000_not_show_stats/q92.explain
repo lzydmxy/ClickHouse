@@ -1,0 +1,44 @@
+Projection
+│     Expressions: Excess Discount Amount:=`expr#sum(ws_ext_discount_amt)`
+└─ Limit
+   │     Limit: 100
+   └─ Sorting
+      │     Order by: {expr#sum(ws_ext_discount_amt) ASC NULLS LAST}
+      │     Limit: 100
+      └─ MergingAggregated
+         └─ Gather Exchange
+            └─ Aggregating
+               │     Group by: {}
+               │     Aggregates: expr#sum(ws_ext_discount_amt):=AggNull(sum)(ws_ext_discount_amt)
+               └─ Projection
+                  │     Expressions: [ws_ext_discount_amt]
+                  └─ Filter
+                     │     Condition: ws_ext_discount_amt > ('1.3' * `expr#avg(ws_ext_discount_amt)`)
+                     └─ Window
+                        └─ Inner Join
+                           │     Condition: ws_sold_date_sk == d_date_sk
+                           │     Runtime Filters Builder: {d_date_sk}
+                           ├─ Inner Join
+                           │  │     Condition: ws_item_sk == i_item_sk
+                           │  │     Runtime Filters Builder: {i_item_sk}
+                           │  ├─ Filter
+                           │  │  │     Condition: Runtime Filters: {ws_item_sk, ws_sold_date_sk}
+                           │  │  └─ TableScan tpcds1000.web_sales
+                           │  │           Where: Runtime Filters: {ws_item_sk, ws_sold_date_sk}
+                           │  │           Outputs: [ws_sold_date_sk, ws_item_sk, ws_ext_discount_amt]
+                           │  └─ Projection
+                           │     │     Expressions: [i_item_sk]
+                           │     └─ Filter
+                           │        │     Condition: i_manufact_id = 350
+                           │        └─ TableScan tpcds1000.item
+                           │                 Where: i_manufact_id = 350
+                           │                 Outputs: [i_item_sk, i_manufact_id]
+                           └─ Broadcast Exchange
+                              └─ Projection
+                                 │     Expressions: [d_date_sk]
+                                 └─ Filter
+                                    │     Condition: (d_date >= cast(10983, 'Date32')) AND (d_date <= cast(11073, 'Date32'))
+                                    └─ TableScan tpcds1000.date_dim
+                                             Where: (d_date >= cast(10983, 'Date32')) AND (d_date <= cast(11073, 'Date32'))
+                                             Outputs: [d_date_sk, d_date]
+note: Runtime Filter is applied for 2 times.

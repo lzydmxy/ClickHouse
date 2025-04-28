@@ -1,8 +1,8 @@
 #pragma once
 
 #include <Query/Optimizer/Property/Property.h>
-#include <QueryPlan/CTEVisitHelper.h>
-#include <QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/CTEVisitHelper.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
 
 
 namespace DB
@@ -45,8 +45,8 @@ class DeriverVisitor : public StepVisitor<Property, DeriverContext>
 public:
     Property visitStep(const IQueryPlanStep &, DeriverContext &) override;
 
-#define VISITOR_DEF(TYPE) Property visit##TYPE##Step(const TYPE##Step & step, DeriverContext & context) override;
-    APPLY_STEP_TYPES(VISITOR_DEF)
+#define VISITOR_DEF(TYPE) Property visit##TYPE(const TYPE & step, DeriverContext & context) override;
+    APPLY_PROTOBUF_STEP_TYPES(VISITOR_DEF)
 #undef VISITOR_DEF
 };
 
@@ -56,7 +56,7 @@ public:
     PlanDeriverVisitor(CTEInfo & cte_info, bool ignore_null_) : cte_helper(cte_info), ignore_null(ignore_null_) { }
 
     Property visitPlanNode(PlanNodeBase &, ContextMutablePtr &) override;
-    Property visitCTERefNode(CTERefNode & node, ContextMutablePtr & context) override;
+    Property visitCTERefStepExtNode(CTERefStepExtNode & node, ContextMutablePtr & context) override;
 
 private:
     SimpleCTEVisitHelper<Property> cte_helper;

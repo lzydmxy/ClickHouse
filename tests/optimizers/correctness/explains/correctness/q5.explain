@@ -1,0 +1,5 @@
+Projection Est. ? rows
+│     Expressions: [a, b]
+└─ Gather Exchange Est. ? rows
+   └─ TableScan correctness.q5_t1 Est. ? rows
+            Outputs: [a, b]

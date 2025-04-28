@@ -4,7 +4,7 @@
 #include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
 #include <Query/Optimizer/Property/Property.h>
 #include <Query/Optimizer/Rule/Rule.h>
-#include <QueryPlan/IQueryPlanStep.h>
+#include <Query/Processors/IQueryPlanStepExt.h>
 
 #include <memory>
 #include <utility>

@@ -1,15 +1,20 @@
 #pragma once
 
-#include <Query/Processors/QueryPlan/PlanNode.h>
-
 #include <any>
-#include <atomic>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
 
+#include <Common/Exception.h>
+
 namespace DB
 {
+
+namespace ErrorCodes
+{
+extern const int LOGICAL_ERROR;
+}
+
 
 using Capture = std::string_view;
 
@@ -23,7 +28,7 @@ public:
         auto next = iters.first;
 
         if (iters.first == iters.second || ++next != iters.second) {
-            throw Exception(ErrorCodes::LOGICAL_ERROR, "Not unique capture for this capture key: " + String{capture});
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "Not unique capture for this capture key: {}", capture);
         }
 
         return std::any_cast<T>(iters.first->second);

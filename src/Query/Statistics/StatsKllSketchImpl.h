@@ -1,0 +1,309 @@
+#pragma once
+
+#include <DataTypes/IDataType.h>
+#include <Query/Statistics/SerdeUtils.h>
+#include <Query/Statistics/StatisticsBase.h>
+#include <Query/Statistics/StatsKllSketch.h>
+#include <Query/Statistics/VectorSerde.h>
+#include <Common/Exception.h>
+#include <Query/Statistics/Base64.h>
+#include <Query/Statistics/BucketBoundsImpl.h>
+#include <Query/Statistics/DataSketchesHelper.h>
+#include <Query/Statistics/SerdeUtils.h>
+#include <Query/Statistics/StatsNdvBucketsResultImpl.h>
+#include <Query/Statistics/StringHash.h>
+#include <Query/Statistics/serde_extend.h>
+#include <Query/Statistics/CollectorSettings.h>
+
+#include <boost/lexical_cast.hpp>
+
+#include <cmath>
+#include <string_view>
+#include <city.h>
+
+namespace DB::QueryStatistics
+{
+namespace impl
+{
+    /// @description trim array of data to at most 2 duplicated
+    /// @example [1, 1, 2, 3, 4, 4, 4, 5, 6, 6, 6, 6] => [1, 1, 2, 3, 4, 4, 5, 6, 6]
+    /// @param src sorted array of data
+    /// @return trimmed array of data
+    template <typename T>
+    std::vector<T> trimBucketBounds(const std::vector<T> & src)
+    {
+        if (src.empty())
+        {
+            return {};
+        }
+        std::vector<T> result;
+        auto last_count = 0;
+        T last = src[0];
+        for (auto & x : src)
+        {
+            if (x == last)
+            {
+                if (last_count < 2)
+                {
+                    result.push_back(x);
+                }
+                ++last_count;
+            }
+            else
+            {
+                last = x;
+                last_count = 1;
+                result.push_back(x);
+            }
+        }
+        return result;
+    }
+
+    // algorithm to generate bucket bounds from kll_sketch
+    template <typename T>
+    std::vector<T> generateBoundsFromKll(const datasketches::kll_sketch<T> & kll, UInt64 histogram_bucket_size)
+    {
+        // dump internal data from kll_sketch
+        std::vector<T> internal_bounds;
+        for (auto [k, v] : kll)
+        {
+            // internal data is of format <data, node_freq>
+            // dump data only since we just need it
+            internal_bounds.emplace_back(k);
+        }
+        std::sort(internal_bounds.begin(), internal_bounds.end());
+        internal_bounds = trimBucketBounds(internal_bounds);
+
+        if (internal_bounds.size() < histogram_bucket_size)
+        {
+            if (internal_bounds.size() <= histogram_bucket_size / 2)
+            {
+                // construct top K like bounds
+                // i.e. [1, 1, 3, 3, 5, 5, ...]
+                auto end = std::unique(internal_bounds.begin(), internal_bounds.end());
+                internal_bounds.resize(std::distance(internal_bounds.begin(), end));
+                std::vector<T> result;
+                for (auto & x : internal_bounds)
+                {
+                    result.push_back(x);
+                    result.push_back(x);
+                }
+                return result;
+            }
+            // in case data points are not sufficient
+            // use internal bounds directly
+            return internal_bounds;
+        }
+        else
+        {
+            // quantiles API will return split points on [0.0, 1/(size -1), 2/(size -1),..., 1.0]
+            // to get equal-height bucket, we need to add 1 more split point
+            auto quantiles = kll.get_quantiles(histogram_bucket_size + 1, false);
+            // rewrite min/max to the accurate one
+            quantiles[0] = kll.get_min_item();
+            quantiles[histogram_bucket_size] = kll.get_max_item();
+            return trimBucketBounds(quantiles);
+        }
+    }
+}
+template <typename T>
+class StatsKllSketchImpl : public StatsKllSketch
+{
+public:
+    using Self = StatsKllSketchImpl;
+    static constexpr bool is_string = std::is_same_v<T, String>;
+    using EmbeddedType = std::conditional_t<is_string, UInt64, T>;
+    using ViewType = std::conditional_t<is_string, std::string_view, T>;
+
+    template <typename U = T>
+    static inline EmbeddedType hash(std::string_view str)
+    {
+        // enable only when T is string
+        // using sfinae
+        static_assert(is_string);
+        return QueryStatistics::stringHash64(str);
+    }
+
+    // default value of logK of kll_sketch is 1600
+    explicit StatsKllSketchImpl(UInt64 logK = DEFAULT_KLL_SKETCH_LOG_K) : data(logK) { }
+
+    String serialize() const override;
+    void deserialize(std::string_view blob) override;
+
+    void update(ViewType value)
+    {
+        if constexpr (std::is_same_v<T, String>)
+        {
+            data.update(hash(value));
+        }
+        else
+        {
+            data.update(value);
+        }
+    }
+
+    void merge(const StatsKllSketchImpl & rhs) { data.merge(rhs.data); }
+
+    SerdeDataType getSerdeDataType() const override { return SerdeDataTypeFrom<T>; }
+
+    bool isEmpty() const override { return data.is_empty(); }
+
+    T getMinItem() { return data.get_min_item(); }
+    T getMaxItem() { return data.get_max_item(); }
+
+    std::shared_ptr<BucketBounds> getBucketBounds(UInt64 bucket_size) const override;
+
+    int64_t getCount() const override { return data.get_n(); }
+
+    // assuming ndv==count for each bucket
+    // generate ndvBucketsResultImpl
+    std::shared_ptr<StatsNdvBucketsResultImpl<T>> generateNdvBucketsResultImpl(double total_ndv, UInt64 histogram_bucket_size) const;
+
+    std::shared_ptr<StatsNdvBucketsResult> generateNdvBucketsResult(double total_ndv, UInt64 histogram_bucket_size) const override
+    {
+        return generateNdvBucketsResultImpl(total_ndv, histogram_bucket_size);
+    }
+
+protected:
+    // hide since these function won't be used in derived class
+    std::optional<double> minAsDouble() const override
+    {
+        if (data.is_empty())
+        {
+            return std::nullopt;
+        }
+        else
+        {
+            return QueryStatistics::toDouble(data.get_min_item());
+        }
+    }
+    std::optional<double> maxAsDouble() const override
+    {
+        if (data.is_empty())
+        {
+            return std::nullopt;
+        }
+        else
+        {
+            return QueryStatistics::toDouble(data.get_max_item());
+        }
+    }
+
+private:
+    datasketches::kll_sketch<EmbeddedType> data;
+};
+
+template <typename T>
+inline std::shared_ptr<BucketBounds> StatsKllSketchImpl<T>::getBucketBounds(UInt64 histogram_bucket_size) const
+{
+    auto bounds = std::make_shared<BucketBoundsImpl<T>>();
+    auto vec = impl::generateBoundsFromKll(data, histogram_bucket_size);
+    bounds->setBounds(std::move(vec));
+    return bounds;
+}
+
+template <typename T>
+String StatsKllSketchImpl<T>::serialize() const
+{
+    std::ostringstream ss;
+    auto serde_data_type = SerdeDataTypeFrom<T>;
+    ss.write(reinterpret_cast<const char *>(&serde_data_type), sizeof(serde_data_type));
+    data.serialize(ss);
+    return ss.str();
+}
+
+template <typename T>
+void StatsKllSketchImpl<T>::deserialize(std::string_view raw_blob)
+{
+    auto [serde_data_type, blob] = parseBlobWithHeader(raw_blob);
+    checkSerdeDataType<T>(serde_data_type);
+    data = decltype(data)::deserialize(blob.data(), blob.size());
+}
+
+namespace impl
+{
+    template <typename T>
+    inline T nextAfter(const T x)
+    {
+        if constexpr (std::is_floating_point_v<T>)
+        {
+            return std::nextafter(x, std::numeric_limits<T>::max());
+        }
+        else
+        {
+            if (x < std::numeric_limits<T>::max())
+            {
+                return x + 1;
+            }
+            else
+            {
+                return x;
+            }
+        }
+    }
+}
+
+// return null when ndv < 2
+template <typename T>
+std::shared_ptr<StatsNdvBucketsResultImpl<T>> StatsKllSketchImpl<T>::generateNdvBucketsResultImpl(double total_ndv, UInt64 histogram_bucket_size) const
+{
+    auto bounds = impl::generateBoundsFromKll(data, histogram_bucket_size);
+    auto output_bounds = bounds;
+
+    auto row_count = data.get_n();
+    auto num_bucket = bounds.size() - 1;
+
+    if (num_bucket <= 1)
+    {
+        return nullptr;
+    }
+
+    for (size_t i = 0; i < num_bucket; ++i)
+    {
+        if (bounds[i] == bounds[i + 1])
+        {
+            auto & x = bounds[i + 1];
+            x = impl::nextAfter(x);
+            // to avoid mistakenly change
+            ++i;
+        }
+    }
+
+    std::vector<EmbeddedType> splitters;
+    std::unique_copy(bounds.begin(), bounds.end(), std::back_inserter(splitters));
+    auto cdfs = data.get_CDF(splitters.data(), splitters.size());
+    std::vector<uint64_t> counts;
+    int splitter_id = 0;
+    UInt64 last_sum = 0;
+    for (UInt64 i = 0; i < num_bucket - 1; ++i)
+    {
+        auto x = bounds[i + 1];
+        if (x != splitters[splitter_id])
+        {
+            ++splitter_id;
+        }
+        assert(splitters[splitter_id] == x);
+        UInt64 ncdf = static_cast<UInt64>(std::round(cdfs[splitter_id] * row_count));
+        counts.push_back(ncdf - last_sum);
+        last_sum = ncdf;
+    }
+    counts.push_back(row_count - last_sum);
+    assert(num_bucket == counts.size());
+
+    BucketBoundsImpl<T> bounds_obj;
+    bounds_obj.setBounds(std::move(output_bounds));
+    std::vector<double> ndvs;
+    for (auto cnt : counts)
+    {
+        // TODO scale this
+        double ndv = std::llround(total_ndv * cnt / row_count);
+        if (cnt != 0)
+        {
+            ndv = std::max(1.0, ndv);
+        }
+        ndvs.push_back(ndv);
+    }
+    return StatsNdvBucketsResultImpl<T>::createImpl(bounds_obj, std::move(counts), std::move(ndvs));
+}
+
+}
