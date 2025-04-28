@@ -54,7 +54,7 @@ public:
     PlanNodePtr getNodeById(PlanNodeId node_id) const;
 
     static PlanNodePtr createPlanNode(
-        [[maybe_unused]] PlanNodeId id_, [[maybe_unused]] QueryPlanStepPtr step_, [[maybe_unused]] const PlanNodes & children_ = {}
+        [[maybe_unused]] PlanNodeId id_, [[maybe_unused]] QueryPlanStepPtr step_, [[maybe_unused]] const PlanNodes & children_ = {},
         [[maybe_unused]] const PlanNodeStatisticsEstimate & statistics_ = {}
     )
     {

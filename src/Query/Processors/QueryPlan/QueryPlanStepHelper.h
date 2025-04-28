@@ -61,7 +61,6 @@ namespace DB
 // protobuf's types and names for StepExt with proto
 #define APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(M) \
     M(AggregatingStepExt, aggregating_step_ext) \
-    M(AnyStepExt, any_step_ext) \
     M(ApplyStepExt, apply_step_ext) \
     M(AssignUniqueIdStepExt, assign_unique_id_step_ext) \
     M(BufferStepExt, buffer_step_ext) \
@@ -106,12 +105,12 @@ namespace DB
     M(LimitByStep, limit_by_step) \
     M(OffsetStep, offset_step) \
     M(ReadNothingStep, read_nothing_step) \
-    M(WindowStep, window_step)
+    M(WindowStep, window_step) \
 
 // types for StepExt without proto
 #define APPLY_NOPROTOBUF_STEP_TYPES_FOR_EXT(M) \
     M(PlanSegmentSourceStepExt) \
-    M(SettingQuotaAndLimitsStepExt)
+    M(SettingQuotaAndLimitsStepExt) \
 
 // types for Step without proto
 #define APPLY_NOPROTOBUF_STEP_TYPES(M) \
@@ -124,7 +123,7 @@ namespace DB
     M(ExpressionStep) \
     M(FilledJoinStep) \
     M(ReadFromStorageStep) \
-    M(RollupStep)
+    M(RollupStep) \
 
 // macro helpers to convert MM(x, y) to M(x)
 #define IMPL_TUPLE_TO_FIRST(_x, _y) (_x)
@@ -150,11 +149,11 @@ namespace DB
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) ITEM,
 enum class QueryPlanStepType : UInt8
 {
-    Any = 0,
-    Tree = 1,
+    AnyStepExt = 0,
     // change this when order is changed to avoid conflicts
     StepBegin = 100,
     APPLY_ALL_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE) UNDEFINED,
+    Tree,
 };
 #undef ENUM_QUERY_PLAN_STEP_TYPE
 

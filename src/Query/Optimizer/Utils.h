@@ -34,7 +34,7 @@ namespace Utils
     // return inside expression if cast don't affect the data in the bound column, such as cast to Nullable(column_name), int8 to int32.
     ConstASTPtr tryUnwrapCast(const ConstASTPtr & expression, ContextMutablePtr context, const NamesAndTypes & names_and_types);
 
-    NameToNameMap extractIdentities(const ProjectionStep & project);
+    NameToNameMap extractIdentities(const ProjectionStepExt & project);
     std::unordered_map<String, String> computeIdentityTranslations(const Assignments & assignments);
     ASTPtr extractAggregateToFunction(const AggregateDescription & agg_descr);
     bool containsAggregateFunction(const ASTPtr & ast);

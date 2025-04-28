@@ -161,15 +161,13 @@ public:
     PlanCacheManager* getPlanCacheManager();
     const SymbolAllocatorPtr & getSymbolAllocator() { return symbol_allocator; }
     StatisticsMemoryStorePtr getStatisticsMemoryStore();
-
     ExcludedRulesMap & getExcludedRulesMap() { return exclude_rules_map; }
-protected:
-    std::shared_ptr<QueryStatistics::StatisticsMemoryStore> stats_memory_store = nullptr;
-
     int getRuleId() const { return rule_id; }
     void setRuleId(int rule_id_) { rule_id = rule_id_; }
     void incRuleId() { ++rule_id; }
 
+protected:
+    std::shared_ptr<QueryStatistics::StatisticsMemoryStore> stats_memory_store = nullptr;
 private:
     OptimizerSettings optimizer_settings;
     UInt32 query_max_execution_time;

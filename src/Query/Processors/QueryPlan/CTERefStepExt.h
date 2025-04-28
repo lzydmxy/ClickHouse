@@ -4,7 +4,6 @@
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
 #include <Query/Processors/QueryPlan/CTEInfo.h>
-#include <Query/Processors/QueryPlan/PlanSymbolReallocator.h>
 
 #include <memory>
 

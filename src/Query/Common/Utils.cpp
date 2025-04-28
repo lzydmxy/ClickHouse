@@ -47,6 +47,30 @@ void checkState(bool expression, const String & msg)
     }
 }
 
+bool isIdentity(const String & symbol, const ConstASTPtr & expression) {
+    return isIdentity(std::make_pair(symbol, expression));
+}
+
+bool isIdentity(const Assignment & assignment)
+{
+    String symbol = assignment.first;
+    if (const auto * identifier = assignment.second->as<const ASTIdentifier>())
+        return identifier->name() == symbol;
+    return false;
+}
+
+bool isIdentity(const Assignments & assignments)
+{
+    return std::all_of(assignments.begin(), assignments.end(), [](const Assignment & assignment) {
+        return isIdentity(assignment);
+    });
+}
+
+bool isIdentity(const ProjectionStepExt & step)
+{
+    return !step.isFinalProject() && Utils::isIdentity(step.getAssignments());
+}
+
 }
 
 namespace UUIDHelpers

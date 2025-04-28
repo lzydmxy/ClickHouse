@@ -1,14 +1,14 @@
 #include <Query/Optimizer/Rule/Transformation/InnerJoinAssociate.h>
 
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>
-#include <Query/Optimizer/PredicateUtils.h>
+#include <Query/Common/PredicateUtils.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
 #include <Query/Optimizer/SymbolsExtractor.h>
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/IAST_fwd.h>
-#include <QueryPlan/AnyStep.h>
-#include <QueryPlan/PlanNode.h>
+#include <Query/Common/NameToTypeExt.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
 
 namespace DB
 {
@@ -23,12 +23,12 @@ const std::vector<RuleType> & InnerJoinAssociate::blockRules() const
 ConstRefPatternPtr InnerJoinAssociate::getPattern() const
 {
     static auto pattern = Patterns::join()
-        .matchingStep<JoinStep>([](const JoinStep & s) {
+        .matchingStep<JoinStepExt>([](const JoinStepExt & s) {
             return supportSwap(s) && !s.isOrdered() && s.getFilter() && !PredicateUtils::isTruePredicate(s.getFilter());
         })
         .with(
             Patterns::join()
-                .matchingStep<JoinStep>([&](const JoinStep & s) { return supportSwap(s) && !s.isOrdered(); })
+                .matchingStep<JoinStepExt>([&](const JoinStepExt & s) { return supportSwap(s) && !s.isOrdered(); })
                 .with(Patterns::tree(), Patterns::tree()),
             Patterns::tree())
         .result();
@@ -48,13 +48,13 @@ TransformResult InnerJoinAssociate::transformImpl(PlanNodePtr node, const Captur
     {
         return {};
     }
-    auto * join_node = dynamic_cast<JoinNode *>(node.get());
+    auto * join_node = dynamic_cast<JoinStepExtNode *>(node.get());
     if (!join_node)
         return {};
 
     auto join_step = join_node->getStep();
 
-    auto * left_join_node = dynamic_cast<JoinNode *>(node->getChildren()[0].get());
+    auto * left_join_node = dynamic_cast<JoinStepExtNode *>(node->getChildren()[0].get());
     auto left_join_step = left_join_node->getStep();
 
     // TODO
@@ -195,32 +195,32 @@ TransformResult InnerJoinAssociate::transformImpl(PlanNodePtr node, const Captur
             }
     }
 
-    auto bc_join_step = std::make_shared<JoinStep>(
+    auto bc_join_step = std::make_shared<JoinStepExt>(
         DataStreams{b->getStep()->getOutputStream(), c->getStep()->getOutputStream()},
-        DataStream{bc_output},
-        ASTTableJoin::Kind::Inner,
-        ASTTableJoin::Strictness::All,
+        DataStream{ToColumnsWithTypeAndName(bc_output)},
+        JoinKind::Inner,
+        JoinStrictness::All,
         rule_context.context->getSettingsRef().max_threads,
         rule_context.context->getSettingsRef().optimize_read_in_order,
         bc_left_keys,
         bc_right_keys,
         std::vector<bool>{},
         bc_join_filter);
-    auto bc_node = PlanNodeBase::createPlanNode(rule_context.context->nextNodeId(), bc_join_step, {b, c});
+    auto bc_node = PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), bc_join_step, {b, c});
 
 
-    auto top_join_step = std::make_shared<JoinStep>(
+    auto top_join_step = std::make_shared<JoinStepExt>(
         DataStreams{a->getStep()->getOutputStream(), bc_join_step->getOutputStream()},
         node->getCurrentDataStream(),
-        ASTTableJoin::Kind::Inner,
-        ASTTableJoin::Strictness::All,
+        JoinKind::Inner,
+        JoinStrictness::All,
         rule_context.context->getSettingsRef().max_threads,
         rule_context.context->getSettingsRef().optimize_read_in_order,
         top_left_keys,
         top_right_keys,
         std::vector<bool>{},
         top_join_filter);
-    auto top_node = PlanNodeBase::createPlanNode(rule_context.context->nextNodeId(), top_join_step, {a, bc_node});
+    auto top_node = PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), top_join_step, {a, bc_node});
 
     return top_node;
 }

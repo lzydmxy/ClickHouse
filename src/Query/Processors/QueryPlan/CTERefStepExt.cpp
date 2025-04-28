@@ -1,6 +1,7 @@
 #include <Query/Processors/QueryPlan/CTERefStepExt.h>
 #include <Parsers/ASTIdentifier.h>
 #include <Query/Processors/QueryPlan/PlanNode.h>
+#include <Query/Planner/PlanSymbolReallocator.h>
 
 namespace DB
 {
