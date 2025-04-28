@@ -1,10 +1,8 @@
-
-
 #include <Query/Optimizer/CardinalityEstimate/AssignUniqueIdEstimator.h>
 
 namespace DB
 {
-PlanNodeStatisticsPtr AssignUniqueIdEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const AssignUniqueIdStep & step)
+PlanNodeStatisticsPtr AssignUniqueIdEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const AssignUniqueIdStepExt & step)
 {
     if (!child_stats)
     {

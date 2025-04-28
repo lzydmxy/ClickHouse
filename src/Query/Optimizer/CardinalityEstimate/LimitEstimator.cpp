@@ -1,10 +1,8 @@
-
-
 #include <Query/Optimizer/CardinalityEstimate/LimitEstimator.h>
 
 namespace DB
 {
-PlanNodeStatisticsPtr LimitEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const LimitStep & step)
+PlanNodeStatisticsPtr LimitEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const LimitStepExt & step)
 {
     return step.hasPreparedParam() ? child_stats : getLimitStatistics(child_stats, step.getLimitValue());
 }

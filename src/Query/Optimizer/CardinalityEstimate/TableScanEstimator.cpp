@@ -1,11 +1,6 @@
-
-
 #include <Query/Optimizer/CardinalityEstimate/TableScanEstimator.h>
-#include <Statistics/StatisticsCollector.h>
-#include <Statistics/StatsTableBasic.h>
-#include <Poco/Logger.h>
-#include <common/ErrorHandlers.h>
-#include <Parsers/ASTSelectQuery.h>
+#include <Query/Statistics/StatisticsCollector.h>
+#include <Common/ErrorHandlers.h>
 #include <Query/Optimizer/CardinalityEstimate/LimitEstimator.h>
 #include <Interpreters/convertFieldToType.h>
 #include <DataTypes/DataTypesNumber.h>
@@ -19,7 +14,7 @@ namespace ErrorCodes
     extern const int UNKNOWN_TABLE;
 }
 
-PlanNodeStatisticsPtr TableScanEstimator::estimate(ContextMutablePtr context, const TableScanStep & step)
+PlanNodeStatisticsPtr TableScanEstimator::estimate(ContextMutablePtr context, const TableScanStepExt & step)
 {
     auto plan_node_stats_opt = estimate(context, step.getStorageID(), step.getColumnNames());
     if (!plan_node_stats_opt.has_value())
@@ -53,7 +48,7 @@ PlanNodeStatisticsPtr TableScanEstimator::estimate(ContextMutablePtr context, co
     }
 
     auto query_info = step.getQueryInfo();
-    auto *query = query_info.query->as<ASTSelectQuery>();
+    auto *query = query_info.query->as<ASTSelectQueryExt>();
     if (step.hasLimit() && query->getLimitLength())
     {
         Field converted = convertFieldToType(query->refLimitLength()->as<ASTLiteral>()->value, DataTypeUInt64());
@@ -66,7 +61,7 @@ PlanNodeStatisticsPtr TableScanEstimator::estimate(ContextMutablePtr context, co
 std::optional<PlanNodeStatisticsPtr> TableScanEstimator::estimate(
     ContextMutablePtr context, const StorageID & storage_id, const Names & columns)
 {
-    auto catalog = Statistics::createCatalogAdaptor(context);
+    auto catalog = QueryStatistics::createCatalogAdaptor(context);
     auto table_info_opt = catalog->getTableIdByName(storage_id.getDatabaseName(), storage_id.getTableName());
     if (!table_info_opt.has_value())
     {
@@ -76,7 +71,7 @@ std::optional<PlanNodeStatisticsPtr> TableScanEstimator::estimate(
 
     PlanNodeStatisticsPtr plan_node_stats;
     try {
-        Statistics::StatisticsCollector collector(context, catalog, table_info_opt.value(), {});
+        QueryStatistics::StatisticsCollector collector(context, catalog, table_info_opt.value(), {});
         collector.readFromCatalog(columns);
         auto plan_node_stats_opt = collector.toPlanNodeStatistics();
         if (!plan_node_stats_opt.has_value())

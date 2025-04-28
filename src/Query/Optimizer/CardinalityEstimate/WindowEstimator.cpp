@@ -1,5 +1,3 @@
-
-
 #include <Query/Optimizer/CardinalityEstimate/WindowEstimator.h>
 
 namespace DB

@@ -1,16 +1,13 @@
-
-
 #include <Query/Optimizer/CardinalityEstimate/ProjectionEstimator.h>
 
 #include <Query/Optimizer/SymbolsExtractor.h>
-#include <Parsers/ASTVisitor.h>
 #include <Common/FieldVisitorConvertToNumber.h>
 #include <Common/FieldVisitors.h>
-#include <Statistics/StringHash.h>
+#include <Query/Statistics/StringHash.h>
 
 namespace DB
 {
-PlanNodeStatisticsPtr ProjectionEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const ProjectionStep & step)
+PlanNodeStatisticsPtr ProjectionEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const ProjectionStepExt & step)
 {
     if (!child_stats)
     {
@@ -105,7 +102,7 @@ ScalarStatsCalculator::visitASTLiteral(const ConstASTPtr & node, std::unordered_
     if (tmp_type->getTypeId() == TypeIndex::String || type->getTypeId() == TypeIndex::FixedString)
     {
         String str = literal->value.safeGet<String>();
-        double value = Statistics::stringHash64(str);
+        double value = QueryStatistics::stringHash64(str);
         return std::make_shared<SymbolStatistics>(
             1, value, value, 0, 8, Histogram{Buckets{Bucket(value, value, 1, total_rows, true, true)}}, type, "unknown", false);
     }

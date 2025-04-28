@@ -1,10 +1,8 @@
-
-
 #include <Query/Optimizer/CardinalityEstimate/UnionEstimator.h>
 
 namespace DB
 {
-PlanNodeStatisticsPtr UnionEstimator::estimate(std::vector<PlanNodeStatisticsPtr> & children_stats, const UnionStep & step)
+PlanNodeStatisticsPtr UnionEstimator::estimate(std::vector<PlanNodeStatisticsPtr> & children_stats, const UnionStepExt & step)
 {
     PlanNodeStatisticsPtr output;
     auto & out_to_input = step.getOutToInputs();

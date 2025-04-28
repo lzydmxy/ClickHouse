@@ -4,7 +4,8 @@
 #include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/IAST_fwd.h>
-#include <Processors/QueryPlan/JoinStep.h>
+#include <Parsers/ASTTablesInSelectQuery.h>
+#include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <Query/Optimizer/DataDependency/InclusionDependency.h>
 
 namespace DB
@@ -33,7 +34,7 @@ public:
     static PlanNodeStatisticsPtr estimate(
         PlanNodeStatisticsPtr & left_stats,
         PlanNodeStatisticsPtr & right_stats,
-        const JoinStep & join_step,
+        const JoinStepExt & join_step,
         ContextMutablePtr & context,
         bool is_left_base_table = false,
         bool is_right_base_table = false,
@@ -45,8 +46,8 @@ public:
         PlanNodeStatistics & right_stats,
         const Names & left_keys,
         const Names & right_keys,
-        ASTTableJoin::Kind kind,
-        ASTTableJoin::Strictness strictness,
+        JoinKind kind,
+        JoinStrictness strictness,
         Context & context,
         bool is_left_base_table = false,
         bool is_right_base_table = false,
@@ -80,8 +81,8 @@ private:
         PlanNodeStatistics & right_stats,
         SymbolStatistics & left_key_stats,
         SymbolStatistics & right_key_stats,
-        ASTTableJoin::Kind kind,
-        ASTTableJoin::Strictness strictness,
+        JoinKind kind,
+        JoinStrictness strictness,
         String left_key,
         String right_key,
         std::unordered_map<String, SymbolStatisticsPtr> & join_output_statistics,
@@ -92,8 +93,8 @@ private:
         PlanNodeStatistics & right_stats,
         SymbolStatistics & left_key_stats,
         SymbolStatistics & right_key_stats,
-        ASTTableJoin::Kind kind,
-        ASTTableJoin::Strictness strictness,
+        JoinKind kind,
+        JoinStrictness strictness,
         String left_key,
         String right_key,
         std::unordered_map<String, SymbolStatisticsPtr> & join_output_statistics,

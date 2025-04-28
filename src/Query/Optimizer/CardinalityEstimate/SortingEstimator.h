@@ -1,21 +1,21 @@
 #pragma once
 #include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
-#include <Processors/QueryPlan/FinishSortingStep.h>
-#include <Processors/QueryPlan/MergeSortingStep.h>
-#include <Processors/QueryPlan/MergingSortedStep.h>
-#include <Processors/QueryPlan/PartialSortingStep.h>
-#include <Processors/QueryPlan/SortingStep.h>
+#include <Query/Processors/QueryPlan/FinishSortingStepExt.h>
+#include <Query/Processors/QueryPlan/MergeSortingStepExt.h>
+#include <Query/Processors/QueryPlan/MergingSortedStepExt.h>
+#include <Query/Processors/QueryPlan/PartialSortingStepExt.h>
+#include <Query/Processors/QueryPlan/SortingStepExt.h>
 
 namespace DB
 {
 class SortingEstimator
 {
 public:
-    static PlanNodeStatisticsPtr estimate(PlanNodeStatisticsPtr & child_stats, const SortingStep &);
-    static PlanNodeStatisticsPtr estimate(PlanNodeStatisticsPtr & child_stats, const PartialSortingStep &);
-    static PlanNodeStatisticsPtr estimate(PlanNodeStatisticsPtr & child_stats, const MergeSortingStep &);
-    static PlanNodeStatisticsPtr estimate(PlanNodeStatisticsPtr & child_stats, const MergingSortedStep &);
-    static PlanNodeStatisticsPtr estimate(PlanNodeStatisticsPtr & child_stats, const FinishSortingStep &);
+    static PlanNodeStatisticsPtr estimate(PlanNodeStatisticsPtr & child_stats, const SortingStepExt &);
+    static PlanNodeStatisticsPtr estimate(PlanNodeStatisticsPtr & child_stats, const PartialSortingStepExt &);
+    static PlanNodeStatisticsPtr estimate(PlanNodeStatisticsPtr & child_stats, const MergeSortingStepExt &);
+    static PlanNodeStatisticsPtr estimate(PlanNodeStatisticsPtr & child_stats, const MergingSortedStepExt &);
+    static PlanNodeStatisticsPtr estimate(PlanNodeStatisticsPtr & child_stats, const FinishSortingStepExt &);
 
 };
 

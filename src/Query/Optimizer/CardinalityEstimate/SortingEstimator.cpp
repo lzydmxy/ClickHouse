@@ -3,7 +3,7 @@
 
 namespace DB
 {
-PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const SortingStep & step)
+PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const SortingStepExt & step)
 {
     if (!step.hasPreparedParam() && step.getLimitValue() > 0)
     {
@@ -13,7 +13,7 @@ PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_s
     return child_stats;
 }
 
-PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const PartialSortingStep & step)
+PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const PartialSortingStepExt & step)
 {
     if (step.getLimit() > 0)
     {
@@ -23,7 +23,7 @@ PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_s
     return child_stats;
 }
 
-PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const MergeSortingStep & step)
+PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const MergeSortingStepExt & step)
 {
     if (step.getLimit() > 0)
     {
@@ -33,7 +33,7 @@ PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_s
     return child_stats;
 }
 
-PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const MergingSortedStep & step)
+PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const MergingSortedStepExt & step)
 {
     if (step.getLimit() > 0)
     {
@@ -43,7 +43,7 @@ PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_s
     return child_stats;
 }
 
-PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const FinishSortingStep & step)
+PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const FinishSortingStepExt & step)
 {
     if (step.getLimit() > 0)
     {

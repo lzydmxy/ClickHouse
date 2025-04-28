@@ -170,7 +170,6 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_nested_loop_join, false, "Whether enable nest loop join for outer join with filter", 0)\
     M(Bool, use_grace_hash_only_repartition, false, "Only use grace hash join when exchange type is repartition", 0) \
     M(UInt64, grace_hash_join_left_side_parallel, 1, "Initial number of grace hash join left side parallel", 0) \
-    M(UInt64, parallel_join_threshold, 2000000, "Parallel join right source rows threshold", 0) \
     M(Bool, enum_replicate, true, "Enum replicate join", 0) \
     M(Bool, enum_repartition, true, "Enum repartition join", 0) \
     M(Bool, enum_replicate_no_stats, true, "Enum replicate join when statistics not exists", 0) \
@@ -192,64 +191,230 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     /** */ \
     M(Bool, convert_to_right_type_for_in_subquery, true, "For IN subquery, whether convert arguments to the right type", 0) \
     /** Optimizer relative settings, Plan build and RBO */ \
+    M(Bool, enable_auto_prepared_statement, false, "Whether to enable automatic prepared statement", 0) \
+    M(Bool, enable_nested_loop_join, true, "Whether enable nest loop join for outer join with filter", 0)\
+    M(Bool, enforce_all_join_to_any_join, false, "Whether enforce all join to any join", 0) \
     M(Bool, enable_implicit_type_conversion, true, "Whether enable implicit type conversion for JOIN, Set operation, IN subquery", 0) \
-    M(Bool, enable_implicit_arg_type_convert, false, "Eable implicit type conversion for functions", 0) \
-    M(Bool, allow_extended_type_conversion, false, "When enabled, implicit type conversion is allowed for more input types(e.g. UInt64 & Ints, Decimal & Float, Float & Int64)", 0) \
-    M(Bool, enable_subcolumn_optimization_through_union, true, "Whether enable sub column optimization through set operation.", 0) \
-    M(Bool, optimize_json_function_to_subcolumn, false, "Whether to optimize json extract functions to subcolumn read", 0) \
-    M(Bool, optimizer_index_projection_support, true, "Use indexprojection in optimizer mode", 0) \
-    M(Bool, optimizer_projection_support, false, "Use projection in optimizer mode", 0) \
-    /** Optimizer relative settings, CBO, CTE, MagicSet, MV */ \
-    M(CTEMode, cte_mode, CTEMode::AUTO, "CTE mode: SHARED|INLINED|AUTO|ENFORCED", 0) \
-    M(SpillMode, spill_mode, SpillMode::MANUAL, "SpillMode: MANUAL(default)|AUTO", 0) \
-    M(QueryDryRunMode, query_dry_run_mode, QueryDryRunMode::NONE, "Whether to choose a query debug mode, in order to skip some workloads", 0) \
-    M(Bool, enable_group_by_keys_pruning, false, "Whether to enable RBO -- group by keys pruning optimization", 0) \
-    M(Bool, enable_set_join_distribution, true, "Whether to enable SetJoinDistribution rule", 0) \
-    M(Bool, enable_eliminate_complicated_pk_fk_join, false, "Whether to eliminate complicated join by fk optimization", 0) \
-    M(Bool, enable_eliminate_complicated_pk_fk_join_without_top_join, false, "Whether to allow eliminate complicated join by fk pull through pass the multi-child node even if no top join", 0) \
-    M(Bool, enable_distinct_remove, true, "Whether to eliminate redundancy during execution", 0) \
-    M(UInt64, execute_uncorrelated_in_subquery_size, 10000, "Size of execute uncorrelated in subquery", 0) \
-    M(Bool, enable_execute_uncorrelated_subquery, false, "Whether enable execute uncorrelated subquery", 0) \
-    M(Bool, enable_remove_uncorrelated_exists_subquery, true, "Whether enable remove uncorrelated exists subquery", 0) \
-    M(Bool, enable_remove_correlated_quantified_comparison_subquery, true, "Whether enable remove correlated quantified comparison subquery", 0) \
-    M(Bool, enable_remove_correlated_exists_subquery, true, "Whether enable remove correlated exists subquery", 0) \
-    M(Bool, enable_unnesting_subquery_with_window, true, "Whether enable unnesting subquery with window", 0) \
-    M(Bool, enable_unnesting_subquery_with_semi_anti_join, true, "Whether enable unnesting subquery with semi anti join", 0) \
+    M(Bool, rewrite_like_function, true, "Rewrite simple pattern like function", 0) \
+    M(UInt64, iterative_optimizer_timeout, 10000, "Max running time of a single iterative optimizer in ms", 0) \
+    M(Bool, debug_iterative_optimizer, false, "If enabled, iterative optimizer will print plan after each rule application", 0) \
     M(Bool, enable_remove_uncorrelated_in_subquery, true, "Whether enable remove uncorrelated in subquery", 0) \
     M(Bool, enable_remove_correlated_in_subquery, true, "Whether enable remove correlated in subquery", 0) \
+    M(Bool, enable_remove_uncorrelated_exists_subquery, true, "Whether enable remove uncorrelated exists subquery", 0) \
+    M(Bool, enable_remove_correlated_exists_subquery, true, "Whether enable remove correlated exists subquery", 0) \
     M(Bool, enable_remove_uncorrelated_scalar_subquery, true, "Whether enable remove uncorrelated scalar subquery", 0) \
     M(Bool, enable_remove_correlated_scalar_subquery, true, "Whether enable remove correlated scalar subquery", 0) \
     M(Bool, enable_remove_uncorrelated_quantified_comparison_subquery, true, "Whether enable remove correlated quantified comparison subquery", 0) \
-    M(Bool, enable_join_reorder, true, "Whether enable join reorder", 0) \
-    M(UInt64 , max_graph_reorder_size, 6, "Max tables join order enum on graph", 0) \
-    M(Bool, enable_share_common_plan_node, true, "Whether enable share common plan node using cte", 0) \
-    M(Bool, enable_common_expression_sharing, true, "Whether to share common expression between steps", 0) \
-    M(Bool, enable_common_expression_sharing_for_prewhere, true, "Whether to share common expression between steps and PREWHERE", 0) \
-    M(UInt64, common_expression_sharing_threshold, 3, "The minimal cost to share a common expression, the cost is defined by (complexity * (occurrence - 1))", 0) \
-    M(Bool, enable_injective_in_property, false, "Whether enable using injective function when property match", 0) \
-    M(Bool, enable_bitmap_index_splitter, true, "Whether to enable BitMapIndexSplitter", 0) \
-    M(Bool, enable_sorting_property, true, "Whether enable sorting property rule", 0) \
-    M(Bool, enable_case_when_prop, false, "Whether enable case when prop", 0) \
+    M(Bool, enable_remove_correlated_quantified_comparison_subquery, true, "Whether enable remove correlated quantified comparison subquery", 0) \
+    M(Bool, enable_unnesting_subquery_with_window, true, "Whether enable unnesting subquery with window", 0) \
+    M(Bool, enable_unnesting_subquery_with_semi_anti_join, true, "Whether enable unnesting subquery with semi anti join", 0) \
+    M(Bool, eliminate_cross_joins, true, "Whether eliminate cross joins", 0) \
     M(Bool, enable_unify_join_outputs, true, "Whether enable unify join output ", 0) \
-    M(Bool, enable_column_pruning, true, "Whether to enable ColumnPruning", 0) \
-    M(Bool, enable_remove_unused_cte, true, "Whether enable remove unused cte", 0) \
-    M(Bool, enable_add_projection_to_pruning, true, "Whether add projection when column pruning", 0) \
+    M(Bool, enable_unify_nullable_type, true, "Whether enable unify nullable type", 0) \
+    M(Bool, enable_sorting_property, true, "Whether enable sorting property rule", 0) \
+    M(Bool, enable_streaming_property, true, "Whether enable streaming property rule", 0) \
+    M(Bool, enable_use_node_property, true, "Whether enable node property rule", 0) \
     M(Bool, enable_distinct_to_aggregate, true, "Whether enable convert distinct to group by", 0) \
-    M(Bool, enable_filter_window_to_sorting_limit, true, "Filter window to sorting limit", 0) \
+    M(Bool, enable_cross_join_to_union, false, "Whether enable convert cross join to union", 0) \
+    M(Bool, enable_distinct_remove, true, "Whether to eliminate redundancy during execution", 0) \
+    M(Bool, enable_single_distinct_to_group_by, true, "Whether enable convert single count distinct to group by", 0) \
+    M(Bool, enable_mark_distinct_optimzation, false, "Whether enable Mark distinct optimization", 0)                                            \
+    M(Bool, enable_expand_distinct_optimization, false, "Whether enable rewrite distinct optimization", 0)                                            \
+    M(ExpandMode, expand_mode, ExpandMode::EXPAND, "Rewrite distinct optimization, Expand Mode : EXPAND|UNION|CTE", 0)                                            \
+    M(Bool, enable_common_predicate_rewrite, true, "Whether enable common predicate rewrite", 0) \
+    M(Bool, enable_common_join_predicate_rewrite, true, "Whether enable common predicate rewrite", 0) \
+    M(Bool, enable_swap_predicate_rewrite, true, "Whether enable swap predicate rewrite", 0) \
+    M(Bool, rewrite_predicate_by_domain, true, "When enabled, merge predicates belonging to the same domain", 0) \
+    M(Bool, rewrite_complex_predicate_by_domain, false, "Whether enabled, extract merged predicate belonging to the same domain for complex predicate(which normally are DNFs)", 0) \
+    M(Bool, enable_unwrap_cast_in, true, "Whether enable unwrap cast function", 0) \
+    M(Bool, enable_windows_reorder, true, "Reorder adjacent windows to decrease exchange", 0) \
+    M(Bool, enable_push_partial_agg, true, "Whether enable push partial agg", 0) \
+    M(Bool, enable_cbo_push_partial_agg, false, "Whether enable cost base push partial agg", 0) \
+    M(Bool, enable_shuffle_before_state_func, true, "Whether shuffle when agg func is state func.", 0) \
+    M(Bool, enable_share_common_plan_node, true, "Whether enable share common plan node using cte", 0) \
     M(Bool, enable_redundant_sort_removal, true, "Whether enable ignore redundant sort in subquery", 0) \
-    M(Bool, enable_predicate_pushdown_rewrite, true, "Whether to enable PredicatePushdown", 0) \
-    M(Bool, enable_pushdown_filter_through_stateful, false, "Whether to enable push predicate through projection with stateful functions", 0) \
-    M(Bool, enable_unalias_symbol_references, true, "Whether to enable unalias symbol references", 0) \
+    M(Bool, enable_remove_unused_cte, true, "Whether enable remove unused cte", 0) \
+    M(Bool, enable_filter_window_to_partition_topn, true, "Filter window to partition topn", 0) \
+    M(Bool, enable_optimizer_support_window, true, "Optimizer support window", 0) \
+    M(Bool, enable_filter_window_to_sorting_limit, true, "Filter window to sorting limit", 0) \
+    M(Bool, optimizer_projection_support, false, "Use projection in optimizer mode", 0) \
+    M(Bool, optimizer_index_projection_support, true, "Use indexprojection in optimizer mode", 0) \
+    M(Bool, enable_setoperation_to_agg, true, "Whether enable rewrite set operation to aggregation", 0)                                            \
+    M(Bool, enable_execute_uncorrelated_subquery, false, "Whether enable execute uncorrelated subquery", 0) \
+    M(UInt64, execute_uncorrelated_in_subquery_size, 10000, "Size of execute uncorrelated in subquery", 0) \
+    M(Bool, enable_subcolumn_optimization_through_union, true, "Whether enable sub column optimization through set operation.", 0) \
     M(Bool, enable_buffer_for_deadlock_cte, true, "Whether to buffer data for deadlock cte", 0) \
+    M(UInt64, statistics_collect_debug_level, 0, "Debug level for statistics collector", 0) \
     M(Bool, enable_remove_remove_unnecessary_buffer, false, "Whether to only add buffer for cte consumer that may cause deadlock", 0) \
     M(Int64, max_buffer_size_for_deadlock_cte, 13000000000, "Inline CTE if buffer is oversized, set 0 to inline all cte, set -1 to buffer data for all cte even no stats", 0) \
-    M(UInt64, max_in_value_list_to_pushdown, 10000, "Max size of in value list in filter", 0) \
-    M(Bool, offloading_with_query_plan, false, "utilize query plan to offload the computation completely to worker", 0) \
+    M(UInt64, max_prewhere_or_expression_size, 0, "Max depth of condition which can push down to prewhere", 0) \
+    M(Bool, enable_add_exchange, true, "Whether to enable AddExchange rule", 0) \
+    M(Bool, enable_bitmap_index_splitter, true, "Whether to enable BitMapIndexSplitter", 0) \
+    M(Bool, enable_column_pruning, true, "Whether to enable ColumnPruning", 0) \
+    M(Bool, enable_add_projection_to_pruning, true, "Whether add projection when column pruning", 0) \
+    M(Bool, enable_predicate_pushdown_rewrite, true, "Whether to enable PredicatePushdown", 0) \
+    M(Bool, enable_pushdown_filter_through_stateful, false, "Whether to enable push predicate through projection with stateful functions", 0) \
+    M(Bool, enable_hints_propagator, true, "Whether to enable HintsPropagator", 0) \
+    M(Bool, enable_join_algorithm_hints, true, "Whether to enable ImplementJoinAlgorithmHints", 0) \
+    M(Bool, enable_join_operation_hints, true, "Whether to enable ImplementJoinOperationHints", 0) \
+    M(Bool, enable_join_order_hint, true, "Whether to enable ImplementJoinOrderHints", 0) \
+    M(Bool, enable_set_join_distribution, true, "Whether to enable SetJoinDistribution rule", 0) \
+    M(Bool, enable_explain_analyze, true, "Whether to enable ExplainAnalyze rule", 0) \
+    M(Bool, enable_implement_except, true, "Whether to enable ImplementExceptRule rule", 0) \
+    M(Bool, enable_implement_intersect, true, "Whether to enable ImplementIntersectRule rule", 0) \
+    M(Bool, enable_inline_projection, true, "Whether to enable InlineProjections rule", 0) \
+    M(Bool, enable_inline_projection_into_join, true, "Whether to enable InlineProjections rule", 0) \
+    M(Bool, enable_inline_projection_on_join_into_join, true, "Whether to enable InlineProjections rule", 0) \
+    M(Bool, enable_merge_aggregate, true, "Whether to enable MergeAggregatings rule", 0) \
+    M(Bool, enable_merge_union, true, "Whether to enable MergeUnionRule rule", 0) \
+    M(Bool, enable_merge_except, true, "Whether to enable MergeExceptRule rule", 0) \
+    M(Bool, enable_merge_intersect, true, "Whether to enable MergeIntersectRule rule", 0) \
+    M(Bool, enable_pull_projection_on_join_through_join, true, "Whether to enable PullProjectionOnJoinThroughJoin rule", 0) \
+    M(Bool, enable_push_agg_through_outer_join, true, "Whether to enable PushAggThroughOuterJoin rule", 0) \
+    M(Bool, enable_push_agg_through_inner_join, true, "Whether to enable PushAggThroughInnerJoin rule", 0) \
+    M(Bool, enable_push_limit_into_distinct, true, "Whether to enable PushLimitIntoDistinct rule", 0) \
+    M(Bool, enable_push_limit_through_projetion, true, "Whether to enable PushLimitThroughProjection rule", 0) \
+    M(Bool, enable_push_limit_through_extremes, true, "Whether to enable PushLimitThroughExtremes rule", 0) \
+    M(Bool, enable_push_limit_through_union, true, "Whether to enable PushLimitThroughUnion rule", 0) \
+    M(Bool, enable_push_limit_through_outer_join, true, "Whether to enable PushLimitThroughOuterJoin rule", 0) \
+    M(Bool, enable_limit_zero_to_read_nothing, true, "Whether to enable LimitZeroToReadNothing rule", 0) \
+    M(Bool, enable_push_down_limit_into_window, true, "Whether to enable PushdownLimitIntoWindow rule", 0) \
+    M(Bool, enable_push_limit_into_sorting_rule, true, "Whether to enable PushLimitIntoSorting rule", 0) \
+    M(Bool, enable_push_limit_through_buffer, true, "Whether to enable PushLimitThroughBuffer rule", 0) \
+    M(Bool, enable_push_down_apply_through_join, true, "Whether to enable PushDownApplyThroughJoin rule", 0) \
+    M(Bool, enable_push_storage_filter, true, "Whether to enable PushStorageFilter rule", 0) \
+    M(Bool, enable_push_limit_into_table_scan, true, "Whether to enable PushLimitIntoTableScan rule", 0) \
+    M(Bool, enable_push_aggregation_into_table_scan, true, "Whether to enable PushAggregationIntoTableScan rule", 0) \
+    M(Bool, enable_push_projection_into_table_scan, true, "Whether to enable PushProjectionIntoTableScan rule", 0) \
+    M(Bool, enable_push_index_projection_into_table_scan, true, "Whether to enable PushIndexProjectionIntoTableScan rule", 0) \
+    M(Bool, enable_push_filter_into_table_scan, true, "Whether to enable PushFilterIntoTableScan rule", 0) \
+    M(Bool, enable_push_union_through_join, true, "Whether to enable PushUnionThroughJoin rule", 0) \
+    M(Bool, enable_push_union_through_projection, true, "Whether to enable PushUnionThroughProjection rule", 0) \
+    M(Bool, enable_push_union_through_agg, false, "Whether to enable PushUnionThroughAgg rule", 0) \
+    M(Bool, enable_inner_join_associate, true, "Whether to enable InnerJoinAssociate rule", 0) \
+    M(Bool, enable_inner_join_commutation, true, "Whether to enable InnerJoinCommutation rule", 0) \
+    M(Bool, enable_join_enum_on_graph, true, "Whether to enable JoinEnumOnGraph rule", 0) \
+    M(Bool, enable_join_to_multi_join, true, "Whether to enable JoinToMultiJoin rule", 0) \
+    M(Bool, enable_cardinality_based_join_reorder, true, "Whether to enable CardinalityBasedJoinReorder rule", 0) \
+    M(Bool, enable_selectivity_based_join_reorder, true, "Whether to enable SelectivityBasedJoinReorder rule", 0) \
+    M(Bool, enable_left_join_to_right_join, true, "Whether to enable LeftJoinToRightJoin rule", 0) \
+    M(Bool, enable_pull_outer_join, true, "Whether to enable PullOuterJoin rule", 0) \
+    M(Bool, enable_push_join_through_union, true, "Whether to enable PushJoinThroughUnion rule", 0) \
+    M(Bool, enable_semi_join_push_down, true, "Whether to enable SemiJoinPushDown rule", 0) \
+    M(Bool, enable_simplify_predicate_rewrite, true, "Whether to enable SimplifyPredicateRewrite rule", 0) \
+    M(Bool, enable_simplify_expression_by_derived_constant, false, "Whether to use derived constants to simplify expression", 0) \
+    M(Bool, enable_simplify_prewhere_rewrite, true, "Whether to enable SimplifyPrewhereRewrite rule", 0) \
+    M(Bool, enable_simplify_join_filter_rewrite, true, "Whether to enable SimplifyJoinFilterRewrite rule", 0) \
+    M(Bool, enable_simplify_expression_rewrite, true, "Whether to enable SimplifyExpressionRewrite rule", 0) \
+    M(Bool, enable_simplify_predicate_in_projection, false, "Whether to rewrite predicate in projection", 0) \
+    M(Bool, enable_simplify_assume_not_null, true, "Whether to remove redundant assumeNotNull --temporary settings", 0) \
+    M(Bool, enable_evaluate_constant_for_nondeterministic, true, "Enable evaluate the constant result of non-deterministic functions while using optimizer", 0) \
+    M(Bool, enable_remove_redundant, true, "Whether to enable RemoveRedundant rules", 0) \
+    M(Bool, enable_push_projection, true, "Whether to enable PushProjection rules", 0) \
+    M(Bool, enable_push_partial_agg_through_exchange, true, "Whether to enable PushPartialAggThroughExchange rules", 0) \
+    M(Bool, enable_push_partial_agg_through_union, true, "Whether to enable PushPartialAggThroughUnion rules", 0) \
+    M(Bool, enable_push_partial_sorting_through_exchange, true, "Whether to enable PushPartialSortingThroughExchange rules", 0) \
+    M(Bool, enable_push_partial_sorting_through_union, true, "Whether to enable PushPartialSortingThroughUnion rules", 0) \
+    M(Bool, enable_push_partial_limit_through_exchange, true, "Whether to enable PushPartialLimitThroughExchange rules", 0) \
+    M(Bool, enable_push_partial_distinct_through_exchange, true, "Whether to enable PushPartialDistinctThroughExchange rules", 0) \
+    M(Bool, enable_push_partial_topn_distinct_through_exchange, true, "Whether to enable PushPartialTopNDistinctThroughExchange rules", 0) \
+    M(Bool, enable_push_projection_through_exchange, true, "Whether to enable PushProjectionThroughExchange rules", 0) \
+    M(Bool, enable_split_countd_to_state_merge, false, "Whether to enable split count distinct to state and merge", 0) \
+    M(UInt64, max_rows_to_use_topn_filtering, 0, "The maximum N of TopN to use topn filtering optimization. Set 0 to choose this value adaptively.", 0) \
+    M(String, topn_filtering_algorithm_for_unsorted_stream, "SortAndLimit", "The default topn filtering algorithm for unsorted stream, can be one of: 'SortAndLimit', 'Heap'", 0) \
+    M(Bool, enable_create_topn_filtering_for_aggregating, false, "Whether to enable CreateTopNFilteringForAggregating rules", 0) \
+    M(Bool, enable_push_sort_through_projection, true, "Whether to enable PushTopNThroughProjection rules", 0) \
+    M(Bool, enable_push_topn_through_projection, false, "Whether to enable PushTopNThroughProjection rules", 0) \
+    M(Bool, enable_push_topn_filtering_through_projection, true, "Whether to enable PushTopNFilteringThroughProjection rules", 0) \
+    M(Bool, enable_push_topn_filtering_through_union, true, "Whether to enable PushTopNFilteringThroughUnion rules", 0) \
+    M(Bool, enable_optimize_aggregate_memory_efficient, false, "Whether to enable OptimizeMemoryEfficientAggregation rules", 0) \
+    M(Bool, enable_cascades_optimizer, true, "Whether to enable CascadesOptimizer", 0) \
+    M(Bool, enable_iterative_rewriter, true, "Whether to enable InterativeRewriter", 0) \
+    M(Float, multi_join_keys_correlated_coefficient, 0.8, "Coefficient about multi join keys, the smaller the value, the smaller the estimated join cardnlity, do nothing when equals 1.0", 0) \
+    M(Float, multi_agg_keys_correlated_coefficient, 0.9, "Coefficient about multi agg keys, the smaller the value, the smaller the estimated agg cardnlity, do nothing when equals 1.0", 0) \
+    M(Bool, enable_common_expression_sharing, true, "Whether to share common expression between steps", 0) \
+    M(Bool, enable_common_expression_sharing_for_prewhere, true, "Whether to share common expression between steps and PREWHERE", 0) \
+    M(Bool, enable_unalias_symbol_references, true, "Whether to enable unalias symbol references", 0) \
+    M(UInt64, common_expression_sharing_threshold, 3, "The minimal cost to share a common expression, the cost is defined by (complexity * (occurrence - 1))", 0) \
+    M(Bool, extract_bitmap_implicit_filter, true, "Whether to extract implicit filter for bitmap functions, e.g. for bitmapCount('1 | 2 & 3')(a, b), extract 'a in (1, 2, 3)'", 0) \
+    M(Bool, enable_add_local_exchange, false, "Whether to add local exchange", 0) \
+    M(Bool, enable_join_using_to_join_on, false, "Whether rewrite Join Using to Join On to make reordering possible", 0) \
+    M(Bool, enable_ab_test, false, "Whether to open ab test for settings, If true, the settings for some queries are set in the ab_test_profile profile.", 0) \
+    M(Float, ab_test_traffic_factor, 0, "Proportion of queries that perform ab test, meaningful between 0 and 1", 0) \
+    M(String, ab_test_profile, "default", "Profile name for ab test", 0) \
+    M(Bool, optimize_json_function_to_subcolumn, false, "Whether to optimize json extract functions to subcolumn read", 0) \
+    /** Optimizer relative settings, CBO, CTE, MagicSet, MV */ \
+    M(Bool, enable_join_reorder, true, "Whether enable join reorder", 0) \
+    M(UInt64, max_predicate_text_length, 5000, "Max length of predicate text", 0) \
+    M(UInt64, cascades_optimizer_timeout, 10000, "Max running time of a single cascades optimizer in ms", 0) \
+    M(UInt64 , max_graph_reorder_size, 6, "Max tables join order enum on graph", 0) \
+    M(UInt64 , heuristic_join_reorder_enumeration_times, 3, "Heuristic times in CardinalityBased Join Reorder algorithm", 0) \
+    M(Bool, enable_cbo, true, "Whether enable CBO", 0) \
+    M(Bool, enable_cascades_pruning, true, "Whether enable cascades pruning", 0) \
+    M(Bool, enum_replicate, true, "Enum replicate join", 0) \
+    M(Bool, enum_repartition, true, "Enum repartition join", 0) \
+    M(Bool, enum_replicate_no_stats, true, "Enum replicate join when statistics not exists", 0) \
+    M(UInt64, max_replicate_build_size, 200000, "Max join build size, when enum replicate", 0) \
+    M(UInt64, max_replicate_shuffle_size, 50000000, "Max join build size, when enum replicate", 0) \
+    M(UInt64, parallel_join_threshold, 2000000, "Parallel join right source rows threshold", 0) \
+    M(UInt64, parallel_join_rows_batch_threshold, 4096, "Rows that concurrent hash join wait data reach, then to build hashtable or join block", 0) \
+    M(Bool, add_parallel_after_join, false, "Add parallel after join", 0) \
+    M(Bool, enforce_round_robin, false, "Whether add round robin exchange node", 0) \
     M(Bool, enable_shuffle_with_order, false, "Whether enable keep data order when shuffle", 0) \
+    M(Bool, enable_merge_require_property, false, "Whether enable merge required property in aggregation", 0) \
+    M(Bool, enable_join_graph_support_filter, true, "Whether enable join graph support filter", 0) \
+    M(Bool, enable_equivalences, true, "Whether enable using equivalences when property match", 0) \
+    M(Bool, enable_injective_in_property, false, "Whether enable using injective function when property match", 0) \
+    M(Bool, enable_case_when_prop, false, "Whether enable case when prop", 0) \
+    M(UInt64, max_expand_join_key_size, 3, "Whether enable using equivalences when property match", 0) \
+    M(UInt64, max_expand_agg_key_size, 3, "Max allowed agg/window keys number when expand powerset when property match", 0) \
+    M(Bool, enable_sharding_optimize, false, "Whether enable sharding optimization, eg. local join", 0) \
+    M(Bool, enable_bucket_shuffle, false, "Whether enable bucket shuffle", 0) \
+    M(Bool, enable_magic_set, true, "Whether enable magic set rewriting for join aggregation", 0) \
+    M(Float, magic_set_filter_factor, 0.5, "The minimum filter factor of magic set, used for early pruning", 0) \
+    M(UInt64, magic_set_max_search_tree, 2, "The maximum table scans in magic set, used for early pruning", 0) \
+    M(UInt64, magic_set_source_min_rows, 10000, "The minimum rows of source node in magic set, used for early pruning", 0) \
+    M(Float, magic_set_rows_factor, 0.6, "The minimum rows of source node in magic set, used for early pruning", 0) \
+    M(Bool, enable_magic_set_cte, true, "Whether enable magic set rewriting build as cte", 0) \
+    M(CTEMode, cte_mode, CTEMode::AUTO, "CTE mode: SHARED|INLINED|AUTO|ENFORCED", 0) \
+    M(SpillMode, spill_mode, SpillMode::MANUAL, "SpillMode: MANUAL(default)|AUTO", 0) \
+    M(UInt64, max_allowed_mem_size_in_join_spill, 512000000, "Max allowed memory-size(estimated) in join spill", 0) \
+    M(Float, spill_triger_threshold, 0.7, "Threshold to triger spill then memory usage reach a certain ratio of memory quota", 0) \
+    M(Bool, enable_cte_property_enum, false, "Whether enumerate all possible properties for cte", 0) \
+    M(Bool, enable_cte_common_property, true, "Whether search common property for cte", 0) \
+    M(Bool, enable_windows_parallel, false, "Whether run windows in parallel", 0) \
+    M(Bool, enable_view_based_query_rewrite, false, "Whether enable materialized view based rewriter for query, compatible for  enable_materialized_view_rewrite", 0) \
+    M(Bool, enable_non_equijoin_reorder, true, "Whether enable no equi join reorder", 0) \
+    M(Bool, enable_materialized_view_rewrite, true, "Whether enable materialized view based rewriter for query", 0) \
+    M(Bool, enable_sync_materialized_view_rewrite, true, "Whether enable materialized view based rewriter for sync materialized view", 0) \
+    M(Bool, enforce_materialized_view_rewrite, false, "Whether throw exception if materialized view is not applied", 0) \
+    M(String, enable_push_partial_block_list, "", "Aggregate names who can push partial agg, split by ',' => axxx,bxxx,cxxx", 0) \
+    M(Bool, enable_materialized_view_ast_rewrite, false, "Whether enable materialized view based rewriter for query", 0) \
+    M(Bool, enable_materialized_view_rewrite_verbose_log, false, "Whether enable materialized view based rewriter for query", 0) \
+    M(Bool, enable_materialized_view_empty_grouping_rewriting, true, "Whether enable materialized view based rewriter for query", 0) \
+    M(Bool, enable_materialized_view_join_rewriting, true, "Whether enable materialized view based rewriter for query using join materialized views", 0) \
+    M(Bool, enable_materialized_view_union_rewriting, false, "Whether enable materialized view based rewriter for query using union", 0) \
+    M(Bool, enforce_materialized_view_union_rewriting, false, "Enforce enable materialized view based rewriter for query using union, used for testing", 0) \
+    M(MaterializedViewConsistencyCheckMethod, materialized_view_consistency_check_method, MaterializedViewConsistencyCheckMethod::PARTITION, "The method to check whether a materialized view is consistent with the base table for a query", 0) \
+    M(QueryDryRunMode, query_dry_run_mode, QueryDryRunMode::NONE, "Whether to choose a query debug mode, in order to skip some workloads", 0) \
+    M(UInt64, max_plan_segment_num, 500, "maximum plan segments allowed, 0 means no restriction", 0)\
+    M(Bool, force_create_foreign_key, false, "Whether to create inexistent foreign key when creating a table", 0) \
+    M(Bool, enable_group_by_keys_pruning, false, "Whether to enable RBO -- group by keys pruning optimization", 0) \
+    M(Bool, enable_eager_aggregation, false, "Whether to enable RBO -- eager aggregation optimization", 0) \
+    M(Bool, only_push_agg_with_functions, false, "Only use eager aggregation with functions", 0) \
+    M(Float, agg_push_down_threshold, 40.0, "Which ratio is greater than threshold can be push down", 0) \
+    M(Bool, agg_push_down_every_join, false, "Below every join can insert one agg instead of bottom jion", 0) \
+    M(String, eager_agg_join_id_blocklist, "", "Which join in blocklist can't be push down through", 0) \
+    M(String, eager_agg_join_id_whitelist, "", "Which join in blocklist can be push down through", 0) \
+    M(Bool, enable_sum_if_to_count_if, false, "Whether enable rewrite sumIf to countIf", 0) \
+    M(Bool, enable_eliminate_join_by_fk, false, "Whether to enable RBO -- eliminate join by fk optimization", 0) \
+    M(Bool, enable_eliminate_complicated_pk_fk_join, false, "Whether to eliminate complicated join by fk optimization", 0) \
+    M(Bool, enable_eliminate_complicated_pk_fk_join_without_top_join, false, "Whether to allow eliminate complicated join by fk pull through pass the multi-child node even if no top join", 0) \
+    M(Bool, enable_filtered_pk_selectivity, 1, "Enable the selectivity of filtered pk table", 0) \
     M(Bool, execute_subquery_in_lambda, true, "Whether to execute subquery in lambda", 0) \
     M(Bool, early_execute_scalar_subquery, false, "Whether to early execute scalar subquery", 0) \
     M(Bool, early_execute_in_subquery, false, "Whether to early execute in subquery", 0) \
-    M(Bool, enable_equivalences, true, "Whether enable using equivalences when property match", 0) \
+    M(String, prewhere_skip_functions, "", "A collection of functions which are not choosen as prewhere, use ',' to seperate", 0) \
     /** Complex query settings **/\
     M(Milliseconds, send_plan_segment_timeout_ms, 10000, "Default timeout for send plan segment by rpc", 0) \
     M(Bool, enable_distributed_stages, false, "Enable complex query mode to split plan to distributed stages", 0)\
@@ -335,7 +500,6 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, distributed_max_parallel_size, false, "Max distributed execution parallel size", 0) \
     M(Bool, log_optimizer_run_time, false, "Whether Log optimizer runtime", 0) \
     M(Bool, log_query_plan, 0, "Log json format query plan to the system query_log table.", 0) \
-    M(UInt64, iterative_optimizer_timeout, 10000, "Max running time of a single iterative optimizer in ms", 0) \
     M(LogExplainAnalyzeType, log_explain_analyze_type, LogExplainAnalyzeType::NONE, "Log explain analyze result. Type: NONE|QUERY_PIPELINE|AGGREGATED_QUERY_PIPELINE.", 0) \
     M(UInt64, max_plannode_count, 200, "The max plannode count", 0) \
     M(Bool, enable_plan_cache, false, "Whether enable plan cache", 0) \

@@ -19,6 +19,7 @@
 #include <Query/Processors/QueryPlan/PartialSortingStepExt.h>
 #include <Query/Processors/QueryPlan/QueryPlanExt.h>
 #include <Query/Functions/InternalFunctionRuntimeFilter.h>
+#include <Query/Core/BlockHelper.h>
 
 
 namespace DB
@@ -49,7 +50,7 @@ std::optional<PlanNodeStatisticsPtr> CardinalityEstimator::estimate(
         .inclusion_dependency = inclusion_dependency};
     auto stats = VisitorUtil::accept(step, visitor, cardinality_context);
     if (stats)
-        stats->pruneSymbols(step->getOutputStream().header.getNameSet());
+        stats->pruneSymbols(BlockHelper::getNameSet(step->getOutputStream().header));
     return stats ? std::make_optional(stats) : std::nullopt;
 }
 
@@ -64,7 +65,7 @@ CardinalityEstimator::estimate(PlanNodeBase & node, CTEInfo & cte_info, ContextM
     CardinalityContext cardinality_context{.context = context, .cte_info = cte_info, .children_stats = {}, .re_estimate = re_estimate};
     auto stats = VisitorUtil::accept(node, visitor, cardinality_context);
     if (stats)
-        stats->pruneSymbols(node.getCurrentDataStream().header.getNameSet());
+        stats->pruneSymbols(BlockHelper::getNameSet(node.getCurrentDataStream().header));
     return stats ? std::make_optional(stats) : std::nullopt;
 }
 
@@ -154,7 +155,7 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitFilterStepExt(const FilterStepExt
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     PlanNodeStatisticsPtr stats = FilterEstimator::estimate(
-        child_stats, step.getFilter(), step.getInputStreams()[0].header.getNamesToTypes(), context.context, context.simple_children);
+        child_stats, step.getFilter(), BlockHelper::getNamesToTypes(step.getInputStreams()[0].header), context.context, context.simple_children);
     return stats;
 }
 
@@ -441,7 +442,7 @@ PlanNodeStatisticsPtr PlanCardinalityVisitor::visitPlanNode(PlanNodeBase & node,
         }
     }
 
-    simple_children &= getQueryPlanStepType(node.getStep()) != QueryPlanStepType::Join;
+    simple_children &= getQueryPlanStepType(node.getStep()) != QueryPlanStepType::JoinStepExt;
 
     context.is_table_scan = is_table_scan;
     context.simple_children = simple_children;
@@ -487,7 +488,7 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitTotalsHavingStepExt(const TotalsH
     PlanNodeStatisticsPtr stats = context.children_stats[0];
     if (const auto & having = step.getHavingFilter())
         stats = FilterEstimator::estimate(
-            stats, having, step.getInputStreams()[0].header.getNamesToTypes(), context.context, context.simple_children);
+            stats, having, BlockHelper::getNamesToTypes(step.getInputStreams()[0].header), context.context, context.simple_children);
     return stats;
 }
 
