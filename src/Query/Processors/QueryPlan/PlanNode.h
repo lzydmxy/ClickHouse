@@ -174,10 +174,9 @@ private:
     extern template class PlanNode<TYPE>; \
     using TYPE##Node = PlanNode<TYPE>;
 
-APPLY_PROTOBUF_STEP_TYPES(PLAN_NODE_DEF)
-// PLAN_NODE_DEF(APPLY_STEP_TYPES)
-// PLAN_NODE_DEF(Any)
-// PLAN_NODE_DEF(MultiJoin)
+    APPLY_PROTOBUF_STEP_TYPES(PLAN_NODE_DEF)
+    // PLAN_NODE_DEF(Any)
+    // PLAN_NODE_DEF(MultiJoin)
 #undef PLAN_NODE_DEF
 
 }

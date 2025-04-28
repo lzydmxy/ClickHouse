@@ -87,13 +87,13 @@ private:
 class GroupExpression
 {
 public:
-    GroupExpression(QueryPlanStepExtPtr step_, std::vector<GroupId> child_groups_,
+    GroupExpression(QueryPlanStepPtr step_, std::vector<GroupId> child_groups_,
                     RuleType produce_rule_ = RuleType::UNDEFINED, GroupId group_id_ = UNDEFINED_GROUP)
         : step(std::move(step_)), group_id(group_id_), child_groups(std::move(child_groups_)), produce_rule(produce_rule_)
     {
     }
 
-    QueryPlanStepExtPtr & getStep() { return step; }
+    QueryPlanStepPtr & getStep() { return step; }
 
     void setGroupId(GroupId group_id_) { group_id = group_id_; }
     GroupId getGroupId() const { return group_id; }
@@ -144,7 +144,7 @@ public:
     }
 
 private:
-    QueryPlanStepExtPtr step;
+    QueryPlanStepPtr step;
     GroupId group_id;
 
     /**

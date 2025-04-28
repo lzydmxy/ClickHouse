@@ -7,10 +7,9 @@
 #include <Query/Optimizer/Property/Property.h>
 #include <Query/Optimizer/Rewriter/Rewriter.h>
 #include <Query/Optimizer/Rule/Rule.h>
-#include <QueryPlan/CTEInfo.h>
-#include <QueryPlan/CTEVisitHelper.h>
-#include <QueryPlan/PlanNode.h>
-#include <QueryPlan/PlanNodeIdAllocator.h>
+#include <Query/Processors/QueryPlan/CTEInfo.h>
+#include <Query/Processors/QueryPlan/CTEVisitHelper.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
 
 #include <stack>
 #include <unordered_set>
@@ -36,8 +35,8 @@ public:
     static WinnerPtr optimize(GroupId root, CascadesContext & context, const Property & required_prop);
     static PlanNodePtr buildPlanNode(GroupId root, CascadesContext & context, const Property & required_prop);
 private:
-    bool rewrite(QueryPlan & plan, ContextMutablePtr context) const override;
-    bool isEnabled(ContextMutablePtr context) const override { return context->getSettingsRef().enable_cascades_optimizer; }
+    bool rewrite(QueryPlanExt & plan, ContextMutablePtr context) const override;
+    bool isEnabled(ContextMutablePtr context) const override { return context->getOptimizerContext()->getSettingsRef().enable_cascades_optimizer; }
     bool enable_cbo;
 };
 
@@ -83,6 +82,11 @@ public:
     const CostModel & getCostModel() const { return cost_model; }
 
 private:
+    struct Metric
+    {
+        UInt64 elapsed_ns;
+        UInt64 counts;
+    };
     using RuleTrace = std::unordered_map<RuleType, std::unordered_map<String, Metric>>;
 
     ContextMutablePtr context;
@@ -102,11 +106,6 @@ private:
     size_t max_join_size;
     CostModel cost_model;
 
-    struct Metric
-    {
-        UInt64 elapsed_ns;
-        UInt64 counts;
-    };
     RuleTrace rule_trace;
     
     LoggerPtr log;
@@ -140,7 +139,7 @@ public:
 
     CascadesContext & getOptimizerContext() const { return context; }
     Memo & getMemo() { return context.getMemo(); }
-    PlanNodeId nextNodeId() { return context.getContext()->nextNodeId(); }
+    PlanNodeId nextNodeId() { return context.getContext()->getOptimizerContext()->nextNodeId(); }
 
 private:
     CascadesContext & context;
@@ -159,10 +158,10 @@ private:
 class WorkerSizeFinder : public PlanNodeVisitor<std::optional<size_t>, const Context>
 {
 public:
-    static size_t find(QueryPlan & query_plan, const Context & context);
+    static size_t find(QueryPlanExt & query_plan, const Context & context);
     std::optional<size_t> visitPlanNode(PlanNodeBase & node, const Context & context) override;
-    std::optional<size_t> visitTableScanNode(TableScanNode & node, const Context & context) override;
-    std::optional<size_t> visitCTERefNode(CTERefNode & node, const Context & context) override;
+    std::optional<size_t> visitTableScanStepExtNode(TableScanStepExtNode & node, const Context & context) override;
+    std::optional<size_t> visitCTERefStepExtNode(CTERefStepExtNode & node, const Context & context) override;
 
 private:
     explicit WorkerSizeFinder(CTEInfo & cte_info_) : cte_info(cte_info_) { }
