@@ -397,4 +397,5 @@ String CascadesContext::getInfo() const
     }
     return ss.str();
 }
-    }
+
+}
