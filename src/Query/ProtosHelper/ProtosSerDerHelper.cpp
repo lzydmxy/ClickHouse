@@ -3,6 +3,7 @@
 #include <Query/ProtosHelper/PlanSerDerHelper.h>
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <Query/Core/FieldHelper.h>
+#include <Query/ProtosHelper/RPCHelpers.h>
 
 namespace DB
 {
@@ -295,6 +296,59 @@ void ProtosSerDerHelper::fillFromProto(SizeLimits & size_limits, const Protos::S
     size_limits.max_rows = proto.max_rows();
     size_limits.max_bytes = proto.max_bytes();
     size_limits.overflow_mode = OverflowModeConverter::fromProto(proto.overflow_mode());
+}
+
+void ProtosSerDerHelper::toProto(const StorageID & storage_id, Protos::StorageID & proto)
+{
+    RPCHelpers::fillStorageID(storage_id, proto);
+}
+
+std::shared_ptr<StorageID> ProtosSerDerHelper::fromProto(const Protos::StorageID & proto, ContextPtr context)
+{
+    auto storage_id = std::make_shared<StorageID>(proto.database(), proto.table(), RPCHelpers::createUUID(proto.uuid()));
+
+    if (!storage_id)
+    {
+        return std::make_shared<StorageID>("_dummy", "_dummy", UUID{});
+    }
+
+    // todo: liyang453, other feat: StorageID do not have server_vw_name in 24.3, may need to be added later
+    // patch
+    /*
+    StoragePtr storage = DatabaseCatalog::instance().getTable(*storage_id, context);
+    if (storage)
+    {
+        auto patched_storage_id = storage->getStorageID();
+
+         set vw_name twice
+        if (!proto.server_vw_name().empty())
+            patched_storage_id.server_vw_name = proto.server_vw_name();
+        return patched_storage_id;
+    }
+    */
+
+    return storage_id;
+}
+
+std::shared_ptr<StorageID> ProtosSerDerHelper::tryFromProto(const Protos::StorageID & proto, ContextPtr context)
+{
+    try {
+        return fromProto(proto, context);
+    } catch (Exception &) {
+        tryLogCurrentException(__PRETTY_FUNCTION__);
+        return std::make_shared<StorageID>();
+    }
+}
+
+void ProtosSerDerHelper::serializeToProtoBase(const ISourceStep & step, Protos::ISourceStep & proto)
+{
+    serializeHeaderToProto(step.getOutputStream().header, *proto.mutable_output_header());
+}
+
+Block ProtosSerDerHelper::deserializeFromProtoBase(const Protos::ISourceStep & proto)
+{
+    Block output_header = deserializeHeaderFromProto(proto.output_header());
+    return output_header;
 }
 
 }

@@ -25,7 +25,7 @@ public:
     static std::vector<ConstASTPtr> removeLargeInValueList(const std::vector<ConstASTPtr> & filters, UInt64 limit);
 
     void toProto(Protos::FilterStepExt & proto, bool for_hash_equals = false) const;
-    static std::shared_ptr<FilterStep> fromProto(const Protos::FilterStepExt & proto, ContextPtr context);
+    static std::shared_ptr<FilterStepExt> fromProto(const Protos::FilterStepExt & proto, ContextPtr context);
 
 private:
     ConstASTPtr filter;

@@ -32,6 +32,8 @@ DistinctStepExt(
     void setLimitHint(UInt64 limit_hint_) { limit_hint = limit_hint_; }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
+    void toProto(Protos::DistinctStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<DistinctStepExt> fromProto(const Protos::DistinctStepExt & proto, ContextPtr context);
 
 public:
     bool can_to_agg;

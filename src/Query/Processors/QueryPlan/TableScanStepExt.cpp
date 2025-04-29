@@ -4,7 +4,10 @@
 #include <Query/Processors/IQueryPlanStepExt.h>
 #include <Query/Processors/QueryPlan/ExecutePlanElement.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
+#include <Query/ProtosHelper/RPCHelpers.h>
 #include <Query/Optimizer/SymbolTransformMap.h>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
 #include <Interpreters/evaluateConstantExpression.h>
 #include <Planner/Utils.h>
 #include <Storages/StorageDistributed.h>
@@ -27,10 +30,9 @@ namespace _scan_execute_impl
     struct ProjectionMatchContext;
     using ProjectionMatchContexts = std::vector<ProjectionMatchContext>;
 
-    const UInt32 NODE_ID_TABLE_SCAN = 0;
     //todo: liyang453, need optimizer: need to implement Optimizer/SymbolTransformMap
     /*
-    
+    const UInt32 NODE_ID_TABLE_SCAN = 0;
     const UInt32 NODE_ID_FILTER = 1;
     const UInt32 NODE_ID_PROJECTION = 2;
     const UInt32 NODE_ID_AGGREGATION = 3;
@@ -260,22 +262,26 @@ TableScanExecutor::TableScanExecutor(TableScanStepExt & step, const MergeTreeDat
 
     if (has_aggregate)
     {
-        const auto * query_aggregate = step.getPushdownAggregationCast();
+        //const auto * query_aggregate = step.getPushdownAggregationCast();
         //tood:need getNamesToTypes func in Block
         //column_types_before_agg = query_aggregate->getInputStreams()[0].header.getNamesToTypes();
 
+        //todo: liyang453, need optimizer: inlineReferences need impl
+        /*
         for (const auto & origin_grouping_key: query_aggregate->getKeys())
             aggregate_keys.emplace_back(NameWithAST{origin_grouping_key, query_lineage->inlineReferences(origin_grouping_key)});
 
         for (const auto & query_aggregate_desc: query_aggregate->getAggregates())
             aggregate_descs.emplace_back(NameWithAST{query_aggregate_desc.column_name,
                                                      query_lineage->inlineReferences(query_aggregate_desc.column_name)});
+        */
     }
 
     if (const auto * query_filter_step = step.getPushdownFilterCast())
     {
-        const auto & query_filter = query_filter_step->getFilter();
-        flatten_filter = query_lineage->inlineReferences(query_filter);
+        
+        //const auto & query_filter = query_filter_step->getFilter();
+        //flatten_filter = query_lineage->inlineReferences(query_filter);
     }
 
     if (!select_query_info.query) 
@@ -287,8 +293,9 @@ TableScanExecutor::TableScanExecutor(TableScanStepExt & step, const MergeTreeDat
 
     if (auto prewhere = select_query->prewhere())
     {
-        NameSet columns{step.getColumnNames().begin(), step.getColumnNames().end()};
-        flatten_prewhere = IdentifierToColumnReference::rewrite(step.getStorage().get(), NODE_ID_TABLE_SCAN, prewhere);
+        //todo: liyang453, need optimizer: IdentifierToColumnReference need impl
+        //NameSet columns{step.getColumnNames().begin(), step.getColumnNames().end()};
+        //flatten_prewhere = IdentifierToColumnReference::rewrite(step.getStorage().get(), NODE_ID_TABLE_SCAN, prewhere);
     }
 
     const auto & settings = context->getSettingsRef();
@@ -432,6 +439,8 @@ bool TableScanExecutor::match(ProjectionMatchContext & candidate) const
         }
 
         // match & rewrite aggregates
+        //todo: liyang453, need optimizer: tryGetTranslation need impl
+        /*
         for (const auto & aggregate_desc: aggregate_descs)
         {
             auto projection_agg_column_opt = candidate.column_translation.tryGetTranslation(aggregate_desc.flatten_ast);
@@ -442,6 +451,7 @@ bool TableScanExecutor::match(ProjectionMatchContext & candidate) const
             candidate.rewritten_types.emplace(aggregate_desc.name, candidate.column_types.at(projection_agg_column));
             candidate.required_column_set.emplace(projection_agg_column);
         }
+        */
 
         // match & rewrite where
         if (flatten_filter)
@@ -561,11 +571,14 @@ PartGroups TableScanExecutor::groupPartsBySchema(const MergeTreeData::DataPartsV
 
 ASTPtr TableScanExecutor::rewriteExpr(ASTPtr expr, ProjectionMatchContext & candidate) const
 {
+    //todo: liyang453, need optimizer: tryGetTranslation need impl
+    /*
     if (auto projection_column = candidate.column_translation.tryGetTranslation(expr))
     {
         candidate.required_column_set.emplace(*projection_column);
         return std::make_shared<ASTIdentifier>(*projection_column);
     }
+    */
 
     if (auto * col_ref = expr->as<ASTTableColumnReference>())
     {
@@ -1803,6 +1816,97 @@ StreamLocalLimits getLimitsForStorage(const Settings & settings, const SelectQue
     limits.speed_limits.timeout_before_checking_execution_speed = settings.timeout_before_checking_execution_speed;
 
     return limits;
+}
+
+void TableScanStepExt::toProto(Protos::TableScanStepExt & proto, bool for_hash_equals) const
+{
+    ProtosSerDerHelper::toProto(storage_id, *proto.mutable_storage_id());
+    for (auto & [name, c_alias] : column_alias)
+    {
+        auto proto_element = proto.add_column_alias();
+        proto_element->set_name(name);
+        proto_element->set_alias(c_alias);
+    }
+
+    //todo: liyang453, other feat: need query_info.toProto
+    //query_info.toProto(*proto.mutable_query_info());
+    proto.set_max_block_size(max_block_size);
+
+    serializeAssignmentsToProto(inline_expressions, *proto.mutable_inline_expressions());
+
+    if (pushdown_aggregation)
+    {
+        pushdown_aggregation->toProto(*proto.mutable_pushdown_aggregation());
+    }
+    if (pushdown_projection)
+    {
+        pushdown_projection->toProto(*proto.mutable_pushdown_projection());
+    }
+    if (pushdown_filter)
+    {
+        pushdown_filter->toProto(*proto.mutable_pushdown_filter());
+    }
+    if (output_stream)
+    {
+        ProtosSerDerHelper::toProto(output_stream.value(), *proto.mutable_output_stream());
+    }
+    ProtosSerDerHelper::toProto(table_output_stream, *proto.mutable_table_output_stream());
+}
+
+std::shared_ptr<TableScanStepExt> TableScanStepExt::fromProto(const Protos::TableScanStepExt & proto, ContextPtr context)
+{
+    auto storage_id = context->getOptimizerContext()->getSettingsRef().enable_prune_source_plan_segment ? ProtosSerDerHelper::tryFromProto(proto.storage_id(), context)
+                                                                            : ProtosSerDerHelper::fromProto(proto.storage_id(), context);
+    NamesWithAliases column_alias;
+    for (const auto & proto_element : proto.column_alias())
+    {
+        auto name = proto_element.name();
+        auto alias = proto_element.alias();
+        column_alias.emplace_back(name, alias);
+    }
+    SelectQueryInfo query_info;
+    //todo: liyang453, other feat: need query_info.toProto
+    //query_info.fillFromProto(proto.query_info());
+    auto max_block_size = proto.max_block_size();
+    auto inline_expressions = deserializeAssignmentsFromProto(proto.inline_expressions());
+
+    std::shared_ptr<AggregatingStepExt> pushdown_aggregation;
+    std::shared_ptr<ProjectionStepExt> pushdown_projection;
+    std::shared_ptr<FilterStepExt> pushdown_filter;
+    std::optional<DataStream> output_stream;
+    DataStream table_output_stream;
+    if (proto.has_pushdown_aggregation())
+        pushdown_aggregation = AggregatingStepExt::fromProto(proto.pushdown_aggregation(), context);
+
+    if (proto.has_pushdown_projection())
+        pushdown_projection = ProjectionStepExt::fromProto(proto.pushdown_projection(), context);
+    if (proto.has_pushdown_filter())
+        pushdown_filter = FilterStepExt::fromProto(proto.pushdown_filter(), context);
+    if (proto.has_output_stream())
+    {
+        output_stream = std::make_optional<DataStream>();
+        ProtosSerDerHelper::fillFromProto(output_stream.value(), proto.output_stream());
+    }
+    if (proto.has_table_output_stream())
+    {
+        ProtosSerDerHelper::fillFromProto(table_output_stream, proto.table_output_stream());
+    }
+
+    auto step = std::make_shared<TableScanStepExt>(
+        context,
+        *output_stream,
+        *storage_id,
+        column_alias,
+        query_info,
+        max_block_size,
+        String{} /*alias*/,
+        inline_expressions,
+        pushdown_aggregation,
+        pushdown_projection,
+        pushdown_filter,
+        std::move(table_output_stream));
+
+    return step;
 }
 
 }
