@@ -38,6 +38,8 @@ public:
 
     std::shared_ptr<ProjectionStepExt> toProjectionStep() const;
     PlanNodePtr toInlinedPlanNode(CTEInfo & cte_info, ContextMutablePtr & context) const;
+    void toProto(Protos::CTERefStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<CTERefStepExt> fromProto(const Protos::CTERefStepExt & proto, ContextPtr context);
 
 private:
     /**

@@ -9,6 +9,7 @@
 #include <Processors/Sources/SourceFromSingleChunk.h>
 #include <Query/Interpreters/InterpreterSelectQueryUseOptimizer.h>
 #include <Query/Interpreters/executeSubQuery.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 
 namespace DB
 {
@@ -127,6 +128,37 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
 std::shared_ptr<IQueryPlanStep> ReadStorageRowCountStepExt::copy(ContextPtr context) const
 {
     auto step = std::make_shared<ReadStorageRowCountStepExt>(output_stream->header, query, agg_desc, is_final_agg, storage_id, context);
+    step->setNumRows(num_rows);
+    return step;
+}
+
+void ReadStorageRowCountStepExt::toProto(Protos::ReadStorageRowCountStepExt & proto, bool for_hash_equals) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
+    serializeASTToProto(query, *proto.mutable_query());
+    ProtosSerDerHelper::toProto(agg_desc, *proto.mutable_agg_desc());
+    proto.set_num_rows(num_rows);
+    proto.set_is_final_agg(is_final_agg);
+    if (storage_id)
+        ProtosSerDerHelper::toProto(storage_id, *proto.mutable_storage_id());
+}
+
+std::shared_ptr<ReadStorageRowCountStepExt> ReadStorageRowCountStepExt::fromProto(const Protos::ReadStorageRowCountStepExt & proto, ContextPtr context)
+{
+    auto base_output_header = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    auto query = deserializeASTFromProto(proto.query());
+    AggregateDescription agg_desc;
+    ProtosSerDerHelper::fillFromProto(agg_desc, proto.agg_desc());
+    auto num_rows = proto.num_rows();
+    bool is_final = proto.is_final_agg();
+    StorageID storage_id = StorageID::createEmpty();
+    if (proto.has_storage_id())
+    {
+        auto storage_id_tmp = ProtosSerDerHelper::fromProto(proto.storage_id(), context);
+        storage_id = *storage_id_tmp;
+    }
+
+    auto step = std::make_shared<ReadStorageRowCountStepExt>(base_output_header, query, agg_desc, is_final, storage_id, context);
     step->setNumRows(num_rows);
     return step;
 }

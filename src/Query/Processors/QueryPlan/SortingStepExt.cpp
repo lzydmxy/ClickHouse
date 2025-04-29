@@ -309,7 +309,7 @@ std::shared_ptr<IQueryPlanStep> SortingStepExt::copy(ContextPtr) const
     return std::make_shared<SortingStepExt>(input_streams[0], result_description, limit, stage, prefix_description, enable_adaptive_spill);
 }
 
-void SortingStepExt::setSizeOrVariableToProto(const SizeOrVariable & size_or_var, Protos::SizeOrVariable & proto) const
+void setSizeOrVariableToProto(const SizeOrVariable & size_or_var, Protos::SizeOrVariable & proto)
 {
     if (const auto * size = std::get_if<size_t>(&size_or_var))
         proto.set_size(*size);
@@ -317,7 +317,7 @@ void SortingStepExt::setSizeOrVariableToProto(const SizeOrVariable & size_or_var
         proto.set_variable(std::get<String>(size_or_var));
 }
 
-std::optional<SizeOrVariable> SortingStepExt::getSizeOrVariableFromProto(const Protos::SizeOrVariable & proto)
+std::optional<SizeOrVariable> getSizeOrVariableFromProto(const Protos::SizeOrVariable & proto)
 {
     if (proto.has_size())
         return SizeOrVariable{proto.size()};

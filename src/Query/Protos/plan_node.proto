@@ -333,7 +333,7 @@ message LimitByStep {
     repeated string columns = 4;
 }
 
-message LimitStep {
+message LimitStepExt {
     ITransformingStep query_plan_base = 1;
     uint64 limit = 2; // deprecated, use limit_or_var instead
     uint64 offset = 3; // deprecated, use offset_or_var instead
@@ -381,7 +381,7 @@ message SortingStepExt {
     SizeOrVariable limit_or_var = 7;
 }
 
-message ValuesStep {
+message ValuesStepExt {
     ISourceStep query_plan_base = 1;
     repeated Field fields = 2;
     uint64 rows = 3;
@@ -413,14 +413,14 @@ message ExchangeStepExt {
     bool keep_order = 4;
 }
 
-message CTERefStep {
+message CTERefStepExt {
     ISourceStep query_plan_base = 1;
     uint32 id = 2;
     map<string, string> output_columns = 3;
     bool has_filter = 4;
 }
 
-message DistinctStep {
+message DistinctStepExt {
     ITransformingStep query_plan_base = 1;
     SizeLimits set_size_limits = 2;
     uint64 limit_hint = 3;
@@ -599,7 +599,7 @@ message AggregatingStepExt {
     bool streaming_for_cache = 15; 
 }
 
-message TotalsHavingStep {
+message TotalsHavingStepExt {
     ITransformingStep query_plan_base = 1;
     bool overflow_row = 2;
     AST having_filter = 3;
@@ -644,7 +644,7 @@ message SelectQueryInfo {
     InputOrderInfo input_order_info = 5;
 }
   
-message TableScanStep {
+message TableScanStepExt {
     StorageID storage_id = 1;
     repeated NameWithAliasPair column_alias = 2;
     SelectQueryInfo query_info = 3;
@@ -671,7 +671,7 @@ message FinalSampleStepExt {
     uint64 max_chunk_size = 3;
 }
 
-message ReadStorageRowCountStep {
+message ReadStorageRowCountStepExt {
     ISourceStep query_plan_base = 1;
     AST query = 3;
     AggregateDescription agg_desc = 4;
@@ -818,8 +818,8 @@ message QueryPlanStep {
         AggregatingStepExt aggregating_step_ext = 1;
         ArrayJoinStep array_join_step = 2;
         AssignUniqueIdStep assign_unique_id_step = 3;
-        CTERefStep c_t_e_ref_step = 4;  // must be perfectly matched
-        DistinctStep distinct_step = 5;
+        CTERefStepExt c_t_e_ref_step_ext = 4;  // must be perfectly matched
+        DistinctStepExt distinct_step_ext = 5;
         EnforceSingleRowStepExt enforce_single_row_step_ext = 6;
         ExceptStep except_step = 7;
         ExchangeStepExt exchange_step_ext = 8;
@@ -831,7 +831,7 @@ message QueryPlanStep {
         IntersectStep intersect_step = 14;
         JoinStepExt join_step_ext = 15;
         LimitByStep limit_by_step = 16;
-        LimitStep limit_step = 17;
+        LimitStepExt limit_step_ext = 17;
         MarkDistinctStep mark_distinct_step = 18;
         MergeSortingStepExt merge_sorting_step_ext = 19;
         MergingAggregatedStep merging_aggregated_step = 20;
@@ -841,23 +841,23 @@ message QueryPlanStep {
         PartitionTopNStepExt partition_top_n_step_ext = 24;
         ProjectionStepExt projection_step_ext = 25;
         ReadNothingStep read_nothing_step = 26;
-        ReadStorageRowCountStep read_storage_row_count_step = 27;
+        ReadStorageRowCountStepExt read_storage_row_count_step_ext = 27;
         RemoteExchangeSourceStepExt remote_exchange_source_step_ext = 28;
         SortingStepExt sorting_step_ext = 29;
         TableFinishStep table_finish_step = 30;
-        TableScanStep table_scan_step = 31;
+        TableScanStepExt table_scan_step_ext = 31;
         TableWriteStep table_write_step = 32;
         TopNFilteringStep top_n_filtering_step = 33;
         UnionStepExt union_step_ext = 34;
         WindowStep window_step = 35;
-        ValuesStep values_step = 36;
+        ValuesStepExt values_step_ext = 36;
         IntersectOrExceptStep intersect_or_except_step = 37;
         BufferStepExt buffer_step_ext = 38;
         ApplyStepExt apply_step_ext = 39;
         OutfileWriteStep outfile_write_step = 40;
         OutfileFinishStep outfile_finish_step = 41;
         ExplainAnalyzeStepExt explain_analyze_step_ext = 44;
-        TotalsHavingStep totals_having_step = 50;
+        TotalsHavingStepExt totals_having_step_ext = 50;
         IntermediateResultCacheStepExt intermediate_result_cache_step_ext = 53;
         LocalExchangeStepExt local_exchange_step_ext = 54;
         MultiJoinStepExt multi_join_step_ext = 55;
