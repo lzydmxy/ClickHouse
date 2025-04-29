@@ -91,11 +91,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, push_queue_timeout_millseconds, 10, "Timeout millseconds of push profile or others to queue.", 0) \
     /** Query optimizer relative settings */ \
     M(Bool, enable_jd_optimizer, true, "Whether enable jd query optimizer", 0) \
-    M(Bool, rewrite_like_function, true, "Rewrite simple pattern like function", 0) \
     M(Bool, enable_legacy_optimizer, false, "Whether enable query optimizer", 0) \
-    M(Bool, enable_use_node_property, true, "Whether enable node property rule", 0) \
-    M(Bool, enable_shuffle_before_state_func, true, "Whether shuffle when agg func is state func.", 0) \
-    M(Bool, enable_merge_require_property, false, "Whether enable merge required property in aggregation", 0) \
     M(UInt64, exchange_buffer_send_threshold_in_bytes, 1000000, "The minimum bytes when exchange will flush send buffer ", 0) \
     M(UInt64, exchange_buffer_send_threshold_in_row, 65505, "The minimum row num when exchange will flush send buffer", 0) \
     M(Bool, exchange_enable_force_remote_mode, false, "Force exchange data transfer through network", 0) \
@@ -108,22 +104,16 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, print_graphviz, false, "Whether print graphviz", 0) \
     M(String, graphviz_path, "/tmp/plan/", "The path of graphviz plan", 0) \
     M(Bool, print_graphviz_ast, false, "Whether print graphviz", 0) \
-    M(UInt64, max_expand_join_key_size, 3, "Whether enable using equivalences when property match", 0) \
-    M(UInt64, max_expand_agg_key_size, 3, "Max allowed agg/window keys number when expand powerset when property match", 0) \
     M(UInt64, plan_optimizer_rule_warning_time, 1000, "Send warning if a optimize rule optimize time exceed timeout", 0) \
     M(Bool, group_by_two_level_for_grouping_set, true, "Adaptive two-level aggregation is not valid for grouping set queries. Setting 1 to enforce two-level aggregation, 0 to enforce single-level aggregation.", 0) \
-    M(Bool, enable_cascades_optimizer, true, "Whether to enable CascadesOptimizer", 0) \
-    M(Bool, enable_iterative_rewriter, true, "Whether to enable InterativeRewriter", 0) \
     M(UInt64, memory_catalog_worker_size, 8, "Memory catalog work size for unittest", 0) \
     /** Exchange settings */ \
-    M(Bool, enable_add_exchange, true, "Whether to enable AddExchange rule", 0) \
     M(UInt64, exchange_timeout_ms, 1000000, "Exchange request timeout ms",0) \
     M(UInt64, exchange_queue_bytes, 209715200, "Queue size(bytes) for exchange queue, 0 means disable", 0) \
     M(Bool, exchange_use_query_memory_tracker, true, "Use query-level memory tracker", 0) \
     M(UInt64, exchange_parallel_size, 1, "Exchange parallel size", 0) \
     M(UInt64, distributed_query_wait_exception_ms, 2000,"Wait final planSegment exception from segmentScheduler.", 0) \
     M(Bool, enable_wait_for_post_processing, false, "Whether a query needs to wait for post processing rpcs done before end", 0) \
-    M(Bool, enforce_round_robin, false, "Whether add round robin exchange node", 0) \
     M(UInt64, wait_for_post_processing_timeout_ms, 1000, "Timeout for waiting post processing rpc from workers.", 0) \
     M(UInt64, exchange_wait_accept_max_timeout_ms, 20000, "Exchange receiver wait accept max timeout ms",0) \
     M(UInt64, exchange_unordered_output_parallel_size, 8, \
@@ -133,7 +123,6 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, disk_shuffle_advisory_partition_size, 104857600, "Disk shuffle files's advisory partition size(including all files in a partition), used by partition coalescing", 0) \
     M(Bool, enable_disk_shuffle_partition_coalescing, true, "If enabled, sheduler will try to coalesce overly-small partitions, thus avoid small plan segments and I/O waste", 0) \
     M(Bool, enable_batch_send_plan_segment, true, "Whether enable combined sending plan segments to reduce rpc calls", 0) \
-    M(Bool, enable_add_local_exchange, false, "Whether to add local exchange", 0) \
     M(UInt64, exchange_remote_receiver_queue_size, 10, "Queue size for remote exchange receiver",0) \
     M(UInt64, exchange_stream_max_buf_size, 20971520, "Default 20M, -1 means no limit", 0) \
     M(Bool, exchange_enable_block_compress, true, "Whether enable exchange block compress ", 0) \
@@ -170,21 +159,6 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_nested_loop_join, false, "Whether enable nest loop join for outer join with filter", 0)\
     M(Bool, use_grace_hash_only_repartition, false, "Only use grace hash join when exchange type is repartition", 0) \
     M(UInt64, grace_hash_join_left_side_parallel, 1, "Initial number of grace hash join left side parallel", 0) \
-    M(Bool, enum_replicate, true, "Enum replicate join", 0) \
-    M(Bool, enum_repartition, true, "Enum repartition join", 0) \
-    M(Bool, enum_replicate_no_stats, true, "Enum replicate join when statistics not exists", 0) \
-    M(UInt64, max_replicate_build_size, 200000, "Max join build size, when enum replicate", 0) \
-    M(UInt64, max_replicate_shuffle_size, 50000000, "Max join build size, when enum replicate", 0) \
-    M(Bool, enable_cardinality_based_join_reorder, true, "Whether to enable CardinalityBasedJoinReorder rule", 0) \
-    M(UInt64 , heuristic_join_reorder_enumeration_times, 3, "Heuristic times in CardinalityBased Join Reorder algorithm", 0) \
-    M(Bool, enable_inner_join_associate, true, "Whether to enable InnerJoinAssociate rule", 0) \
-    M(Bool, enable_inner_join_commutation, true, "Whether to enable InnerJoinCommutation rule", 0) \
-    M(Bool, enable_join_enum_on_graph, true, "Whether to enable JoinEnumOnGraph rule", 0) \
-    M(Bool, enable_semi_join_push_down, true, "Whether to enable SemiJoinPushDown rule", 0) \
-    M(Bool, enable_join_to_multi_join, true, "Whether to enable JoinToMultiJoin rule", 0) \
-    M(Bool, enable_pull_outer_join, true, "Whether to enable PullOuterJoin rule", 0) \
-    M(Bool, enable_push_join_through_union, true, "Whether to enable PushJoinThroughUnion rule", 0) \
-    M(Bool, enable_selectivity_based_join_reorder, true, "Whether to enable SelectivityBasedJoinReorder rule", 0) \
     /** Debug settings */ \
     M(Bool, log_segment_profiles, false, "Log profile of each segment info including runtime and planning information.", 0) \
     M(Bool, report_segment_profiles, false, "Report plan segment profile to coordinator.", 0) \
@@ -192,8 +166,6 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, convert_to_right_type_for_in_subquery, true, "For IN subquery, whether convert arguments to the right type", 0) \
     /** Optimizer relative settings, Plan build and RBO */ \
     M(Bool, enable_auto_prepared_statement, false, "Whether to enable automatic prepared statement", 0) \
-    M(Bool, enable_nested_loop_join, true, "Whether enable nest loop join for outer join with filter", 0)\
-    M(Bool, enforce_all_join_to_any_join, false, "Whether enforce all join to any join", 0) \
     M(Bool, enable_implicit_type_conversion, true, "Whether enable implicit type conversion for JOIN, Set operation, IN subquery", 0) \
     M(Bool, rewrite_like_function, true, "Rewrite simple pattern like function", 0) \
     M(UInt64, iterative_optimizer_timeout, 10000, "Max running time of a single iterative optimizer in ms", 0) \
@@ -421,7 +393,6 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, fallback_to_simple_query, false, "Enable fallback if there is any syntax error", 0)\
     M(Bool, send_plan_segment_by_brpc_join_per_stage, false, "Whether to send plan segment by BRPC and join async rpc request per stage", 0)\
     M(Bool, send_plan_segment_by_brpc_join_at_last, true, "Whether to send plan segment by BRPC and join async rpc request at last", 0)\
-    M(Double, spill_triger_threshold, 0.7, "Threshold to triger spill then memory usage reach a certain ratio of memory quota", 0) \
     /** Optimizer relative settings, statistics */ \
     M(Bool, create_stats_time_output, true, "Enable time output in create stats, should be disabled at regression test", 0) \
     M(Bool, statistics_forward_query, false, "Indicate whether this query is coming from another replica", 0)  \
