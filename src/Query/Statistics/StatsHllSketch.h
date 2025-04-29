@@ -4,15 +4,8 @@
 #include <Common/Exception.h>
 
 #include <Query/Statistics/Base64.h>
-//#include <Statistics/DataSketchesHelper.h>
-#include <hll.hpp>
-// #include <cpc_sketch.hpp>
-// #include <cpc_union.hpp>
-// #include <kll_sketch.hpp>
-// #include <theta_a_not_b.hpp>
-// #include <theta_intersection.hpp>
-// #include <theta_sketch.hpp>
-// #include <theta_union.hpp>
+#include <Query/Statistics/DataSketchesHelper.h>
+
 #include <Query/Statistics/serde_extend.h>
 
 namespace DB::QueryStatistics
