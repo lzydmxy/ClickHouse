@@ -32,6 +32,15 @@ enum class SchedulerMode
 };
 DECLARE_SETTING_ENUM(SchedulerMode);
 
+enum class ExpandMode
+{
+    EXPAND,
+    UNION,
+    CTE,
+};
+
+DECLARE_SETTING_ENUM(ExpandMode)
+
 enum class CTEMode
 {
     INLINED,
@@ -39,6 +48,14 @@ enum class CTEMode
     AUTO,
     ENFORCED,
 };
+
+enum class MaterializedViewConsistencyCheckMethod
+{
+    NONE,
+    PARTITION,
+};
+
+DECLARE_SETTING_ENUM(MaterializedViewConsistencyCheckMethod);
 
 enum class DialectType {
     CLICKHOUSE,
@@ -302,8 +319,8 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_optimize_aggregate_memory_efficient, false, "Whether to enable OptimizeMemoryEfficientAggregation rules", 0) \
     M(Bool, enable_cascades_optimizer, true, "Whether to enable CascadesOptimizer", 0) \
     M(Bool, enable_iterative_rewriter, true, "Whether to enable InterativeRewriter", 0) \
-    M(Float, multi_join_keys_correlated_coefficient, 0.8, "Coefficient about multi join keys, the smaller the value, the smaller the estimated join cardnlity, do nothing when equals 1.0", 0) \
-    M(Float, multi_agg_keys_correlated_coefficient, 0.9, "Coefficient about multi agg keys, the smaller the value, the smaller the estimated agg cardnlity, do nothing when equals 1.0", 0) \
+    M(Float, multi_join_keys_correlated_coefficient, 0.8f, "Coefficient about multi join keys, the smaller the value, the smaller the estimated join cardnlity, do nothing when equals 1.0", 0) \
+    M(Float, multi_agg_keys_correlated_coefficient, 0.9f, "Coefficient about multi agg keys, the smaller the value, the smaller the estimated agg cardnlity, do nothing when equals 1.0", 0) \
     M(Bool, enable_common_expression_sharing, true, "Whether to share common expression between steps", 0) \
     M(Bool, enable_common_expression_sharing_for_prewhere, true, "Whether to share common expression between steps and PREWHERE", 0) \
     M(Bool, enable_unalias_symbol_references, true, "Whether to enable unalias symbol references", 0) \
@@ -312,7 +329,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_add_local_exchange, false, "Whether to add local exchange", 0) \
     M(Bool, enable_join_using_to_join_on, false, "Whether rewrite Join Using to Join On to make reordering possible", 0) \
     M(Bool, enable_ab_test, false, "Whether to open ab test for settings, If true, the settings for some queries are set in the ab_test_profile profile.", 0) \
-    M(Float, ab_test_traffic_factor, 0, "Proportion of queries that perform ab test, meaningful between 0 and 1", 0) \
+    M(Float, ab_test_traffic_factor, 0.0f, "Proportion of queries that perform ab test, meaningful between 0 and 1", 0) \
     M(String, ab_test_profile, "default", "Profile name for ab test", 0) \
     M(Bool, optimize_json_function_to_subcolumn, false, "Whether to optimize json extract functions to subcolumn read", 0) \
     /** Optimizer relative settings, CBO, CTE, MagicSet, MV */ \
@@ -343,15 +360,15 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_sharding_optimize, false, "Whether enable sharding optimization, eg. local join", 0) \
     M(Bool, enable_bucket_shuffle, false, "Whether enable bucket shuffle", 0) \
     M(Bool, enable_magic_set, true, "Whether enable magic set rewriting for join aggregation", 0) \
-    M(Float, magic_set_filter_factor, 0.5, "The minimum filter factor of magic set, used for early pruning", 0) \
+    M(Float, magic_set_filter_factor, 0.5f, "The minimum filter factor of magic set, used for early pruning", 0) \
     M(UInt64, magic_set_max_search_tree, 2, "The maximum table scans in magic set, used for early pruning", 0) \
     M(UInt64, magic_set_source_min_rows, 10000, "The minimum rows of source node in magic set, used for early pruning", 0) \
-    M(Float, magic_set_rows_factor, 0.6, "The minimum rows of source node in magic set, used for early pruning", 0) \
+    M(Float, magic_set_rows_factor, 0.6f, "The minimum rows of source node in magic set, used for early pruning", 0) \
     M(Bool, enable_magic_set_cte, true, "Whether enable magic set rewriting build as cte", 0) \
     M(CTEMode, cte_mode, CTEMode::AUTO, "CTE mode: SHARED|INLINED|AUTO|ENFORCED", 0) \
     M(SpillMode, spill_mode, SpillMode::MANUAL, "SpillMode: MANUAL(default)|AUTO", 0) \
     M(UInt64, max_allowed_mem_size_in_join_spill, 512000000, "Max allowed memory-size(estimated) in join spill", 0) \
-    M(Float, spill_triger_threshold, 0.7, "Threshold to triger spill then memory usage reach a certain ratio of memory quota", 0) \
+    M(Float, spill_triger_threshold, 0.7f, "Threshold to triger spill then memory usage reach a certain ratio of memory quota", 0) \
     M(Bool, enable_cte_property_enum, false, "Whether enumerate all possible properties for cte", 0) \
     M(Bool, enable_cte_common_property, true, "Whether search common property for cte", 0) \
     M(Bool, enable_windows_parallel, false, "Whether run windows in parallel", 0) \
@@ -374,7 +391,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_group_by_keys_pruning, false, "Whether to enable RBO -- group by keys pruning optimization", 0) \
     M(Bool, enable_eager_aggregation, false, "Whether to enable RBO -- eager aggregation optimization", 0) \
     M(Bool, only_push_agg_with_functions, false, "Only use eager aggregation with functions", 0) \
-    M(Float, agg_push_down_threshold, 40.0, "Which ratio is greater than threshold can be push down", 0) \
+    M(Float, agg_push_down_threshold, 40.0f, "Which ratio is greater than threshold can be push down", 0) \
     M(Bool, agg_push_down_every_join, false, "Below every join can insert one agg instead of bottom jion", 0) \
     M(String, eager_agg_join_id_blocklist, "", "Which join in blocklist can't be push down through", 0) \
     M(String, eager_agg_join_id_whitelist, "", "Which join in blocklist can be push down through", 0) \
@@ -427,33 +444,33 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, statistics_max_partitions, 0, "Max partitions in total to collect partitioned stats, 0 for unlimited", 0) \
     M(Bool, statistics_query_cnch_parts_for_row_count, true, "Use cnch parts instead of count(*) for row count to speed up test", 0) \
     /** Optimizer relative settings, cost model and estimation */ \
-    M(Float, cost_calculator_cpu_cost_ratio, 0.74, "Table scan cost weight for cost calculator", 0) \
-    M(Float, cost_calculator_mem_cost_ratio, 0.16, "Table scan cost weight for cost calculator", 0) \
-    M(Float, cost_calculator_net_cost_ratio, 1.0, "Table scan cost weight for cost calculator", 0) \
-    M(Float, cost_calculator_table_scan_weight, 3.8, "Table scan cost weight for cost calculator", 0) \
-    M(Float, cost_calculator_aggregating_weight, 7, "Aggregate output weight for cost calculator", 0) \
-    M(Float, cost_calculator_join_probe_weight, 0.5, "Join probe side weight for cost calculator", 0) \
-    M(Float, cost_calculator_join_build_weight, 1.5, "Join build side weight for cost calculator", 0) \
-    M(Float, cost_calculator_join_output_weight, 0.5, "Join output weight for cost calculator", 0) \
-    M(Float, cost_calculator_cte_weight, 1, "CTE output weight for cost calculator", 0) \
-    M(Float, cost_calculator_cte_weight_for_join_build_side, 1.3, "Join build side weight for cost calculator", 0) \
-    M(Float, cost_calculator_projection_weight, 0.1, "CTE output weight for cost calculator", 0) \
+    M(Float, cost_calculator_cpu_cost_ratio, 0.74f, "Table scan cost weight for cost calculator", 0) \
+    M(Float, cost_calculator_mem_cost_ratio, 0.16f, "Table scan cost weight for cost calculator", 0) \
+    M(Float, cost_calculator_net_cost_ratio, 1.0f, "Table scan cost weight for cost calculator", 0) \
+    M(Float, cost_calculator_table_scan_weight, 3.8f, "Table scan cost weight for cost calculator", 0) \
+    M(Float, cost_calculator_aggregating_weight, 7.0f, "Aggregate output weight for cost calculator", 0) \
+    M(Float, cost_calculator_join_probe_weight, 0.5f, "Join probe side weight for cost calculator", 0) \
+    M(Float, cost_calculator_join_build_weight, 1.5f, "Join build side weight for cost calculator", 0) \
+    M(Float, cost_calculator_join_output_weight, 0.5f, "Join output weight for cost calculator", 0) \
+    M(Float, cost_calculator_cte_weight, 1.0f, "CTE output weight for cost calculator", 0) \
+    M(Float, cost_calculator_cte_weight_for_join_build_side, 1.3f, "Join build side weight for cost calculator", 0) \
+    M(Float, cost_calculator_projection_weight, 0.1f, "CTE output weight for cost calculator", 0) \
     M(Bool, cost_calculator_use_size, true, "Whether use byte size to calc cost", 0) \
     M(Bool, cost_calculator_use_size_in_join, true, "Whether use byte size to calc cost in join", 0) \
-    M(Float, cost_calculator_byte_size_weight, 1, " Byte size weight for cost calculator", 0) \
-    M(Float, stats_estimator_join_filter_selectivity, 0.5, "Join filter selectivity", 0) \
+    M(Float, cost_calculator_byte_size_weight, 1.0f, " Byte size weight for cost calculator", 0) \
+    M(Float, stats_estimator_join_filter_selectivity, 0.5f, "Join filter selectivity", 0) \
     M(Bool, stats_estimator_join_use_histogram, true, "Estimate join use histogram", 0) \
-    M(Float, stats_estimator_anti_join_filter_coefficient, 0.6, "Anti Join filter coefficient", 0) \
-    M(Float, stats_estimator_first_agg_key_filter_coefficient, 0.3, "First agg key coefficient", 0) \
-    M(Float, stats_estimator_remaining_agg_keys_filter_coefficient, 1.5, "Remaining agg key coefficient", 0) \
-    M(Float, stats_estimator_unknown_filter_selectivity, 0.25, "Join filter selectivity", 0) \
-    M(Float, stats_estimator_unknown_in_filter_selectivity, 0.5, "In filter selectivity", 0) \
-    M(Float, stats_estimator_like_selectivity, 0.15, "Like filter selectivity", 0) \
+    M(Float, stats_estimator_anti_join_filter_coefficient, 0.6f, "Anti Join filter coefficient", 0) \
+    M(Float, stats_estimator_first_agg_key_filter_coefficient, 0.3f, "First agg key coefficient", 0) \
+    M(Float, stats_estimator_remaining_agg_keys_filter_coefficient, 1.5f, "Remaining agg key coefficient", 0) \
+    M(Float, stats_estimator_unknown_filter_selectivity, 0.25f, "Join filter selectivity", 0) \
+    M(Float, stats_estimator_unknown_in_filter_selectivity, 0.5f, "In filter selectivity", 0) \
+    M(Float, stats_estimator_like_selectivity, 0.15f, "Like filter selectivity", 0) \
     M(Bool, enable_estimate_without_symbol_statistics, false, "Try to estimiate cardinality even if no symbol statistics", 0) \
     M(Bool, enable_left_deep_join_reorder, false, "Try to do join reorder without accurate statistics", 0) \
     M(Bool, enable_pk_fk, true, "Whether enable PK-FK join estimation", 0) \
     M(Bool, enable_real_pk_fk, true, "Whether enable Real PK-FK join estimation", 0) \
-    M(Float, pk_selectivity, 1.0, "PK selectivity for join estimation", 0) \
+    M(Float, pk_selectivity, 1.0f, "PK selectivity for join estimation", 0) \
     /** Just for compatible, maybe removed or implemented later */ \
     M(UInt64, max_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a query segment can consume.", 0) \
     M(UInt64, max_distributed_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a distribute query can consume.", 0) \

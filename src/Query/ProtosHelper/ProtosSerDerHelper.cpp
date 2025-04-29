@@ -324,6 +324,7 @@ void ProtosSerDerHelper::fillFromProto(SettingsChanges & settings_changes, const
         fillFromProto(element, proto_element);
         settings_changes.emplace_back(std::move(element));
     }
+}
 
 void ProtosSerDerHelper::toProto(const StorageID & storage_id, Protos::StorageID & proto)
 {
