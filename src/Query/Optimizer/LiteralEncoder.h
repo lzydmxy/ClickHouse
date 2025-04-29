@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Analyzers/TypeAnalyzer.h>
+#include <Query/Analyzer/TypeAnalyzer.h>
 #include <Core/Field.h>
 #include <DataTypes/IDataType.h>
 #include <Interpreters/Context_fwd.h>

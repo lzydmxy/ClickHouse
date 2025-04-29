@@ -4,20 +4,17 @@
 #include <Query/Optimizer/Rule/Rewrite/InlineProjections.h>
 #include <Query/Optimizer/SymbolUtils.h>
 #include <Query/Optimizer/SymbolsExtractor.h>
-#include <QueryPlan/JoinStep.h>
-#include <QueryPlan/ProjectionStep.h>
-#include <QueryPlan/QueryPlan.h>
 
 namespace DB
 {
-std::optional<PlanNodePtr> PushProjectionThroughJoin::pushProjectionThroughJoin(ProjectionNode & project, ContextMutablePtr & context)
+std::optional<PlanNodePtr> PushProjectionThroughJoin::pushProjectionThroughJoin(ProjectionStepExtNode & project, ContextMutablePtr & context)
 {
     auto & step = *project.getStep();
 
     bool all_deterministic = true;
     const auto & assignments = step.getAssignments();
     const NameToType & name_to_type = step.getNameToType();
-    for (auto & assigment : assignments)
+    for (const auto & assigment : assignments)
     {
         if (!ExpressionDeterminism::isDeterministic(assigment.second, context))
         {
@@ -29,7 +26,7 @@ std::optional<PlanNodePtr> PushProjectionThroughJoin::pushProjectionThroughJoin(
         return {};
     }
 
-    auto * join_ptr = dynamic_cast<JoinNode *>(project.getChildren()[0].get());
+    auto * join_ptr = dynamic_cast<JoinStepExtNode *>(project.getChildren()[0].get());
     if (!join_ptr)
     {
         return {};
@@ -40,10 +37,10 @@ std::optional<PlanNodePtr> PushProjectionThroughJoin::pushProjectionThroughJoin(
     //    {
     //        return {};
     //    }
-    bool can_project_left = join_step.getKind() == ASTTableJoin::Kind::Inner || join_step.getKind() == ASTTableJoin::Kind::Left
-        || join_step.getKind() == ASTTableJoin::Kind::Cross;
-    bool can_project_right = join_step.getKind() == ASTTableJoin::Kind::Inner || join_step.getKind() == ASTTableJoin::Kind::Right
-        || join_step.getKind() == ASTTableJoin::Kind::Cross;
+    bool can_project_left = join_step.getKind() == JoinKind::Inner || join_step.getKind() == JoinKind::Left
+        || join_step.getKind() == JoinKind::Cross;
+    bool can_project_right = join_step.getKind() == JoinKind::Inner || join_step.getKind() == JoinKind::Right
+        || join_step.getKind() == JoinKind::Cross;
 
     PlanNodePtr join_left = join_ptr->getChildren()[0];
     PlanNodePtr join_right = join_ptr->getChildren()[1];
@@ -70,7 +67,7 @@ std::optional<PlanNodePtr> PushProjectionThroughJoin::pushProjectionThroughJoin(
     NameToType left_name_to_type;
     Assignments right_assignments;
     NameToType right_name_to_type;
-    for (auto & assignment : assignments)
+    for (const auto & assignment : assignments)
     {
         auto expression = assignment.second;
         std::set<String> symbols = SymbolsExtractor::extract(expression);
@@ -154,9 +151,9 @@ std::optional<PlanNodePtr> PushProjectionThroughJoin::pushProjectionThroughJoin(
     else
     {
         auto left_expression_step
-            = std::make_shared<ProjectionStep>(join_left->getStep()->getOutputStream(), std::move(left_assignments), std::move(left_name_to_type));
+            = std::make_shared<ProjectionStepExt>(join_left->getStep()->getOutputStream(), std::move(left_assignments), std::move(left_name_to_type));
         PlanNodePtr left_expression_node
-            = std::make_shared<ProjectionNode>(context->nextNodeId(), std::move(left_expression_step), PlanNodes{join_left});
+            = std::make_shared<ProjectionStepExtNode>(context->getOptimizerContext()->nextNodeId(), std::move(left_expression_step), PlanNodes{join_left});
         left_expression_step_inline = inlineProjections(left_expression_node, context);
     }
 
@@ -169,9 +166,9 @@ std::optional<PlanNodePtr> PushProjectionThroughJoin::pushProjectionThroughJoin(
     else
     {
         auto right_expression_step
-            = std::make_shared<ProjectionStep>(join_right->getStep()->getOutputStream(), std::move(right_assignments), std::move(right_name_to_type));
+            = std::make_shared<ProjectionStepExt>(join_right->getStep()->getOutputStream(), std::move(right_assignments), std::move(right_name_to_type));
         PlanNodePtr right_expression_node
-            = std::make_shared<ProjectionNode>(context->nextNodeId(), std::move(right_expression_step), PlanNodes{join_right});
+            = std::make_shared<ProjectionStepExtNode>(context->getOptimizerContext()->nextNodeId(), std::move(right_expression_step), PlanNodes{join_right});
         right_expression_step_inline = inlineProjections(right_expression_node, context);
     }
 
@@ -192,7 +189,7 @@ std::optional<PlanNodePtr> PushProjectionThroughJoin::pushProjectionThroughJoin(
         output.emplace_back(NameAndTypePair{item.name, item.type});
     }
 
-    auto new_join_step = std::make_shared<JoinStep>(
+    auto new_join_step = std::make_shared<JoinStepExt>(
         streams,
         DataStream{.header = step.getOutputStream().header},
         join_step.getKind(),
@@ -211,10 +208,9 @@ std::optional<PlanNodePtr> PushProjectionThroughJoin::pushProjectionThroughJoin(
         join_step.isMagic(),
         join_step.isOrdered(),
         join_step.isSimpleReordered(),
-        join_step.getRuntimeFilterBuilders(),
-        join_step.getHints());
-    PlanNodePtr new_join_node = std::make_shared<JoinNode>(
-        context->nextNodeId(), std::move(new_join_step), PlanNodes{left_expression_step_inline, right_expression_step_inline});
+        join_step.getRuntimeFilterBuilders());
+    PlanNodePtr new_join_node = std::make_shared<JoinStepExtNode>(
+        context->getOptimizerContext()->nextNodeId(), std::move(new_join_step), PlanNodes{left_expression_step_inline, right_expression_step_inline});
 
     return std::make_optional<PlanNodePtr>(new_join_node);
 }
@@ -222,7 +218,7 @@ std::optional<PlanNodePtr> PushProjectionThroughJoin::pushProjectionThroughJoin(
 PlanNodePtr PushProjectionThroughJoin::inlineProjections(PlanNodePtr parent_projection, ContextMutablePtr & context)
 {
     PlanNodePtr child = parent_projection->getChildren()[0];
-    if (child->getStep()->getType() != IQueryPlanStep::Type::Projection)
+    if (getQueryPlanStepType(child->getStep()) != QueryPlanStepType::ProjectionStepExt)
     {
         return parent_projection;
     }
@@ -237,7 +233,7 @@ PlanNodePtr PushProjectionThroughJoin::inlineProjections(PlanNodePtr parent_proj
     }
 }
 
-std::set<String> PushProjectionThroughJoin::getJoinRequiredSymbols(JoinNode & node)
+std::set<String> PushProjectionThroughJoin::getJoinRequiredSymbols(JoinStepExtNode & node)
 {
     // extract symbols required by the join itself
     std::set<String> join_symbols;

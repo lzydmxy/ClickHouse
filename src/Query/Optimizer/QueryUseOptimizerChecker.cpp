@@ -1,19 +1,17 @@
 #include <Query/Optimizer/QueryUseOptimizerChecker.h>
 
-#include <Analyzers/QueryAnalyzer.h>
-#include <Analyzers/QueryRewriter.h>
-#include <Interpreters/SegmentScheduler.h>
+#include <Query/Analyzer/QueryAnalyzer.h>
+#include <Query/Analyzer/QueryRewriter.h>
 #include <Interpreters/SelectQueryOptions.h>
 #include <Interpreters/getTableExpressions.h>
 #include <Interpreters/misc.h>
 #include <Parsers/ASTExplainQuery.h>
-#include <Parsers/ASTPreparedStatement.h>
 #include <Parsers/ASTSelectIntersectExceptQuery.h>
 #include <Parsers/ASTWithElement.h>
 #include <Storages/StorageView.h>
-#include <common/logger_useful.h>
 #include <Interpreters/executeQuery.h>
-//#include <Common/TestLog.h>
+#include <Query/Parsers/ASTExplainQueryExt.h>
+#include <Parsers/ASTInsertQuery.h>
 
 namespace DB
 {
@@ -92,21 +90,21 @@ static bool checkDatabaseAndTable(String database_name, String table_name, Conte
         return true;
     }
 
-    if (!storage_table->supportsOptimizer())
-    {
-        reason = fmt::format("unsupport storage {}: {}.{}", storage_table->getName(), database_name, table_name);
-        return false;
-    }
+    // todo: hongzhigao1, need storage
+    // if (!storage_table->supportsOptimizer())
+    // {
+    //     reason = fmt::format("unsupport storage {}: {}.{}", storage_table->getName(), database_name, table_name);
+    //     return false;
+    // }
     return true;
 }
 
 bool QueryUseOptimizerChecker::check(ASTPtr node, ContextMutablePtr context, bool throw_exception)
 {
-    if (!context->getSettingsRef().enable_optimizer && context->getSettingsRef().enable_distributed_output)
-        throw Exception(
-            "Distributed output in non-optimizer mode is not supported, please enable optimizer.", ErrorCodes::UNSUPPORTED_PARAMETER);
+    if (!context->getOptimizerContext()->getSettingsRef().enable_jd_optimizer && context->getOptimizerContext()->getSettingsRef().enable_distributed_output)
+        throw Exception(ErrorCodes::UNSUPPORTED_PARAMETER, "Distributed output in non-optimizer mode is not supported, please enable optimizer.");
 
-    if (!node || !context->getSettingsRef().enable_optimizer)
+    if (!node || !context->getOptimizerContext()->getSettingsRef().enable_jd_optimizer)
     {
         turnOffOptimizer(context, node);
         return false;
@@ -117,34 +115,36 @@ bool QueryUseOptimizerChecker::check(ASTPtr node, ContextMutablePtr context, boo
     // will execute query : INSERT INTO test.parallel_replicas_backup_4313395779120660490 (d, x, u, s) SELECT d, x, u, s FROM test.parallel_replicas )
     // will execute query : SELECT d, x, u, s FROM test.parallel_replicas_4313395779120660490
     // in worker.
-    if (context->getServerType() == ServerType::cnch_worker)
-    {
-        turnOffOptimizer(context, node);
-        return false;
-    }
+    // todo: hongzhigao1, no chch
+    // if (context->getServerType() == ServerType::cnch_worker)
+    // {
+    //     turnOffOptimizer(context, node);
+    //     return false;
+    // }
 
     String reason;
-    if (auto * explain = node->as<ASTExplainQuery>())
+    if (auto * explain = node->as<ASTExplainQueryExt>())
     {
-        bool explain_plan = explain->getKind() == ASTExplainQuery::ExplainKind::OptimizerPlan
-            || explain->getKind() == ASTExplainQuery::ExplainKind::QueryPlan
-            || explain->getKind() == ASTExplainQuery::ExplainKind::QueryPipeline
-            || explain->getKind() ==  ASTExplainQuery::AnalyzedSyntax
-            || explain->getKind() ==  ASTExplainQuery::DistributedAnalyze
-            || explain->getKind() ==  ASTExplainQuery::LogicalAnalyze
-            || explain->getKind() ==  ASTExplainQuery::PipelineAnalyze
-            || explain->getKind() ==  ASTExplainQuery::Distributed
-            || explain->getKind() ==  ASTExplainQuery::TraceOptimizerRule
-            || explain->getKind() ==  ASTExplainQuery::TraceOptimizer
-            || explain->getKind() ==  ASTExplainQuery::MetaData;
+        bool explain_plan = explain->getKind() == ASTExplainQueryExt::ExplainKindExt::OptimizerPlan
+            || explain->getKind() == ASTExplainQueryExt::ExplainKindExt::QueryPlan
+            || explain->getKind() == ASTExplainQueryExt::ExplainKindExt::QueryPipeline
+            || explain->getKind() ==  ASTExplainQueryExt::AnalyzedSyntax
+            || explain->getKind() ==  ASTExplainQueryExt::DistributedAnalyze
+            || explain->getKind() ==  ASTExplainQueryExt::LogicalAnalyze
+            || explain->getKind() ==  ASTExplainQueryExt::PipelineAnalyze
+            || explain->getKind() ==  ASTExplainQueryExt::Distributed
+            || explain->getKind() ==  ASTExplainQueryExt::TraceOptimizerRule
+            || explain->getKind() ==  ASTExplainQueryExt::TraceOptimizer
+            || explain->getKind() ==  ASTExplainQueryExt::MetaData;
         if (!explain_plan)
             reason = "unsupported explain type";
         return explain_plan && check(explain->getExplainedQuery(), context, throw_exception);
     }
-    if (auto * prepare = node->as<ASTCreatePreparedStatementQuery>())
-    {
-        return check(prepare->getQuery(), context, throw_exception);
-    }
+    // todo: hongzhigao1, implement ASTCreatePreparedStatementQuery
+    // if (auto * prepare = node->as<ASTCreatePreparedStatementQuery>())
+    // {
+    //     return check(prepare->getQuery(), context, throw_exception);
+    // }
 
 
     bool support = false;
@@ -169,8 +169,7 @@ bool QueryUseOptimizerChecker::check(ASTPtr node, ContextMutablePtr context, boo
 
         if (!support)
         {
-            LOG_INFO(
-                getLogger("QueryUseOptimizerChecker"), "query is unsupported for optimizer, reason: " + checker.getReason());
+            LOG_INFO(getLogger("QueryUseOptimizerChecker"), "query is unsupported for optimizer, reason: {}", checker.getReason());
             reason = checker.getReason();
         }
     }
@@ -178,7 +177,7 @@ bool QueryUseOptimizerChecker::check(ASTPtr node, ContextMutablePtr context, boo
     {
         support = true;
         auto * insert_query = node->as<ASTInsertQuery>();
-        if (insert_query->in_file || insert_query->table_function || !insert_query->select)
+        if (insert_query->infile || insert_query->table_function || !insert_query->select)
         {
             reason = "unsupported function/in file/no select";
             support = false;
@@ -193,9 +192,7 @@ bool QueryUseOptimizerChecker::check(ASTPtr node, ContextMutablePtr context, boo
                 support = false;
         }
 
-        LOG_DEBUG(
-            getLogger("QueryUseOptimizerChecker"),
-            fmt::format("support: {}, check: {}", support, check(insert_query->select, context)));
+        LOG_DEBUG(getLogger("QueryUseOptimizerChecker"), "support: {}, check: {}", support, check(insert_query->select, context));
         if (support)
             support = check(insert_query->select, context, throw_exception);
     }
@@ -203,7 +200,7 @@ bool QueryUseOptimizerChecker::check(ASTPtr node, ContextMutablePtr context, boo
     if (!support)
     {
         if (throw_exception)
-            throw Exception(ErrorCodes::INCORRECT_QUERY, "query is unsupported for optimizer, reason: " + reason);
+            throw Exception(ErrorCodes::INCORRECT_QUERY, "query is unsupported for optimizer, reason: {}", reason);
         else
             turnOffOptimizer(context, node);
     }
@@ -234,7 +231,7 @@ checkDatabaseAndTable(const ASTTableExpression & table_expression, const Context
     return true;
 }
 
-bool QueryUseOptimizerVisitor::visitASTSelectQuery(ASTPtr & node, QueryUseOptimizerContext & context)
+bool QueryUseOptimizerVisitor::visitASTSelectQueryExt(ASTPtr & node, QueryUseOptimizerContext & context)
 {
     auto * select = node->as<ASTSelectQuery>();
 
@@ -302,9 +299,9 @@ bool QueryUseOptimizerVisitor::visitASTFunction(ASTPtr & node, QueryUseOptimizer
         return false;
     }
 
-    else if (functionIsInOrGlobalInOperator(fun.name) && fun.arguments->getChildren().size() == 2)
+    else if (functionIsInOrGlobalInOperator(fun.name) && fun.arguments->children.size() == 2)
     {
-        if (auto * identifier = fun.arguments->getChildren()[1]->as<ASTIdentifier>())
+        if (auto * identifier = fun.arguments->children[1]->as<ASTIdentifier>())
         {
             if (auto table = identifier->createTable())
             {
@@ -322,7 +319,7 @@ bool QueryUseOptimizerVisitor::visitASTFunction(ASTPtr & node, QueryUseOptimizer
     return support;
 }
 
-bool QueryUseOptimizerVisitor::visitASTQuantifiedComparison(ASTPtr & node, QueryUseOptimizerContext & context)
+bool QueryUseOptimizerVisitor::visitASTQuantifiedComparisonExt(ASTPtr & node, QueryUseOptimizerContext & context)
 {
     return visitNode(node, context);
 }

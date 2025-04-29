@@ -5,9 +5,6 @@
 #include <Query/Processors/QueryPlan/PlanNode.h>
 #include <Storages/IStorage_fwd.h>
 
-#include <unordered_map>
-#include <DataTypes/IDataType.h>
-
 namespace DB
 {
 class ProjectionStep;
@@ -15,31 +12,54 @@ struct AggregateDescription;
 
 namespace Utils
 {
-    using ConstASTPtr = std::shared_ptr<const IAST>;
-    using NameToType = std::map<String, DataTypePtr>;
+void assertIff(bool expression1, bool expression2);
+void checkState(bool expression);
+void checkState(bool expression, const String & msg);
+void checkArgument(bool expression);
+void checkArgument(bool expression, const String & msg);
+bool isIdentity(const String & symbol, const ConstASTPtr & expression);
+bool isIdentity(const Assignment & assignment);
+bool isIdentity(const Assignments & assignments);
+bool isIdentity(const ProjectionStep & project);
+bool isAlias(const Assignment & assignment);
+bool isAlias(const Assignments & assignments);
 
-    void assertIff(bool expression1, bool expression2);
-    void checkState(bool expression);
-    void checkState(bool expression, const String & msg);
-    void checkArgument(bool expression);
-    void checkArgument(bool expression, const String & msg);
-    bool isIdentity(const String & symbol, const ConstASTPtr & expression);
-    bool isIdentity(const Assignment & assignment);
-    bool isIdentity(const Assignments & assignments);
-    bool isIdentity(const ProjectionStep & project);
-    bool isAlias(const Assignment & assignment);
-    bool isAlias(const Assignments & assignments);
+bool isIdentifierOrIdentifierCast(const ConstASTPtr & expression);
+// return inside expression if cast don't affect the data in the bound column, such as cast to Nullable(column_name), int8 to int32.
+ConstASTPtr tryUnwrapCast(const ConstASTPtr & expression, ContextMutablePtr context, const NamesAndTypes & names_and_types);
 
-    bool isIdentifierOrIdentifierCast(const ConstASTPtr & ast);
-    // return inside expression if cast don't affect the data in the bound column, such as cast to Nullable(column_name), int8 to int32.
-    ConstASTPtr tryUnwrapCast(const ConstASTPtr & expression, ContextMutablePtr context, const NamesAndTypes & names_and_types);
+NameToNameMap extractIdentities(const ProjectionStepExt & project);
+std::unordered_map<String, String> computeIdentityTranslations(const Assignments & assignments);
+ASTPtr extractAggregateToFunction(const AggregateDescription & aggregate_description);
+bool containsAggregateFunction(const ASTPtr & ast);
 
-    NameToNameMap extractIdentities(const ProjectionStepExt & project);
-    std::unordered_map<String, String> computeIdentityTranslations(const Assignments & assignments);
-    ASTPtr extractAggregateToFunction(const AggregateDescription & agg_descr);
-    bool containsAggregateFunction(const ASTPtr & ast);
+bool canIgnoreNullsDirection(const DataTypePtr & type);
 
-    bool canIgnoreNullsDirection(const DataTypePtr & type);
+// this method is used to deal with function names which are case-insensitive or have an alias to.
+// should be called after `registerFunctions`
+bool checkFunctionName(const ASTFunction & function, const String & expect_name);
+inline bool checkFunctionName(const ASTPtr & function_ptr, const String & expect_name)
+{
+    return checkFunctionName(function_ptr->as<ASTFunction &>(), expect_name);
+}
+
+/**
+      * Ordering used to determine ASTPtr preference when determining canonicals
+      *
+      * Current cost heuristic:
+      * 1) Prefer fewer input symbols
+      * 2) Prefer smaller expression trees
+      * 3) Sort the expressions alphabetically - creates a stable consistent ordering (extremely useful for unit testing)
+      */
+struct ConstASTPtrOrdering
+{
+    bool operator()(const ConstASTPtr & predicate_1, const ConstASTPtr & predicate_2) const;
+};
+
+//Determine whether it is NAN
+bool isFloatingPointNaN(const DataTypePtr & type, const Field & value);
+
+String flipOperator(const String & name);
 
 template <typename T>
 static std::vector<std::vector<T>> powerSet(std::vector<T> set)
@@ -66,22 +86,22 @@ static std::vector<std::vector<T>> powerSet(std::vector<T> set)
     return power_set;
 }
 
-    bool canChangeOutputRows(const Assignments & assignments, ContextPtr context);
-    bool canChangeOutputRows(const ProjectionStepExt & project, ContextPtr context);
+bool canChangeOutputRows(const Assignments & assignments, ContextPtr context);
+bool canChangeOutputRows(const ProjectionStepExt & project, ContextPtr context);
 
-    // return nullopt if ambiguous symbol exists(rarely)
-    std::optional<NameToType> extractNameToType(const PlanNodeBase & node);
+// return nullopt if ambiguous symbol exists(rarely)
+std::optional<NameToType> extractNameToType(const PlanNodeBase & node);
 
-    template <template <typename, typename...> typename Map, typename K, typename V>
-    Map<V, K> reverseMap(const Map<K, V> & map)
-    {
-        Map<V, K> reversed;
-        for (const auto & entry : map)
-            reversed.emplace(entry.second, entry.first);
-        return reversed;
-    }
+template <template <typename, typename...> typename Map, typename K, typename V>
+Map<V, K> reverseMap(const Map<K, V> & map)
+{
+    Map<V, K> reversed;
+    for (const auto & entry : map)
+        reversed.emplace(entry.second, entry.first);
+    return reversed;
+}
 
-    std::string getVersionFromSystem();
+std::string getVersionFromSystem();
 }
 
 }

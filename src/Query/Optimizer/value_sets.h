@@ -2,10 +2,8 @@
 
 #include <Core/Field.h>
 #include <Common/Exception.h>
-#include <Common/LinkedHashSet.h>
 #include <DataTypes/IDataType.h>
 #include <Query/Optimizer/Utils.h>
-#include <unordered_set>
 #include <utility>
 #include <variant>
 #include <DataTypes/DataTypeNullable.h>

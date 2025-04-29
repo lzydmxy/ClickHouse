@@ -137,7 +137,7 @@ NameToNameMap extractIdentities(const ProjectionStepExt & project)
 {
     NameToNameMap result;
     for (const auto & assignment: project.getAssignments())
-        if (auto identifier = assignment.second->as<const ASTIdentifier>())
+        if (const auto *identifier = assignment.second->as<const ASTIdentifier>())
             result.emplace(assignment.first, identifier->name());
     return result;
 }
@@ -161,12 +161,12 @@ ASTPtr extractAggregateToFunction(const AggregateDescription & aggregate_descrip
     function->name = aggregate_description.function->getName();
     function->arguments = std::make_shared<ASTExpressionList>();
     function->children.push_back(function->arguments);
-    for (auto & argument : aggregate_description.argument_names)
+    for (const auto & argument : aggregate_description.argument_names)
         function->arguments->children.emplace_back(std::make_shared<ASTIdentifier>(argument));
     if (!aggregate_description.parameters.empty())
     {
         function->parameters = std::make_shared<ASTExpressionList>();
-        for (auto & parameter : aggregate_description.parameters)
+        for (const auto & parameter : aggregate_description.parameters)
             function->parameters->children.emplace_back(std::make_shared<ASTLiteral>(parameter));
     }
     return function;
@@ -174,7 +174,7 @@ ASTPtr extractAggregateToFunction(const AggregateDescription & aggregate_descrip
 
 bool containsAggregateFunction(const ASTPtr & ast)
 {
-    if (auto function = ast->as<ASTFunction>())
+    if (auto *function = ast->as<ASTFunction>())
         if (AggregateFunctionFactory::instance().isAggregateFunctionName(function->name))
             return true;
     for (const auto & child : ast->children)

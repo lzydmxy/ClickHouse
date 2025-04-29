@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QueryPlan/QueryPlan.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
 
 namespace DB
 {
@@ -10,7 +10,7 @@ class PlanNodeSearcher
 public:
     static PlanNodeSearcher searchFrom(const PlanNodePtr & node) { return PlanNodeSearcher{node}; }
 
-    static PlanNodeSearcher searchFrom(QueryPlan & plan)
+    static PlanNodeSearcher searchFrom(QueryPlanExt & plan)
     {
         PlanNodes nodes;
         nodes.emplace_back(plan.getPlanNode());
@@ -55,7 +55,7 @@ public:
 
     PlanNodePtr findOnlyElementOr(const PlanNodePtr & default_);
 
-    void findAllRecursive(const PlanNodePtr & curr, std::vector<PlanNodePtr> & nodes);
+    void findAllRecursive(const PlanNodePtr & curr, std::vector<PlanNodePtr> & result);
 
     bool matches() { return findFirst().has_value(); }
 

@@ -365,7 +365,7 @@ Array SortedRangeSet::getDiscreteSet() const
 {
     Array res;
 
-    for (auto & range : ranges)
+    for (const auto & range : ranges)
         res.emplace_back(range.getSingleValue());
 
     return res;
@@ -725,7 +725,7 @@ ValueSet createSingleValueSet(const DataTypePtr & type, const Field & value)
 bool isTypeOrderable(const DataTypePtr & type)
 {
     auto t = removeNullable(recursiveRemoveLowCardinality(type));
-    return isNumber(t) || isDecimal(t) || isString(t) || isDateOrDateTime(t);
+    return isNumber(t) || isDecimal(t) || isString(t) || isDateOrDate32OrDateTimeOrDateTime64(t);
 }
 
 bool isTypeComparable(const DataTypePtr &)

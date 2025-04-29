@@ -1,41 +1,38 @@
 #pragma once
 
 #include <Parsers/IAST_fwd.h>
-#include <Storages/IStorage.h>
-#include <Query/Parsers/ASTHelper.h>
 #include <Query/Optimizer/SimpleExpressionRewriter.h>
-#include <Query/Analyzer/ASTEquals.h>
-#include <Query/Optimizer/SymbolsExtractor.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
 
 #include <optional>
 #include <unordered_map>
 
 namespace DB
 {
-class PlanNodeBase;
-using PlanNodePtr = std::shared_ptr<PlanNodeBase>;
-using PlanNodes = std::vector<PlanNodePtr>;
-using String = std::string;
-using UInt32 = uint32_t;
-using PlanNodeId = UInt32;
-
+/**
+  * Used to determines the origin of identifier in expression.
+  */
 class SymbolTransformMap
 {
 public:
     static std::optional<SymbolTransformMap> buildFrom(PlanNodeBase & plan, std::optional<PlanNodeId> stop_node = std::nullopt);
 
-    // todo: lizhuoyu5, just to temporarily pass the compilation.
-    ASTPtr inlineReferences(const ConstASTPtr & expression) const {return nullptr;}
+    ASTPtr inlineReferences(const ConstASTPtr & expression) const;
 
     ASTPtr inlineReferences(const String & symbol) const { return inlineReferences(std::make_shared<ASTIdentifier>(symbol)); }
 
     String toString() const;
 
 private:
+    /**
+      * violation may happen when illegal plan has symbol transform loop, or contain duplicate
+      * symbol names with other plan nodes. eg, expr1 := cast(expr1, 'UInt8').
+      */
     bool addSymbolMapping(const String & symbol, ConstASTPtr expr);
 
     std::unordered_map<String, ConstASTPtr> symbol_to_expressions;
 
+    // cache
     mutable std::unordered_map<String, ConstASTPtr> expression_lineage;
 
     class Visitor;
@@ -45,19 +42,11 @@ private:
 class SymbolTranslationMap
 {
 public:
-    void addTranslation(ASTPtr ast, String name)
-    {
-        translation.emplace(std::move(ast), std::move(name));
-    }
+    void addTranslation(ASTPtr ast, String name) { translation.emplace(std::move(ast), std::move(name)); }
     // rewrite table column to ASTColumnReference before adding translation
     void addStorageTranslation(ASTPtr ast, String name, const IStorage * storage, UInt32 unique_id);
-
-    // todo: lizhuoyu5, just to temporarily pass the compilation.
-    std::optional<String> tryGetTranslation(const ASTPtr & expr) const {return std::nullopt;}
-    ASTPtr translate(ASTPtr ast) const
-    {
-        return translateImpl(ast);
-    }
+    std::optional<String> tryGetTranslation(const ASTPtr & expr) const;
+    ASTPtr translate(ASTPtr ast) const { return translateImpl(ast); }
 
 private:
     ASTMap<String> translation;
@@ -68,8 +57,7 @@ private:
 class IdentifierToColumnReference : public SimpleExpressionRewriter<Void>
 {
 public:
-    // todo: lizhuoyu5, just to temporarily pass the compilation.
-    static ASTPtr rewrite(const IStorage * storage, UInt32 unique_id, ASTPtr ast, bool clone = true) {return nullptr;}
+    static ASTPtr rewrite(const IStorage * storage, UInt32 unique_id, ASTPtr ast, bool clone = true);
 
 private:
     const IStorage * storage;
@@ -85,7 +73,6 @@ class ColumnReferenceToIdentifier : public SimpleExpressionRewriter<Void>
 {
 public:
     static ASTPtr rewrite(ASTPtr ast, bool clone = true);
-    ASTPtr visitASTTableColumnReference(ASTPtr & node, Void & context);
+    ASTPtr visitASTTableColumnReference(ASTPtr & node, Void & context) override;
 };
-
 }

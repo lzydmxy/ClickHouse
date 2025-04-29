@@ -1,16 +1,16 @@
 #include <Query/Optimizer/PlanCheck.h>
 
-#include <Analyzers/TypeAnalyzer.h>
+#include <Query/Analyzer/TypeAnalyzer.h>
 
 namespace DB
 {
-void PlanCheck::checkInitPlan(QueryPlan & plan, ContextMutablePtr context)
+void PlanCheck::checkInitPlan(QueryPlanExt & plan, ContextMutablePtr context)
 {
     // As init plan may contain correlated symbols, pass check filter.
     SymbolChecker::check(plan, context, false);
 }
 
-void PlanCheck::checkFinalPlan(QueryPlan & plan, ContextMutablePtr context)
+void PlanCheck::checkFinalPlan(QueryPlanExt & plan, ContextMutablePtr context)
 {
     SymbolChecker::check(plan, context, true);
     TableScanChecker::check(plan, context);
@@ -19,7 +19,7 @@ void PlanCheck::checkFinalPlan(QueryPlan & plan, ContextMutablePtr context)
 void ReadNothingChecker::check(PlanNodePtr plan)
 {
     // if the whole plan is simplify to ReadNothingNode, return.
-    if (plan->getStep()->getType() == IQueryPlanStep::Type::ReadNothing)
+    if (getQueryPlanStepType(plan->getStep()) == QueryPlanStepType::ReadNothing)
     {
         return;
     }
@@ -44,7 +44,7 @@ Void ReadNothingChecker::visitReadNothingNode(ReadNothingNode &, Void &)
     throw Exception(ErrorCodes::LOGICAL_ERROR, "ReadNothingNode must removed in query optimization");
 }
 
-void SymbolChecker::check(QueryPlan & plan, ContextMutablePtr & context, bool check_filter)
+void SymbolChecker::check(QueryPlanExt & plan, ContextMutablePtr & context, bool check_filter)
 {
     SymbolChecker symbol_check{check_filter};
     VisitorUtil::accept(plan.getPlanNode(), symbol_check, context);
@@ -59,7 +59,7 @@ Void SymbolChecker::visitPlanNode(PlanNodeBase & node, ContextMutablePtr & conte
     return {};
 }
 
-Void SymbolChecker::visitProjectionNode(ProjectionNode & node, ContextMutablePtr & context)
+Void SymbolChecker::visitProjectionStepExtNode(ProjectionStepExtNode & node, ContextMutablePtr & context)
 {
     VisitorUtil::accept(node.getChildren()[0], *this, context);
     const auto & step = *node.getStep();
@@ -67,7 +67,7 @@ Void SymbolChecker::visitProjectionNode(ProjectionNode & node, ContextMutablePtr
     const auto & input_header = node.getChildren()[0]->getStep()->getOutputStream().header;
     auto names_and_types = input_header.getNamesAndTypes();
     auto type_analyzer = TypeAnalyzer::create(context, names_and_types);
-    for (auto & assignment : assignments)
+    for (const auto & assignment : assignments)
     {
         ConstASTPtr value = assignment.second;
         type_analyzer.getType(value);
@@ -75,7 +75,7 @@ Void SymbolChecker::visitProjectionNode(ProjectionNode & node, ContextMutablePtr
     return {};
 }
 
-Void SymbolChecker::visitFilterNode(FilterNode & node, ContextMutablePtr & context)
+Void SymbolChecker::visitFilterStepExtNode(FilterStepExtNode & node, ContextMutablePtr & context)
 {
     VisitorUtil::accept(node.getChildren()[0], *this, context);
 
@@ -89,7 +89,7 @@ Void SymbolChecker::visitFilterNode(FilterNode & node, ContextMutablePtr & conte
     return {};
 }
 
-void TableScanChecker::check(QueryPlan & plan, ContextMutablePtr & context)
+void TableScanChecker::check(QueryPlanExt & plan, ContextMutablePtr & context)
 {
     TableScanChecker tablescan_check;
     VisitorUtil::accept(plan.getPlanNode(), tablescan_check, context);
@@ -104,10 +104,10 @@ Void TableScanChecker::visitPlanNode(PlanNodeBase & node, ContextMutablePtr & co
     return {};
 }
 
-Void TableScanChecker::visitTableScanNode(TableScanNode & node, ContextMutablePtr & context)
+Void TableScanChecker::visitTableScanStepExtNode(TableScanStepExtNode & node, ContextMutablePtr & context)
 {
     auto & step = node.getStep();
-    if (!context->getSettingsRef().allow_map_access_without_key && step->getStorage() && step->getStorage()->supportsMapImplicitColumn())
+    if (!context->getOptimizerContext()->getSettingsRef().allow_map_access_without_key && step->getStorage() && step->getStorage()->supportsMapImplicitColumn())
     {
         if (!step->getStorageSnapshot())
             throw Exception(ErrorCodes::LOGICAL_ERROR, "StorageSnapshot is nullptr in TableScan");

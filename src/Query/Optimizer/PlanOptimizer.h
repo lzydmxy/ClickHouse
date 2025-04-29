@@ -1,22 +1,20 @@
 #pragma once
 
 #include <Interpreters/Context.h>
-#include <Query/Processors/QueryPlan/PlanNode.h>
-//todo: need Rewriter
-//#include <Optimizer/Rewriter/Rewriter.h>
+#include <Optimizer/Rewriter/Rewriter.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
 
 namespace DB
 {
 class PlanOptimizer
 {
 public:
-    //todo: need impl the optimize and other getXXX, now just a fake impl
-    static void optimize(QueryPlan & plan, ContextMutablePtr context) {}
-    //static void optimize(QueryPlan & plan, ContextMutablePtr context, const Rewriters & rewriters);
-    //static const Rewriters & getSimpleRewriters();
-    //static const Rewriters & getLegacyFullRewriters();
-    //static const Rewriters & getFullRewriters();
-    //static const Rewriters & getShortCircuitRewriters();
+    static void optimize(QueryPlanExt & plan, ContextMutablePtr context);
+    static void optimize(QueryPlanExt & plan, ContextMutablePtr context, const Rewriters & rewriters);
+    static const Rewriters & getSimpleRewriters();
+    static const Rewriters & getLegacyFullRewriters();
+    static const Rewriters & getFullRewriters();
+    static const Rewriters & getShortCircuitRewriters();
 };
 
 }

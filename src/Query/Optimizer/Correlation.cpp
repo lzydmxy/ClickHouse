@@ -5,13 +5,14 @@
 #include <Query/Optimizer/SymbolsExtractor.h>
 #include <Query/Optimizer/ProjectionPlanner.h>
 #include <Query/Optimizer/makeCastFunction.h>
-#include <Interpreters/join_common.h>
+// #include <Interpreters/join_common.h>
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTTablesInSelectQuery.h>
-#include <QueryPlan/Assignment.h>
-#include <QueryPlan/DistinctStep.h>
-#include <QueryPlan/FilterStep.h>
-#include <QueryPlan/ProjectionStep.h>
+#include "Query/Interpreters/JoinUtilsExt.h"
+// #include <QueryPlan/Assignment.h>
+// #include <QueryPlan/DistinctStep.h>
+// #include <QueryPlan/FilterStep.h>
+// #include <QueryPlan/ProjectionStep.h>
 
 namespace DB
 {
@@ -68,7 +69,7 @@ std::pair<Names, Names> DecorrelationResult::extractCorrelations(Names & correla
     for (auto & predicate : correlation_predicates)
     {
         const auto & fun = predicate->as<ASTFunction &>();
-        ASTIdentifier & left_symbol = fun.arguments->getChildren()[0]->as<ASTIdentifier &>();
+        ASTIdentifier & left_symbol = fun.arguments->children[0]->as<ASTIdentifier &>();
         if (std::find(correlation.begin(), correlation.end(), left_symbol.name()) != correlation.end())
         {
             left.emplace_back(left_symbol.name());
@@ -77,7 +78,7 @@ std::pair<Names, Names> DecorrelationResult::extractCorrelations(Names & correla
         {
             right.emplace_back(left_symbol.name());
         }
-        ASTIdentifier & right_symbol = fun.arguments->getChildren()[1]->as<ASTIdentifier &>();
+        ASTIdentifier & right_symbol = fun.arguments->children[1]->as<ASTIdentifier &>();
         if (std::find(correlation.begin(), correlation.end(), right_symbol.name()) != correlation.end())
         {
             left.emplace_back(right_symbol.name());
@@ -181,7 +182,7 @@ std::optional<DecorrelationResult> DecorrelationVisitor::visitPlanNode(PlanNodeB
     return std::make_optional(result);
 }
 
-std::optional<DecorrelationResult> DecorrelationVisitor::visitFilterNode(FilterNode & node, Context & context)
+std::optional<DecorrelationResult> DecorrelationVisitor::visitFilterStepExtNode(FilterStepExtNode & node, Context & context)
 {
     PlanNodePtr & source = node.getChildren()[0];
     DecorrelationResult child{.node = source};
@@ -198,9 +199,9 @@ std::optional<DecorrelationResult> DecorrelationVisitor::visitFilterNode(FilterN
     const auto & step = *node.getStep();
     const auto & predicate = step.getFilter();
 
-    std::vector<ConstASTPtr> predicates = PredicateUtils::extractConjuncts(predicate);
+    ConstASTs predicates = PredicateUtils::extractConjuncts(predicate);
     std::vector<ConstASTPtr> correlation_predicates;
-    std::vector<ConstASTPtr> un_correlation_predicates;
+    ConstASTs un_correlation_predicates;
     for (auto & pre : predicates)
     {
         if (Correlation::isCorrelated(pre, correlation))
@@ -238,8 +239,8 @@ std::optional<DecorrelationResult> DecorrelationVisitor::visitFilterNode(FilterN
     {
         const DataStream & input = child_result_value.node->getStep()->getOutputStream();
         ASTPtr un_correlation_predicate = PredicateUtils::combineConjuncts(un_correlation_predicates);
-        auto filter_step = std::make_shared<FilterStep>(input, un_correlation_predicate);
-        auto filter_node = std::make_shared<FilterNode>(context.nextNodeId(), std::move(filter_step), children);
+        auto filter_step = std::make_shared<FilterStepExt>(input, un_correlation_predicate);
+        auto filter_node = std::make_shared<FilterStepExtNode>(context.getOptimizerContext()->nextNodeId(), std::move(filter_step), children);
         DecorrelationResult filter_result{
             .node = filter_node,
             .symbols_to_propagate = symbols_to_propagate,
@@ -256,7 +257,7 @@ std::optional<DecorrelationResult> DecorrelationVisitor::visitFilterNode(FilterN
     return std::make_optional(filter_result);
 }
 
-std::optional<DecorrelationResult> DecorrelationVisitor::visitProjectionNode(ProjectionNode & node, Context & context)
+std::optional<DecorrelationResult> DecorrelationVisitor::visitProjectionStepExtNode(ProjectionStepExtNode & node, Context & context)
 {
     PlanNodePtr & source = node.getChildren()[0];
     std::optional<DecorrelationResult> child_result = VisitorUtil::accept(source, *this, context);
@@ -309,9 +310,9 @@ std::optional<DecorrelationResult> DecorrelationVisitor::visitProjectionNode(Pro
         }
 
         DataStream input{.header = input_stream_columns};
-        auto expression_step = std::make_shared<ProjectionStep>(input, add_assignments, name_to_type);
+        auto expression_step = std::make_shared<ProjectionStepExt>(input, add_assignments, name_to_type);
         PlanNodes children{child_result_value.node};
-        auto expression_node = std::make_shared<ProjectionNode>(context.nextNodeId(), std::move(expression_step), children);
+        auto expression_node = std::make_shared<ProjectionStepExtNode>(context.getOptimizerContext()->nextNodeId(), std::move(expression_step), children);
 
         DecorrelationResult result{
             .node = expression_node,

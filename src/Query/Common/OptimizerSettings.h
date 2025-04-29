@@ -471,6 +471,10 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_pk_fk, true, "Whether enable PK-FK join estimation", 0) \
     M(Bool, enable_real_pk_fk, true, "Whether enable Real PK-FK join estimation", 0) \
     M(Float, pk_selectivity, 1.0f, "PK selectivity for join estimation", 0) \
+    /* Outfile related Settings */ \
+    M(Bool, enable_distributed_output, false, "Each worker is allowed to output query results to a file separately", 0) \
+    /** Settings for Map */ \
+    M(Bool, allow_map_access_without_key, true, "Allow access map column without providing key", 0) \
     /** Just for compatible, maybe removed or implemented later */ \
     M(UInt64, max_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a query segment can consume.", 0) \
     M(UInt64, max_distributed_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a distribute query can consume.", 0) \

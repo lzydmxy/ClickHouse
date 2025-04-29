@@ -21,6 +21,20 @@ DataTypePtr tryConvertTypeToNullable(const DataTypePtr & type)
     return type;
 }
 
+DataTypePtr removeTypeNullability(const DataTypePtr & type)
+{
+    if (const auto * local_type = typeid_cast<const DataTypeLowCardinality *>(type.get()))
+    {
+        const auto & dict_type = local_type->getDictionaryType();
+        return std::make_shared<DataTypeLowCardinality>(removeNullable(dict_type));
+    }
+    else if (type->isNullable())
+    {
+        return removeNullable(type);
+    }
+    return type;
+}
+
 /// Convert column to nullable. If column LowCardinality or Const, convert nested column.
 /// Returns nullptr if conversion cannot be performed.
 ColumnPtr tryConvertColumnToNullable(ColumnPtr col)
