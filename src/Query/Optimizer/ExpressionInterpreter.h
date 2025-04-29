@@ -3,9 +3,9 @@
 #include <Core/Field.h>
 #include <Interpreters/Context.h>
 #include <Query/Optimizer/LiteralEncoder.h>
-#include <Analyzers/TypeAnalyzer.h>
+#include <Query/Analyzer/TypeAnalyzer.h>
 #include <Parsers/ASTFunction.h>
-#include <Parsers/ASTVisitor.h>
+#include <Query/Parsers/ASTVisitor.h>
 #include <Parsers/IAST.h>
 
 #include <unordered_map>
@@ -154,7 +154,6 @@ private:
     InterpretIMResult visit(const ConstASTPtr & node) const;
     InterpretIMResult visitASTLiteral(const ASTLiteral & literal, const ConstASTPtr & node) const;
     InterpretIMResult visitASTIdentifier(const ASTIdentifier & identifier, const ConstASTPtr & node) const;
-    InterpretIMResult visitASTPreparedParameter(const ASTPreparedParameter & prepared_param, const ConstASTPtr & node) const;
     InterpretIMResult visitOrdinaryFunction(const ASTFunction & function, const ConstASTPtr & node) const;
     InterpretIMResult visitInFunction(const ASTFunction & function, const ConstASTPtr & node) const;
     // including toXXX and cast

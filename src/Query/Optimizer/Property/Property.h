@@ -36,20 +36,6 @@ using SymbolEquivalencesPtr = std::shared_ptr<SymbolEquivalences>;
 
 class Constants;
 
-struct FieldWithType
-{
-    DataTypePtr type;
-    Field value;
-    bool operator==(const FieldWithType & other) const
-    {
-        return type->equals(*other.type) && value == other.value;
-    }
-    bool operator!=(const FieldWithType & other) const
-    {
-        return !operator==(other);
-    }
-};
-
 class Partitioning
 {
 public:

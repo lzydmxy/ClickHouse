@@ -1,6 +1,6 @@
 #pragma once
-#include <QueryPlan/PlanNode.h>
-#include <QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
 
 
 namespace DB
@@ -8,8 +8,8 @@ namespace DB
 class PlanCheck
 {
 public:
-    static void checkInitPlan(QueryPlan & plan, ContextMutablePtr context);
-    static void checkFinalPlan(QueryPlan & plan, ContextMutablePtr context);
+    static void checkInitPlan(QueryPlanExt & plan, ContextMutablePtr context);
+    static void checkFinalPlan(QueryPlanExt & plan, ContextMutablePtr context);
 };
 
 class ReadNothingChecker : public PlanNodeVisitor<Void, Void>
@@ -24,13 +24,13 @@ public:
 class SymbolChecker : public PlanNodeVisitor<Void, ContextMutablePtr>
 {
 public:
-    static void check(QueryPlan & plan, ContextMutablePtr & context, bool check_filter);
+    static void check(QueryPlanExt & plan, ContextMutablePtr & context, bool check_filter);
 
-    SymbolChecker(bool checkFilter) : check_filter(checkFilter) { }
+    explicit SymbolChecker(bool checkFilter) : check_filter(checkFilter) { }
 
     Void visitPlanNode(PlanNodeBase &, ContextMutablePtr &) override;
-    Void visitProjectionNode(ProjectionNode &, ContextMutablePtr &) override;
-    Void visitFilterNode(FilterNode &, ContextMutablePtr &) override;
+    Void visitProjectionStepExtNode(ProjectionStepExtNode &, ContextMutablePtr &) override;
+    Void visitFilterStepExtNode(FilterStepExtNode &, ContextMutablePtr &) override;
 
 private:
     bool check_filter;
@@ -39,9 +39,9 @@ private:
 class TableScanChecker : public PlanNodeVisitor<Void, ContextMutablePtr>
 {
 public:
-    static void check(QueryPlan & plan, ContextMutablePtr & context);
+    static void check(QueryPlanExt & plan, ContextMutablePtr & context);
 
     Void visitPlanNode(PlanNodeBase &, ContextMutablePtr &) override;
-    Void visitTableScanNode(TableScanNode &, ContextMutablePtr &) override;
+    Void visitTableScanStepExtNode(TableScanStepExtNode &, ContextMutablePtr &) override;
 };
 }

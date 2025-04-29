@@ -1,7 +1,7 @@
 #include <Query/Optimizer/PlanNodeCardinality.h>
 
 #include <Query/Optimizer/ExpressionDeterminism.h>
-#include <QueryPlan/AggregatingStep.h>
+#include <Query/Processors/QueryPlan/AggregatingStepExt.h>
 
 namespace DB
 {
@@ -13,79 +13,81 @@ public:
 
     static Range applyLimit(const Range & source, size_t limit)
     {
-        limit = std::min(source.upperBound, limit);
-        size_t lower = std::min(limit, source.lowerBound);
+        limit = std::min(source.upper_bound, limit);
+        size_t lower = std::min(limit, source.lower_bound);
         return Range{lower, limit};
     }
 
     static Range applyOffset(const Range & source, size_t offset)
     {
         return Range{
-            std::max(source.lowerBound - offset, static_cast<size_t>(0)), std::max(source.upperBound - offset, static_cast<size_t>(0))};
+            std::max(source.lower_bound - offset, static_cast<size_t>(0)), std::max(source.upper_bound - offset, static_cast<size_t>(0))};
     }
 
-    Range visitLimitNode(LimitNode & node, Void & context) override
+    Range visitLimitStepExtNode(LimitStepExtNode & node, Void & context) override
     {
         auto source_range = VisitorUtil::accept(node.getChildren()[0], *this, context);
-        const auto * step = dynamic_cast<const LimitStep *>(node.getStep().get());
+        const auto * step = dynamic_cast<const LimitStepExt *>(node.getStep().get());
+        // todo: hongzhigao1, implement getOffsetValue in limitStepExt
         return step->hasPreparedParam() ? source_range
                                         : applyLimit(applyOffset(source_range, step->getOffsetValue()), step->getLimitValue());
     }
 
-    Range visitProjectionNode(ProjectionNode & node, Void & context) override
+    Range visitProjectionStepExtNode(ProjectionStepExtNode & node, Void & context) override
     {
         // todo: arrayJoin
         return VisitorUtil::accept(node.getChildren()[0], *this, context);
     }
 
-    Range visitUnionNode(UnionNode & node, Void & context) override
+    Range visitUnionStepExtNode(UnionStepExtNode & node, Void & context) override
     {
         if (node.getChildren().size() == 1)
-            return PlanNodeVisitor::visitUnionNode(node, context);
+            return PlanNodeVisitor::visitUnionStepExtNode(node, context);
         else
             return Range{0, std::numeric_limits<size_t>::max()};
     }
 
-    Range visitExchangeNode(ExchangeNode & node, Void & context) override
+    Range visitExchangeStepExtNode(ExchangeStepExtNode & node, Void & context) override
     {
         return VisitorUtil::accept(node.getChildren()[0], *this, context);
     }
 
-    Range visitFilterNode(FilterNode & node, Void & context) override
+    Range visitFilterStepExtNode(FilterStepExtNode & node, Void & context) override
     {
         auto source_range = VisitorUtil::accept(node.getChildren()[0], *this, context);
-        return Range{0, source_range.upperBound};
+        return Range{0, source_range.upper_bound};
     }
 
-    Range visitEnforceSingleRowNode(EnforceSingleRowNode &, Void &) override { return Range{1, 1}; }
+    Range visitEnforceSingleRowStepExtNode(EnforceSingleRowStepExtNode &, Void &) override { return Range{1, 1}; }
 
-    Range visitValuesNode(ValuesNode & node, Void &) override
+    Range visitValuesStepExtNode(ValuesStepExtNode & node, Void &) override
     {
-        const auto * step = dynamic_cast<const ValuesStep *>(node.getStep().get());
+        const auto * step = dynamic_cast<const ValuesStepExt *>(node.getStep().get());
         return Range{step->getRows(), step->getRows()};
     }
 
-    Range visitAggregatingNode(AggregatingNode & node, Void & context) override
+    Range visitAggregatingStepExtNode(AggregatingStepExtNode & node, Void & context) override
     {
-        const auto * step = dynamic_cast<const AggregatingStep *>(node.getStep().get());
+        const auto * step = dynamic_cast<const AggregatingStepExt *>(node.getStep().get());
         if (step->getKeys().empty())
             return Range{1, 1};
 
         auto source_range = VisitorUtil::accept(node.getChildren()[0], *this, context);
         // hasDefaultOutput ? 1 : 0
-        return Range{std::max(static_cast<size_t>(0), source_range.lowerBound), std::max(static_cast<size_t>(1), source_range.upperBound)};
+        return Range{std::max(static_cast<size_t>(0), source_range.lower_bound), std::max(static_cast<size_t>(1), source_range.upper_bound)};
     }
 
+    // todo: hongzhigao1, implement WindowStep
     Range visitWindowNode(WindowNode & node, Void & context) override { return VisitorUtil::accept(node.getChildren()[0], *this, context); }
 
-    Range visitDistinctNode(DistinctNode & node, Void & context) override
+    Range visitDistinctStepExtNode(DistinctStepExtNode & node, Void & context) override
     {
         auto source_range = VisitorUtil::accept(node.getChildren()[0], *this, context);
-        auto step = dynamic_cast<const DistinctStep *>(node.getStep().get());
+        const auto *step = dynamic_cast<const DistinctStep *>(node.getStep().get());
         auto limit_hint = step->getLimitHint();
         if (limit_hint != 0)
-            return Range{std::min(static_cast<size_t>(1), source_range.lowerBound), std::min(limit_hint, source_range.upperBound)};
-        return Range{std::min(static_cast<size_t>(1), source_range.lowerBound), source_range.upperBound};
+            return Range{std::min(static_cast<size_t>(1), source_range.lower_bound), std::min(limit_hint, source_range.upper_bound)};
+        return Range{std::min(static_cast<size_t>(1), source_range.lower_bound), source_range.upper_bound};
     }
 };
 

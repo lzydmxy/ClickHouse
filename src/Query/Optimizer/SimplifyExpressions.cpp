@@ -22,7 +22,8 @@ ConstASTPtr CommonPredicatesRewriter::visitNode(const ConstASTPtr & node, NodeCo
         children.emplace_back(ast);
     }
     auto new_node = node->clone();
-    new_node->replaceChildren(children);
+    // todo: hongzhigao1, implement replaceChildren
+    // new_node->replaceChildren(children);
     return new_node;
 }
 
@@ -31,8 +32,8 @@ ConstASTPtr CommonPredicatesRewriter::visitASTFunction(const ConstASTPtr & node,
     const auto & fun = node->as<ASTFunction &>();
     if (fun.name == PredicateConst::AND || fun.name == PredicateConst::OR)
     {
-        std::vector<ConstASTPtr> extracted_predicates = PredicateUtils::extractPredicate(node);
-        std::vector<ConstASTPtr> result;
+        ConstASTs extracted_predicates = PredicateUtils::extractPredicate(node);
+        ConstASTs result;
         for (auto & predicate : extracted_predicates)
         {
             NodeContext child_context{
@@ -48,7 +49,7 @@ ConstASTPtr CommonPredicatesRewriter::visitASTFunction(const ConstASTPtr & node,
         }
         auto simplified = PredicateUtils::extractCommonPredicates(combined_predicate, node_context.context);
         // Prefer AND at the root if possible
-        auto simplified_fun = simplified->as<ASTFunction>();
+        const auto *simplified_fun = simplified->as<ASTFunction>();
         if ((node_context.root == NodeContext::Root::ROOT_NODE || node_context.deep_rewrite) && simplified_fun
             && simplified_fun->name == PredicateConst::OR)
         {
@@ -80,7 +81,8 @@ ConstASTPtr SwapPredicateRewriter::visitNode(const ConstASTPtr & node, Void & co
         children.emplace_back(ast);
     }
     auto new_node = node->clone();
-    new_node->replaceChildren(children);
+    // todo: hongzhigao1, implement replaceChildren
+    // new_node->replaceChildren(children);
     return new_node;
 }
 
@@ -89,9 +91,9 @@ ConstASTPtr SwapPredicateRewriter::visitASTFunction(const ConstASTPtr & predicat
     const auto & function = predicate->as<ASTFunction &>();
     if (function.name == "and")
     {
-        std::vector<ConstASTPtr> conjuncts = PredicateUtils::extractConjuncts(predicate);
+        ConstASTs conjuncts = PredicateUtils::extractConjuncts(predicate);
         ASTs reordered_conjunct;
-        for (ConstASTPtr conjunct : conjuncts)
+        for (const ConstASTPtr& conjunct : conjuncts)
         {
             ASTPtr ast = ASTVisitorUtil::accept(conjunct, *this, context)->clone();
             reordered_conjunct.emplace_back(ast);
@@ -100,9 +102,9 @@ ConstASTPtr SwapPredicateRewriter::visitASTFunction(const ConstASTPtr & predicat
     }
     if (function.name == "or")
     {
-        std::vector<ConstASTPtr> disjuncts = PredicateUtils::extractDisjuncts(predicate);
+        ConstASTs disjuncts = PredicateUtils::extractDisjuncts(predicate);
         ASTs reordered_disjuncts;
-        for (ConstASTPtr disjunct : disjuncts)
+        for (const ConstASTPtr& disjunct : disjuncts)
         {
             ASTPtr ast = ASTVisitorUtil::accept(disjunct, *this, context)->clone();
             reordered_disjuncts.emplace_back(ast);
@@ -111,55 +113,55 @@ ConstASTPtr SwapPredicateRewriter::visitASTFunction(const ConstASTPtr & predicat
     }
     if (function.name == "not")
     {
-        ConstASTPtr sub = function.arguments->getChildren()[0];
+        ConstASTPtr sub = function.arguments->children[0];
         ASTPtr reorder_sub = ASTVisitorUtil::accept(sub, *this, context)->clone();
         return makeASTFunction("not", reorder_sub);
     }
     if (function.name == "equals")
     {
-        if (!function.arguments->getChildren()[0]->as<ASTIdentifier>() && function.arguments->getChildren()[1]->as<ASTIdentifier>())
+        if (!function.arguments->children[0]->as<ASTIdentifier>() && function.arguments->children[1]->as<ASTIdentifier>())
         {
-            return makeASTFunction("equals", ASTs{function.arguments->getChildren()[1], function.arguments->getChildren()[0]});
+            return makeASTFunction("equals", ASTs{function.arguments->children[1], function.arguments->children[0]});
         }
         return predicate->clone();
     }
     if (function.name == "notEquals")
     {
-        if (!function.arguments->getChildren()[0]->as<ASTIdentifier>() && function.arguments->getChildren()[1]->as<ASTIdentifier>())
+        if (!function.arguments->children[0]->as<ASTIdentifier>() && function.arguments->children[1]->as<ASTIdentifier>())
         {
-            return makeASTFunction("notEquals", ASTs{function.arguments->getChildren()[1], function.arguments->getChildren()[0]});
+            return makeASTFunction("notEquals", ASTs{function.arguments->children[1], function.arguments->children[0]});
         }
         return predicate->clone();
     }
     if (function.name == "greater")
     {
-        if (!function.arguments->getChildren()[0]->as<ASTIdentifier>() && function.arguments->getChildren()[1]->as<ASTIdentifier>())
+        if (!function.arguments->children[0]->as<ASTIdentifier>() && function.arguments->children[1]->as<ASTIdentifier>())
         {
-            return makeASTFunction("less", ASTs{function.arguments->getChildren()[1], function.arguments->getChildren()[0]});
+            return makeASTFunction("less", ASTs{function.arguments->children[1], function.arguments->children[0]});
         }
         return predicate->clone();
     }
     if (function.name == "greaterOrEquals")
     {
-        if (!function.arguments->getChildren()[0]->as<ASTIdentifier>() && function.arguments->getChildren()[1]->as<ASTIdentifier>())
+        if (!function.arguments->children[0]->as<ASTIdentifier>() && function.arguments->children[1]->as<ASTIdentifier>())
         {
-            return makeASTFunction("lessOrEquals", ASTs{function.arguments->getChildren()[1], function.arguments->getChildren()[0]});
+            return makeASTFunction("lessOrEquals", ASTs{function.arguments->children[1], function.arguments->children[0]});
         }
         return predicate->clone();
     }
     if (function.name == "less")
     {
-        if (!function.arguments->getChildren()[0]->as<ASTIdentifier>() && function.arguments->getChildren()[1]->as<ASTIdentifier>())
+        if (!function.arguments->children[0]->as<ASTIdentifier>() && function.arguments->children[1]->as<ASTIdentifier>())
         {
-            return makeASTFunction("greater", ASTs{function.arguments->getChildren()[1], function.arguments->getChildren()[0]});
+            return makeASTFunction("greater", ASTs{function.arguments->children[1], function.arguments->children[0]});
         }
         return predicate->clone();
     }
     if (function.name == "lessOrEquals")
     {
-        if (!function.arguments->getChildren()[0]->as<ASTIdentifier>() && function.arguments->getChildren()[1]->as<ASTIdentifier>())
+        if (!function.arguments->children[0]->as<ASTIdentifier>() && function.arguments->children[1]->as<ASTIdentifier>())
         {
-            return makeASTFunction("greaterOrEquals", ASTs{function.arguments->getChildren()[1], function.arguments->getChildren()[0]});
+            return makeASTFunction("greaterOrEquals", ASTs{function.arguments->children[1], function.arguments->children[0]});
         }
         return predicate->clone();
     }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Analyzers/ASTEquals.h>
+#include <Query/Analyzer/ASTEquals.h>
 #include <Query/Optimizer/FunctionInvoker.h>
 #include <Query/Optimizer/value_sets.h>
 #include <Parsers/IAST_fwd.h>

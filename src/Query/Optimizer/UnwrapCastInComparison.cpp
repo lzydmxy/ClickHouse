@@ -1,13 +1,13 @@
 #include <Query/Optimizer/UnwrapCastInComparison.h>
 
-#include <Analyzers/function_utils.h>
+#include <Query/Analyzer/function_utils.h>
 #include <DataTypes/DataTypeFunction.h>
 #include <DataTypes/DataTypeNullable.h>
 #include <DataTypes/DataTypeString.h>
 #include <DataTypes/DataTypesNumber.h>
-#include <Functions/InternalFunctionRuntimeFilter.h>
+#include <Query/Functions/InternalFunctionRuntimeFilter.h>
 #include <Interpreters/convertFieldToType.h>
-#include <Interpreters/join_common.h>
+#include <Query/Interpreters/JoinUtilsExt.h>
 #include <Query/Optimizer/FunctionInvoker.h>
 #include <Query/Optimizer/LiteralEncoder.h>
 #include <Query/Optimizer/PredicateUtils.h>
@@ -80,7 +80,14 @@ ASTPtr UnwrapCastInComparisonVisitor::visitASTFunction(ASTPtr & node, UnwrapCast
     if (!isCastMonotonicAndInjective(source_type, target_type, literal, literal_type, context.context))
         return rewriteArgs(function, context, true);
 
-    auto source_range = source_type->getRange();
+    // todo: hongzhigao1, implement getRange
+    // auto source_range = source_type->getRange();
+    struct Range
+    {
+        Field min;
+        Field max;
+    };
+    std::optional<Range> source_range = std::nullopt;
 
     if (!source_range)
         return rewriteArgs(function, context, true);
@@ -215,7 +222,7 @@ ASTPtr UnwrapCastInComparisonVisitor::rewriteArgs(ASTFunction & function, Unwrap
                 auto type_analyzer = TypeAnalyzer::create(context.context, context.column_types);
                 auto expression_types = type_analyzer.getExpressionTypes(function.ptr());
                 auto arg_type = expression_types.at(arg);
-                auto arg_type_func = typeid_cast<const DataTypeFunction *>(arg_type.get());
+                const auto *arg_type_func = typeid_cast<const DataTypeFunction *>(arg_type.get());
 
                 if (!arg_type_func)
                     throw Exception(ErrorCodes::LOGICAL_ERROR, "unexpected type found for lambda expression");

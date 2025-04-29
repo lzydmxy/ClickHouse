@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Parsers/IAST.h>
-#include <Parsers/ASTVisitor.h>
+#include <Query/Parsers/ASTVisitor.h>
 #include <Query/Optimizer/ExpressionInterpreter.h>
 
 namespace DB
@@ -30,10 +30,6 @@ class UnwrapCastInComparisonVisitor: public ASTVisitor<ASTPtr, UnwrapCastInCompa
     ASTPtr visitASTLiteral(ASTPtr & node, UnwrapCastInComparisonContext &) override { return node; }
     ASTPtr visitASTIdentifier(ASTPtr & node, UnwrapCastInComparisonContext &) override { return node; }
     ASTPtr visitASTSubquery(ASTPtr & node, UnwrapCastInComparisonContext &) override { return node; }
-    ASTPtr visitASTPreparedParameter(ASTPtr & node, UnwrapCastInComparisonContext &) override
-    {
-        return node;
-    }
 
     ASTPtr rewriteArgs(ASTFunction & function, UnwrapCastInComparisonContext & context, bool first_only = false);
     static bool isComparisonFunction(const ASTFunction & function);

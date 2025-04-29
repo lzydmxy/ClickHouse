@@ -1,9 +1,9 @@
 #pragma once
 
 #include <Interpreters/Context.h>
-#include <Parsers/ASTVisitor.h>
-#include <QueryPlan/PlanVisitor.h>
-#include <QueryPlan/SimplePlanRewriter.h>
+#include <Query/Parsers/ASTVisitor.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/SimplePlanRewriter.h>
 
 namespace DB
 {
@@ -48,7 +48,7 @@ class SwapPredicateRewriter : public ConstASTVisitor<ConstASTPtr, Void>
 public:
     static ConstASTPtr rewrite(const ConstASTPtr & predicate, ContextMutablePtr & context);
     ConstASTPtr visitNode(const ConstASTPtr & node, Void & context) override;
-    ConstASTPtr visitASTFunction(const ConstASTPtr & node, Void & context) override;
+    ConstASTPtr visitASTFunction(const ConstASTPtr & predicate, Void & context) override;
 };
 
 }

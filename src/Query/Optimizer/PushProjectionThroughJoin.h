@@ -11,9 +11,9 @@ namespace DB
 class PushProjectionThroughJoin
 {
 public:
-    static std::optional<PlanNodePtr> pushProjectionThroughJoin(ProjectionNode & project, ContextMutablePtr & context);
+    static std::optional<PlanNodePtr> pushProjectionThroughJoin(ProjectionStepExtNode & project, ContextMutablePtr & context);
     static PlanNodePtr inlineProjections(PlanNodePtr parent_projection, ContextMutablePtr & context);
-    static std::set<String> getJoinRequiredSymbols(JoinNode & node);
+    static std::set<String> getJoinRequiredSymbols(JoinStepExtNode & node);
 };
 
 }
