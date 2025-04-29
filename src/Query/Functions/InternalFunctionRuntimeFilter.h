@@ -4,6 +4,7 @@
 #include <DataTypes/DataTypesNumber.h>
 #include <Functions/FunctionFactory.h>
 #include <Functions/IFunction.h>
+#include <Columns/ColumnsNumber.h>
 
 namespace DB
 {
@@ -15,7 +16,12 @@ class InternalFunctionRuntimeFilter : public IFunction
 public:
     static constexpr auto name = "$runtimeFilter";
 
-    static FunctionPtr create(ContextPtr /*context*/) { return std::make_shared<InternalFunctionRuntimeFilter>(); }
+    static FunctionPtr create(ContextPtr /*context*/)
+    {
+        //todo: liyang453, other feat: instantiation of function template specialization
+        //return std::make_shared<InternalFunctionRuntimeFilter>();
+        return nullptr;
+    }
 
     String getName() const override { return name; }
 
