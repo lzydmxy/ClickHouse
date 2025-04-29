@@ -1,7 +1,5 @@
-#include <Optimizer/Dump/DDLDumper.h>
-
-#include <Optimizer/Dump/ProtoEnumUtils.h>
-
+#include <Query/Optimizer/Dump/DDLDumper.h>
+#include <Query/Optimizer/Dump/ProtoEnumUtils.h>
 #include <Core/Names.h>
 #include <Core/QualifiedTableName.h>
 #include <Interpreters/Context_fwd.h>
@@ -10,16 +8,16 @@
 #include <Parsers/ASTSelectQuery.h>
 #include <Parsers/ASTWithElement.h>
 #include <Poco/JSON/Parser.h>
-#include <QueryPlan/QueryPlan.h>
-#include <QueryPlan/PlanVisitor.h>
-#include <Statistics/StatisticsBase.h>
-#include <Statistics/StatisticsCollector.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
+#include <Query/Statistics/StatisticsBase.h>
+#include <Query/Statistics/StatisticsCollector.h>
 
 #include <Storages/IStorage_fwd.h>
 #include <Storages/StorageDistributed.h>
 #include <Storages/StorageView.h>
 #include <Storages/StorageMaterializedView.h>
-#include <Optimizer/Dump/DumpUtils.h>
+#include <Query/Optimizer/Dump/DumpUtils.h>
 
 #include <chrono>
 #include <string>

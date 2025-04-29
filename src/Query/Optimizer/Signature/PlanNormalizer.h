@@ -2,13 +2,9 @@
 
 #include <Core/Block.h>
 #include <Interpreters/Context_fwd.h>
-#include <Optimizer/Signature/StepNormalizer.h>
-#include <QueryPlan/PlanNode.h>
-#include <QueryPlan/QueryPlan.h>
-
-#include <memory>
-#include <unordered_map>
-#include <utility>
+#include <Query/Optimizer/Signature/StepNormalizer.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
 
 namespace DB
 {
@@ -31,7 +27,7 @@ public:
     {
     }
 
-    static PlanNormalizer from(const QueryPlan & plan, ContextPtr _context) { return PlanNormalizer(plan.getCTEInfo(), _context); }
+    static PlanNormalizer from(const QueryPlanExt & plan, ContextPtr _context) { return PlanNormalizer(plan.getCTEInfo(), _context); }
 
     QueryPlanStepPtr computeNormalStep(PlanNodePtr node, PlanNormalizerOptions options = {})
     {
@@ -77,7 +73,7 @@ protected:
     {
         return visitPlanNodeImpl(node, normal_steps);
     }
-    StepAndOutputOrder visitCTERefNode(CTERefNode & node, PlanNormalizer::NormalSteps & normal_steps) override
+    StepAndOutputOrder visitCTERefNode(CTERefStepExtNode & node, PlanNormalizer::NormalSteps & normal_steps)
     {
         return visitCTERefNodeImpl(node, normal_steps);
     }

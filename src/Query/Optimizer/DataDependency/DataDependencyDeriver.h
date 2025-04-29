@@ -4,8 +4,7 @@
 #include <utility>
 #include <Query/Optimizer/DataDependency/DataDependency.h>
 #include <Query/Optimizer/DataDependency/DependencyUtils.h>
-#include <QueryPlan/PlanVisitor.h>
-
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
 
 namespace DB
 {

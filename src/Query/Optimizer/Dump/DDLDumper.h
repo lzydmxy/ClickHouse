@@ -7,10 +7,10 @@
 #include <Parsers/IAST_fwd.h>
 #include <Parsers/ASTSelectQuery.h>
 #include <Interpreters/Context_fwd.h>
-#include <Optimizer/Dump/DumpUtils.h>
+#include <Query/Optimizer/Dump/DumpUtils.h>
 #include <Poco/JSON/Object.h>
 #include <Poco/Logger.h>
-#include <QueryPlan/QueryPlan.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
 
 #include <string>
 #include <optional>

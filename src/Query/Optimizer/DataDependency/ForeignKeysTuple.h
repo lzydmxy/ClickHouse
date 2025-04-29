@@ -1,11 +1,12 @@
 #pragma once
+
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 #include <Core/Types.h>
 #include <Query/Optimizer/Property/Equivalences.h>
-#include <common/types.h>
+#include <base/types.h>
 #include <Core/Names.h>
 
 namespace DB

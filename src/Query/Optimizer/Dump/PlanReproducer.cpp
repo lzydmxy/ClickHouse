@@ -1,16 +1,16 @@
-#include <Optimizer/Dump/PlanReproducer.h>
+#include <Query/Optimizer/Dump/PlanReproducer.h>
 
 #include <Common/SettingsChanges.h>
 #include <Core/QualifiedTableName.h>
 #include <Core/UUID.h>
 #include <Interpreters/Context_fwd.h>
 #include <Interpreters/DatabaseCatalog.h>
-#include <Optimizer/Dump/DumpUtils.h>
-#include <Optimizer/Dump/ReproduceUtils.h>
-#include <Optimizer/Dump/StatsLoader.h>
+#include <Query/Optimizer/Dump/DumpUtils.h>
+#include <Query/Optimizer/Dump/ReproduceUtils.h>
+#include <Query/Optimizer/Dump/StatsLoader.h>
 #include <Parsers/IAST_fwd.h>
-#include <Parsers/ASTCreateQuery.h>
-#include <Parsers/ASTDropQuery.h>
+#include <Query/Parsers/ASTCreateQuery.h>
+#include <Query/Parsers/ASTDropQuery.h>
 #include <Poco/JSON/Object.h>
 #include <Poco/Logger.h>
 

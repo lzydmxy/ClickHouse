@@ -1,10 +1,8 @@
-#include <Optimizer/Signature/PlanSignature.h>
-
-#include <Optimizer/Signature/PlanNormalizer.h>
-#include <Optimizer/Signature/StepNormalizer.h>
-#include <QueryPlan/PlanNode.h>
+#include <Query/Optimizer/Signature/PlanSignature.h>
+#include <Query/Optimizer/Signature/PlanNormalizer.h>
+#include <Query/Optimizer/Signature/StepNormalizer.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
 #include <Common/SipHash.h>
-
 #include <memory>
 #include <vector>
 
@@ -69,7 +67,7 @@ PlanSignature PlanSignatureProvider::computeSignatureImpl(
     for (const auto & child : node->getChildren())
         sigs.emplace_back(computeSignatureImpl(child, write_to_buffer, buffer, options));
     // special case for cte, because its child is implicit
-    if (auto cte_step = dynamic_pointer_cast<const CTERefStep>(node->getStep()))
+    if (auto cte_step = dynamic_pointer_cast<const CTERefStepExt>(node->getStep()))
     {
         auto cte_root = cte_info.getCTEs().at(cte_step->getId());
         auto cte_root_signature

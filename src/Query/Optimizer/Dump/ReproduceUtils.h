@@ -1,13 +1,12 @@
 #pragma once
 
-#include <DataStreams/BlockIO.h>
+#include <QueryPipeline/BlockIO.h>
 #include <Interpreters/Context_fwd.h>
 #include <Interpreters/executeQuery.h>
 #include <Parsers/IAST_fwd.h>
 #include <Poco/JSON/Object.h>
 #include <Poco/Logger.h>
-#include <QueryPlan/QueryPlan.h>
-
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
 #include <string>
 
 // helpers for reproducing queries

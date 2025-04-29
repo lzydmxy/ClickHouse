@@ -1,5 +1,5 @@
-#include <Optimizer/Signature/PlanSegmentNormalizer.h>
-#include <QueryPlan/PlanPrinter.h>
+#include <Query/Optimizer/Signature/PlanSegmentNormalizer.h>
+#include <Query/Processors/QueryPlan/PlanPrinter.h>
 
 namespace DB
 {
@@ -19,7 +19,9 @@ PlanNodePtr PlanSegmentNormalizer::buildNormalPlanForNodeImpl(
     for (const auto & child : node->children)
         new_children.emplace_back(buildNormalPlanForNodeImpl(child, results, options));
     auto result = NormalizeNodeVisitor::normalize(context, node, results, options);
-    auto plan_node = PlanNodeBase::createPlanNode(node->id, result.normal_step, std::move(new_children));
+
+ 
+    auto plan_node = PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), result.normal_step, new_children);
     return plan_node;
 }
 
@@ -38,7 +40,7 @@ PlanNodePtr PlanSegmentNormalizer::buildNormalPlanForNodeImpl(
     for (const auto & child : node->getChildren())
         new_children.emplace_back(buildNormalPlanForNodeImpl(child, results, options));
     auto result = NormalizeVisitor::normalize(node, *cte_info, context, results, options);
-    auto plan_node = PlanNodeBase::createPlanNode(node->getId(), result.normal_step, std::move(new_children));
+    auto plan_node = PlanNodeBase::createPlanNode(node->getId(), result.normal_step, new_children);
     return plan_node;
 }
 
@@ -47,7 +49,8 @@ String generatePlanSegmentPlanHash(PlanSegment * plan_segment, const ContextPtr 
     auto & plan = plan_segment->getQueryPlan();
     auto normalizer = PlanSegmentNormalizer(context);
     auto logical_plan = normalizer.buildNormalPlan(plan.getRoot(), {.normalize_literals = true, .normalize_storage = true});
-    auto logical_plan_str = PlanPrinter::textPlanNode(logical_plan, context);
-    return logical_plan_str;
+    //TODO zhangdongdong add PlanPrinter::textPlanNode
+    // auto logical_plan_str = PlanPrinter::textPlanNode(logical_plan, context);
+    return "logical_plan_str";
 }
 }

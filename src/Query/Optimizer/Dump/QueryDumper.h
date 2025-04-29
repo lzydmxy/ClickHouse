@@ -2,8 +2,7 @@
 
 #include <Functions/FunctionsHashing.h>
 #include <Interpreters/Context_fwd.h>
-#include <Optimizer/Dump/DumpUtils.h>
-
+#include <Query/Optimizer/Dump/DumpUtils.h>
 #include <memory>
 #include <string>
 #include <unordered_map>

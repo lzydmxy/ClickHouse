@@ -1,20 +1,12 @@
 #pragma once
 
-#include <Interpreters/Context_fwd.h>
-#include <Optimizer/Signature/PlanNormalizer.h>
-#include <QueryPlan/PlanNode.h>
-#include <QueryPlan/QueryPlan.h>
-#pragma once
-
-#include <Interpreters/Context_fwd.h>
-#include <Optimizer/Signature/PlanNormalizer.h>
-#include <QueryPlan/PlanNode.h>
-#include <QueryPlan/QueryPlan.h>
-#include <common/types.h>
-
-#include <memory>
 #include <unordered_map>
 #include <vector>
+#include <Interpreters/Context_fwd.h>
+#include <Query/Optimizer/Signature/PlanNormalizer.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
+#include <base/types.h>
 
 namespace DB
 {
@@ -37,7 +29,7 @@ public:
         : normalizer(_cte_info, context_), cte_info(_cte_info), context(context_)
     {
     }
-    static PlanSignatureProvider from(const QueryPlan & plan, ContextPtr _context)
+    static PlanSignatureProvider from(const QueryPlanExt & plan, ContextPtr _context)
     {
         return PlanSignatureProvider(plan.getCTEInfo(), _context);
     }
@@ -47,10 +39,7 @@ public:
     static PlanSignature combineSettings(PlanSignature signature, const SettingsChanges & settings);
 
     PlanNodeToSignatures computeSignatures(PlanNodePtr node);
-    Block computeNormalOutputOrder(PlanNodePtr node)
-    {
-        return normalizer.computeNormalOutputOrder(node);
-    }
+    Block computeNormalOutputOrder(PlanNodePtr node) { return normalizer.computeNormalOutputOrder(node); }
     PlanNodePtr computeNormalPlan(PlanNodePtr node, PlanNormalizerOptions options = {})
     {
         return normalizer.buildNormalPlan(node, options);
@@ -62,6 +51,7 @@ protected:
     static size_t combine(const std::vector<size_t> & hashes);
 
     PlanNormalizer normalizer;
+
 private:
     const CTEInfo & cte_info;
     ContextPtr context;

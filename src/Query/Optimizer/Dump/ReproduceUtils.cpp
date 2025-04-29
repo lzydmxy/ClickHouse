@@ -1,5 +1,4 @@
-#include <Optimizer/Dump/ReproduceUtils.h>
-
+#include <Query/Optimizer/Dump/ReproduceUtils.h>
 #include <Analyzers/Analysis.h>
 #include <Analyzers/QueryAnalyzer.h>
 #include <Analyzers/QueryRewriter.h>
@@ -7,7 +6,7 @@
 #include <Interpreters/InterpreterExplainQuery.h>
 #include <IO/ReadBufferFromString.h>
 #include <IO/WriteBufferFromString.h>
-#include <Optimizer/Dump/DumpUtils.h>
+#include <Query/Optimizer/Dump/DumpUtils.h>
 #include <Parsers/IAST_fwd.h>
 #include <Parsers/IParserBase.h>
 #include <Parsers/ParserQuery.h>
@@ -19,8 +18,7 @@
 #include <Poco/JSON/Parser.h>
 #include <Poco/Zip/Decompress.h>
 #include <QueryPlan/QueryPlanner.h>
-#include <QueryPlan/QueryPlan.h>
-
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
 #include <filesystem>
 #include <fstream>
 #include <string>
