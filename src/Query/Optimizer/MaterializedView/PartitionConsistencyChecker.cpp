@@ -36,91 +36,92 @@ checkMaterializedViewPartitionConsistency(MaterializedViewStructurePtr structure
     if (!mview)
         return {};
     // todo: hongzhigao1, need storage
-    auto partition_transformer = std::make_shared<PartitionTransformer>(mview->getInnerQuery()->clone(), mview->getTargetTableId(), mview->async());
-    try
-    {
-        partition_transformer->validate(context, structure);
-    }
-    catch (...)
-    {
-        return {}; // validate failed, bail out
-    }
+    return {};
+    // auto partition_transformer = std::make_shared<PartitionTransformer>(mview->getInnerQuery()->clone(), mview->getTargetTableId(), mview->async());
+    // try
+    // {
+    //     partition_transformer->validate(context, structure);
+    // }
+    // catch (...)
+    // {
+    //     return {}; // validate failed, bail out
+    // }
 
-    PartitionDiffPtr partition_diff = std::make_shared<PartitionDiff>();
-    VersionPartContainerPtrs latest_versioned_partitions;
-    mview->syncBaseTablePartitions(
-        partition_diff,
-        latest_versioned_partitions,
-        partition_transformer->getBaseTables(),
-        partition_transformer->getNonDependBaseTables(),
-        context,
-        true);
+    // PartitionDiffPtr partition_diff = std::make_shared<PartitionDiff>();
+    // VersionPartContainerPtrs latest_versioned_partitions;
+    // mview->syncBaseTablePartitions(
+    //     partition_diff,
+    //     latest_versioned_partitions,
+    //     partition_transformer->getBaseTables(),
+    //     partition_transformer->getNonDependBaseTables(),
+    //     context,
+    //     true);
 
-    if (partition_diff->add_partitions.empty() && partition_diff->drop_partitions.empty())
-        return freshness; // non partition changed
+    // if (partition_diff->add_partitions.empty() && partition_diff->drop_partitions.empty())
+    //     return freshness; // non partition changed
 
-    if (!partition_diff->paritition_based_refresh)
-        return {}; // is not parition based refresh, bail out
+    // if (!partition_diff->paritition_based_refresh)
+    //     return {}; // is not parition based refresh, bail out
 
-    if (!partition_diff->depend_storage_id)
-        return {}; // is not parition based refresh, bail out
+    // if (!partition_diff->depend_storage_id)
+    //     return {}; // is not parition based refresh, bail out
 
-    VersionPartPtrs update_parts;
-    update_parts.insert(update_parts.end(), partition_diff->add_partitions.begin(), partition_diff->add_partitions.end());
-    update_parts.insert(update_parts.end(), partition_diff->drop_partitions.begin(), partition_diff->drop_partitions.end());
-    std::unordered_map<String, String> name_to_binary;
-    PartMapRelations part_map = partition_transformer->transform(update_parts, name_to_binary, partition_diff->depend_storage_id);
+    // VersionPartPtrs update_parts;
+    // update_parts.insert(update_parts.end(), partition_diff->add_partitions.begin(), partition_diff->add_partitions.end());
+    // update_parts.insert(update_parts.end(), partition_diff->drop_partitions.begin(), partition_diff->drop_partitions.end());
+    // std::unordered_map<String, String> name_to_binary;
+    // PartMapRelations part_map = partition_transformer->transform(update_parts, name_to_binary, partition_diff->depend_storage_id);
 
-    std::unordered_set<String> synced_partitions;
-    if (mview->sync())
-    {
-        // fetch synced partitions
-        auto view_partitions = context->getCnchCatalog()->getPartitionList(partition_transformer->getTargeTable(), context.get());
-        FormatSettings format_settings;
-        auto & target_meta_base = dynamic_cast<MergeTreeMetaBase &>(*partition_transformer->getTargeTable());
-        for (const auto & partition : view_partitions)
-        {
-            WriteBufferFromOwnString write_buffer;
-            partition->serializeText(target_meta_base, write_buffer, format_settings);
-            synced_partitions.emplace(write_buffer.str());
-        }
-    }
+    // std::unordered_set<String> synced_partitions;
+    // if (mview->sync())
+    // {
+    //     // fetch synced partitions
+    //     auto view_partitions = context->getCnchCatalog()->getPartitionList(partition_transformer->getTargeTable(), context.get());
+    //     FormatSettings format_settings;
+    //     auto & target_meta_base = dynamic_cast<MergeTreeMetaBase &>(*partition_transformer->getTargeTable());
+    //     for (const auto & partition : view_partitions)
+    //     {
+    //         WriteBufferFromOwnString write_buffer;
+    //         partition->serializeText(target_meta_base, write_buffer, format_settings);
+    //         synced_partitions.emplace(write_buffer.str());
+    //     }
+    // }
 
-    std::set<String> source_parts;
-    std::set<String> target_parts;
-    for (const auto & relation : part_map)
-    {
-        if (synced_partitions.contains(relation.first))
-            continue;
-        target_parts.insert(relation.first);
-        for (const auto & part : relation.second)
-            source_parts.insert(part);
-    }
+    // std::set<String> source_parts;
+    // std::set<String> target_parts;
+    // for (const auto & relation : part_map)
+    // {
+    //     if (synced_partitions.contains(relation.first))
+    //         continue;
+    //     target_parts.insert(relation.first);
+    //     for (const auto & part : relation.second)
+    //         source_parts.insert(part);
+    // }
 
-    if (source_parts.empty() || target_parts.empty())
-        return freshness;
+    // if (source_parts.empty() || target_parts.empty())
+    //     return freshness;
 
-    const auto & depend_base_table = partition_transformer->getDependBaseTables().at(partition_diff->depend_storage_id);
+    // const auto & depend_base_table = partition_transformer->getDependBaseTables().at(partition_diff->depend_storage_id);
 
-    ParserExpression parser(ParserSettings::CLICKHOUSE);
-    const auto & settings = context->getSettingsRef();
-    String query_partition_filter = fmt::format(
-        "{} in ({})",
-        queryToString(depend_base_table->partition_key_ast),
-        fmt::join(source_parts, ","));
-    ASTPtr query_partition_filter_ast = parseQuery(parser, query_partition_filter, settings.max_query_size, settings.max_parser_depth);
+    // ParserExpression parser(ParserSettings::CLICKHOUSE);
+    // const auto & settings = context->getSettingsRef();
+    // String query_partition_filter = fmt::format(
+    //     "{} in ({})",
+    //     queryToString(depend_base_table->partition_key_ast),
+    //     fmt::join(source_parts, ","));
+    // ASTPtr query_partition_filter_ast = parseQuery(parser, query_partition_filter, settings.max_query_size, settings.max_parser_depth);
 
-    ASTPtr mv_partition_filter_ast = PredicateConst::TRUE_VALUE;
-    if (mview->async())
-    {
-        String mv_partition_filter = fmt::format(
-            "{} not in ({})",
-            queryToString(partition_transformer->getTargeTable()->getInMemoryMetadataPtr()->getPartitionKeyAST()),
-            fmt::join(target_parts, ","));
-        mv_partition_filter_ast = parseQuery(parser, mv_partition_filter, settings.max_query_size, settings.max_parser_depth);
-    }
+    // ASTPtr mv_partition_filter_ast = PredicateConst::TRUE_VALUE;
+    // if (mview->async())
+    // {
+    //     String mv_partition_filter = fmt::format(
+    //         "{} not in ({})",
+    //         queryToString(partition_transformer->getTargeTable()->getInMemoryMetadataPtr()->getPartitionKeyAST()),
+    //         fmt::join(target_parts, ","));
+    //     mv_partition_filter_ast = parseQuery(parser, mv_partition_filter, settings.max_query_size, settings.max_parser_depth);
+    // }
 
-    return PartitionCheckResult{
-        depend_base_table->storage, depend_base_table->unique_id, query_partition_filter_ast, mv_partition_filter_ast};
+    // return PartitionCheckResult{
+    //     depend_base_table->storage, depend_base_table->unique_id, query_partition_filter_ast, mv_partition_filter_ast};
 }
 }

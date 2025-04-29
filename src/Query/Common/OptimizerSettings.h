@@ -49,14 +49,6 @@ enum class CTEMode
     ENFORCED,
 };
 
-enum class MaterializedViewConsistencyCheckMethod
-{
-    NONE,
-    PARTITION,
-};
-
-DECLARE_SETTING_ENUM(MaterializedViewConsistencyCheckMethod);
-
 enum class DialectType {
     CLICKHOUSE,
     ANSI,
@@ -411,9 +403,6 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, execute_subquery_in_lambda, true, "Whether to execute subquery in lambda", 0) \
     M(Bool, early_execute_scalar_subquery, false, "Whether to early execute scalar subquery", 0) \
     M(Bool, early_execute_in_subquery, false, "Whether to early execute in subquery", 0) \
-    M(Bool, enable_sync_materialized_view_rewrite, true, "Whether enable materialized view based rewriter for sync materialized view", 0) \
-    M(Bool, enable_materialized_view_join_rewriting, true, "Whether enable materialized view based rewriter for query using join materialized views", 0) \
-    M(MaterializedViewConsistencyCheckMethod, materialized_view_consistency_check_method, MaterializedViewConsistencyCheckMethod::PARTITION, "The method to check whether a materialized view is consistent with the base table for a query", 0) \
     M(String, prewhere_skip_functions, "", "A collection of functions which are not choosen as prewhere, use ',' to seperate", 0) \
     /** Complex query settings **/\
     M(Milliseconds, send_plan_segment_timeout_ms, 10000, "Default timeout for send plan segment by rpc", 0) \

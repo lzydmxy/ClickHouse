@@ -501,15 +501,14 @@ bool PredicateUtils::isJoinClause(
         const auto & fun = expression->as<const ASTFunction &>();
         if (fun.name == "equals")
         {
-            // todo: hongzhigao1, implement getChildren
-            // std::set<String> symbols1 = SymbolsExtractor::extract(fun.arguments->getChildren()[0]);
-            // std::set<String> symbols2 = SymbolsExtractor::extract(fun.arguments->getChildren()[1]);
-            // if (symbols1.empty() || symbols2.empty())
-            // {
-            //     return false;
-            // }
-            // return (SymbolUtils::containsAll(left_symbols, symbols1) && SymbolUtils::containsAll(right_symbols, symbols2))
-            //     || (SymbolUtils::containsAll(right_symbols, symbols1) && SymbolUtils::containsAll(left_symbols, symbols2));
+            std::set<String> symbols1 = SymbolsExtractor::extract(fun.arguments->children[0]);
+            std::set<String> symbols2 = SymbolsExtractor::extract(fun.arguments->children[1]);
+            if (symbols1.empty() || symbols2.empty())
+            {
+                return false;
+            }
+            return (SymbolUtils::containsAll(left_symbols, symbols1) && SymbolUtils::containsAll(right_symbols, symbols2))
+                || (SymbolUtils::containsAll(right_symbols, symbols1) && SymbolUtils::containsAll(left_symbols, symbols2));
         }
     }
     return false;
@@ -672,7 +671,7 @@ ASTPtr PredicateUtils::splitPredicates(const ConstASTPtr & source, const ConstAS
 }
 
 std::pair<std::vector<std::pair<ConstASTPtr, ConstASTPtr>>, std::vector<ConstASTPtr>>
-PredicateUtils::extractEqualPredicates(const std::vector<ConstASTPtr> & predicates)
+PredicateUtils::extractEqualPredicates(const ConstASTs & predicates)
 {
     std::vector<std::pair<ConstASTPtr, ConstASTPtr>> equal_predicates;
     std::vector<ConstASTPtr> other_predicates;
