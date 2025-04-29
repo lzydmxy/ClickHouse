@@ -1,12 +1,11 @@
 #pragma once
 
-#include <Optimizer/SymbolTransformMap.h>
+#include <Query/Optimizer/SymbolTransformMap.h>
 #include <Parsers/IAST_fwd.h>
-#include <QueryPlan/IQueryPlanStep.h>
-#include <QueryPlan/PlanNode.h>
-#include <QueryPlan/PlanNodeIdAllocator.h>
-#include <QueryPlan/PlanVisitor.h>
-#include <QueryPlan/QueryPlan.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
+#include <Query/Processors/QueryPlan/PlanNodeIdAllocator.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
 
 #include <unordered_map>
 #include <unordered_set>
@@ -15,7 +14,7 @@
 
 namespace DB
 {
-using JoinStepPtr = std::shared_ptr<JoinStep>;
+using JoinStepExtPtr = std::shared_ptr<JoinStepExt>;
 struct JoinHyperGraphContext;
 
 /**
@@ -41,7 +40,7 @@ public:
         NodeSet conditions_used_nodes;
 
         // join kind
-        JoinStepPtr join_step;
+        JoinStepExtPtr join_step;
 
         // join conditions
         ConstASTPtr join_condition;
@@ -66,14 +65,14 @@ public:
         const PlanNodePtr & plan,
         const SymbolTransformMap & symbol_transform_map,
         ContextPtr context,
-        std::unordered_set<IQueryPlanStep::Type> skip_nodes = {});
+        std::unordered_set<QueryPlanStepType> skip_nodes = {});
 
     JoinHyperGraph(
         PlanNodes plan_nodes_,
         NodeSet nodes_,
         std::vector<Edge> edges_,
         std::vector<HyperEdge> hyper_edges_,
-        std::unordered_map<NodeSet, std::vector<ConstASTPtr>> filters_)
+        std::unordered_map<NodeSet, ConstASTs> filters_)
         : plan_nodes(std::move(plan_nodes_))
         , nodes(std::move(nodes_))
         , edges(std::move(edges_))
@@ -86,8 +85,8 @@ public:
     const PlanNodes & getPlanNodes() const { return plan_nodes; }
     const std::vector<Edge> & getEdges() const { return edges; }
     const std::vector<HyperEdge> & getHyperEdges() const { return hyper_edges; }
-    const std::unordered_map<NodeSet, std::vector<ConstASTPtr>> & getFilters() const { return filters; }
-    std::unordered_map<JoinHyperGraph::NodeSet, std::vector<ConstASTPtr>> getJoinConditions() const;
+    const std::unordered_map<NodeSet, ConstASTs> & getFilters() const { return filters; }
+    std::unordered_map<JoinHyperGraph::NodeSet, ConstASTs> getJoinConditions() const;
 
     bool isEmpty() const { return plan_nodes.empty(); }
     size_t size() const { return plan_nodes.size(); }
@@ -97,7 +96,7 @@ public:
     size_t getNodeSetIndex(const PlanNodePtr & plan) const;
     size_t getNodeSetIndex(const PlanNodeId & plan_node_id) const;
 
-    JoinHyperGraph withJoinGraph(const JoinHyperGraph & other, const JoinStepPtr & join, JoinHyperGraphContext & context) const;
+    JoinHyperGraph withJoinGraph(const JoinHyperGraph & other, const JoinStepExtPtr & join, JoinHyperGraphContext & context) const;
     void withFilter(ConstASTPtr filter);
 
     String toString() const;
@@ -108,9 +107,9 @@ private:
     NodeSet nodes;
     std::vector<Edge> edges;
     std::vector<HyperEdge> hyper_edges;
-    std::unordered_map<NodeSet, std::vector<ConstASTPtr>> filters;
+    std::unordered_map<NodeSet, ConstASTs> filters;
 
-    static Edge buildEdge(NodeSet left_nodes, NodeSet right_nodes, const JoinStepPtr & join, JoinHyperGraphContext & context);
+    static Edge buildEdge(NodeSet left_nodes, NodeSet right_nodes, const JoinStepExtPtr & join, JoinHyperGraphContext & context);
 
     static HyperEdge
     buildConflictRulesAndHyperEdge(const Edge & edge, const std::vector<Edge> & left_edges, const std::vector<Edge> & right_edges);
@@ -124,7 +123,7 @@ struct JoinHyperGraphContext
 
     NodeSet registerPlanNode(const PlanNodePtr & node);
     NodeSet getSymbolSources(const String & symbol);
-    bool isSkiped(IQueryPlanStep::Type type) { return skip_nodes.contains(type); }
+    bool isSkiped(QueryPlanStepType type) { return skip_nodes.contains(type); }
 
     PlanNodes sources;
     std::unordered_map<PlanNodeId, size_t> plan_id_to_index;
@@ -132,7 +131,7 @@ struct JoinHyperGraphContext
 
     const ContextPtr context;
     const SymbolTransformMap & symbol_transform_map;
-    const std::unordered_set<IQueryPlanStep::Type> & skip_nodes;
+    const std::unordered_set<QueryPlanStepType> & skip_nodes;
 };
 
 class JoinHyperGraphVisitor : public PlanNodeVisitor<JoinHyperGraph, Void>
@@ -145,9 +144,9 @@ public:
     }
 
     JoinHyperGraph visitPlanNode(PlanNodeBase &, Void &) override;
-    JoinHyperGraph visitJoinNode(JoinNode &, Void &) override;
-    JoinHyperGraph visitFilterNode(FilterNode &, Void &) override;
-    JoinHyperGraph visitProjectionNode(ProjectionNode &, Void &) override;
+    JoinHyperGraph visitJoinStepExtNode(JoinStepExtNode &, Void &) override;
+    JoinHyperGraph visitFilterStepExtNode(FilterStepExtNode &, Void &) override;
+    JoinHyperGraph visitProjectionStepExtNode(ProjectionStepExtNode &, Void &) override;
 
 private:
     JoinHyperGraphContext & join_hyper_graph_context;

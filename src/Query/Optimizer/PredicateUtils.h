@@ -1,12 +1,14 @@
 #pragma once
 
-#include <Parsers/ASTVisitor.h>
+#include <Query/Parsers/ASTVisitor.h>
 #include <Parsers/IAST_fwd.h>
-#include <QueryPlan/PlanNode.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
 
 namespace DB
 {
 class ConstHashAST;
+
+static constexpr size_t PREDICATE_VECTOR_SIZE = 7;
 
 template <typename T>
 using enable_if_ast = typename std::enable_if_t<std::is_same_v<T, ASTPtr> || std::is_same_v<T, ConstASTPtr>, bool>;
@@ -24,7 +26,7 @@ public:
      * (A & B & C & D) =>  A, B, C, D
      */
     template <typename T, enable_if_ast<T> = true>
-    static std::vector<T> extractConjuncts(T predicate);
+    static absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> extractConjuncts(T predicate);
 
     /**
      * Extract predicate according 'or' function.
@@ -32,13 +34,13 @@ public:
      * (A & B) | (C & D) =>  (A & B), (C & D)
      */
     template <typename T, enable_if_ast<T> = true>
-    static std::vector<T> extractDisjuncts(T predicate);
+    static absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> extractDisjuncts(T predicate);
 
     /**
      * Extract predicate according function's name.
      */
     template <typename T, enable_if_ast<T> = true>
-    static std::vector<T> extractPredicate(T predicate);
+    static absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> extractPredicate(T predicate);
 
     /**
      * Extract sub-predicate :
@@ -49,7 +51,7 @@ public:
      * E, F, G, H
      * I, J, K, L
      */
-    static std::vector<std::vector<ConstASTPtr>> extractSubPredicates(ConstASTPtr predicate);
+    static std::vector<ConstASTs> extractSubPredicates(ConstASTPtr predicate);
 
     /**
      * Extract common predicate
@@ -72,13 +74,13 @@ public:
     static ConstASTPtr distributePredicate(ConstASTPtr or_predicate, ContextMutablePtr & context);
 
     template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combineConjuncts(const std::vector<T> & predicates);
+    static ASTPtr combineConjuncts(const absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> & predicates);
     template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combineDisjuncts(const std::vector<T> & predicates);
+    static ASTPtr combineDisjuncts(const absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> & predicates);
     template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combineDisjunctsWithDefault(const std::vector<T> & predicates, const ASTPtr & default_ast);
+    static ASTPtr combineDisjunctsWithDefault(const absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> & predicates, const ASTPtr & default_ast);
     template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combinePredicates(const String & fun, std::vector<T> predicates);
+    static ASTPtr combinePredicates(const String & fun, absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> predicates);
 
     template <typename T, enable_if_ast<T> = true>
     static bool isTruePredicate(const T & predicate);
@@ -88,8 +90,8 @@ public:
     static bool containsAll(const Strings & partition_symbols, const std::set<String> & unique_symbols);
     static bool containsAny(const Strings & partition_symbols, const std::set<String> & unique_symbols);
 
-    static bool isInliningCandidate(ConstASTPtr & predicate, ProjectionNode & node);
-    static ASTPtr extractJoinPredicate(JoinNode &);
+    static bool isInliningCandidate(ConstASTPtr & predicate, ProjectionStepExtNode & node);
+    static ASTPtr extractJoinPredicate(JoinStepExtNode &);
     static bool isJoinClause(ConstASTPtr expression, std::set<String> & left_symbols, std::set<String> & right_symbols, ContextMutablePtr & context);
     static bool
     isJoinClauseUnmodified(std::set<std::pair<String, String>> & join_clauses, const Names & left_keys, const Names & right_keys);
@@ -102,7 +104,7 @@ public:
     static ASTPtr splitPredicates(const ConstASTPtr & source, const ConstASTPtr & target);
 
     static std::pair<std::vector<std::pair<ConstASTPtr, ConstASTPtr>>, std::vector<ConstASTPtr>>
-    extractEqualPredicates(const std::vector<ConstASTPtr> & predicates);
+    extractEqualPredicates(const ConstASTs & predicates);
 
     // Set Operation
     static void subtract(ASTs & left, const ASTs & right);
@@ -110,10 +112,10 @@ public:
 private:
     static String flip(const String & fun_name);
     template <typename T, enable_if_ast<T> = true>
-    static void extractPredicate(const T & predicate, const std::string & fun_name, std::vector<T> & result);
+    static void extractPredicate(const T & predicate, const std::string & fun_name, absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> & result);
     static std::vector<std::pair<ConstASTPtr, String>>
     removeAll(std::vector<std::pair<ConstASTPtr, String>> & collection, std::set<String> & elements_to_remove);
-    static std::vector<std::vector<ConstASTPtr>> cartesianProduct(std::vector<std::vector<ConstASTPtr>> &);
+    static std::vector<ConstASTs> cartesianProduct(std::vector<std::vector<ConstASTPtr>> &);
 };
 
 }

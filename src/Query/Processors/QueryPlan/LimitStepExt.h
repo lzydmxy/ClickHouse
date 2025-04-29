@@ -51,6 +51,9 @@ public:
 
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
 
+    void toProto(Protos::LimitStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<LimitStepExt> fromProto(const Protos::LimitStepExt & proto, ContextPtr);
+
 private:
     bool partial;
 };

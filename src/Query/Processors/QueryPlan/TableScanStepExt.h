@@ -20,7 +20,6 @@
 #include <Processors/Transforms/AggregatingTransform.h>
 #include <Processors/Transforms/ExpressionTransform.h>
 #include <Query/Common/LinkedHashSet.h>
-#include <Query/Common/PredicateUtils.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterUtils.h>
 #include <Query/Parsers/ASTTableColumnReference.h>
 #include <Query/Processors/QueryPlan/DistributedPipelineSettings.h>
@@ -228,6 +227,9 @@ public:
     };
 
     Names getRequiredColumns(GetFlags flags = All) const;
+
+    void toProto(Protos::TableScanStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<TableScanStepExt> fromProto(const Protos::TableScanStepExt & proto, ContextPtr context);
 
 private:
     StoragePtr storage;

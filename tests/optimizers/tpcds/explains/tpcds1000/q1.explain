@@ -1,0 +1,93 @@
+Projection Est. 100 rows
+│     Expressions: [c_customer_id]
+└─ Limit Est. 100 rows
+   │     Limit: 100
+   └─ Sorting Est. 100 rows
+      │     Order by: {c_customer_id ASC NULLS LAST}
+      │     Limit: 100
+      └─ Gather Exchange Est. 2156293 rows
+         └─ Sorting Est. 100 rows
+            │     Order by: {c_customer_id ASC NULLS LAST}
+            │     Limit: 100
+            └─ Inner (PARALLEL_HASH) Join Est. 2156293 rows
+               │     Condition: c_customer_sk == sr_customer_sk_1
+               │     Runtime Filters Builder: {sr_customer_sk_1}
+               ├─ Repartition Exchange Est. 12000000 rows
+               │  │     Partition by: {c_customer_sk}
+               │  └─ Filter Est. 12000000 rows
+               │     │     Condition: Runtime Filters: {c_customer_sk}
+               │     └─ TableScan tpcds1000.customer Est. 12000000 rows
+               │              Where: Runtime Filters: {c_customer_sk}
+               │              Outputs: [c_customer_sk, c_customer_id]
+               └─ Repartition Exchange Est. 2147436 rows
+                  │     Partition by: {sr_customer_sk_1}
+                  └─ Inner Join Est. 2147436 rows
+                     │     Condition: sr_store_sk_1 == s_store_sk
+                     │     Filter: `expr#sum(sr_return_amt)_1` > (`expr#avg(ctr_total_return)_1` * '1.2')
+                     │     Runtime Filters Builder: {s_store_sk}
+                     ├─ Filter Est. 13120309 rows
+                     │  │     Condition: Runtime Filters: {sr_store_sk_1}
+                     │  └─ Local Exchange Est. 52481235 rows
+                     │     └─ Buffer Est. 52481235 rows
+                     │        └─ CTERef[0] Est. 52481235 rows
+                     └─ Broadcast Exchange Est. 41 rows
+                        └─ Inner Join Est. 41 rows
+                           │     Condition: sr_store_sk_2 == s_store_sk
+                           │     Runtime Filters Builder: {s_store_sk}
+                           ├─ MergingAggregated Est. 41 rows
+                           │  └─ Repartition Exchange Est. 41 rows
+                           │     │     Partition by: {sr_store_sk_2}
+                           │     └─ Aggregating Est. 41 rows
+                           │        │     Group by: {sr_store_sk_2}
+                           │        │     Aggregates: expr#avg(ctr_total_return)_1:=AggNull(avgIf)(expr#sum(sr_return_amt)_2,build_side_non_null_symbol)
+                           │        └─ Projection Est. 4294871 rows
+                           │           │     Expressions: [expr#sum(sr_return_amt)_2, sr_store_sk_2], build_side_non_null_symbol:=1
+                           │           └─ Left Semi Join Est. 4294871 rows
+                           │              │     Condition: sr_store_sk_2 == s_store_sk
+                           │              │     Runtime Filters Builder: {s_store_sk}
+                           │              ├─ Filter Est. 13120309 rows
+                           │              │  │     Condition: Runtime Filters: {sr_store_sk_2}
+                           │              │  └─ Local Exchange Est. 52481235 rows
+                           │              │     └─ Buffer Est. 52481235 rows
+                           │              │        └─ CTERef[0] Est. 52481235 rows
+                           │              └─ Broadcast Exchange Est. 41 rows
+                           │                 └─ Buffer Est. 41 rows
+                           │                    └─ CTERef[1] Est. 41 rows
+                           └─ Repartition Exchange Est. 41 rows
+                              │     Partition by: {s_store_sk}
+                              └─ Buffer Est. 41 rows
+                                 └─ CTERef[1] Est. 41 rows
+CTEDef [0]
+   MergingAggregated Est. 52481235 rows
+   └─ Repartition Exchange Est. 52481235 rows
+      │     Partition by: {sr_customer_sk, sr_store_sk}
+      └─ Aggregating Est. 52481235 rows
+         │     Group by: {sr_customer_sk, sr_store_sk}
+         │     Aggregates: expr#sum(sr_return_amt):=AggNull(sum)(sr_return_amt)
+         └─ Inner Join Est. 52481235 rows
+            │     Condition: sr_returned_date_sk == d_date_sk
+            │     Runtime Filters Builder: {d_date_sk}
+            ├─ Filter Est. 287999764 rows
+            │  │     Condition: Runtime Filters: {sr_returned_date_sk}
+            │  └─ TableScan tpcds1000.store_returns Est. 287999764 rows
+            │           Where: Runtime Filters: {sr_returned_date_sk}
+            │           Outputs: [sr_returned_date_sk, sr_customer_sk, sr_store_sk, sr_return_amt]
+            └─ Broadcast Exchange Est. 366 rows
+               └─ Projection Est. 366 rows
+                  │     Expressions: [d_date_sk]
+                  └─ Filter Est. 366 rows
+                     │     Condition: d_year = 2000
+                     └─ TableScan tpcds1000.date_dim Est. 73049 rows
+                              Where: d_year = 2000
+                              Outputs: [d_date_sk, d_year]
+CTEDef [1]
+   Projection Est. 41 rows
+   │     Expressions: [s_store_sk]
+   └─ Filter Est. 41 rows
+      │     Condition: s_state = 'TN'
+      └─ TableScan tpcds1000.store Est. 1002 rows
+               Where: s_state = 'TN'
+               Outputs: [s_store_sk, s_state]
+note: Magic Set is applied for 1 parts.
+note: Runtime Filter is applied for 5 times.
+note: CTE(Common Table Expression) is applied for 4 times.

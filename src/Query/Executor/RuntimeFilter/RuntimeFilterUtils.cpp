@@ -7,7 +7,7 @@
 #include <Parsers/formatAST.h>
 #include <Query/Parsers/ASTHelper.h>
 #include <Query/Common/Utils.h>
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
 //#include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
 //#include <Functions/FunctionsRuntimeFilter.h>
@@ -173,7 +173,7 @@ std::pair<ASTs, ASTs> RuntimeFilterUtils::extractRuntimeFilters(const ConstASTPt
     return std::make_pair(runtime_filters, static_filters);
 }
 
-std::vector<RuntimeFilterId> RuntimeFilterUtils::extractRuntimeFilterId(const ASTPtr & conjuncts)
+std::vector<RuntimeFilterId> RuntimeFilterUtils::extractRuntimeFilterId(const ConstASTPtr & conjuncts)
 {
     std::vector<RuntimeFilterId> ids;
     if (!conjuncts)
@@ -186,7 +186,7 @@ std::vector<RuntimeFilterId> RuntimeFilterUtils::extractRuntimeFilterId(const AS
     return ids;
 }
 
-RuntimeFilterId RuntimeFilterUtils::extractId(const ASTPtr & runtime_filter)
+RuntimeFilterId RuntimeFilterUtils::extractId(const ConstASTPtr & runtime_filter)
 {
     Utils::checkArgument(isInternalRuntimeFilter(runtime_filter));
 

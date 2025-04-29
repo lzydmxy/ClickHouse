@@ -1,6 +1,9 @@
 #include <Query/Processors/QueryPlan/CTERefStepExt.h>
 #include <Parsers/ASTIdentifier.h>
 #include <Query/Processors/QueryPlan/PlanNode.h>
+#include <Query/Planner/PlanSymbolReallocator.h>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 
 namespace DB
 {
@@ -83,4 +86,24 @@ std::unordered_map<String, String> CTERefStepExt::getReverseOutputColumns() cons
         reverse.emplace(item.second, item.first);
     return reverse;
 }
+
+void CTERefStepExt::toProto(Protos::CTERefStepExt & proto, bool for_hash_equals) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
+    proto.set_id(id);
+    serializeMapToProto(output_columns, *proto.mutable_output_columns());
+    proto.set_has_filter(has_filter);
+}
+
+std::shared_ptr<CTERefStepExt> CTERefStepExt::fromProto(const Protos::CTERefStepExt & proto, ContextPtr)
+{
+    auto base_output_header = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    auto id = proto.id();
+    auto output_columns = deserializeMapFromProto<String, String>(proto.output_columns());
+    auto has_filter = proto.has_filter();
+    auto step = std::make_shared<CTERefStepExt>(base_output_header, id, output_columns, has_filter);
+
+    return step;
+}
+
 }

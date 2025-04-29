@@ -9,6 +9,9 @@ namespace DB
 {
 using SizeOrVariable = std::variant<size_t, String>;
 
+void setSizeOrVariableToProto(const SizeOrVariable & size_or_var, Protos::SizeOrVariable & proto);
+std::optional<SizeOrVariable> getSizeOrVariableFromProto(const Protos::SizeOrVariable & proto);
+
 /// Sorts stream of data. See MergeSortingTransform.
 class SortingStepExt : public ITransformingStep
 {
@@ -68,8 +71,6 @@ private:
     SortDescription prefix_description;
     bool enable_adaptive_spill = false;
 
-    void setSizeOrVariableToProto(const SizeOrVariable & size_or_var, Protos::SizeOrVariable & proto) const;
-    static std::optional<SizeOrVariable> getSizeOrVariableFromProto(const Protos::SizeOrVariable & proto);
 };
 
 }

@@ -2,7 +2,7 @@
 #include <IO/Operators.h>
 #include <Interpreters/ExpressionActions.h>
 #include <Processors/Transforms/ExpressionTransform.h>
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterUtils.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/Transforms/FilterTransformExt.h>
@@ -150,7 +150,7 @@ std::vector<ConstASTPtr> FilterStepExt::removeLargeInValueList(const std::vector
     return removed_large_in_value_list;
 }
 
-std::shared_ptr<FilterStep> FilterStepExt::fromProto(const Protos::FilterStepExt & proto, ContextPtr)
+std::shared_ptr<FilterStepExt> FilterStepExt::fromProto(const Protos::FilterStepExt & proto, ContextPtr)
 {
     auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
     auto filter = deserializeASTFromProto(proto.filter());

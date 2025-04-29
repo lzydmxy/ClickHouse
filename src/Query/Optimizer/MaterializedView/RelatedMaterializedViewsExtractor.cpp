@@ -1,11 +1,11 @@
 #include <algorithm>
-#include <Optimizer/MaterializedView/RelatedMaterializedViewsExtractor.h>
+#include <Query/Optimizer/MaterializedView/RelatedMaterializedViewsExtractor.h>
 #include "Interpreters/StorageID.h"
 
 namespace DB
 {
 
-RelatedMaterializedViews RelatedMaterializedViewsExtractor::extract(QueryPlan & plan, ContextMutablePtr context_)
+RelatedMaterializedViews RelatedMaterializedViewsExtractor::extract(QueryPlanExt & plan, ContextMutablePtr context_)
 {
     Void c;
     RelatedMaterializedViewsExtractor finder{context_, plan.getCTEInfo()};
@@ -21,25 +21,14 @@ RelatedMaterializedViews RelatedMaterializedViewsExtractor::extract(QueryPlan & 
 }
 
 
-Void RelatedMaterializedViewsExtractor::visitTableScanNode(TableScanNode & node, Void &)
+Void RelatedMaterializedViewsExtractor::visitTableScanStepExtNode(TableScanStepExtNode & node, Void &)
 {
     auto table_scan = node.getStep();
-    auto catalog_client = context->tryGetCnchCatalog();
-    if (catalog_client)
-    {
-        auto start_time = context->getTimestamp();
-        auto views = catalog_client->getAllViewsOn(*context, table_scan->getStorage(), start_time);
-        for (const auto & view : views)
-            if (visited_materialized_views.emplace(view->getStorageID()).second)
-                result.materialized_views.emplace_back(view->getStorageID());
-    }
-    else
-    {
-        auto dependencies = DatabaseCatalog::instance().getDependencies(table_scan->getStorageID());
-        for (const auto & item : dependencies)
-            if (visited_materialized_views.emplace(item).second)
-                result.materialized_views.emplace_back(item);
-    }
+
+    auto dependencies = DatabaseCatalog::instance().getLoadingDependencies(table_scan->getStorageID());
+    for (const auto & item : dependencies)
+        if (visited_materialized_views.emplace(item).second)
+            result.materialized_views.emplace_back(item);
     return Void{};
 }
 }

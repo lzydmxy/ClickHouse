@@ -13,7 +13,7 @@ namespace DB
         static std::set<String> getDeterministicSymbols(const Assignments & assignments, ContextPtr context);
         static ConstASTPtr filterDeterministicConjuncts(ConstASTPtr predicate, ContextPtr context);
         static ConstASTPtr filterNonDeterministicConjuncts(ConstASTPtr predicate, ContextPtr context);
-        static std::set<ConstASTPtr> filterDeterministicPredicates(std::vector<ConstASTPtr> & predicates, ContextPtr context);
+        static std::set<ConstASTPtr> filterDeterministicPredicates(ConstASTs & predicates, ContextPtr context);
         static bool isDeterministic(ConstASTPtr expression, ContextPtr context);
         static bool canChangeOutputRows(ConstASTPtr expression, ContextPtr context);
 

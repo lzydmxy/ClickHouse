@@ -4,7 +4,7 @@
 namespace DB
 {
 
-PlanNodeCost TableScanCost::calculate(const TableScanStep &, CostContext & context)
+PlanNodeCost TableScanCost::calculate(const TableScanStepExt &, CostContext & context)
 {
     if (!context.stats)
         return PlanNodeCost::ZERO;

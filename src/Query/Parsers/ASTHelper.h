@@ -59,7 +59,7 @@ using DB::IAST;
 using DB::ASTPtr;
 using DB::ASTs;
 using ConstASTPtr = std::shared_ptr<const IAST>;
-using ConstASTs = std::vector<ConstASTPtr>;
+using ConstASTs = absl::InlinedVector<ConstASTPtr, 7>;
 using ASTFunctionPtr = std::shared_ptr<ASTFunction>;
 
 struct ShowStatsQueryInfoExt;
@@ -128,6 +128,14 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf);
 void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_child);
 
 ASTFunctionPtr makeASTFunctionWithVectorArgs(ASTFunctionPtr & ast, const String &name, ASTs &&args);
+
+template <class Predicate>
+inline typename DB::ASTs::size_type erase_if(DB::ConstASTs & asts, Predicate pred) /// NOLINT(cert-dcl58-cpp)
+{
+    auto old_size = asts.size();
+    asts.erase(std::remove_if(asts.begin(), asts.end(), pred), asts.end());
+    return old_size - asts.size();
+}
 
 }
 

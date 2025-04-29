@@ -4,6 +4,7 @@
 #include <Processors/QueryPlan/QueryPlan.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/QueryPlan/PlanNode.h>
+#include <Query/Common/Void.h>
 
 namespace DB
 {
@@ -137,7 +138,7 @@ public:
     template <typename R, typename C>
     static R accept(QueryPlan::Node * node, NodeVisitor<R, C> & visitor, C & context)
     {
-        switch (node ? getQueryPlanStepType(node->step) : QueryPlanStepType::Any)
+        switch (node ? getQueryPlanStepType(node->step) : QueryPlanStepType::AnyStepExt)
         {
 #define VISITOR_DEF(TYPE) \
     case QueryPlanStepType::TYPE: { \

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Query/Optimizer/Rule/Rule.h>
-#include <QueryPlan/JoinStep.h>
+#include <Query/Processors/QueryPlan/JoinStepExt.h>
 
 namespace DB
 {
@@ -21,7 +21,7 @@ class SemiJoinPushDown : public Rule
 public:
     RuleType getType() const override { return RuleType::SEMI_JOIN_PUSH_DOWN; }
     String getName() const override { return "SEMI_JOIN_PUSH_DOWN"; }
-    bool isEnabled(ContextPtr context) const override {return context->getSettingsRef().enable_semi_join_push_down; }
+    bool isEnabled(ContextPtr context) const override {return context->getOptimizerContext()->getSettingsRef().enable_semi_join_push_down; }
     ConstRefPatternPtr getPattern() const override;
 
 protected:
@@ -57,7 +57,7 @@ public:
     }
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_semi_join_push_down;
+        return context->getOptimizerContext()->getSettingsRef().enable_semi_join_push_down;
     }
     ConstRefPatternPtr getPattern() const override;
 
@@ -94,7 +94,7 @@ public:
     }
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_semi_join_push_down;
+        return context->getOptimizerContext()->getSettingsRef().enable_semi_join_push_down;
     }
     ConstRefPatternPtr getPattern() const override;
 

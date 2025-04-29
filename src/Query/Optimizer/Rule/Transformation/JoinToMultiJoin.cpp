@@ -6,15 +6,16 @@
 #include <Query/Optimizer/Rule/Pattern.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Optimizer/Utils.h>
-#include <QueryPlan/AnyStep.h>
-#include <QueryPlan/MultiJoinStep.h>
+#include <<Query/Processors/QueryPlan/AnyStep.h>
+#include <<Query/Processors/QueryPlan/MultiJoinStep.h>
+#include <Query/Common/PredicateUtils.h>
 
 namespace DB
 {
 ConstRefPatternPtr JoinToMultiJoin::getPattern() const
 {
     static auto pattern = Patterns::join()
-        .matchingStep<JoinStep>([](const JoinStep & s) { return isSupport(s); })
+        .matchingStep<JoinStepExt>([](const JoinStepExt & s) { return isSupport(s); })
         .with(Patterns::tree(), Patterns::tree())
         .result();
     return pattern;
@@ -23,7 +24,7 @@ ConstRefPatternPtr JoinToMultiJoin::getPattern() const
 PlanNodes JoinToMultiJoin::createMultiJoin(
     ContextMutablePtr context,
     CascadesContext &  optimizer_context,
-    const JoinStep * join_step,
+    const JoinStepExt * join_step,
     GroupId group_id,
     GroupId left_group_id,
     GroupId right_group_id)
@@ -62,7 +63,7 @@ PlanNodes JoinToMultiJoin::createMultiJoin(
             if (!group->containsJoinSet(merged_join_set))
             {
                 group->addJoinSet(merged_join_set);
-                auto multi_join_step = std::make_shared<MultiJoinStep>(
+                auto multi_join_step = std::make_shared<MultiJoinStepExt>(
                     join_step->getOutputStream(),
                     Graph::build(
                         merged_join_set.getGroups(),
@@ -79,7 +80,7 @@ PlanNodes JoinToMultiJoin::createMultiJoin(
                     input_children.emplace_back(leaf_node);
                 }
 
-                auto multi_join_node = MultiJoinNode::createPlanNode(context->nextNodeId(), std::move(multi_join_step), input_children);
+                auto multi_join_node = MultiJoinStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(multi_join_step), input_children);
                 result.emplace_back(multi_join_node);
             }
         }
@@ -91,10 +92,10 @@ TransformResult JoinToMultiJoin::transformImpl(PlanNodePtr node, const Captures 
 {
     auto group_id = context.group_id;
 
-    auto left_group_id = dynamic_cast<const AnyStep *>(node->getChildren()[0]->getStep().get())->getGroupId();
-    auto right_group_id = dynamic_cast<const AnyStep *>(node->getChildren()[1]->getStep().get())->getGroupId();
+    auto left_group_id = dynamic_cast<const AnyStepExt *>(node->getChildren()[0]->getStep().get())->getGroupId();
+    auto right_group_id = dynamic_cast<const AnyStepExt *>(node->getChildren()[1]->getStep().get())->getGroupId();
 
-    const auto * join_step = dynamic_cast<const JoinStep *>(node->getStep().get());
+    const auto * join_step = dynamic_cast<const JoinStepExt *>(node->getStep().get());
 
     return TransformResult{
         createMultiJoin(context.context, context.optimization_context->getOptimizerContext(), join_step, group_id, left_group_id, right_group_id)};

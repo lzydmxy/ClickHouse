@@ -36,4 +36,6 @@ protected:
     std::unordered_map<String, RuntimeAttributeDescription> attribute_descriptions;
 };
 
+using QueryPlanStepExtPtr = std::shared_ptr<IQueryPlanStepExt>;
+
 }

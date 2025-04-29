@@ -1,10 +1,10 @@
-
-
 #include <Query/Optimizer/CardinalityEstimate/SymbolStatistics.h>
 
 #include <Query/Statistics/TypeUtils.h>
+#include <Query/DataTypes/DataTypeHelper.h>
+#include <Query/Common/FieldVisitorToStringHelper.h>
 #include <Common/FieldVisitorConvertToNumber.h>
-#include <Common/FieldVisitorToString.h>
+
 
 namespace DB
 {
@@ -75,7 +75,7 @@ bool SymbolStatistics::isImplicitConvertableFromString()
 {
     auto tmp_type = QueryStatistics::decayDataType(type);
     // currently support date, date32, datetime32/64
-    return isDateOrDateTime(tmp_type) || isTime(tmp_type);
+    return isDateOrDateTime(tmp_type);
 }
 
 double SymbolStatistics::toDouble(const Field & literal)

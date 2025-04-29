@@ -4,9 +4,8 @@
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>
 #include <Query/Optimizer/Cascades/Memo.h>
 #include <Query/Optimizer/Rule/Patterns.h>
-#include <QueryPlan/AnyStep.h>
-#include <QueryPlan/MultiJoinStep.h>
-#include <QueryPlan/IQueryPlanStep.h>
+#include <Query/Processors/QueryPlan/AnyStepExt.h>
+#include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
 #include <Common/Exception.h>
 
 namespace DB
@@ -39,7 +38,7 @@ GroupBindingIterator::GroupBindingIterator(const Memo & memo_, GroupId id_, Patt
 }
 bool GroupBindingIterator::hasNext()
 {
-    if (pattern->getTargetType() == IQueryPlanStep::Type::Any || pattern->getTargetType() == IQueryPlanStep::Type::Tree)
+    if (pattern->getTargetType() == QueryPlanStepType::Any || pattern->getTargetType() == QueryPlanStepType::Tree)
     {
         return current_item_index == 0;
     }
@@ -76,14 +75,14 @@ bool GroupBindingIterator::hasNext()
 
 PlanNodePtr GroupBindingIterator::next()
 {
-    if (pattern->getTargetType() == IQueryPlanStep::Type::Any || pattern->getTargetType() == IQueryPlanStep::Type::Tree)
+    if (pattern->getTargetType() == QueryPlanStepType::Any || pattern->getTargetType() == QueryPlanStepType::Tree)
     {
         current_item_index = num_group_items + 1;
         PlanNodes children;
         const auto & statistics = memo.getGroupById(group_id)->getStatistics();
         return PlanNodeBase::createPlanNode(
             context->nextNodeId(),
-            std::make_shared<AnyStep>(context->getMemo().getGroupById(group_id)->getStep()->getOutputStream(), group_id),
+            std::make_shared<AnyStepExt>(context->getMemo().getGroupById(group_id)->getStep()->getOutputStream(), group_id),
             children,
             statistics);
     }
@@ -99,7 +98,7 @@ GroupExprBindingIterator::GroupExprBindingIterator(
     , has_next(false)
     , current_binding(nullptr)
 {
-    if (group_expr->getStep()->getType() != pattern->getTargetType())
+    if (getQueryPlanStepType(group_expr->getStep()) != pattern->getTargetType())
     {
         // Check root node type
         return;
@@ -229,21 +228,21 @@ PlanNodePtr Winner::buildPlanNode(CascadesContext & context, PlanNodes & childre
 {
     if (!group_expr)
     {
-        throw Exception("Can not build cascades plan", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Can not build cascades plan");
     }
     auto stats = context.getMemo().getGroupById(group_expr->getGroupId())->getStatistics();
-    auto plan_node = PlanNodeBase::createPlanNode(context.getContext()->nextNodeId(), group_expr->getStep(), children);
+    auto plan_node = PlanNodeBase::createPlanNode(context.getContext()->getOptimizerContext()->nextNodeId(), group_expr->getStep(), children);
     if (stats)
         plan_node->setStatistics(stats);
     if (remote_exchange)
     {
-        plan_node = PlanNodeBase::createPlanNode(context.getContext()->nextNodeId(), remote_exchange->getStep(), {plan_node});
+        plan_node = PlanNodeBase::createPlanNode(context.getContext()->getOptimizerContext()->nextNodeId(), remote_exchange->getStep(), {plan_node});
         if (stats)
             plan_node->setStatistics(stats);
     }
     if (local_exchange)
     {
-        plan_node = PlanNodeBase::createPlanNode(context.getContext()->nextNodeId(), local_exchange->getStep(), {plan_node});
+        plan_node = PlanNodeBase::createPlanNode(context.getContext()->getOptimizerContext()->nextNodeId(), local_exchange->getStep(), {plan_node});
         if (stats)
             plan_node->setStatistics(stats);
     }

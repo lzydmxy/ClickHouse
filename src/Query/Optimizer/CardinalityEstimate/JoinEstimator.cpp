@@ -1,18 +1,17 @@
-
-
 #include <Query/Optimizer/CardinalityEstimate/JoinEstimator.h>
 
 #include <Core/Types.h>
 #include <Query/Optimizer/CardinalityEstimate/FilterEstimator.h>
 #include <Query/Optimizer/PredicateUtils.h>
-#include <common/types.h>
+#include <Query/Core/BlockHelper.h>
+#include <base/types.h>
 
 namespace DB
 {
 PlanNodeStatisticsPtr JoinEstimator::estimate(
     PlanNodeStatisticsPtr & opt_left_stats,
     PlanNodeStatisticsPtr & opt_right_stats,
-    const JoinStep & join_step,
+    const JoinStepExt & join_step,
     ContextMutablePtr & context,
     bool is_left_base_table,
     bool is_right_base_table,
@@ -30,7 +29,7 @@ PlanNodeStatisticsPtr JoinEstimator::estimate(
     const Names & left_keys = join_step.getLeftKeys();
     const Names & right_keys = join_step.getRightKeys();
 
-    ASTTableJoin::Kind kind = join_step.getKind();
+    JoinKind kind = join_step.getKind();
     PlanNodeStatisticsPtr res = computeCardinality(
         left_stats,
         right_stats,
@@ -51,22 +50,22 @@ PlanNodeStatisticsPtr JoinEstimator::estimate(
 
     // TODO@lichengxian update statistics for join filters.
     const auto & filter = join_step.getFilter();
-    if ((kind == ASTTableJoin::Kind::Inner || kind == ASTTableJoin::Kind::Cross)
-        && join_step.getStrictness() == ASTTableJoin::Strictness::All && filter && !PredicateUtils::isTruePredicate(filter))
+    if ((kind == JoinKind::Inner || kind == JoinKind::Cross)
+        && join_step.getStrictness() == JoinStrictness::All && filter && !PredicateUtils::isTruePredicate(filter))
     {
-        double selectivity = context->getSettingsRef().stats_estimator_join_filter_selectivity;
+        double selectivity = context->getOptimizerContext()->getSettingsRef().stats_estimator_join_filter_selectivity;
         std::unordered_map<String, SymbolStatisticsPtr> symbol_statistics_in_filter;
         // only cross join estimate directly inner join use default selectivity because of the symbol stats after cross join is accuracy.
         if (join_step.getLeftKeys().empty())
         {
-            auto name_to_type = join_step.getInputStreams()[0].header.getNamesToTypes();
-            auto name_to_type2 = join_step.getInputStreams()[1].header.getNamesToTypes();
+            auto name_to_type = BlockHelper::getNamesToTypes(join_step.getInputStreams()[0].header);
+            auto name_to_type2 = BlockHelper::getNamesToTypes(join_step.getInputStreams()[1].header);
             name_to_type.insert(name_to_type2.begin(), name_to_type2.end());
             auto interpreter = ExpressionInterpreter::basicInterpreter(name_to_type, context);
             FilterEstimatorContext estimator_context{
                 .context = context,
                 .interpreter = interpreter,
-                .default_selectivity = context->getSettingsRef().stats_estimator_join_filter_selectivity};
+                .default_selectivity = context->getOptimizerContext()->getSettingsRef().stats_estimator_join_filter_selectivity};
             FilterEstimateResult result = FilterEstimator::estimateFilter(*res, filter, estimator_context);
 
             selectivity = result.first.value_or(estimator_context.default_selectivity);
@@ -115,8 +114,8 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
     PlanNodeStatistics & right_stats,
     const Names & left_keys,
     const Names & right_keys,
-    ASTTableJoin::Kind kind,
-    ASTTableJoin::Strictness strictness,
+    JoinKind kind,
+    JoinStrictness strictness,
     Context & context,
     bool is_left_base_table,
     bool is_right_base_table,
@@ -142,7 +141,7 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
         }
 
     // cross join
-    if (kind == ASTTableJoin::Kind::Cross)
+    if (kind == JoinKind::Cross)
     {
         for (const auto & item : left_stats.getSymbolStatistics())
         {
@@ -200,8 +199,8 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
         // join output cardinality and join output column statistics for every join key
         UInt64 pre_key_join_card;
         std::unordered_map<String, SymbolStatisticsPtr> pre_key_join_output_statistics;
-        bool enable_pk_fk = context.getSettingsRef().enable_pk_fk;
-        bool enable_real_pk_fk = context.getSettingsRef().enable_real_pk_fk;
+        bool enable_pk_fk = context.getOptimizerContext()->getSettingsRef().enable_pk_fk;
+        bool enable_real_pk_fk = context.getOptimizerContext()->getSettingsRef().enable_real_pk_fk;
 
         // case 1 : left join key equals to right join key. (self-join)
         if (left_db_table_column == right_db_table_column)
@@ -228,7 +227,7 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
                 right_rows,
                 right_ndv,
                 left_ndv,
-                context.getSettingsRef().pk_selectivity,
+                context.getOptimizerContext()->getSettingsRef().pk_selectivity,
                 right_stats,
                 left_stats,
                 right_key_stats,
@@ -237,7 +236,7 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
                 left_key,
                 is_right_base_table,
                 is_left_base_table,
-                context.getSettingsRef().enable_filtered_pk_selectivity && children_filter_selectivity.size() == 2
+                context.getOptimizerContext()->getSettingsRef().enable_filtered_pk_selectivity && children_filter_selectivity.size() == 2
                     ? children_filter_selectivity[0]
                     : 1.0,
                 pre_key_join_output_statistics,
@@ -253,7 +252,7 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
                 left_rows,
                 left_ndv,
                 right_ndv,
-                context.getSettingsRef().pk_selectivity,
+                context.getOptimizerContext()->getSettingsRef().pk_selectivity,
                 left_stats,
                 right_stats,
                 left_key_stats,
@@ -262,7 +261,7 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
                 right_key,
                 is_left_base_table,
                 is_right_base_table,
-                context.getSettingsRef().enable_filtered_pk_selectivity && children_filter_selectivity.size() == 2
+                context.getOptimizerContext()->getSettingsRef().enable_filtered_pk_selectivity && children_filter_selectivity.size() == 2
                     ? children_filter_selectivity[1]
                     : 1.0,
                 pre_key_join_output_statistics,
@@ -270,7 +269,7 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
         }
 
         // case 4 : normal join cases, with histogram exist.
-        else if (context.getSettingsRef().stats_estimator_join_use_histogram && !left_key_stats.getHistogram().getBuckets().empty() && !right_key_stats.getHistogram().getBuckets().empty())
+        else if (context.getOptimizerContext()->getSettingsRef().stats_estimator_join_use_histogram && !left_key_stats.getHistogram().getBuckets().empty() && !right_key_stats.getHistogram().getBuckets().empty())
         {
             pre_key_join_card = computeCardinalityByHistogram(
                 left_stats,
@@ -311,7 +310,7 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
     // not cross join and can't estimate
     if (all_unknown_stat && !left_keys.empty())
     {
-        if (context.getSettingsRef().enable_estimate_without_symbol_statistics)
+        if (context.getOptimizerContext()->getSettingsRef().enable_estimate_without_symbol_statistics)
             return std::make_shared<PlanNodeStatistics>(std::max(left_rows, right_rows), std::unordered_map<String, SymbolStatisticsPtr>{});
         return nullptr;
     }
@@ -319,23 +318,23 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
     // Adjust the number of output rows by join kind.
 
     // Consider correlated with multi join keys.
-    if (kind == ASTTableJoin::Kind::Inner && left_keys.size() > 1)
+    if (kind == JoinKind::Inner && left_keys.size() > 1)
     {
         double adjust_correlated_coefficient
-            = std::pow(context.getSettingsRef().multi_join_keys_correlated_coefficient, left_keys.size() - 1);
+            = std::pow(context.getOptimizerContext()->getSettingsRef().multi_join_keys_correlated_coefficient, left_keys.size() - 1);
         join_card *= adjust_correlated_coefficient;
     }
 
     // All rows from left side should be in the result.
-    if (kind == ASTTableJoin::Kind::Left)
+    if (kind == JoinKind::Left)
     {
-        if (strictness == ASTTableJoin::Strictness::Anti)
+        if (strictness == JoinStrictness::Anti)
         {
-            join_card = left_rows * context.getSettingsRef().stats_estimator_anti_join_filter_coefficient;
+            join_card = left_rows * context.getOptimizerContext()->getSettingsRef().stats_estimator_anti_join_filter_coefficient;
             if (left_rows > join_card)
                 join_card = std::max(join_card, left_rows - join_card);
         }
-        else if (strictness == ASTTableJoin::Strictness::Semi)
+        else if (strictness == JoinStrictness::Semi)
         {
             join_card = std::min(left_rows, join_card);
         }
@@ -345,15 +344,15 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
         }
     }
     // All rows from right side should be in the result.
-    if (kind == ASTTableJoin::Kind::Right)
+    if (kind == JoinKind::Right)
     {
-        if (strictness == ASTTableJoin::Strictness::Anti)
+        if (strictness == JoinStrictness::Anti)
         {
-            join_card = right_rows * context.getSettingsRef().stats_estimator_anti_join_filter_coefficient;
+            join_card = right_rows * context.getOptimizerContext()->getSettingsRef().stats_estimator_anti_join_filter_coefficient;
             if (right_rows > join_card)
                 join_card = std::max(join_card, right_rows - join_card);
         }
-        else if (strictness == ASTTableJoin::Strictness::Semi)
+        else if (strictness == JoinStrictness::Semi)
         {
             join_card = std::min(right_rows, join_card);
         }
@@ -363,7 +362,7 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
         }
     }
     // T(A FOJ B) = T(A LOJ B) + T(A ROJ B) - T(A IJ B)
-    if (kind == ASTTableJoin::Kind::Full)
+    if (kind == JoinKind::Full)
     {
         join_card = std::max(left_rows, join_card) + std::max(right_rows, join_card) - join_card;
     }
@@ -545,18 +544,18 @@ UInt64 JoinEstimator::computeCardinalityByFKPK(
     return join_card;
 }
 
-static bool isInnerOrLeftSemi(ASTTableJoin::Kind kind, ASTTableJoin::Strictness strictness)
+static bool isInnerOrLeftSemi(JoinKind kind, JoinStrictness strictness)
 {
-    return kind == ASTTableJoin::Kind::Inner
-        || (kind == ASTTableJoin::Kind::Left
-            && (strictness == ASTTableJoin::Strictness::Semi || strictness == ASTTableJoin::Strictness::Any));
+    return kind == JoinKind::Inner
+        || (kind == JoinKind::Left
+            && (strictness == JoinStrictness::Semi || strictness == JoinStrictness::Any));
 }
 
-static bool isInnerOrRightSemi(ASTTableJoin::Kind kind, ASTTableJoin::Strictness strictness)
+static bool isInnerOrRightSemi(JoinKind kind, JoinStrictness strictness)
 {
-    return kind == ASTTableJoin::Kind::Inner
-        || (kind == ASTTableJoin::Kind::Right
-            && (strictness == ASTTableJoin::Strictness::Semi || strictness == ASTTableJoin::Strictness::Any));
+    return kind == JoinKind::Inner
+        || (kind == JoinKind::Right
+            && (strictness == JoinStrictness::Semi || strictness == JoinStrictness::Any));
 }
 
 UInt64 JoinEstimator::computeCardinalityByHistogram(
@@ -564,8 +563,8 @@ UInt64 JoinEstimator::computeCardinalityByHistogram(
     PlanNodeStatistics & right_stats,
     SymbolStatistics & left_key_stats,
     SymbolStatistics & right_key_stats,
-    ASTTableJoin::Kind kind,
-    ASTTableJoin::Strictness strictness,
+    JoinKind kind,
+    JoinStrictness strictness,
     String left_key,
     String right_key,
     std::unordered_map<String, SymbolStatisticsPtr> & join_output_statistics,
@@ -636,8 +635,8 @@ UInt64 JoinEstimator::computeCardinalityByNDV(
     PlanNodeStatistics & right_stats,
     SymbolStatistics & left_key_stats,
     SymbolStatistics & right_key_stats,
-    ASTTableJoin::Kind kind,
-    ASTTableJoin::Strictness strictness,
+    JoinKind kind,
+    JoinStrictness strictness,
     String left_key,
     String right_key,
     std::unordered_map<String, SymbolStatisticsPtr> & join_output_statistics,

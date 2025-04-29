@@ -1,40 +1,22 @@
-/*
- * Copyright (2022) Bytedance Ltd. and/or its affiliates
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+#include <Query/Optimizer/MaterializedView/MaterializedViewStructure.h>
 
-#include <Optimizer/MaterializedView/MaterializedViewStructure.h>
-
-#include <Analyzers/QueryAnalyzer.h>
-#include <Analyzers/QueryRewriter.h>
+#include <Query/Analyzer/QueryAnalyzer.h>
+#include <Query/Analyzer/QueryRewriter.h>
 #include <Interpreters/Context.h>
-#include <Optimizer/Iterative/IterativeRewriter.h>
-#include <Optimizer/MaterializedView/InnerJoinCollector.h>
-#include <Optimizer/MaterializedView/MaterializedViewChecker.h>
-#include <Optimizer/PlanOptimizer.h>
-#include <Optimizer/PredicateUtils.h>
-#include <Optimizer/Rewriter/PredicatePushdown.h>
-#include <Optimizer/Rewriter/UnifyJoinOutputs.h>
-#include <Optimizer/Rewriter/UnifyNullableType.h>
-#include <Optimizer/Rule/Rules.h>
-#include <Optimizer/Utils.h>
+#include <Query/Optimizer/Iterative/IterativeRewriter.h>
+#include <Query/Optimizer/MaterializedView/InnerJoinCollector.h>
+#include <Query/Optimizer/MaterializedView/MaterializedViewChecker.h>
+#include <Query/Optimizer/PlanOptimizer.h>
+#include <Query/Optimizer/PredicateUtils.h>
+#include <Query/Optimizer/Rewriter/PredicatePushdown.h>
+#include <Query/Optimizer/Rewriter/UnifyJoinOutputs.h>
+#include <Query/Optimizer/Rewriter/UnifyNullableType.h>
+#include <Query/Optimizer/Rule/Rules.h>
+#include <Query/Optimizer/Utils.h>
 #include <Parsers/ASTIdentifier.h>
-#include <QueryPlan/CTEInfo.h>
-#include <QueryPlan/IQueryPlanStep.h>
-#include <QueryPlan/QueryPlanner.h>
-#include <QueryPlan/SymbolMapper.h>
 #include <Common/Exception.h>
 #include <Core/Field.h>
+#include <Query/Planner/PlannerExt.h>
 
 #include <unordered_map>
 
@@ -50,8 +32,8 @@ MaterializedViewStructurePtr MaterializedViewStructure::buildFrom(
     const StorageID & view_storage_id, const StorageID & target_storage_id, ASTPtr query, bool async_materialized_view_, ContextPtr context)
 {
     ContextMutablePtr query_context = Context::createCopy(context);
-    query_context->createSymbolAllocator();
-    query_context->createPlanNodeIdAllocator();
+    query_context->getOptimizerContext()->createSymbolAllocator();
+    query_context->getOptimizerContext()->createPlanNodeIdAllocator();
     query_context->setQueryContext(query_context);
     query_context->setSetting("prefer_global_in_and_join", true); // for dialect_type='CLICKHOUSE'
     query_context->setSetting("cte_mode", Field{"INLINED"}); // support with clause
@@ -62,7 +44,7 @@ MaterializedViewStructurePtr MaterializedViewStructure::buildFrom(
     if (!analysis->non_deterministic_functions.empty())
         throw Exception(ErrorCodes::QUERY_IS_NOT_SUPPORTED_IN_MATERIALIZED_VIEW, "materialized view query contains non deterministic functions");
 
-    QueryPlanPtr query_plan = QueryPlanner().plan(query_ptr, *analysis, query_context);
+    QueryPlanExtPtr query_plan = PlannerExt().plan(query_ptr, *analysis, query_context);
 
     auto wrap_rewriter_name = [&](const String & name) -> String {
         return "MV_" + name + "_" + view_storage_id.getDatabaseName() + "." + view_storage_id.getTableName();
@@ -81,7 +63,7 @@ MaterializedViewStructurePtr MaterializedViewStructure::buildFrom(
     for (auto & rewriter : rewriters)
         rewriter->rewritePlan(*query_plan, query_context);
 
-    GraphvizPrinter::printLogicalPlan(*query_plan, query_context, "MaterializedViewPlan_" + std::to_string(query_context->nextNodeId()));
+    GraphvizPrinter::printLogicalPlan(*query_plan, query_context, "MaterializedViewPlan_" + std::to_string(query_context->getOptimizerContext()->nextNodeId()));
     return buildFrom(view_storage_id, target_storage_id, query_plan->getPlanNode(), async_materialized_view_, query_context);
 }
 
@@ -89,10 +71,10 @@ MaterializedViewStructurePtr MaterializedViewStructure::buildFrom(
     const StorageID & view_storage_id, const StorageID & target_storage_id, PlanNodePtr query, bool async_materialized_view_, ContextPtr context)
 {
     PlanNodePtr root = query;
-    if (root->getType() != IQueryPlanStep::Type::Projection)
+    if (root->getType() != QueryPlanStepType::ProjectionStepExt)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "materialized view sql has no output plan node");
 
-    auto & output_step = dynamic_cast<ProjectionStep &>(*root->getStep().get());
+    auto & output_step = dynamic_cast<ProjectionStepExt &>(*root->getStep().get());
     if (!output_step.isFinalProject())
         throw Exception(ErrorCodes::LOGICAL_ERROR, "materialized view sql has no output plan node");
 
@@ -124,13 +106,13 @@ MaterializedViewStructurePtr MaterializedViewStructure::buildFrom(
     InnerJoinCollector inner_join_collector;
     inner_join_collector.collect(query);
 
-    std::unordered_set<IQueryPlanStep::Type> skip_nodes;
-    skip_nodes.emplace(IQueryPlanStep::Type::Aggregating);
-    skip_nodes.emplace(IQueryPlanStep::Type::Sorting);
+    std::unordered_set<QueryPlanStepType> skip_nodes;
+    skip_nodes.emplace(QueryPlanStepType::AggregatingStepExt);
+    skip_nodes.emplace(QueryPlanStepType::SortingStepExt);
     JoinHyperGraph join_hyper_graph = JoinHyperGraph::build(query, *symbol_map, context, skip_nodes);
 
     // enable enable_materialized_view_join_rewriting, optimizer rewrite query use mview contains join.
-    if (join_hyper_graph.getPlanNodes().size() > 1 && !context->getSettingsRef().enable_materialized_view_join_rewriting)
+    if (join_hyper_graph.getPlanNodes().size() > 1 && !context->getOptimizerContext()->getSettingsRef().enable_materialized_view_join_rewriting)
         throw Exception(
             ErrorCodes::QUERY_IS_NOT_SUPPORTED_IN_MATERIALIZED_VIEW,
             "set enable_materialized_view_join_rewriting=1 to support materialized view with join");
@@ -138,11 +120,11 @@ MaterializedViewStructurePtr MaterializedViewStructure::buildFrom(
     std::unordered_set<StorageID> base_tables;
     for (const auto & node : join_hyper_graph.getPlanNodes())
     {
-        if (node->getStep()->getType() != IQueryPlanStep::Type::TableScan)
+        if (getQueryPlanStepType(node->getStep()) != QueryPlanStepType::TableScanStepExt)
             throw Exception(
                 ErrorCodes::QUERY_IS_NOT_SUPPORTED_IN_MATERIALIZED_VIEW,
-                "query is not supported in materialized view: " + node->getStep()->getName());
-        auto storage_id = dynamic_cast<TableScanStep *>(node->getStep().get())->getStorageID();
+                "query is not supported in materialized view: {}", node->getStep()->getName());
+        auto storage_id = dynamic_cast<TableScanStepExt *>(node->getStep().get())->getStorageID();
         base_tables.emplace(storage_id);
     }
 
@@ -171,7 +153,7 @@ MaterializedViewStructurePtr MaterializedViewStructure::buildFrom(
     if (table_columns.size() < root->getCurrentDataStream().header.columns())
         throw Exception(
             ErrorCodes::LOGICAL_ERROR,
-            "size of materialized view physical columns is less than than select outputs for " + target_storage_id.getFullTableName());
+            "size of materialized view physical columns is less than than select outputs for {}", target_storage_id.getFullTableName());
 
     size_t index = 0;
     for (auto & table_column : table_columns)

@@ -2,7 +2,7 @@
 
 namespace DB
 {
-PlanNodeStatisticsPtr SampleEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const FinalSampleStep & step)
+PlanNodeStatisticsPtr SampleEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const FinalSampleStepExt & step)
 {
     if (!child_stats)
     {

@@ -2,11 +2,11 @@
 
 #include <Core/Names.h>
 #include <Query/Optimizer/Rule/Patterns.h>
-#include <QueryPlan/JoinStep.h>
-#include <QueryPlan/PlanSymbolReallocator.h>
-#include <QueryPlan/SymbolAllocator.h>
-#include <QueryPlan/SymbolMapper.h>
-#include <QueryPlan/UnionStep.h>
+#include <Query/Processors/QueryPlan/JoinStepExt.h>
+#include <Query/Planner/PlanSymbolReallocator.h>
+#include <Query/Planner/SymbolAllocator.h>
+#include <Query/Planner/SymbolMapper.h>
+#include <Query/Processors/QueryPlan/UnionStepExt.h>
 
 namespace DB
 {
@@ -24,9 +24,9 @@ const std::vector<RuleType> & PushJoinThroughUnion::blockRules() const
 
 TransformResult PushJoinThroughUnion::transformImpl(PlanNodePtr node, const Captures &, RuleContext & rule_context)
 {
-    const auto & join = dynamic_cast<const JoinStep &>(*node->getStep());
+    const auto & join = dynamic_cast<const JoinStepExt &>(*node->getStep());
     auto union_node = node->getChildren()[0];
-    const auto & unionn = dynamic_cast<const UnionStep &>(*union_node->getStep());
+    const auto & unionn = dynamic_cast<const UnionStepExt &>(*union_node->getStep());
     auto & context = rule_context.context;
 
     DataStreams input_streams;
@@ -59,12 +59,12 @@ TransformResult PushJoinThroughUnion::transformImpl(PlanNodePtr node, const Capt
             input_streams.back().header.insert(name_and_type);
         }
         new_union_children.emplace_back(PlanNodeBase::createPlanNode(
-            context->nextNodeId(), std::move(new_join_step), PlanNodes{union_node->getChildren()[i], plan_node_and_mappings.plan_node}));
+            context->getOptimizerContext()->nextNodeId(), std::move(new_join_step), PlanNodes{union_node->getChildren()[i], plan_node_and_mappings.plan_node}));
     }
 
     return {PlanNodeBase::createPlanNode(
-        context->nextNodeId(),
-        std::make_shared<UnionStep>(
+        context->getOptimizerContext()->nextNodeId(),
+        std::make_shared<UnionStepExt>(
             std::move(input_streams), join.getOutputStream(), OutputToInputs{}, unionn.getMaxThreads(), unionn.isLocal()),
         new_union_children)};
 }

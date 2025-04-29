@@ -1,6 +1,6 @@
 import base64
 import errno
-from functools import cache
+from functools import lru_cache as cache
 import http.client
 import logging
 import os

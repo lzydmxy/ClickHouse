@@ -4,7 +4,6 @@
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
 #include <Query/Processors/QueryPlan/CTEInfo.h>
-#include <Query/Processors/QueryPlan/PlanSymbolReallocator.h>
 
 #include <memory>
 
@@ -39,6 +38,8 @@ public:
 
     std::shared_ptr<ProjectionStepExt> toProjectionStep() const;
     PlanNodePtr toInlinedPlanNode(CTEInfo & cte_info, ContextMutablePtr & context) const;
+    void toProto(Protos::CTERefStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<CTERefStepExt> fromProto(const Protos::CTERefStepExt & proto, ContextPtr context);
 
 private:
     /**

@@ -1,10 +1,9 @@
 #include <Query/Optimizer/CostModel/AggregatingCost.h>
 #include <Query/Optimizer/CostModel/CostCalculator.h>
-#include <QueryPlan/AggregatingStep.h>
 
 namespace DB
 {
-PlanNodeCost AggregatingCost::calculate(const AggregatingStep & step, CostContext & context)
+PlanNodeCost AggregatingCost::calculate(const AggregatingStepExt & step, CostContext & context)
 {
     PlanNodeStatisticsPtr stats = context.stats;
     if (!step.isFinal())

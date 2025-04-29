@@ -1,9 +1,8 @@
 #pragma once
 
-#include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
-#include <Parsers/IAST_fwd.h>
-#include <QueryPlan/PlanNode.h>
-#include <QueryPlan/PlanVisitor.h>
+// #include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
 
 #include <utility>
 
@@ -15,7 +14,7 @@ struct JoinGraphContext;
 /**
  * JoinGraph represents sequence of Joins, where nodes in the graph
  * are PlanNodes that are being joined and edges are all equality join
- * conditions between pair of nodes.
+ * conditions between a pair of nodes.
  */
 class JoinGraph
 {
@@ -102,7 +101,7 @@ struct JoinGraphContext
     {
         if (symbol_sources.contains(symbol))
             return symbol_sources.at(symbol);
-        throw Exception(ErrorCodes::LOGICAL_ERROR, "Symbol not exists : " + symbol);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Symbol not exists {}", symbol);
     }
 
     std::unordered_map<String, PlanNodePtr> symbol_sources = {};
@@ -122,10 +121,10 @@ public:
     {
     }
     JoinGraph visitPlanNode(PlanNodeBase &, NameSet &) override;
-    JoinGraph visitJoinNode(JoinNode &, NameSet &) override;
-    JoinGraph visitFilterNode(FilterNode &, NameSet &) override;
-    JoinGraph visitProjectionNode(ProjectionNode &, NameSet &) override;
-    JoinGraph visitSortingNode(SortingNode &, NameSet &) override;
+    JoinGraph visitJoinStepExtNode(JoinStepExtNode &, NameSet &) override;
+    JoinGraph visitFilterStepExtNode(FilterStepExtNode &, NameSet &) override;
+    JoinGraph visitProjectionStepExtNode(ProjectionStepExtNode &, NameSet &) override;
+    JoinGraph visitSortingStepExtNode(SortingStepExtNode &, NameSet &) override;
 
 private:
     JoinGraphContext & join_graph_context;

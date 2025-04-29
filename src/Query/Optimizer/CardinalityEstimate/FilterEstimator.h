@@ -1,11 +1,11 @@
-
-
 #pragma once
+
 #include <optional>
-#include <Analyzers/TypeAnalyzer.h>
-#include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
+#include <Query/Analyzer/TypeAnalyzer.h>
 #include <Query/Optimizer/ExpressionInterpreter.h>
-#include <Processors/QueryPlan/FilterStep.h>
+#include <Query/Processors/QueryPlan/FilterStepExt.h>
+#include <Query/Optimizer/CardinalityEstimate/SymbolStatistics.h>
+#include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
 
 namespace DB
 {

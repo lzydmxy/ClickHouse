@@ -10,7 +10,7 @@ double calculateKeySize()
     return 1;
 }
 
-double getAvgProbeCost(const JoinStep & step, CostContext & context)
+double getAvgProbeCost(const JoinStepExt & step, CostContext & context)
 {
     PlanNodeStatisticsPtr join_stats = context.stats;
     PlanNodeStatisticsPtr left_stats = context.children_stats[0];

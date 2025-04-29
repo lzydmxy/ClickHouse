@@ -1,10 +1,12 @@
 #pragma once
 
-#include <Optimizer/EqualityASTMap.h>
-#include <Optimizer/SymbolTransformMap.h>
+#include <Query/Optimizer/EqualityASTMap.h>
+#include <Query/Optimizer/SymbolTransformMap.h>
 #include <Parsers/ASTFunction.h>
-#include <Parsers/ASTTableColumnReference.h>
+#include <Query/Parsers/ASTTableColumnReference.h>
 #include <Parsers/IAST_fwd.h>
+#include <Query/Optimizer/Property/Equivalences.h>
+#include <Query/Processors/QueryPlan/AggregatingStepExt.h>
 
 namespace DB
 {
@@ -75,6 +77,6 @@ namespace MaterializedView
 
 
     AggregateDefaultValueProvider
-    getAggregateDefaultValueProvider(const std::shared_ptr<const AggregatingStep> & query_step, ContextMutablePtr context);
+    getAggregateDefaultValueProvider(const std::shared_ptr<const AggregatingStepExt> & query_step, ContextMutablePtr context);
 }
 }

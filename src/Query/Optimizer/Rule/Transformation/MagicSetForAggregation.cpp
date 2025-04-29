@@ -9,7 +9,7 @@
 #include <QueryPlan/CTEInfo.h>
 #include <QueryPlan/CTERefStep.h>
 #include <QueryPlan/ITransformingStep.h>
-#include <QueryPlan/JoinStep.h>
+#include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <QueryPlan/PlanNode.h>
 #include <QueryPlan/ProjectionStep.h>
 #include <Common/Exception.h>
@@ -52,11 +52,11 @@ PlanNodePtr MagicSetRule::buildMagicSetAsSemiJoin(
     if (context.getContext()->getSettingsRef().enable_magic_set_cte)
         recordCTERefIntoGroup(filter_source, context);
 
-    auto magic_set_join_step = std::make_shared<JoinStep>(
+    auto magic_set_join_step = std::make_shared<JoinStepExt>(
         DataStreams{source->getStep()->getOutputStream(), filter_source->getStep()->getOutputStream()},
         source->getStep()->getOutputStream(),
-        ASTTableJoin::Kind::Left,
-        ASTTableJoin::Strictness::Semi,
+        JoinKind::Left,
+        JoinStrictness::Semi,
         context.getContext()->getSettingsRef().max_threads,
         context.getContext()->getSettingsRef().optimize_read_in_order,
         source_names,
@@ -69,7 +69,7 @@ PlanNodePtr MagicSetRule::buildMagicSetAsSemiJoin(
 
 void MagicSetRule::recordCTERefIntoGroup(PlanNodePtr plan_node, CascadesContext & context)
 {
-    if (plan_node->getType() != IQueryPlanStep::Type::Any)
+    if (plan_node->getType() != QueryPlanStepType::Any)
         throw Exception("expected any node", ErrorCodes::LOGICAL_ERROR);
 
     GroupId target_group_id = dynamic_cast<AnyStep *>(plan_node->getStep().get())->getGroupId();
@@ -78,7 +78,7 @@ void MagicSetRule::recordCTERefIntoGroup(PlanNodePtr plan_node, CascadesContext 
     GroupPtr target_group = context.getMemo().getGroupById(target_group_id);
     for (const auto & group_expr : target_group->getLogicalExpressions())
     {
-        if (group_expr->getStep()->getType() == IQueryPlanStep::Type::CTERef)
+        if (group_expr->getStep()->getType() == QueryPlanStepType::CTERef)
             return;
     }
 
@@ -101,9 +101,9 @@ void MagicSetRule::recordCTERefIntoGroup(PlanNodePtr plan_node, CascadesContext 
 ConstRefPatternPtr MagicSetForProjectionAggregation::getPattern() const
 {
     static auto pattern = Patterns::join()
-        .matchingStep<JoinStep>([](const JoinStep & s) {
-            return (s.getKind() == ASTTableJoin::Kind::Inner || s.getKind() == ASTTableJoin::Kind::Right)
-                && s.getStrictness() == ASTTableJoin::Strictness::All;
+        .matchingStep<JoinStepExt>([](const JoinStepExt & s) {
+            return (s.getKind() == JoinKind::Inner || s.getKind() == JoinKind::Right)
+                && s.getStrictness() == JoinStrictness::All;
         })
         .with(Patterns::project().withSingle(Patterns::aggregating().withSingle(Patterns::any())), Patterns::any())
         .result();
@@ -112,14 +112,14 @@ ConstRefPatternPtr MagicSetForProjectionAggregation::getPattern() const
 
 TransformResult MagicSetForProjectionAggregation::transformImpl(PlanNodePtr node, const Captures &, RuleContext & rule_context)
 {
-    const auto & join_step = dynamic_cast<const JoinStep &>(*node->getStep());
+    const auto & join_step = dynamic_cast<const JoinStepExt &>(*node->getStep());
 
     auto magic_set_node = node->getChildren()[1];
     auto magic_set_group_id = dynamic_cast<const AnyStep &>(*magic_set_node->getStep().get()).getGroupId();
     auto magic_set_group = rule_context.optimization_context->getOptimizerContext().getMemo().getGroupById(magic_set_group_id);
 
     auto & context = rule_context.context;
-    if (magic_set_group->getMaxTableScans() > context->getSettingsRef().magic_set_max_search_tree)
+    if (magic_set_group->getMaxTableScans() > context->getOptimizerContext()->getSettingsRef().magic_set_max_search_tree)
     {
         return {};
     }
@@ -135,15 +135,15 @@ TransformResult MagicSetForProjectionAggregation::transformImpl(PlanNodePtr node
 
     auto target_node_group_id = dynamic_cast<const AnyStep &>(*target_node->getStep().get()).getGroupId();
     auto target_node_group = rule_context.optimization_context->getOptimizerContext().getMemo().getGroupById(target_node_group_id);
-    if (magic_set_group->getMaxTableScanRows() > target_node_group->getMaxTableScanRows() * context->getSettingsRef().magic_set_rows_factor)
+    if (magic_set_group->getMaxTableScanRows() > target_node_group->getMaxTableScanRows() * context->getOptimizerContext()->getSettingsRef().magic_set_rows_factor)
     {
         return {};
     }
 
     if (!source_statistics || !filter_statistics
-        || source_statistics.value()->getRowCount() * context->getSettingsRef().magic_set_rows_factor
+        || source_statistics.value()->getRowCount() * context->getOptimizerContext()->getSettingsRef().magic_set_rows_factor
             <= filter_statistics.value()->getRowCount()
-        || source_statistics.value()->getRowCount() < context->getSettingsRef().magic_set_source_min_rows)
+        || source_statistics.value()->getRowCount() < context->getOptimizerContext()->getSettingsRef().magic_set_source_min_rows)
     {
         return {};
     }
@@ -178,7 +178,7 @@ TransformResult MagicSetForProjectionAggregation::transformImpl(PlanNodePtr node
     }
 
     double filter_factor = getFilterFactor(source_statistics.value(), filter_statistics.value(), target_keys, filter_keys);
-    if (filter_factor > context->getSettingsRef().magic_set_filter_factor)
+    if (filter_factor > context->getOptimizerContext()->getSettingsRef().magic_set_filter_factor)
     {
         return {};
     }
@@ -187,14 +187,14 @@ TransformResult MagicSetForProjectionAggregation::transformImpl(PlanNodePtr node
         target_node, node->getChildren()[1], target_keys, filter_keys, rule_context.optimization_context->getOptimizerContext());
 
     return PlanNodeBase::createPlanNode(
-        context->nextNodeId(),
+        context->getOptimizerContext()->nextNodeId(),
         join_step.copy(context),
         PlanNodes{
             PlanNodeBase::createPlanNode(
-                context->nextNodeId(),
+                context->getOptimizerContext()->nextNodeId(),
                 project_step.copy(context),
                 PlanNodes{
-                    PlanNodeBase::createPlanNode(context->nextNodeId(), agg_step.copy(context), PlanNodes{filter_join_node}),
+                    PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), agg_step.copy(context), PlanNodes{filter_join_node}),
                 }),
             node->getChildren()[1]});
 }
@@ -202,9 +202,9 @@ TransformResult MagicSetForProjectionAggregation::transformImpl(PlanNodePtr node
 ConstRefPatternPtr MagicSetForAggregation::getPattern() const
 {
     static auto pattern = Patterns::join()
-        .matchingStep<JoinStep>([](const JoinStep & s) {
-            return (s.getKind() == ASTTableJoin::Kind::Inner || s.getKind() == ASTTableJoin::Kind::Right)
-                && s.getStrictness() == ASTTableJoin::Strictness::All;
+        .matchingStep<JoinStepExt>([](const JoinStepExt & s) {
+            return (s.getKind() == JoinKind::Inner || s.getKind() == JoinKind::Right)
+                && s.getStrictness() == JoinStrictness::All;
         })
         .with(Patterns::aggregating().withSingle(Patterns::any()), Patterns::any())
         .result();
@@ -213,14 +213,14 @@ ConstRefPatternPtr MagicSetForAggregation::getPattern() const
 
 TransformResult MagicSetForAggregation::transformImpl(PlanNodePtr node, const Captures &, RuleContext & rule_context)
 {
-    const auto & join_step = dynamic_cast<const JoinStep &>(*node->getStep());
+    const auto & join_step = dynamic_cast<const JoinStepExt &>(*node->getStep());
 
     auto magic_set_node = node->getChildren()[1];
     auto magic_set_group_id = dynamic_cast<const AnyStep &>(*magic_set_node->getStep().get()).getGroupId();
     auto magic_set_group = rule_context.optimization_context->getOptimizerContext().getMemo().getGroupById(magic_set_group_id);
 
     auto & context = rule_context.context;
-    if (magic_set_group->getMaxTableScans() > context->getSettingsRef().magic_set_max_search_tree)
+    if (magic_set_group->getMaxTableScans() > context->getOptimizerContext()->getSettingsRef().magic_set_max_search_tree)
     {
         return {};
     }
@@ -230,7 +230,7 @@ TransformResult MagicSetForAggregation::transformImpl(PlanNodePtr node, const Ca
     auto target_node = agg_node->getChildren()[0];
     auto target_node_group_id = dynamic_cast<const AnyStep &>(*target_node->getStep().get()).getGroupId();
     auto target_node_group = rule_context.optimization_context->getOptimizerContext().getMemo().getGroupById(target_node_group_id);
-    if (magic_set_group->getMaxTableScanRows() > target_node_group->getMaxTableScanRows() * context->getSettingsRef().magic_set_rows_factor)
+    if (magic_set_group->getMaxTableScanRows() > target_node_group->getMaxTableScanRows() * context->getOptimizerContext()->getSettingsRef().magic_set_rows_factor)
     {
         return {};
     }
@@ -238,9 +238,9 @@ TransformResult MagicSetForAggregation::transformImpl(PlanNodePtr node, const Ca
     const auto & source_statistics = target_node->getStatistics();
     const auto & filter_statistics = magic_set_node->getStatistics();
     if (!source_statistics || !filter_statistics
-        || source_statistics.value()->getRowCount() * context->getSettingsRef().magic_set_rows_factor
+        || source_statistics.value()->getRowCount() * context->getOptimizerContext()->getSettingsRef().magic_set_rows_factor
             <= filter_statistics.value()->getRowCount()
-        || source_statistics.value()->getRowCount() < context->getSettingsRef().magic_set_source_min_rows)
+        || source_statistics.value()->getRowCount() < context->getOptimizerContext()->getSettingsRef().magic_set_source_min_rows)
     {
         return {};
     }
@@ -268,7 +268,7 @@ TransformResult MagicSetForAggregation::transformImpl(PlanNodePtr node, const Ca
     }
 
     double filter_factor = getFilterFactor(source_statistics.value(), filter_statistics.value(), target_keys, filter_keys);
-    if (filter_factor > context->getSettingsRef().magic_set_filter_factor)
+    if (filter_factor > context->getOptimizerContext()->getSettingsRef().magic_set_filter_factor)
     {
         return {};
     }
@@ -277,10 +277,10 @@ TransformResult MagicSetForAggregation::transformImpl(PlanNodePtr node, const Ca
         target_node, node->getChildren()[1], target_keys, filter_keys, rule_context.optimization_context->getOptimizerContext());
 
     return PlanNodeBase::createPlanNode(
-        context->nextNodeId(),
+        context->getOptimizerContext()->nextNodeId(),
         node->getStep(),
         PlanNodes{
-            PlanNodeBase::createPlanNode(context->nextNodeId(), agg_node->getStep(), PlanNodes{magic_set_join}), node->getChildren()[1]});
+            PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), agg_node->getStep(), PlanNodes{magic_set_join}), node->getChildren()[1]});
 }
 
 }

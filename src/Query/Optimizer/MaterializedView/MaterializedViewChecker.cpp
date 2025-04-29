@@ -1,4 +1,4 @@
-#include <Optimizer/MaterializedView/MaterializedViewChecker.h>
+#include <Query/Optimizer/MaterializedView/MaterializedViewChecker.h>
 
 namespace DB
 {

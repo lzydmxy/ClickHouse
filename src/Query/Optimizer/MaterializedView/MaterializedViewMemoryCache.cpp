@@ -1,26 +1,7 @@
-/*
- * Copyright (2022) Bytedance Ltd. and/or its affiliates
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+#include <Query/Optimizer/MaterializedView/MaterializedViewMemoryCache.h>
 
-#include <Optimizer/MaterializedView/MaterializedViewMemoryCache.h>
-
-#include <Interpreters/InterpreterSelectQueryUseOptimizer.h>
-#include <Interpreters/SegmentScheduler.h>
-#include <QueryPlan/QueryPlanner.h>
 #include <Storages/StorageDistributed.h>
 #include <Common/Exception.h>
-#include <common/logger_useful.h>
 #include <Storages/StorageMaterializedView.h>
 
 namespace DB
@@ -93,35 +74,37 @@ MaterializedViewMemoryCache::getMaterializedViewStructure(
     if (!materialized_view)
         return {};
 
-    if (materialized_view->sync() && !context->getSettings().enable_sync_materialized_view_rewrite)
-        return {};
+    // todo: hongzhigao1, need storage
+    // if (materialized_view->sync() && !context->getOptimizerContext()->getSettingsRef().enable_sync_materialized_view_rewrite)
+    //     return {};
 
-    ASTPtr query = materialized_view->getInnerQuery();
-    StorageID materialized_view_id = materialized_view->getStorageID();
-    std::optional<StorageID> target_table_id = findTargetTable(
-        local_materialized_view, *materialized_view, materialized_view_id, context);
-    if (!target_table_id) {
-        return {};
-    }
+    // ASTPtr query = materialized_view->getInnerQuery();
+    // StorageID materialized_view_id = materialized_view->getStorageID();
+    // std::optional<StorageID> target_table_id = findTargetTable(
+    //     local_materialized_view, *materialized_view, materialized_view_id, context);
+    // if (!target_table_id) {
+    //     return {};
+    // }
 
-    if (local_materialized_view) {
-        LocalTableRewriter::Data data{local_table_to_distributed_table};
-        LocalTableRewriter::Visitor(data).visit(query);
-    }
+    // if (local_materialized_view) {
+    //     LocalTableRewriter::Data data{local_table_to_distributed_table};
+    //     LocalTableRewriter::Visitor(data).visit(query);
+    // }
 
-    try
-    {
-        return MaterializedViewStructure::buildFrom(materialized_view_id, target_table_id.value(), query, materialized_view->async(), context);
-    }
-    catch (Exception & exception)
-    {
-        static auto log = getLogger("MaterializedViewRewriter");
-        if (exception.code() == ErrorCodes::QUERY_IS_NOT_SUPPORTED_IN_MATERIALIZED_VIEW)
-            LOG_DEBUG(log, "skip {}, reason: {}", materialized_view_id.getFullTableName(), exception.message());
-        else
-            LOG_ERROR(log, "skip {}, reason: {}", materialized_view_id.getFullTableName(), exception.message());
-        return {};
-    }
+    // try
+    // {
+    //     return MaterializedViewStructure::buildFrom(materialized_view_id, target_table_id.value(), query, materialized_view->async(), context);
+    // }
+    // catch (Exception & exception)
+    // {
+    //     static auto log = getLogger("MaterializedViewRewriter");
+    //     if (exception.code() == ErrorCodes::QUERY_IS_NOT_SUPPORTED_IN_MATERIALIZED_VIEW)
+    //         LOG_DEBUG(log, "skip {}, reason: {}", materialized_view_id.getFullTableName(), exception.message());
+    //     else
+    //         LOG_ERROR(log, "skip {}, reason: {}", materialized_view_id.getFullTableName(), exception.message());
+    //     return {};
+    // }
+    return {};
 }
 
 std::optional<StorageID> MaterializedViewMemoryCache::findTargetTable(

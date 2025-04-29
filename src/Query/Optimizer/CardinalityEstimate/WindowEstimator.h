@@ -1,5 +1,3 @@
-
-
 #pragma once
 #include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
 #include <Processors/QueryPlan/WindowStep.h>

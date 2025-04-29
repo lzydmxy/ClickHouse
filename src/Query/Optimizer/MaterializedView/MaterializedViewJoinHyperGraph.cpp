@@ -1,19 +1,19 @@
 
-#include <Optimizer/MaterializedView/MaterializedViewJoinHyperGraph.h>
+#include <Query/Optimizer/MaterializedView/MaterializedViewJoinHyperGraph.h>
 
-#include <Optimizer/PredicateUtils.h>
-#include <Optimizer/SymbolsExtractor.h>
-#include <Optimizer/Utils.h>
+#include <Query/Optimizer/PredicateUtils.h>
+#include <Query/Optimizer/SymbolsExtractor.h>
+#include <Query/Optimizer/Utils.h>
 #include <Parsers/ASTFunction.h>
 #include <Parsers/ASTIdentifier.h>
-#include <Parsers/ASTTableColumnReference.h>
-#include <Parsers/ASTVisitor.h>
+#include <Query/Parsers/ASTTableColumnReference.h>
+#include <Query/Parsers/ASTVisitor.h>
 #include <Parsers/IAST.h>
 #include <Parsers/IAST_fwd.h>
 #include <Parsers/queryToString.h>
-#include <Processors/QueryPipeline.h>
-#include <QueryPlan/IQueryPlanStep.h>
-#include <QueryPlan/QueryPlan.h>
+#include <QueryPipeline/QueryPipeline.h>
+#include <Query/Processors/IQueryPlanStepExt.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
 #include <Common/Exception.h>
 
 #include <algorithm>
@@ -44,7 +44,7 @@ static inline JoinHyperGraph::NodeSet intersectOrTotal(const JoinHyperGraph::Nod
     return intersect.any() ? intersect : total;
 }
 
-static bool joinsAreAssociative(JoinStepPtr first, JoinStepPtr second)
+static bool joinsAreAssociative(JoinStepExtPtr first, JoinStepExtPtr second)
 {
     if (first->isInnerJoin())
         return second->isInnerJoin();
@@ -52,14 +52,14 @@ static bool joinsAreAssociative(JoinStepPtr first, JoinStepPtr second)
 }
 
 // Todo: support more join kind
-static bool joinsAreLeftAsscom(JoinStepPtr first, JoinStepPtr second)
+static bool joinsAreLeftAsscom(JoinStepExtPtr first, JoinStepExtPtr second)
 {
     if (first->isInnerJoin() || first->isLeftOuterJoin())
         return second->isInnerJoin() || second->isLeftOuterJoin();
     return false;
 }
 
-static bool joinsAreRightAsscom(JoinStepPtr first, JoinStepPtr second)
+static bool joinsAreRightAsscom(JoinStepExtPtr first, JoinStepExtPtr second)
 {
     if (first->isInnerJoin() || first->isRightOuterJoin())
         return second->isInnerJoin() || second->isRightOuterJoin();
@@ -70,10 +70,10 @@ JoinHyperGraph JoinHyperGraph::build(
     const PlanNodePtr & plan,
     const SymbolTransformMap & symbol_transform_map,
     ContextPtr context,
-    std::unordered_set<IQueryPlanStep::Type> skip_nodes)
+    std::unordered_set<QueryPlanStepType> skip_nodes)
 {
     JoinHyperGraphContext join_hyper_graph_context{
-        .context = context, .symbol_transform_map = symbol_transform_map, .skip_nodes = skip_nodes};
+        .sources = {}, .plan_id_to_index = {}, .plan_node_to_index = {}, .context = context, .symbol_transform_map = symbol_transform_map, .skip_nodes = skip_nodes};
     JoinHyperGraphVisitor vistor{join_hyper_graph_context};
     Void c;
     return VisitorUtil::accept(plan, vistor, c);
@@ -106,7 +106,7 @@ size_t JoinHyperGraph::getNodeSetIndex(const PlanNodeId & plan_node_id) const
     for (size_t i = 0; i < plan_nodes.size(); i++)
         if (plan_node_id == plan_nodes[i]->getId())
             return i;
-    throw Exception("unknown plan node", ErrorCodes::LOGICAL_ERROR);
+    throw Exception(ErrorCodes::LOGICAL_ERROR, "unknown plan node");
 }
 
 String JoinHyperGraph::toString() const
@@ -137,9 +137,9 @@ String JoinHyperGraph::toString(const NodeSet & sub_set, bool show_full_table_na
     std::vector<String> strings;
     for (const auto & plan_node : getPlanNodes(sub_set))
     {
-        if (show_full_table_name && plan_node->getType() == IQueryPlanStep::Type::TableScan)
+        if (show_full_table_name && plan_node->getType() == QueryPlanStepType::TableScanStepExt)
         {
-            auto * table_scan_step = dynamic_cast<TableScanStep *>(plan_node->getStep().get());
+            auto * table_scan_step = dynamic_cast<TableScanStepExt *>(plan_node->getStep().get());
             strings.emplace_back(std::to_string(plan_node->getId()) + ":" + table_scan_step->getStorageID().getFullTableName());
         }
         else
@@ -150,9 +150,9 @@ String JoinHyperGraph::toString(const NodeSet & sub_set, bool show_full_table_na
     return "{" + boost::algorithm::join(strings, ",") + "}";
 }
 
-std::unordered_map<JoinHyperGraph::NodeSet, std::vector<ConstASTPtr>> JoinHyperGraph::getJoinConditions() const
+std::unordered_map<JoinHyperGraph::NodeSet, ConstASTs> JoinHyperGraph::getJoinConditions() const
 {
-    std::unordered_map<JoinHyperGraph::NodeSet, std::vector<ConstASTPtr>> join_clauses;
+    std::unordered_map<JoinHyperGraph::NodeSet, ConstASTs> join_clauses;
     for (size_t i = 0; i < edges.size(); i++)
     {
         const auto & hyper_edge = hyper_edges.at(i);
@@ -161,7 +161,7 @@ std::unordered_map<JoinHyperGraph::NodeSet, std::vector<ConstASTPtr>> JoinHyperG
     return join_clauses;
 }
 
-JoinHyperGraph JoinHyperGraph::withJoinGraph(const JoinHyperGraph & other, const JoinStepPtr & join, JoinHyperGraphContext & context) const
+JoinHyperGraph JoinHyperGraph::withJoinGraph(const JoinHyperGraph & other, const JoinStepExtPtr & join, JoinHyperGraphContext & context) const
 {
     // merge plan nodes
     PlanNodes merged_plan_nodes{plan_nodes.begin(), plan_nodes.end()};
@@ -170,7 +170,7 @@ JoinHyperGraph JoinHyperGraph::withJoinGraph(const JoinHyperGraph & other, const
     NodeSet merged_nodes = nodes | other.nodes;
 
     // merge filters
-    std::unordered_map<NodeSet, std::vector<ConstASTPtr>> merged_filters{filters.begin(), filters.end()};
+    std::unordered_map<NodeSet, ConstASTs> merged_filters{filters.begin(), filters.end()};
     for (const auto & item : other.filters)
     {
         auto & it = merged_filters[item.first];
@@ -199,7 +199,7 @@ JoinHyperGraph JoinHyperGraph::withJoinGraph(const JoinHyperGraph & other, const
     return JoinHyperGraph{merged_plan_nodes, merged_nodes, merged_edges, merged_hyper_edges, merged_filters};
 }
 
-JoinHyperGraph::Edge JoinHyperGraph::buildEdge(NodeSet left_nodes, NodeSet right_nodes, const JoinStepPtr & join, JoinHyperGraphContext & context)
+JoinHyperGraph::Edge JoinHyperGraph::buildEdge(NodeSet left_nodes, NodeSet right_nodes, const JoinStepExtPtr & join, JoinHyperGraphContext & context)
 {
     std::vector<String> left_conditions_used_symbols{join->getLeftKeys().begin(), join->getLeftKeys().end()};
     std::vector<String> right_conditions_used_symbols{join->getRightKeys().begin(), join->getRightKeys().end()};
@@ -219,7 +219,7 @@ JoinHyperGraph::Edge JoinHyperGraph::buildEdge(NodeSet left_nodes, NodeSet right
     for (const auto & symbol : right_conditions_used_symbols)
         right_conditions_used_nodes |= context.getSymbolSources(symbol);
 
-    std::vector<ConstASTPtr> join_filters;
+    ConstASTs join_filters;
     join_filters.emplace_back(join->getFilter());
     for (size_t i = 0; i < join->getLeftKeys().size(); i++)
         join_filters.emplace_back(makeASTFunction(
@@ -321,21 +321,21 @@ JoinHyperGraph JoinHyperGraphVisitor::visitPlanNode(PlanNodeBase & node, Void & 
     return JoinHyperGraph{{node_ptr}, join_hyper_graph_context.registerPlanNode(node_ptr), {}, {}, {}};
 }
 
-JoinHyperGraph JoinHyperGraphVisitor::visitJoinNode(JoinNode & node, Void & c)
+JoinHyperGraph JoinHyperGraphVisitor::visitJoinStepExtNode(JoinStepExtNode & node, Void & c)
 {
     auto left = VisitorUtil::accept(node.getChildren()[0], *this, c);
     auto right = VisitorUtil::accept(node.getChildren()[1], *this, c);
     return left.withJoinGraph(right, node.getStep(), join_hyper_graph_context);
 }
 
-JoinHyperGraph JoinHyperGraphVisitor::visitFilterNode(FilterNode & node, Void & c)
+JoinHyperGraph JoinHyperGraphVisitor::visitFilterStepExtNode(FilterStepExtNode & node, Void & c)
 {
     auto child = VisitorUtil::accept(node.getChildren()[0], *this, c);
     child.withFilter(node.getStep()->getFilter());
     return child;
 }
 
-JoinHyperGraph JoinHyperGraphVisitor::visitProjectionNode(ProjectionNode & node, Void & c)
+JoinHyperGraph JoinHyperGraphVisitor::visitProjectionStepExtNode(ProjectionStepExtNode & node, Void & c)
 {
     return VisitorUtil::accept(node.getChildren()[0], *this, c);
 }
@@ -344,7 +344,7 @@ JoinHyperGraph::NodeSet JoinHyperGraphContext::getSymbolSources(const String & s
 {
     JoinHyperGraph::NodeSet node_set;
     std::function<void(const ConstASTPtr &)> collect = [&](const ConstASTPtr & expr) -> void {
-        if (expr->getType() == ASTType::ASTTableColumnReference)
+        if (getAstType(expr) == ASTType::ASTTableColumnReference)
         {
             auto target_plan_node_id = expr->as<ASTTableColumnReference>()->unique_id;
             node_set.set(plan_id_to_index.at(target_plan_node_id), true);
@@ -364,7 +364,7 @@ JoinHyperGraph::NodeSet JoinHyperGraphContext::registerPlanNode(const PlanNodePt
     size_t index = sources.size();
     sources.emplace_back(node);
     if (sources.size() > JoinHyperGraph::MAX_NODE)
-        throw Exception("max join node size exceeded: " + std::to_string(JoinHyperGraph::MAX_NODE), ErrorCodes::TOO_MANY_JOINS);
+        throw Exception(ErrorCodes::TOO_MANY_JOINS, "max join node size exceeded: {}", std::to_string(JoinHyperGraph::MAX_NODE));
     plan_id_to_index.emplace(node->getId(), index);
     plan_node_to_index.emplace(node, index);
 

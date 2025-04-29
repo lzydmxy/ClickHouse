@@ -1,12 +1,13 @@
 #pragma once
 
 #include <Query/Optimizer/Rule/Match.h>
-#include "QueryPlan/IQueryPlanStep.h"
 
 #include <functional>
 #include <memory>
 #include <unordered_set>
 #include <utility>
+
+#include <Query/Processors/QueryPlan/PlanNode.h>
 
 /**
  * Pattern matching is used to match a plan node with a specified
@@ -31,8 +32,8 @@ class Pattern
 public:
     virtual ~Pattern() = default;
 
-    IQueryPlanStep::Type getTargetType() const;
-    std::unordered_set<IQueryPlanStep::Type> getTargetTypes() const;
+    QueryPlanStepType getTargetType() const;
+    std::unordered_set<QueryPlanStepType> getTargetTypes() const;
     String toString() const;
 
     bool matches(const PlanNodePtr & node) const { return match(node).has_value(); }
@@ -61,12 +62,12 @@ private:
 class TypeOfPattern : public Pattern
 {
 public:
-    explicit TypeOfPattern(IQueryPlanStep::Type type_) : Pattern(), type(type_){}
-    TypeOfPattern(IQueryPlanStep::Type type_, PatternPtr previous) : Pattern(std::move(previous)), type(type_){}
+    explicit TypeOfPattern(QueryPlanStepType type_) : Pattern(), type(type_){}
+    TypeOfPattern(QueryPlanStepType type_, PatternPtr previous) : Pattern(std::move(previous)), type(type_){}
     std::optional<Match> accept(const PlanNodePtr & node, Captures & captures) const override;
     void accept(PatternVisitor & pattern_visitor) const override;
 
-    IQueryPlanStep::Type type;
+    QueryPlanStepType type;
     PatternPredicate attaching_predicate;
 };
 

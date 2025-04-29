@@ -1,16 +1,13 @@
 #include <Query/Optimizer/Property/Property.h>
 
-#include <IO/ReadHelpers.h>
-#include <IO/WriteHelpers.h>
-#include <Parsers/ASTClusterByElement.h>
 #include <Parsers/ASTIdentifier.h>
-#include <Parsers/ASTSerDerHelper.h>
 #include <Parsers/queryToString.h>
-#include <Protos/plan_node_utils.pb.h>
-#include <QueryPlan/PlanSerDerHelper.h>
-#include <Storages/extractKeyExpressionList.h>
+#include <Query/Protos/plan_node.pb.h>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
+#include <Query/Optimizer/Property/Constants.h>
+#include <Query/Optimizer/ExpressionRewriter.h>
 #include <Common/Exception.h>
-#include "Core/Field.h"
+#include <Core/Field.h>
 
 namespace DB
 {
@@ -54,7 +51,7 @@ bool Partitioning::satisfy(const Partitioning & requirement, const Constants & c
 
     switch (requirement.getHandle())
     {
-        case Handle::FIXED_HASH:
+        case PartitioningHandle::FIXED_HASH:
             return getColumns() == requirement.getColumns()
                 || (!requirement.isExactlyMatch() && this->isPartitionOn(requirement, constants));
         default:
@@ -91,126 +88,24 @@ bool Partitioning::isPartitionOn(const Partitioning & requirement, const Constan
     return true;
 }
 
-bool Partitioning::isSimpleExchangeSchema(bool support_bucket_shuffle) const
+bool Partitioning::isSimpleExchangeSchema(bool /*support_bucket_shuffle*/) const
 {
-    if (handle == Handle::BUCKET_TABLE)
-    {
-        if (support_bucket_shuffle && bucket_expr)
-        {
-            if (auto * cluster_by_ast_element = bucket_expr->as<ASTClusterByElement>())
-            {
-                if (cluster_by_ast_element->is_user_defined_expression)
-                {
-                    if (!cluster_by_ast_element->getColumns()->as<ASTIdentifier>())
-                        return false;
-                }
-
-                auto expression = extractKeyExpressionList(cluster_by_ast_element->getColumns());
-
-                if (auto * expr_list = expression->as<ASTExpressionList>())
-                {
-                    if (expr_list->children.size() != columns.size())
-                        return false;
-                    for (const auto & col : expr_list->children)
-                    {
-                        if (auto * id = col->as<ASTIdentifier>())
-                        {
-                            if (!id->name().starts_with("$"))
-                                return false;
-                        }
-                        else
-                        {
-                            return false;
-                        }
-                    }
-                }
-                else
-                {
-                    return false;
-                }
-            }
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    return true;
+    return handle != PartitioningHandle::BUCKET_TABLE;
 }
 
-bool Partitioning::isExchangeSchema(bool support_bucket_shuffle) const
+bool Partitioning::isExchangeSchema(bool /*support_bucket_shuffle*/) const
 {
-    if (handle == Handle::BUCKET_TABLE)
-    {
-        if (support_bucket_shuffle && bucket_expr)
-        {
-            if (auto * cluster_by_ast_element = bucket_expr->as<ASTClusterByElement>())
-            {
-                if (SymbolsExtractor::extract(cluster_by_ast_element->getColumns()).size() != columns.size())
-                    return false;
-            }
-            else
-            {
-                return false;
-            }
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    return true;
+    return handle != PartitioningHandle::BUCKET_TABLE;
 }
 
 
 ASTPtr Partitioning::getShuffleExpr() const
 {
-    auto replace_col = [&](ASTPtr ast) -> ASTPtr {
-        ConstASTMap expression_map;
-        size_t index = 0;
-        for (auto symbol : columns)
-        {
-            ASTPtr name = std::make_shared<ASTIdentifier>(symbol);
-            ASTPtr id = std::make_shared<ASTIdentifier>("$" + std::to_string(index));
-            expression_map[id] = ConstHashAST::make(name);
-            index++;
-        }
-
-        auto result_ast = ExpressionRewriter::rewrite(ast, expression_map);
-        return result_ast;
-    };
-
-    if (handle == Handle::BUCKET_TABLE)
-    {
-        if (bucket_expr)
-        {
-            if (auto * cluster_by_ast_element = bucket_expr->as<ASTClusterByElement>())
-            {
-                return replace_col(cluster_by_ast_element->getColumns());
-            }
-        }
-    }
-
     return nullptr;
 }
 
 String Partitioning::getHashFunc(String default_func) const
 {
-    if (handle == Handle::BUCKET_TABLE)
-    {
-        if (bucket_expr)
-        {
-            if (auto * cluster_by_ast_element = bucket_expr->as<ASTClusterByElement>())
-            {
-                if (cluster_by_ast_element->is_user_defined_expression)
-                    return "toUInt64";
-                return "bucket";
-            }
-        }
-    }
-
     return default_func;
 }
 
@@ -218,31 +113,7 @@ String Partitioning::getHashFunc(String default_func) const
 // bucket(function_name,bucket_num，with_range,split_number)(bucket_column)
 Array Partitioning::getParams() const
 {
-    Array result;
-    if (handle == Handle::BUCKET_TABLE)
-    {
-        if (bucket_expr)
-        {
-            if (auto * cluster_by_ast_element = bucket_expr->as<ASTClusterByElement>())
-            {
-                if (cluster_by_ast_element->is_user_defined_expression)
-                    return result;
-                if (cluster_by_ast_element->split_number > 0 && columns.size() == 1)
-                {
-                    result.emplace_back(Field("dtspartition"));
-                }
-                else
-                {
-                    result.emplace_back(Field("sipHashBuitin"));
-                }
-                result.emplace_back(buckets);
-                result.emplace_back(Field(cluster_by_ast_element->is_with_range));
-                result.emplace_back(Field(static_cast<UInt64>(cluster_by_ast_element->split_number)));
-            }
-        }
-    }
-
-    return result;
+    return {};
 }
 
 Partitioning Partitioning::normalize(const SymbolEquivalences & symbol_equivalences) const
@@ -277,27 +148,27 @@ Partitioning Partitioning::translate(const std::unordered_map<String, String> & 
 
 void Partitioning::toProto(Protos::Partitioning & proto) const
 {
-    proto.set_handle(Partitioning::HandleConverter::toProto(handle));
+    proto.set_handle(handle);
     for (const auto & element : columns)
         proto.add_columns(element);
     proto.set_require_handle(require_handle);
     proto.set_buckets(buckets);
     proto.set_enforce_round_robin(enforce_round_robin);
-    proto.set_component(Partitioning::ComponentConverter::toProto(component));
+    proto.set_component(component);
     proto.set_exactly_match(exactly_match);
     serializeASTToProto(bucket_expr, *proto.mutable_bucket_expr());
 }
 
 Partitioning Partitioning::fromProto(const Protos::Partitioning & proto)
 {
-    auto handle = Partitioning::HandleConverter::fromProto(proto.handle());
+    auto handle = proto.handle();
     std::vector<String> columns;
     for (const auto & element : proto.columns())
         columns.emplace_back(element);
     auto require_handle = proto.require_handle();
     auto buckets = proto.buckets();
     auto enforce_round_robin = proto.enforce_round_robin();
-    auto component = Partitioning::ComponentConverter::fromProto(proto.component());
+    auto component = proto.component();
     auto exactly_match = proto.exactly_match();
     ASTPtr bucket_expr = nullptr;
     if (proto.has_bucket_expr())
@@ -309,11 +180,11 @@ String Partitioning::toString() const
 {
     switch (handle)
     {
-        case Handle::SINGLE:
+        case PartitioningHandle::SINGLE:
             return "SINGLE";
-        case Handle::COORDINATOR:
+        case PartitioningHandle::COORDINATOR:
             return "COORDINATOR";
-        case Handle::FIXED_HASH:
+        case PartitioningHandle::FIXED_HASH:
             if (columns.empty())
                 return "[]";
             else
@@ -333,13 +204,13 @@ String Partitioning::toString() const
                     result += " EM";
                 return result;
             }
-        case Handle::FIXED_ARBITRARY:
+        case PartitioningHandle::FIXED_ARBITRARY:
             return "FIXED_ARBITRARY";
-        case Handle::FIXED_BROADCAST:
+        case PartitioningHandle::FIXED_BROADCAST:
             return "BROADCAST";
-        case Handle::SCALED_WRITER:
+        case PartitioningHandle::SCALED_WRITER:
             return "SCALED_WRITER";
-        case Handle::BUCKET_TABLE:
+        case PartitioningHandle::BUCKET_TABLE:
             if (columns.empty())
                 return "BUCKET_TABLE[]";
             else
@@ -361,9 +232,9 @@ String Partitioning::toString() const
                     result += " SW";
                 return result;
             }
-        case Handle::ARBITRARY:
+        case PartitioningHandle::ARBITRARY:
             return "ARBITRARY";
-        case Handle::FIXED_PASSTHROUGH:
+        case PartitioningHandle::FIXED_PASSTHROUGH:
             return "FIXED_PASSTHROUGH";
         default:
             return "UNKNOWN";
@@ -565,7 +436,7 @@ String Property::toString() const
 {
     std::stringstream output;
     output << node_partitioning.toString();
-    if (stream_partitioning.getHandle() != Partitioning::Handle::ARBITRARY)
+    if (stream_partitioning.getHandle() != PartitioningHandle::ARBITRARY)
         output << "/" << stream_partitioning.toString();
     if (!sorting.empty())
         output << " " << sorting.toString();

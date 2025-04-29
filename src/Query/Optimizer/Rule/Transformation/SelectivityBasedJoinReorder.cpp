@@ -6,15 +6,12 @@
 #include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Optimizer/Rule/Rule.h>
-#include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
 #include <Query/Optimizer/Rule/Transformation/JoinReorderUtils.h>
 #include <Query/Optimizer/SymbolUtils.h>
 #include <Query/Optimizer/Utils.h>
-#include <QueryPlan/FilterStep.h>
-#include <QueryPlan/JoinStep.h>
-#include <QueryPlan/PlanNodeIdAllocator.h>
-#include <QueryPlan/PlanPattern.h>
-#include <QueryPlan/ProjectionStep.h>
+#include <Query/Processors/QueryPlan/FilterStepExt.h>
+#include <Query/Processors/QueryPlan/JoinStepExt.h>
+#include <Query/Processors/QueryPlan/PlanPattern.h>
 #include <Query/Optimizer/JoinOrderUtils.h>
 
 namespace DB
@@ -33,7 +30,7 @@ ConstRefPatternPtr SelectivityBasedJoinReorder::getPattern() const
 
 TransformResult SelectivityBasedJoinReorder::transformImpl(PlanNodePtr node, const Captures &, RuleContext & rule_context)
 {
-    auto * multi_join_node = dynamic_cast<MultiJoinNode *>(node.get());
+    auto * multi_join_node = dynamic_cast<MultiJoinStepExtNode *>(node.get());
     if (!multi_join_node || !rule_context.optimization_context->getMemo().getGroupById(rule_context.group_id)->isJoinRoot())
         return {};
 
@@ -96,8 +93,8 @@ PlanNodePtr SelectivityBasedJoinReorder::getJoinOrder(const Graph & graph, RuleC
                         *right_stats,
                         left_keys,
                         right_keys,
-                        ASTTableJoin::Kind::Inner,
-                        ASTTableJoin::Strictness::All,
+                        JoinKind::Inner,
+                        JoinStrictness::All,
                         *context,
                         is_left_base_table,
                         is_right_base_table,
@@ -239,8 +236,8 @@ PlanNodePtr SelectivityBasedJoinReorder::getJoinOrder(const Graph & graph, RuleC
                     *right_stats,
                     new_left_keys,
                     new_right_keys,
-                    ASTTableJoin::Kind::Inner,
-                    ASTTableJoin::Strictness::All,
+                    JoinKind::Inner,
+                    JoinStrictness::All,
                     *context,
                     is_left_base_table,
                     is_right_base_table,

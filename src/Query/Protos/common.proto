@@ -29,6 +29,19 @@ message OverflowMode {
     }
 }
 
+message SortOrder {
+  enum Enum {
+    ASC_NULLS_FIRST = 0;
+    ASC_NULLS_LAST = 1;
+    DESC_NULLS_FIRST = 2;
+    DESC_NULLS_LAST = 3;
+    ANY = 4;
+    UNKNOWN = 5;
+    ASC_ANY = 6;
+    DESC_ANY = 7;
+  }
+}
+
 message TopNModel {
     enum Enum {
       ROW_NUMBER = 0;

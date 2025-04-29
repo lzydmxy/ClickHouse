@@ -1,9 +1,9 @@
 #pragma once
 
-#include <Optimizer/MaterializedView/MaterializedViewStructure.h>
+#include <Query/Optimizer/MaterializedView/MaterializedViewStructure.h>
 #include <Parsers/IAST_fwd.h>
-#include <QueryPlan/PlanVisitor.h>
-#include <QueryPlan/QueryPlan.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
 
 #include <memory>
 #include <utility>
