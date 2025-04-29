@@ -7,7 +7,7 @@ namespace DB
 {
 namespace ErrorCodes
 {
-    extern const int OPTIMIZER_TIMEOUT;
+extern const int OPTIMIZER_TIMEOUT;
 }
 
 // #define TEST_RECORD_RULE_CALL_TIMES
@@ -87,13 +87,13 @@ bool IterativeRewriter::exploreNode(PlanNodePtr & node, IterativeRewriterContext
     {
         done = true;
 
-        auto node_type = node->getStep()->getType();
+        auto node_type = getQueryPlanStepType(node->getStep());
         if (auto res = rules.find(node_type); res != rules.end())
         {
             const auto & rules_of_this_type = res->second;
             for (auto iter = rules_of_this_type.begin();
                  // we can break the loop if the sub-plan has been entirely removed or the node type has been changed
-                 node && node->getStep()->getType() == node_type && iter != rules_of_this_type.end();
+                 node && getQueryPlanStepType(node->getStep()) == node_type && iter != rules_of_this_type.end();
                  ++iter)
             {
                 const auto & rule = *iter;
@@ -120,7 +120,7 @@ bool IterativeRewriter::exploreNode(PlanNodePtr & node, IterativeRewriterContext
                     node = rewrite_result.getPlans()[0];
                     done = false;
                     progress = true;
-                    if (ctx.globalContext->getSettingsRef().debug_iterative_optimizer)
+                    if (ctx.globalContext->getOptimizerContext()->getSettingsRef().debug_iterative_optimizer)
                     {
                         // avoid too many file generated in case of infinite loop
                         if (ctx.rule_apply_count < 100)
@@ -129,9 +129,9 @@ bool IterativeRewriter::exploreNode(PlanNodePtr & node, IterativeRewriterContext
                             GraphvizPrinter::printLogicalPlan(
                                 ctx.plan,
                                 ctx.globalContext,
-                                std::to_string(ctx.globalContext->getRuleId()) + "_Iterative_" + name() + "_"
-                                    + std::to_string(ctx.rule_apply_count++) + "_" + rule->getName() + "_" + std::to_string(node_id) + "_"
-                                    + std::to_string(node->getId()));
+                                toString(ctx.globalContext->getOptimizerContext()->getRuleId()) + "_Iterative_" + name() + "_"
+                                    + toString(ctx.rule_apply_count++) + "_" + rule->getName() + "_" + std::to_string(node_id) + "_"
+                                    + toString(node->getId()));
                         }
                     }
                 }
@@ -178,8 +178,8 @@ void IterativeRewriter::checkTimeoutNotExhausted(const String & rule_name, const
     if (duration >= context.optimizer_timeout)
     {
         throw Exception(ErrorCodes::OPTIMIZER_TIMEOUT,
-            "The optimizer with rule [ " + rule_name + " ] exhausted the time limit of " + std::to_string(context.optimizer_timeout)
-                + " ms");
+        "The optimizer with rule [ " + rule_name + " ] exhausted the time limit of " + std::to_string(context.optimizer_timeout)
+            + " ms");
     }
 }
 
