@@ -49,6 +49,14 @@ enum class CTEMode
     ENFORCED,
 };
 
+enum class MaterializedViewConsistencyCheckMethod
+{
+    NONE,
+    PARTITION,
+};
+
+DECLARE_SETTING_ENUM(MaterializedViewConsistencyCheckMethod);
+
 enum class DialectType {
     CLICKHOUSE,
     ANSI,
