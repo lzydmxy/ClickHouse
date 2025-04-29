@@ -228,6 +228,9 @@ public:
 
     Names getRequiredColumns(GetFlags flags = All) const;
 
+    void toProto(Protos::TableScanStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<TableScanStepExt> fromProto(const Protos::TableScanStepExt & proto, ContextPtr context);
+
 private:
     StoragePtr storage;
     StorageID storage_id;

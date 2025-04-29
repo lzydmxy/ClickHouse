@@ -2,6 +2,7 @@
 #include <QueryPipeline/QueryPipeline.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Processors/Sources/SourceFromSingleChunk.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 
 namespace DB
 {
@@ -31,6 +32,30 @@ void ValuesStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const Bu
 std::shared_ptr<IQueryPlanStep> ValuesStepExt::copy(ContextPtr) const
 {
     return std::make_shared<ValuesStepExt>(output_stream->header, fields);
+}
+
+void ValuesStepExt::toProto(Protos::ValuesStepExt & proto, bool for_hash_equals) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
+    for (const auto & element : fields)
+        ProtosSerDerHelper::toProto(element, *proto.add_fields());
+    proto.set_rows(rows);
+}
+
+std::shared_ptr<ValuesStepExt> ValuesStepExt::fromProto(const Protos::ValuesStepExt & proto, ContextPtr context)
+{
+    auto base_output_header = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    Fields fields;
+    for (const auto & proto_element : proto.fields())
+    {
+        Field element;
+        auto field = ProtosSerDerHelper::fillFromProto(proto_element);
+        fields.emplace_back(std::move(element));
+    }
+    auto rows = proto.rows();
+    auto step = std::make_shared<ValuesStepExt>(base_output_header, fields, rows);
+
+    return step;
 }
 
 }

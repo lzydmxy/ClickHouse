@@ -3,6 +3,7 @@
 #include <Processors/QueryPlan/ITransformingStep.h>
 #include <Storages/SelectQueryInfo.h>
 #include <Interpreters/WindowDescription.h>
+#include <Processors/QueryPlan/ISourceStep.h>
 
 namespace DB
 {
@@ -70,6 +71,12 @@ public:
     static void toProto(const SettingsChanges & fill_column_description, Protos::SettingsChanges & proto);
     static void fillFromProto(SettingsChanges & fill_column_description, const Protos::SettingsChanges & proto);
 
+    static void toProto(const StorageID & storage_id, Protos::StorageID & proto);
+    static std::shared_ptr<StorageID> fromProto(const Protos::StorageID & proto, ContextPtr context);
+    static std::shared_ptr<StorageID> tryFromProto(const Protos::StorageID & proto, ContextPtr context);
+
+    static void serializeToProtoBase(const ISourceStep & step, Protos::ISourceStep & proto);
+    static Block deserializeFromProtoBase(const Protos::ISourceStep & proto);
 };
 
 }

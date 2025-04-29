@@ -32,6 +32,8 @@ public:
     const ConstASTPtr & getHavingFilter() const { return having_filter;}
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings) override;
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
+    void toProto(Protos::TotalsHavingStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<TotalsHavingStepExt> fromProto(const Protos::TotalsHavingStepExt & proto, ContextPtr);
 
 private:
     ConstASTPtr having_filter;
