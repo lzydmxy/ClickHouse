@@ -3,7 +3,7 @@
 #include <Core/Names.h>
 #include <Interpreters/Context.h>
 #include <Interpreters/Context_fwd.h>
-#include <Query/Common/SymbolsExtractor.h>
+#include <Query/Optimizer/SymbolsExtractor.h>
 #include <Query/Optimizer/Utils.h>
 #include <Parsers/ASTIdentifier.h>
 #include <Query/Processors/QueryPlan/CTEInfo.h>

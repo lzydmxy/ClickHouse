@@ -11,7 +11,8 @@
 #include <Interpreters/evaluateConstantExpression.h>
 #include <Planner/Utils.h>
 #include <Query/Optimizer/PredicateUtils.h>
-
+#include <Interpreters/misc.h>
+#include <Query/Optimizer/SymbolsExtractor.h>
 
 namespace DB
 {

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <Parsers/ASTVisitor.h>
+#include <Query/Parsers/ASTVisitor.h>
 #include <Parsers/IAST_fwd.h>
 #include <Query/Optimizer/SimpleExpressionRewriter.h>
-#include <QueryPlan/Assignment.h>
+#include <Query/Processors/QueryPlan/Assignment.h>
 #include <unordered_map>
 
 namespace DB

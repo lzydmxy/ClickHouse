@@ -4,14 +4,13 @@
 #include <Query/Optimizer/Property/PropertyDeriver.h>
 #include <Query/Optimizer/Property/PropertyMatcher.h>
 #include <Query/Optimizer/SymbolsExtractor.h>
-#include <QueryPlan/CTERefStep.h>
-#include <QueryPlan/PlanNode.h>
-#include <QueryPlan/SymbolMapper.h>
-#include <QueryPlan/TableScanStep.h>
+#include <Query/Processors/QueryPlan/CTERefStepExt.h>
+#include <Query/Planner/SymbolMapper.h>
+#include <Query/Processors/QueryPlan/TableScanStepExt.h>
 
 namespace DB
 {
-String JoinOrderUtils::getJoinOrder(QueryPlan & plan)
+String JoinOrderUtils::getJoinOrder(QueryPlanExt & plan)
 {
     JoinOrderExtractor rewriter{plan.getCTEInfo()};
     Void require;
@@ -34,7 +33,7 @@ String JoinOrderExtractor::visitPlanNode(PlanNodeBase & node, Void &)
     return fmt::format("[{}]", boost::algorithm::join(children, ", "));
 }
 
-String JoinOrderExtractor::visitJoinNode(JoinNode & node, Void & v)
+String JoinOrderExtractor::visitJoinStepExtNode(JoinStepExtNode & node, Void & v)
 {
     auto left = VisitorUtil::accept(node.getChildren()[0], *this, v);
     auto right = VisitorUtil::accept(node.getChildren()[1], *this, v);
@@ -43,12 +42,12 @@ String JoinOrderExtractor::visitJoinNode(JoinNode & node, Void & v)
 }
 
 
-String JoinOrderExtractor::visitTableScanNode(TableScanNode & node, Void &)
+String JoinOrderExtractor::visitTableScanStepExtNode(TableScanStepExtNode & node, Void &)
 {
     return node.getStep()->getTable();
 }
 
-String JoinOrderExtractor::visitCTERefNode(CTERefNode & node, Void & v)
+String JoinOrderExtractor::visitCTERefStepExtNode(CTERefStepExtNode & node, Void & v)
 {
     const auto * step = node.getStep().get();
 

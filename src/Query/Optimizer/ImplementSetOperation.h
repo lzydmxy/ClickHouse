@@ -4,8 +4,8 @@
 #include <Interpreters/Context.h>
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTLiteral.h>
-#include <QueryPlan/PlanNode.h>
-#include <QueryPlan/ProjectionStep.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
+#include <Query/Processors/QueryPlan/ProjectionStepExt.h>
 
 namespace DB
 {
@@ -30,7 +30,7 @@ private:
         Names symbols;
         for (size_t i = 0; i < count; i++)
         {
-            symbols.emplace_back(context.getSymbolAllocator()->newSymbol(name));
+            symbols.emplace_back(context.getOptimizerContext()->getSymbolAllocator()->newSymbol(name));
         }
         return symbols;
     }
@@ -94,14 +94,14 @@ private:
         {
             auto expression = (i == markerIndex) ? std::make_shared<ASTLiteral>(1u) : std::make_shared<ASTLiteral>(0u);
 
-            String marker_symbol = context.getSymbolAllocator()->newSymbol(markers[i]);
+            String marker_symbol = context.getOptimizerContext()->getSymbolAllocator()->newSymbol(markers[i]);
             assignments.emplace_back(marker_symbol, expression);
             new_name_to_type[marker_symbol] = std::make_shared<DataTypeUInt8>();
         }
 
-        auto expression_step = std::make_shared<ProjectionStep>(output_stream, assignments, new_name_to_type);
+        auto expression_step = std::make_shared<ProjectionStepExt>(output_stream, assignments, new_name_to_type);
         PlanNodes children{source};
-        PlanNodePtr expr_node = std::make_shared<ProjectionNode>(context.nextNodeId(), std::move(expression_step), children);
+        PlanNodePtr expr_node = std::make_shared<ProjectionStepExtNode>(context.getOptimizerContext()->nextNodeId(), std::move(expression_step), children);
         return expr_node;
     }
 
