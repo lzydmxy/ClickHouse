@@ -61,7 +61,7 @@ Void SymbolVisitor::visitNode(const ConstASTPtr & node, SymbolVisitorContext & c
 Void SymbolVisitor::visitASTIdentifier(const ConstASTPtr & node, SymbolVisitorContext & context)
 {
     const auto & identifier = node->as<ASTIdentifier &>();
-    if (context.exclude_symbols.empty() || !context.exclude_symbols.count(identifier.name()))
+    if (context.exclude_symbols.empty() || !context.exclude_symbols.contains(identifier.name()))
     {
         context.result.emplace_back(identifier.name());
     }

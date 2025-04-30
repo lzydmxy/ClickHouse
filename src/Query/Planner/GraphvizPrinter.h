@@ -43,7 +43,7 @@ public:
 
     static void printAST(const ASTPtr &, ContextMutablePtr & context, const String & visitor);
     static void printLogicalPlan(PlanNodeBase &, ContextMutablePtr &, const String & name);
-    static void printLogicalPlan(QueryPlan &, ContextMutablePtr &, const String & name, StepProfiles profiles = {});
+    static void printLogicalPlan(QueryPlanExt &, ContextMutablePtr &, const String & name, StepProfiles profiles = {});
     static void printMemo(const Memo & memo, const ContextMutablePtr & context, const String & name);
     static void printMemo(const Memo & memo, GroupId root_id, const ContextMutablePtr & context, const String & name);
     static void printPlanSegment(const PlanSegmentTreeUniqPtr &, const ContextMutablePtr &);

@@ -2,8 +2,8 @@
 
 #include <AggregateFunctions/AggregateFunctionFactory.h>
 #include <Interpreters/ExpressionActions.h>
-#include <QueryPlan/AggregatingStep.h>
-#include <QueryPlan/UnionStep.h>
+#include <Query/Processors/QueryPlan/AggregatingStepExt.h>
+#include <Query/Processors/QueryPlan/UnionStepExt.h>
 #include <Core/Names.h>
 
 namespace DB
@@ -45,15 +45,15 @@ TranslationResult SetOperationNodeTranslator::makeSetContainmentPlanForDistinct(
         DataTypes types{std::make_shared<DataTypeUInt8>()};
         Array params;
         AggregateFunctionProperties properties;
-        aggregate_desc.function = AggregateFunctionFactory::instance().get("sum", types, params, properties);
+        aggregate_desc.function = AggregateFunctionFactory::instance().get("sum", NullsAction::EMPTY, types, params, properties);
 
         aggregates.push_back(aggregate_desc);
     }
 
-    auto agg_step = std::make_shared<AggregatingStep>(
-        union_node->getStep()->getOutputStream(), group_by_keys, NameSet{}, aggregates, GroupingSetsParamsList{}, true);
+    auto agg_step = std::make_shared<AggregatingStepExt>(
+        union_node->getStep()->getOutputStream(), group_by_keys, NameSet{}, aggregates, GroupingSetsParamsExtList{}, true);
     PlanNodes children{union_node};
-    PlanNodePtr agg_node = std::make_shared<AggregatingNode>(context.nextNodeId(), std::move(agg_step), children);
+    PlanNodePtr agg_node = std::make_shared<AggregatingStepExtNode>(context.getOptimizerContext()->nextNodeId(), std::move(agg_step), children);
 
     return TranslationResult{agg_node, aggregation_outputs, std::make_optional<String>()};
 }
@@ -81,7 +81,7 @@ TranslationResult SetOperationNodeTranslator::makeSetContainmentPlanForDistinctA
 
     // add counts and row number
     Names marker_outputs = allocateSymbols(markers.size(), "count");
-    String row_number_symbol = context.getSymbolAllocator()->newSymbol("row_number");
+    String row_number_symbol = context.getOptimizerContext()->getSymbolAllocator()->newSymbol("row_number");
     PlanNodePtr window = appendCounts(union_node, output, markers, marker_outputs, row_number_symbol);
 
     Assignments assignments;
@@ -109,8 +109,8 @@ TranslationResult SetOperationNodeTranslator::makeSetContainmentPlanForDistinctA
     }
 
     // prune markers
-    auto step = std::make_shared<ProjectionStep>(window->getStep()->getOutputStream(), assignments, name_to_type);
-    PlanNodePtr project_node = PlanNodeBase::createPlanNode(context.nextNodeId(), std::move(step), PlanNodes{window});
+    auto step = std::make_shared<ProjectionStepExt>(window->getStep()->getOutputStream(), assignments, name_to_type);
+    PlanNodePtr project_node = PlanNodeBase::createPlanNode(context.getOptimizerContext()->nextNodeId(), std::move(step), PlanNodes{window});
 
     return TranslationResult{project_node, marker_outputs, std::make_optional<String>(row_number_symbol)};
 }
@@ -125,9 +125,9 @@ PlanNodePtr SetOperationNodeTranslator::unionNodes(const PlanNodes & children, c
     {
         output.header.insert(ColumnWithTypeAndName{col.type, col.name});
     }
-    auto union_step = std::make_unique<UnionStep>(input_stream, output);
+    auto union_step = std::make_unique<UnionStepExt>(input_stream, output);
 
-    PlanNodePtr union_node = std::make_shared<UnionNode>(context.nextNodeId(), std::move(union_step), children);
+    PlanNodePtr union_node = std::make_shared<UnionStepExtNode>(context.getOptimizerContext()->nextNodeId(), std::move(union_step), children);
     return union_node;
 }
 
@@ -147,9 +147,10 @@ PlanNodePtr SetOperationNodeTranslator::appendCounts(
     {
         desc.full_sort_description.push_back(SortColumnDescription(column, 1 /* direction */, 1 /* nulls_direction */));
     }
-    WindowFrame default_frame{
-        true, WindowFrame::FrameType::Range, WindowFrame::BoundaryType::Unbounded, 0, true, WindowFrame::BoundaryType::Current, 0, false};
-    desc.frame = default_frame;
+    // todo: hongzhigao1, Range in WindowFrame
+    // WindowFrame default_frame{
+    //     true, WindowFrame::FrameType::Range, WindowFrame::BoundaryType::Unbounded, 0, true, WindowFrame::BoundaryType::Current, 0, false};
+    // desc.frame = default_frame;
 
     std::vector<WindowFunctionDescription> functions;
     for (size_t i = 0; i < markers.size(); i++)
@@ -160,7 +161,7 @@ PlanNodePtr SetOperationNodeTranslator::appendCounts(
         DataTypes types{std::make_shared<DataTypeUInt8>()};
         Array params;
         AggregateFunctionProperties properties;
-        AggregateFunctionPtr aggregate_function = AggregateFunctionFactory::instance().get("sum", types, params, properties);
+        AggregateFunctionPtr aggregate_function = AggregateFunctionFactory::instance().get("sum", NullsAction::EMPTY, types, params, properties);
         WindowFunctionDescription function{output, nullptr, aggregate_function, params, types, argument_names};
         functions.emplace_back(function);
     }
@@ -170,13 +171,13 @@ PlanNodePtr SetOperationNodeTranslator::appendCounts(
         Array params;
         AggregateFunctionProperties properties;
 
-        AggregateFunctionPtr aggregate_function = AggregateFunctionFactory::instance().get("row_number", types, params, properties);
+        AggregateFunctionPtr aggregate_function = AggregateFunctionFactory::instance().get("row_number", NullsAction::EMPTY, types, params, properties);
         WindowFunctionDescription function{row_number_symbol, nullptr, aggregate_function, params, types, argument_names};
         functions.emplace_back(function);
     }
 
     auto step = std::make_shared<WindowStep>(sourceNode->getStep()->getOutputStream(), desc, functions, true);
-    return PlanNodeBase::createPlanNode(context.nextNodeId(), std::move(step), PlanNodes{sourceNode});
+    return PlanNodeBase::createPlanNode(context.getOptimizerContext()->nextNodeId(), std::move(step), PlanNodes{sourceNode});
 };
 
 }

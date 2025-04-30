@@ -27,7 +27,7 @@ ConstASTPtr ExpressionDeterminism::filterDeterministicConjuncts(ConstASTPtr pred
         return predicate;
     }
 
-    std::vector<ConstASTPtr> predicates = PredicateUtils::extractConjuncts(predicate);
+    ConstASTs predicates = PredicateUtils::extractConjuncts(predicate);
     absl::InlinedVector<ConstASTPtr,PREDICATE_VECTOR_SIZE> deterministic;
     for (auto & pre : predicates)
     {
@@ -41,7 +41,7 @@ ConstASTPtr ExpressionDeterminism::filterDeterministicConjuncts(ConstASTPtr pred
 
 ConstASTPtr ExpressionDeterminism::filterNonDeterministicConjuncts(ConstASTPtr predicate, ContextPtr context)
 {
-    std::vector<ConstASTPtr> predicates = PredicateUtils::extractConjuncts(predicate);
+    ConstASTs predicates = PredicateUtils::extractConjuncts(predicate);
     absl::InlinedVector<ConstASTPtr,PREDICATE_VECTOR_SIZE> non_deterministic;
     for (auto & pre : predicates)
     {
@@ -53,7 +53,7 @@ ConstASTPtr ExpressionDeterminism::filterNonDeterministicConjuncts(ConstASTPtr p
     return PredicateUtils::combineConjuncts(non_deterministic);
 }
 
-std::set<ConstASTPtr> ExpressionDeterminism::filterDeterministicPredicates(std::vector<ConstASTPtr> & predicates, ContextPtr context)
+std::set<ConstASTPtr> ExpressionDeterminism::filterDeterministicPredicates(ConstASTs & predicates, ContextPtr context)
 {
     std::set<ConstASTPtr> deterministic;
     for (auto & predicate : predicates)

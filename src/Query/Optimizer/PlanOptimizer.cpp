@@ -29,14 +29,13 @@
 #include <Query/Optimizer/Rewriter/UseNodeProperty.h>
 #include <Query/Optimizer/Rule/Rules.h>
 #include <Query/Optimizer/ShortCircuitPlanner.h>
-#include <QueryPlan/GraphvizPrinter.h>
-#include <QueryPlan/Hints/HintsPropagator.h>
-#include <QueryPlan/Hints/ImplementJoinAlgorithmHints.h>
-#include <QueryPlan/Hints/ImplementJoinOperationHints.h>
-#include <QueryPlan/Hints/ImplementJoinOrderHints.h>
-#include <QueryPlan/PlanPattern.h>
+#include <Query/Planner/GraphvizPrinter.h>
+// #include <QueryPlan/Hints/HintsPropagator.h>
+// #include <QueryPlan/Hints/ImplementJoinAlgorithmHints.h>
+// #include <QueryPlan/Hints/ImplementJoinOperationHints.h>
+// #include <QueryPlan/Hints/ImplementJoinOrderHints.h>
+#include <Query/Processors/QueryPlan/PlanPattern.h>
 #include <Common/Stopwatch.h>
-#include <common/logger_useful.h>
 
 namespace DB
 {
@@ -50,7 +49,7 @@ const Rewriters & PlanOptimizer::getSimpleRewriters()
 {
     static Rewriters simple_rewrites = {
         // rules for normalize plan (DO NOT change !!!)
-        std::make_shared<HintsPropagator>(),
+        // std::make_shared<HintsPropagator>(), /// no hint now
         std::make_shared<ColumnPruning>(),
         std::make_shared<IterativeRewriter>(Rules::sumIfToCountIf(), "SumIfToCountIf"),
 
@@ -85,7 +84,7 @@ const Rewriters & PlanOptimizer::getSimpleRewriters()
 
         //add reorder adjacent windows
         std::make_shared<IterativeRewriter>(Rules::swapAdjacentRules(), "SwapAdjacent"),
-        std::make_shared<ImplementJoinOrderHints>(),
+        // std::make_shared<ImplementJoinOrderHints>(), /// no hint now
 
         // push down limit and aggregate
         std::make_shared<IterativeRewriter>(Rules::pushDownLimitRules(), "PushDownLimit"),
@@ -94,10 +93,10 @@ const Rewriters & PlanOptimizer::getSimpleRewriters()
         std::make_shared<IterativeRewriter>(Rules::distinctToAggregateRules(), "DistinctToAggregate"),
         std::make_shared<DistinctToAggregatePruning>(),
 
-        std::make_shared<ImplementJoinOrderHints>(),
+        // std::make_shared<ImplementJoinOrderHints>(), /// no hint now
 
         std::make_shared<MaterializedViewRewriter>(),
-        std::make_shared<ImplementJoinOperationHints>(),
+        // std::make_shared<ImplementJoinOperationHints>(), /// no hint now
 
         /// topn filtering optimization
         /// rules use novel operators should be placed after MaterializedViewRewriter, in case of MV matching failure
@@ -143,7 +142,7 @@ const Rewriters & PlanOptimizer::getLegacyFullRewriters()
 {
     // the order of rules matters, DO NOT change.
     static Rewriters full_rewrites = {
-        std::make_shared<HintsPropagator>(),
+        // std::make_shared<HintsPropagator>(), /// no hint now
         std::make_shared<ColumnPruning>(),
         std::make_shared<UnifyNullableType>(),
 
@@ -233,7 +232,7 @@ const Rewriters & PlanOptimizer::getLegacyFullRewriters()
         std::make_shared<IterativeRewriter>(Rules::pushAggRules(), "PushAggregateThroughJoin"),
 
 
-        std::make_shared<ImplementJoinOrderHints>(),
+        // std::make_shared<ImplementJoinOrderHints>(), /// no hint now
 
         std::make_shared<GroupByKeysPruning>(),
         std::make_shared<EliminateJoinByFK>(),
@@ -262,7 +261,7 @@ const Rewriters & PlanOptimizer::getLegacyFullRewriters()
 
         //
         std::make_shared<MaterializedViewRewriter>(),
-        std::make_shared<ImplementJoinOperationHints>(),
+        // std::make_shared<ImplementJoinOperationHints>(), /// no hint now
 
         /// topn filtering optimization
         /// rules use novel operators should be placed after MaterializedViewRewriter, in case of MV matching failure
@@ -314,7 +313,7 @@ const Rewriters & PlanOptimizer::getLegacyFullRewriters()
         std::make_shared<UnifyNullableType>(), /* some rules generates incorrect column ptr for DataStream,
                                                   e.g. use a non-nullable column ptr for a nullable column */
         std::make_shared<IterativeRewriter>(Rules::pushTableScanEmbeddedStepRules(), "PushTableScanEmbeddedStepRules"),
-        std::make_shared<ImplementJoinAlgorithmHints>(),
+        // std::make_shared<ImplementJoinAlgorithmHints>(), /// no hint now
         std::make_shared<UseNodeProperty>(),
         std::make_shared<IterativeRewriter>(Rules::addRepartitionColumn(), "AddRepartitionColumn"),
         std::make_shared<AddCache>(),
@@ -329,7 +328,7 @@ const Rewriters & PlanOptimizer::getFullRewriters()
 {
     // the order of rules matters, DO NOT change.
     static Rewriters full_rewrites = {
-        std::make_shared<HintsPropagator>(),
+        // std::make_shared<HintsPropagator>(), /// no hint now
         std::make_shared<ColumnPruning>(),
         std::make_shared<UnifyNullableType>(),
 
@@ -415,7 +414,7 @@ const Rewriters & PlanOptimizer::getFullRewriters()
                  std::make_shared<PredicatePushdown>(),
                  std::make_shared<ColumnPruning>()}),
 
-        std::make_shared<ImplementJoinOrderHints>(),
+        // std::make_shared<ImplementJoinOrderHints>(), /// no hint now
 
         std::make_shared<GroupByKeysPruning>(),
         std::make_shared<EliminateJoinByFK>()->afterRules(
@@ -440,7 +439,7 @@ const Rewriters & PlanOptimizer::getFullRewriters()
         std::make_shared<IterativeRewriter>(Rules::swapAdjacentRules(), "SwapAdjacent"),
 
         //
-        std::make_shared<ImplementJoinOperationHints>(),
+        // std::make_shared<ImplementJoinOperationHints>(), /// no hint now
 
         /// topn filtering optimization
         /// rules use novel operators should be placed after MaterializedViewRewriter, in case of MV matching failure
@@ -475,7 +474,7 @@ const Rewriters & PlanOptimizer::getFullRewriters()
         std::make_shared<UnaliasSymbolReferences>(),
         std::make_shared<IterativeRewriter>(Rules::pushIntoTableScanRules(), "PushIntoTableScan"),
         std::make_shared<ShareCommonExpression>(), // this rule depends on enable_optimizer_early_prewhere_push_down
-        std::make_shared<ImplementJoinAlgorithmHints>(),
+        // std::make_shared<ImplementJoinAlgorithmHints>(), /// no hint now
         std::make_shared<IterativeRewriter>(Rules::removeRedundantRules(), "RemoveRedundant"),
         std::make_shared<IterativeRewriter>(Rules::inlineProjectionRules(), "InlineProjection"),
         // column pruned by add extra projection, DO NOT ADD RemoveRedundant rule after this rule !!!
@@ -503,7 +502,7 @@ const Rewriters & PlanOptimizer::getShortCircuitRewriters()
     return short_circuit_rewriters;
 }
 
-void PlanOptimizer::optimize(QueryPlan & plan, ContextMutablePtr context)
+void PlanOptimizer::optimize(QueryPlanExt & plan, ContextMutablePtr context)
 {
     int i = GraphvizPrinter::PRINT_PLAN_OPTIMIZE_INDEX;
     GraphvizPrinter::printLogicalPlan(plan, context, std::to_string(i++) + "_Init_Plan");
@@ -522,7 +521,7 @@ void PlanOptimizer::optimize(QueryPlan & plan, ContextMutablePtr context)
     }
     else
     {
-        if (context->getSettingsRef().enable_legacy_optimizer)
+        if (context->getOptimizerContext()->getSettingsRef().enable_legacy_optimizer)
         {
             if (PlanPattern::isSimpleQuery(plan))
             {
@@ -544,34 +543,34 @@ void PlanOptimizer::optimize(QueryPlan & plan, ContextMutablePtr context)
     total_watch.restart();
     PlanCheck::checkFinalPlan(plan, context);
 
-    context->logOptimizerProfile(getLogger("PlanOptimizer"),
+    context->getOptimizerContext()->logOptimizerProfile(getLogger("PlanOptimizer"),
                                 "Optimizer stage run time: ",
                                 "checkFinalPlan",
-                                std::to_string(total_watch.elapsedMillisecondsAsDouble()) + "ms", true);
+                                total_watch.elapsedMilliseconds(), true);
 }
 
-void PlanOptimizer::optimize(QueryPlan & plan, ContextMutablePtr context, const Rewriters & rewriters)
+void PlanOptimizer::optimize(QueryPlanExt & plan, ContextMutablePtr context, const Rewriters & rewriters)
 {
-    context->setRuleId(GraphvizPrinter::PRINT_PLAN_OPTIMIZE_INDEX);
+    context->getOptimizerContext()->setRuleId(GraphvizPrinter::PRINT_PLAN_OPTIMIZE_INDEX);
 
     Stopwatch total_watch{CLOCK_THREAD_CPUTIME_ID};
     total_watch.start();
 
     for (const auto & rewriter : rewriters)
     {
-        context->incRuleId();
+        context->getOptimizerContext()->incRuleId();
         rewriter->rewritePlan(plan, context);
         UInt64 elapsed = total_watch.elapsedMilliseconds();
 
-        if (elapsed >= context->getSettingsRef().plan_optimizer_timeout)
+        if (elapsed >= context->getOptimizerContext()->getSettingsRef().plan_optimizer_timeout)
         {
             throw Exception(
-                "PlanOptimizer exhausted the time limit of " + std::to_string(context->getSettingsRef().plan_optimizer_timeout) + " ms",
-                ErrorCodes::OPTIMIZER_TIMEOUT);
+                ErrorCodes::OPTIMIZER_TIMEOUT,
+                "PlanOptimizer exhausted the time limit of {}", std::to_string(context->getOptimizerContext()->getSettingsRef().plan_optimizer_timeout) + " ms");
         }
     }
 
     UInt64 elapsed = total_watch.elapsedMilliseconds();
-    LOG_DEBUG(getLogger("PlanOptimizer"), "Total optimizer time: " + std::to_string(elapsed));
+    LOG_DEBUG(getLogger("PlanOptimizer"), "Total optimizer time: {}", std::to_string(elapsed));
 }
 }

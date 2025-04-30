@@ -66,7 +66,7 @@ public:
     PlanNodePtr visitMergeSortingStepExtNode(MergeSortingStepExtNode &, PredicateContext &) override;
     // todo: lizhuoyu5 need PartialSortingStep
     // PlanNodePtr visitPartialSortingNode(PartialSortingStepNode &, PredicateContext &) override;
-    PlanNodePtr visitSortingStepNode(SortingStepNode &, PredicateContext &) override;
+    PlanNodePtr visitSortingStepExtNode(SortingStepExtNode &, PredicateContext &) override;
     PlanNodePtr visitUnionStepExtNode(UnionStepExtNode &, PredicateContext &) override;
     PlanNodePtr visitDistinctStepExtNode(DistinctStepExtNode &, PredicateContext &) override;
     PlanNodePtr visitAssignUniqueIdStepExtNode(AssignUniqueIdStepExtNode &, PredicateContext &) override;

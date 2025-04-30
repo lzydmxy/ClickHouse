@@ -124,6 +124,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, plan_optimizer_rule_warning_time, 1000, "Send warning if a optimize rule optimize time exceed timeout", 0) \
     M(Bool, group_by_two_level_for_grouping_set, true, "Adaptive two-level aggregation is not valid for grouping set queries. Setting 1 to enforce two-level aggregation, 0 to enforce single-level aggregation.", 0) \
     M(UInt64, memory_catalog_worker_size, 8, "Memory catalog work size for unittest", 0) \
+    M(UInt64, plan_optimizer_timeout, 600000, "Max running time of a plan rewriter optimizer in ms", 0) \
     /** Exchange settings */ \
     M(UInt64, exchange_timeout_ms, 1000000, "Exchange request timeout ms",0) \
     M(UInt64, exchange_queue_bytes, 209715200, "Queue size(bytes) for exchange queue, 0 means disable", 0) \
@@ -503,6 +504,8 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_ab_index_optimization, true, "Optimize ab version by reading Bitmap", 0)\
     M(Double, max_streams_to_max_threads_ratio, 1.0, "Allows you to use more sources than the number of threads - to more evenly distribute work across threads. It is assumed that this is a temporary solution, since it will be possible in the future to make the number of sources equal to the number of threads, but for each source to dynamically select available work for itself.", 0) \
     M(Int64, partition_by_monotonicity_hint, 0, "Hint on whether partition by expression is a monotonic function or not, e.g., '(toYYYYMMDD(ts), toHour(ts))' is a monotonic non-decreasing function. 0 means unknown, Positive means monotonic non-decrasing, Negative means monotonic non-increasing", 0) \
+    M(Bool, allow_extended_type_conversion, false, "When enabled, implicit type conversion is allowed for more input types(e.g. UInt64 & Ints, Decimal & Float, Float & Int64)", 0) \
+    M(Bool, enable_implicit_arg_type_convert, false, "Eable implicit type conversion for functions", 0) \
 
 #define MAKE_OPTIMIZER_OBSOLETE(M, TYPE, NAME, DEFAULT) \
     M(TYPE, NAME, DEFAULT, "Obsolete setting, does nothing.", BaseSettingsHelpers::Flags::OBSOLETE)

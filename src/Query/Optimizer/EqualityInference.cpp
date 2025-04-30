@@ -3,6 +3,8 @@
 #include <Query/Optimizer/ExpressionRewriter.h>
 #include <Query/Optimizer/PredicateUtils.h>
 #include <Parsers/ASTFunction.h>
+#include <Query/Parsers/ASTHelper.h>
+#include "Query/Optimizer/ConstHashAST.h"
 
 namespace DB
 {
@@ -22,8 +24,8 @@ EqualityInference EqualityInference::newInstance(const std::vector<ConstASTPtr> 
             if (isInferenceCandidate(conjunct, context))
             {
                 const auto & fun = conjunct->as<ASTFunction &>();
-                ASTPtr left = fun.arguments->getChildren()[0];
-                ASTPtr right = fun.arguments->getChildren()[1];
+                ASTPtr left = fun.arguments->children[0];
+                ASTPtr right = fun.arguments->children[1];
                 equalities.findAndUnion(ConstHashAST::make(left), ConstHashAST::make(right));
             }
         }
@@ -53,12 +55,12 @@ bool EqualityInference::isInferenceCandidate(const ConstASTPtr & predicate, Cont
         if (fun.name == "equals" && ExpressionDeterminism::isDeterministic(predicate, context))
         {
             // We should only consider equalities that have distinct left and right components
-            if (fun.arguments->getChildren()[0]->getColumnName() != fun.arguments->getChildren()[1]->getColumnName())
+            if (fun.arguments->children[0]->getColumnName() != fun.arguments->children[1]->getColumnName())
             {
                 return true;
             }
 
-            if (fun.arguments->getChildren()[0]->getType() != fun.arguments->getChildren()[1]->getType())
+            if (getAstType(fun.arguments->children[0]) != getAstType(fun.arguments->children[1]))
             {
                 return true;
             }
@@ -116,7 +118,7 @@ EqualityInference::rewrite(const ConstASTPtr & expression, const std::set<String
     for (const auto & sub_expression : sub_expressions)
     {
         auto canonical = getScopedCanonical(sub_expression, scope, contains);
-        if (canonical != nullptr)
+        if (canonical.getPtr() != nullptr)
         {
             expression_remap[sub_expression] = canonical;
         }
@@ -150,7 +152,7 @@ ConstHashAST EqualityInference::getScopedCanonical(const ConstHashAST & expressi
 {
     if (!canonical_map.contains(expression))
     {
-        return nullptr;
+        return ConstHashAST();
     }
 
     auto & canonical_index = canonical_map[expression];
@@ -168,14 +170,14 @@ ConstHashAST EqualityInference::getScopedCanonical(const ConstHashAST & expressi
 
         if (!in_scope)
         {
-            return nullptr;
+            return ConstHashAST();
         }
     }
 
     ConstASTSet candidates;
     for (const auto & equivalence : equivalences)
     {
-        if (isScoped(equivalence, scope))
+        if (isScoped(equivalence.getPtr(), scope))
         {
             candidates.emplace(equivalence);
         }
@@ -187,7 +189,7 @@ ConstHashAST EqualityInference::getScopedCanonical(const ConstHashAST & expressi
 ConstHashAST EqualityInference::getCanonical(ConstASTSet & equivalences)
 {
     if (equivalences.empty())
-        return nullptr;
+        return ConstHashAST();
     return getMin(equivalences);
 }
 
@@ -288,7 +290,7 @@ EqualityPartition EqualityInference::partitionedBy(const std::set<String> & scop
         }
 
         auto connecting_canonical = getCanonical(connecting_expressions_remove_null);
-        if (connecting_canonical != nullptr)
+        if (connecting_canonical.getPtr() != nullptr)
         {
             for (const auto & connecting_expression_remove_null : connecting_expressions_remove_null)
             {
@@ -431,7 +433,7 @@ bool DisjointSet::union_(ConstHashAST & element_1, ConstHashAST & element_2)
 ConstHashAST DisjointSet::findInternal(const ConstHashAST & element) // NOLINT(misc-no-recursion)
 {
     Entry & entry = map[element];
-    if (entry.getParent() == nullptr || entry.getParent() == element)
+    if (entry.getParent().getPtr() == nullptr || entry.getParent() == element)
     {
         return element;
     }

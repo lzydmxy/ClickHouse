@@ -13,20 +13,22 @@
 #include <Functions/FunctionFactory.h>
 #include <Functions/FunctionHelpers.h>
 #include <Functions/FunctionsLogical.h>
-#include <Functions/InternalFunctionRuntimeFilter.h>
+#include <Query/Functions/InternalFunctionRuntimeFilter.h>
 #include <Interpreters/ActionsVisitor.h>
 #include <Interpreters/convertFieldToType.h>
-#include <Interpreters/join_common.h>
+#include <Query/Interpreters/JoinUtilsExt.h>
 #include <Query/Optimizer/FunctionInvoker.h>
 #include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/Utils.h>
 #include <Query/Optimizer/makeCastFunction.h>
 #include <Parsers/ASTFunction.h>
-#include <Parsers/ASTTableColumnReference.h>
+#include <Query/Parsers/ASTTableColumnReference.h>
 #include <Parsers/formatAST.h>
-#include <Statistics/TypeUtils.h>
+#include <Query/Statistics/TypeUtils.h>
 #include <Poco/String.h>
 #include <Common/FieldVisitorConvertToNumber.h>
+#include "Interpreters/PreparedSets.h"
+#include <DataTypes/DataTypeFactory.h>
 
 namespace DB
 {
@@ -118,7 +120,7 @@ struct ConvertFunctionInfo
             info.or_null = true;
         }
 
-        if (supported_types.count(func))
+        if (supported_types.contains(func))
         {
             info.type_name = func;
             return info;
@@ -238,7 +240,7 @@ struct LogicalFunctionRewriter
             else if (value == Ternary::Null)
                 return Null{};
             else
-                throw Exception(ErrorCodes::LOGICAL_ERROR, "Unknown ternary value: " + std::to_string(value));
+                throw Exception(ErrorCodes::LOGICAL_ERROR, "Unknown ternary value: {}", std::to_string(value));
         };
 
         if (has_const)
@@ -249,10 +251,10 @@ struct LogicalFunctionRewriter
                 rewrite_result = {std::make_shared<DataTypeUInt8>(), node, ternary_to_field(const_value)};
                 return true;
             }
-            else if (FunctionImpl::isNeutralValueTernary(const_value))
-            {
-                // `x AND 1` return `x`
-            }
+            // else if (FunctionImpl::isNeutralValueTernary(const_value))
+            // {
+            //     // `x AND 1` return `x`
+            // }
             else
             {
                 // `x AND NULL` return `x AND NULL`
@@ -414,7 +416,7 @@ bool simplifyAssumeNotNull(
     InterpretIMResult & simplify_result,
     const ContextPtr & context)
 {
-    if (!context->getSettingsRef().enable_simplify_assume_not_null || function.name != "assumeNotNull" || argument_results.size() != 1)
+    if (!context->getOptimizerContext()->getSettingsRef().enable_simplify_assume_not_null || function.name != "assumeNotNull" || argument_results.size() != 1)
         return false;
 
     if (isNullableOrLowCardinalityNullable(argument_results[0].type))
@@ -431,10 +433,7 @@ ExpressionInterpreter::ExpressionInterpreter(InterpretSetting setting_, ContextP
 
 ExpressionInterpreter ExpressionInterpreter::basicInterpreter(ExpressionInterpreter::IdentifierTypes types, ContextPtr context)
 {
-    ExpressionInterpreter::InterpretSetting setting
-        {
-            .identifier_types = std::move(types)
-        };
+    ExpressionInterpreter::InterpretSetting setting{std::move(types), {}};
     return {std::move(setting), std::move(context)};
 }
 
@@ -538,8 +537,8 @@ static bool isColumnSuitablyRepresentedByValue(ColumnPtr column, size_t offset, 
     if (const auto * column_array = checkAndGetColumn<ColumnArray>(*column))
     {
         auto data_ptr = column_array->getDataPtr();
-        size_t elem_offset = column_array->offsetAt(offset);
-        size_t end_offset = elem_offset + column_array->sizeAt(offset);
+        size_t elem_offset = column_array->getOffsets()[offset - 1];
+        size_t end_offset = elem_offset + (column_array->getOffsets()[offset] - column_array->getOffsets()[offset - 1]);
 
         for (; elem_offset < end_offset; ++elem_offset)
             if (!isColumnSuitablyRepresentedByValue(data_ptr, elem_offset, max_byte_size))
@@ -551,8 +550,12 @@ static bool isColumnSuitablyRepresentedByValue(ColumnPtr column, size_t offset, 
     if (const auto * column_map = checkAndGetColumn<ColumnMap>(*column))
     {
         auto data_ptr = column_map->getNestedColumn().getDataPtr();
-        size_t elem_offset = column_map->offsetAt(offset);
-        size_t end_offset = elem_offset + column_map->sizeAt(offset);
+
+        size_t elem_offset
+            = static_cast<const ColumnArray::ColumnOffsets &>(*column_map->getNestedColumn().getOffsetsPtr()).getData()[offset - 1];
+        size_t end_offset = elem_offset
+            + (static_cast<const ColumnArray::ColumnOffsets &>(*column_map->getNestedColumn().getOffsetsPtr()).getData()[offset]
+               - static_cast<const ColumnArray::ColumnOffsets &>(*column_map->getNestedColumn().getOffsetsPtr()).getData()[offset - 1]);
 
         for (; elem_offset < end_offset; ++elem_offset)
             if (!isColumnSuitablyRepresentedByValue(data_ptr, elem_offset, max_byte_size))
@@ -601,8 +604,8 @@ InterpretIMResult ExpressionInterpreter::visit(const ConstASTPtr & node) const
         return visitASTLiteral(*ast_literal, node);
     if (const auto * ast_identifier = node->as<ASTIdentifier>())
         return visitASTIdentifier(*ast_identifier, node);
-    if (const auto * ast_prepared_param = node->as<ASTPreparedParameter>())
-        return visitASTPreparedParameter(*ast_prepared_param, node);
+    // if (const auto * ast_prepared_param = node->as<ASTPreparedParameter>())
+    //     return visitASTPreparedParameter(*ast_prepared_param, node);
     if (const auto * ast_func = node->as<ASTFunction>())
     {
         const auto & func_name = ast_func->name;
@@ -634,10 +637,10 @@ InterpretIMResult ExpressionInterpreter::visitASTIdentifier(const ASTIdentifier 
     return originalNode(node);
 }
 
-InterpretIMResult ExpressionInterpreter::visitASTPreparedParameter(const ASTPreparedParameter &, const ConstASTPtr & node) const
-{
-    return originalNode(node);
-}
+// InterpretIMResult ExpressionInterpreter::visitASTPreparedParameter(const ASTPreparedParameter &, const ConstASTPtr & node) const
+// {
+//     return originalNode(node);
+// }
 
 static bool isDataTypeIdentical(const DataTypePtr & a, const DataTypePtr & b)
 {
@@ -656,11 +659,11 @@ static bool isDataTypeIdentical(const DataTypePtr & a, const DataTypePtr & b)
 // or let visitOrdinaryFunction to handle it
 InterpretIMResult ExpressionInterpreter::visitConvertFunction(const ASTFunction & function, const ConstASTPtr & node) const
 {
-    if (Poco::toLower(function.name) == "cast" && function.arguments->getChildren().size() == 2)
+    if (Poco::toLower(function.name) == "cast" && function.arguments->children.size() == 2)
     {
-        auto source = function.arguments->getChildren()[0];
+        auto source = function.arguments->children[0];
         auto source_type = getType(source);
-        const auto * target_type_name = function.arguments->getChildren()[1]->as<ASTLiteral>();
+        const auto * target_type_name = function.arguments->children[1]->as<ASTLiteral>();
         auto target_type = DataTypeFactory::instance().get(target_type_name->value.safeGet<String>());
 
         if (isDataTypeIdentical(source_type, target_type))
@@ -674,12 +677,12 @@ InterpretIMResult ExpressionInterpreter::visitConvertFunction(const ASTFunction 
     }
 
     auto func_info_opt = ConvertFunctionInfo::analyze(function.name);
-    if (func_info_opt && function.arguments->getChildren().size() == 1)
+    if (func_info_opt && function.arguments->children.size() == 1)
     {
         auto func_info = func_info_opt.value();
-        auto source = function.arguments->getChildren()[0];
+        auto source = function.arguments->children[0];
         auto source_type = getType(source);
-        auto source_type_info = Statistics::decayDataTypeVerbose(source_type);
+        auto source_type_info = QueryStatistics::decayDataTypeVerbose(source_type);
         auto target_type = DataTypeFactory::instance().get(func_info.type_name);
         if (isDataTypeIdentical(source_type_info.type, target_type))
         {
@@ -764,8 +767,9 @@ InterpretIMResult ExpressionInterpreter::visitOrdinaryFunction(const ASTFunction
     //   In cnch, constant folding requires `function_base->isDeterministic() == true` and `function_base->isSuitableForConstantFolding() == true`
     // This is because some functions do not satisfy `isColumnConst(*res_col)` in cnch, which cause constant folding not work and
     // furthermore block other optimizations(e.g. outer join to inner join)
-    if (function_base->isSuitableForConstantFoldingInOptimizer() && !has_lambda_argument
-        && (context->getSettingsRef().enable_evaluate_constant_for_nondeterministic || function_base->isDeterministic()))
+    // todo: hongzhigao1, isSuitableForConstantFoldingInOptimizer
+    if (/*function_base->isSuitableForConstantFoldingInOptimizer() &&*/ !has_lambda_argument
+        && (context->getOptimizerContext()->getSettingsRef().enable_evaluate_constant_for_nondeterministic || function_base->isDeterministic()))
     {
         ColumnPtr res_col;
 
@@ -785,7 +789,8 @@ InterpretIMResult ExpressionInterpreter::visitOrdinaryFunction(const ASTFunction
     }
 
     // === Null simplify ===
-    if (has_null_argument && function_builder->useDefaultImplementationForNulls() && setting.enable_null_simplify)
+    // todo: hongzhigao1, useDefaultImplementationForNulls
+    if (has_null_argument && /*function_builder->useDefaultImplementationForNulls() &&*/ setting.enable_null_simplify)
         return {JoinCommon::tryConvertTypeToNullable(std::make_shared<DataTypeNothing>()), simplified_node, Null()};
 
     // === Function simplify ===
@@ -829,16 +834,6 @@ InterpretIMResult ExpressionInterpreter::visitInFunction(const ASTFunction & fun
     if (left_arg_result.isAST() && !setting.enable_function_simplify)
         return {getType(rewritten_in_func), rewritten_in_func};
 
-    if (const auto * ast_prepared_param = right_arg->as<ASTPreparedParameter>())
-    {
-        auto riget_arg_result = visitASTPreparedParameter(*ast_prepared_param, right_arg);
-        ColumnsWithTypeAndName columns_with_types;
-        columns_with_types.emplace_back(left_arg_result.value, left_arg_result.type, "");
-        columns_with_types.emplace_back(riget_arg_result.value, riget_arg_result.type, "");
-        auto overload_resolver = FunctionFactory::instance().tryGet(function.name, context);
-        return {overload_resolver->getReturnType(columns_with_types), rewritten_in_func};
-    }
-
     // build set for IN statement(see also ActionsVisitor)
     SetPtr set;
     {
@@ -862,19 +857,20 @@ InterpretIMResult ExpressionInterpreter::visitInFunction(const ASTFunction & fun
         const auto & settings = context->getSettingsRef();
         SizeLimits size_limits{settings.max_rows_in_set, settings.max_bytes_in_set, settings.set_overflow_mode};
         set = std::make_shared<Set>(size_limits, true, settings.transform_null_in);
-        set->setHeader(block.cloneEmpty());
-        set->insertFromBlock(block);
+        set->setHeader(block.cloneEmpty().getColumnsWithTypeAndName());
+        set->insertFromBlock(block.getColumnsWithTypeAndName());
         set->finishInsert();
     }
 
     // constant folding
     if (left_arg_result.isValue())
     {
-        auto column_set = ColumnSet::create(1, set);
-        ColumnPtr const_column_set = ColumnConst::create(std::move(column_set), 1);
+        // todo: hongzhigao1, ColumnSet::create
+        // auto column_set = ColumnSet::create(1, set);
+        // ColumnPtr const_column_set = ColumnConst::create(std::move(column_set), 1);
         ColumnsWithTypeAndName columns_with_types;
         columns_with_types.emplace_back(left_arg_result.value, left_arg_result.type, "");
-        columns_with_types.emplace_back(const_column_set, std::make_shared<DataTypeSet>(), "");
+        // columns_with_types.emplace_back(const_column_set, std::make_shared<DataTypeSet>(), "");
         auto result = FunctionInvoker::execute(function.name, columns_with_types, context);
         return {result.type, rewritten_in_func, result.value};
     }
@@ -908,13 +904,16 @@ InterpretIMResult ExpressionInterpreter::visitInFunction(const ASTFunction & fun
     auto tuple_func = makeASTFunction("tuple", set_values);
     auto simplified_in_func = makeASTFunction(function.name, rewritten_left_arg, tuple_func);
 
-    auto column_set = ColumnSet::create(1, set);
-    ColumnPtr const_column_set = ColumnConst::create(std::move(column_set), 1);
+    // todo: hongzhigao1, ColumnSet::create
+    // auto column_set = ColumnSet::create(1, set);
+    // ColumnPtr const_column_set = ColumnConst::create(std::move(column_set), 1);
     ColumnsWithTypeAndName columns_with_types;
     columns_with_types.emplace_back(left_arg_result.type, "");
-    columns_with_types.emplace_back(const_column_set, std::make_shared<DataTypeSet>(), "");
+    // columns_with_types.emplace_back(const_column_set, std::make_shared<DataTypeSet>(), "");
     auto overload_resolver = FunctionFactory::instance().tryGet(function.name, context);
-    return {overload_resolver->getReturnType(columns_with_types), simplified_in_func};
+    // todo: hongzhigao1, getReturnType is private
+    // return {overload_resolver->getReturnType(columns_with_types), simplified_in_func};
+    return {};
 }
 
 }

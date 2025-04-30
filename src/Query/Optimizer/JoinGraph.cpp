@@ -4,7 +4,6 @@
 #include <Query/Optimizer/PushProjectionThroughJoin.h>
 #include <Query/Optimizer/SymbolUtils.h>
 #include <Query/Optimizer/Utils.h>
-#include <QueryPlan/FilterStep.h>
 
 namespace DB
 {
@@ -39,7 +38,7 @@ JoinGraph JoinGraph::withJoinGraph(
 {
     for (auto & node : other.nodes)
         if (edges.contains(node->getId()))
-            throw Exception(ErrorCodes::LOGICAL_ERROR, "Node appeared in two JoinGraphs, id : " + std::to_string(node->getId()));
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "Node appeared in two JoinGraphs, id : {}", std::to_string(node->getId()));
 
     std::vector<PlanNodePtr> nodes_merged;
     nodes_merged.insert(nodes_merged.end(), nodes.begin(), nodes.end());
@@ -78,12 +77,8 @@ std::vector<std::pair<String, String>> JoinGraph::getJoinClauses() const
 {
     std::vector<std::pair<String, String>> res;
     for (const auto & item : edges)
-    {
         for (const auto & edge : item.second)
-        {
             res.emplace_back(edge.getSourceSymbol(), edge.getTargetSymbol());
-        }
-    }
     return res;
 }
 
@@ -94,7 +89,7 @@ String JoinGraph::toString() // NOLINT
 }
 
 void JoinGraphContext::addEquivalentEdges(
-    std::map<PlanNodeId, std::vector<Edge>> & edges, const std::vector<std::pair<String, String>> & join_clauses)
+    std::map<PlanNodeId, std::vector<Edge>> & edges, const std::vector<std::pair<String, String>> & join_clauses) const
 {
     auto equivalent_symbol_sets = union_find.getSets();
     for (const auto & edge : join_clauses)
@@ -148,15 +143,13 @@ JoinGraph JoinGraphVisitor::visitPlanNode(PlanNodeBase & node, NameSet &)
     return JoinGraph{PlanNodes{node.shared_from_this()}};
 }
 
-JoinGraph JoinGraphVisitor::visitJoinNode(JoinNode & node, NameSet & required_columns)
+JoinGraph JoinGraphVisitor::visitJoinStepExtNode(JoinStepExtNode & node, NameSet & required_columns)
 {
     const auto & step = *node.getStep();
     if (step.supportReorder(true, support_cross_join))
     {
         if (step.isOrdered() && !join_graph_context.support_ordered_join)
-        {
             return visitPlanNode(node, required_columns);
-        }
         const Names & left_keys = step.getLeftKeys();
         auto left_required_columns = required_columns;
         left_required_columns.insert(left_keys.begin(), left_keys.end());
@@ -169,40 +162,36 @@ JoinGraph JoinGraphVisitor::visitJoinNode(JoinNode & node, NameSet & required_co
 
         std::vector<std::pair<String, String>> join_clauses;
         for (size_t i = 0; i < left_keys.size(); ++i)
-        {
             join_clauses.emplace_back(std::pair<String, String>{left_keys[i], right_keys[i]});
-        }
         bool contains_cross_join
-            = step.getKind() == ASTTableJoin::Kind::Cross || (step.getKind() == ASTTableJoin::Kind::Inner && left_keys.empty());
+            = step.getKind() == JoinKind::Cross || (step.getKind() == JoinKind::Inner && left_keys.empty());
         JoinGraph graph = left.withJoinGraph(right, join_clauses, join_graph_context, node.getId(), contains_cross_join);
         return graph.withFilter(step.getFilter());
     }
     return visitPlanNode(node, required_columns);
 }
 
-JoinGraph JoinGraphVisitor::visitFilterNode(FilterNode & node, NameSet & required_columns)
+JoinGraph JoinGraphVisitor::visitFilterStepExtNode(FilterStepExtNode & node, NameSet & required_columns)
 {
     JoinGraph graph = VisitorUtil::accept(node.getChildren()[0], *this, required_columns);
     if (graph.getNodes().size() == 1 && !ignore_filter_and_projection)
-    {
         return visitPlanNode(node, required_columns);
-    }
     const auto & step = *node.getStep();
     const auto & predicate = step.getFilter();
     return graph.withFilter(predicate);
 }
 
-JoinGraph JoinGraphVisitor::visitProjectionNode(ProjectionNode & node, NameSet & required_columns)
+JoinGraph JoinGraphVisitor::visitProjectionStepExtNode(ProjectionStepExtNode & node, NameSet & required_columns)
 {
     if (ignore_filter_and_projection)
     {
-        const auto * step = dynamic_cast<const ProjectionStep *>(node.getStep().get());
+        const auto * step = dynamic_cast<const ProjectionStepExt *>(node.getStep().get());
         bool contains_required_columns = false;
         for (const auto & assigment : step->getAssignments())
         {
             if (Utils::isIdentity(assigment))
                 continue;
-            if (!required_columns.count(assigment.first))
+            if (!required_columns.contains(assigment.first))
                 continue;
             contains_required_columns = true;
             break;
@@ -221,12 +210,10 @@ JoinGraph JoinGraphVisitor::visitProjectionNode(ProjectionNode & node, NameSet &
     return visitPlanNode(node, required_columns);
 }
 
-JoinGraph JoinGraphVisitor::visitSortingNode(SortingNode & node, NameSet & required_columns)
+JoinGraph JoinGraphVisitor::visitSortingStepExtNode(SortingStepExtNode & node, NameSet & required_columns)
 {
     if (ignore_filter_and_projection)
-    {
         return VisitorUtil::accept(node.getChildren()[0], *this, required_columns);
-    }
     return visitPlanNode(node, required_columns);
 }
 }

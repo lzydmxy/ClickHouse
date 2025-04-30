@@ -23,7 +23,7 @@ struct TupleDomainType
 template <>
 struct TupleDomainType<String>
 {
-    using Value = TupleDomainImpl<String, std::hash<String>, std::equal_to<String>>;
+    using Value = TupleDomainImpl<String, std::hash<String>, std::equal_to<>>;
 };
 
 template <>

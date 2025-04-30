@@ -2,8 +2,8 @@
 #include <Core/Names.h>
 #include <Core/Types.h>
 #include <Parsers/ASTFunction.h>
-#include <Parsers/ASTVisitor.h>
-#include <QueryPlan/PlanVisitor.h>
+#include <Query/Parsers/ASTVisitor.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
 
 namespace DB
 {

@@ -1,10 +1,10 @@
 #include <Query/Optimizer/DistinctOutputUtil.h>
 
-#include <QueryPlan/ExceptStep.h>
-#include <QueryPlan/IntersectStep.h>
-#include <QueryPlan/LimitStep.h>
-#include <QueryPlan/MergingSortedStep.h>
-#include <QueryPlan/ValuesStep.h>
+// #include <Query/Processors/QueryPlan/ExceptStepExt.h>
+// #include <Query/Processors/QueryPlan/IntersectStepExt.h>
+#include <Query/Processors/QueryPlan/LimitStepExt.h>
+#include <Query/Processors/QueryPlan/MergingSortedStepExt.h>
+#include <Query/Processors/QueryPlan/ValuesStepExt.h>
 
 namespace DB
 {
@@ -20,63 +20,67 @@ bool IsDistinctPlanVisitor::visitPlanNode(PlanNodeBase &, Void &)
     return false;
 }
 
-bool IsDistinctPlanVisitor::visitValuesNode(ValuesNode & node, Void &)
+bool IsDistinctPlanVisitor::visitValuesStepExtNode(ValuesStepExtNode & node, Void &)
 {
-    return dynamic_cast<const ValuesStep *>(node.getStep().get())->getRows() <= 1;
+    return dynamic_cast<const ValuesStepExt *>(node.getStep().get())->getRows() <= 1;
 }
 
-bool IsDistinctPlanVisitor::visitLimitNode(LimitNode & node, Void &)
+bool IsDistinctPlanVisitor::visitLimitStepExtNode(LimitStepExtNode & /*node*/, Void &)
 {
-    const auto * step = dynamic_cast<const LimitStep *>(node.getStep().get());
-    return !step->hasPreparedParam() && step->getLimitValue() <= 1;
+    // todo: hongzhigao1, getLimitValue
+    // const auto * step = dynamic_cast<const LimitStep *>(node.getStep().get());
+    // return step->getLimitValue() <= 1;
+    return false;
 }
 
-bool IsDistinctPlanVisitor::visitIntersectNode(IntersectNode & node, Void & context)
-{
-    if (dynamic_cast<const IntersectStep *>(node.getStep().get())->isDistinct())
-        return true;
+// todo: hongzhigao1, IntersectStep
+// bool IsDistinctPlanVisitor::visitIntersectNode(IntersectNode & node, Void & context)
+// {
+//     if (dynamic_cast<const IntersectStep *>(node.getStep().get())->isDistinct())
+//         return true;
 
-    for (auto & child : node.getChildren())
-    {
-        if (!VisitorUtil::accept(child, *this, context))
-            return false;
-    }
-    return true;
-}
+//     for (auto & child : node.getChildren())
+//     {
+//         if (!VisitorUtil::accept(child, *this, context))
+//             return false;
+//     }
+//     return true;
+// }
 
-bool IsDistinctPlanVisitor::visitEnforceSingleRowNode(EnforceSingleRowNode &, Void &)
-{
-    return true;
-}
-
-bool IsDistinctPlanVisitor::visitAggregatingNode(AggregatingNode &, Void &)
+bool IsDistinctPlanVisitor::visitEnforceSingleRowStepExtNode(EnforceSingleRowStepExtNode &, Void &)
 {
     return true;
 }
 
-bool IsDistinctPlanVisitor::visitAssignUniqueIdNode(AssignUniqueIdNode &, Void &)
+bool IsDistinctPlanVisitor::visitAggregatingStepExtNode(AggregatingStepExtNode &, Void &)
 {
     return true;
 }
 
-bool IsDistinctPlanVisitor::visitFilterNode(FilterNode & node, Void & context)
+bool IsDistinctPlanVisitor::visitAssignUniqueIdStepExtNode(AssignUniqueIdStepExtNode &, Void &)
+{
+    return true;
+}
+
+bool IsDistinctPlanVisitor::visitFilterStepExtNode(FilterStepExtNode & node, Void & context)
 {
     return VisitorUtil::accept(node.getChildren()[0], *this, context);
 }
 
-bool IsDistinctPlanVisitor::visitDistinctNode(DistinctNode &, Void &)
+bool IsDistinctPlanVisitor::visitDistinctStepExtNode(DistinctStepExtNode &, Void &)
 {
     return true;
 }
 
-bool IsDistinctPlanVisitor::visitExceptNode(ExceptNode & node, Void & context)
-{
-    return dynamic_cast<const ExceptStep *>(node.getStep().get())->isDistinct() || VisitorUtil::accept(node.getChildren()[0], *this, context);
-}
+// todo: hongzhigao1, ExceptStep
+// bool IsDistinctPlanVisitor::visitExceptNode(ExceptNode & node, Void & context)
+// {
+//     return dynamic_cast<const ExceptStep *>(node.getStep().get())->isDistinct() || VisitorUtil::accept(node.getChildren()[0], *this, context);
+// }
 
-bool IsDistinctPlanVisitor::visitMergingSortedNode(MergingSortedNode & node, Void &)
+bool IsDistinctPlanVisitor::visitMergingSortedStepExtNode(MergingSortedStepExtNode & node, Void &)
 {
-    return dynamic_cast<const MergingSortedStep *>(node.getStep().get())->getLimit() <= 1;
+    return dynamic_cast<const MergingSortedStepExt *>(node.getStep().get())->getLimit() <= 1;
 }
 
 }

@@ -479,9 +479,9 @@ TupleDomainImpl<T, Hash, Equal>::columnWiseUnion(const std::vector<TupleDomainIm
         {
             for (const auto & domain : tuple_domain_ref.getDomains())
             {
-                if (common_columns.count(domain.first))
+                if (common_columns.contains(domain.first))
                 {
-                    if (!domains_by_column.count(domain.first))
+                    if (!domains_by_column.contains(domain.first))
                     {
                         domains_by_column.insert(std::make_pair(domain.first, std::vector<Domain>{domain.second}));
                         continue;
@@ -525,6 +525,6 @@ bool TupleDomainImpl<T, Hash, Equal>::overlaps(const TupleDomainImpl<T, Hash, Eq
     return true;
 }
 
-template class TupleDomainImpl<String, std::hash<String>, std::equal_to<String>>;
+template class TupleDomainImpl<String, std::hash<String>, std::equal_to<>>;
 template class TupleDomainImpl<ASTPtr, ASTEquality::ASTHash, ASTEquality::ASTEquals>;
 }

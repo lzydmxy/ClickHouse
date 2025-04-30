@@ -1,10 +1,9 @@
 #include <utility>
 #include <Query/Optimizer/MergeSetOperation.h>
 
-#include <Interpreters/predicateExpressionsUtils.h>
-#include <QueryPlan/ExceptStep.h>
-#include <QueryPlan/IntersectStep.h>
-#include <QueryPlan/UnionStep.h>
+// #include <Query/Processors/QueryPlan/ExceptStepExt.h>
+// #include <Query/Processors/QueryPlan/IntersectStepExt.h>
+#include <Query/Processors/QueryPlan/UnionStepExt.h>
 
 
 namespace DB
@@ -72,16 +71,18 @@ PlanNodePtr SetOperationMerge::merge()
         output.header.insert(ColumnWithTypeAndName{col.type, col.name});
     }
 
-    if (node->getStep()->getType() == IQueryPlanStep::Type::Union)
+    if (getQueryPlanStepType(node->getStep()) == QueryPlanStepType::UnionStepExt)
     {
-        auto union_step = std::make_unique<UnionStep>(std::move(input_stream), std::move(output), std::move(output_to_inputs));
-        PlanNodePtr union_node = std::make_shared<UnionNode>(context.nextNodeId(), std::move(union_step), std::move(new_sources));
+        auto union_step = std::make_unique<UnionStepExt>(std::move(input_stream), std::move(output), std::move(output_to_inputs));
+        PlanNodePtr union_node = std::make_shared<UnionStepExtNode>(context.getOptimizerContext()->nextNodeId(), std::move(union_step), std::move(new_sources));
         return union_node;
     }
 
-    auto intersect_step = std::make_unique<IntersectStep>(std::move(input_stream), std::move(output), std::move(output_to_inputs), result_is_distinct);
-    PlanNodePtr intersect_node = std::make_shared<IntersectNode>(context.nextNodeId(), std::move(intersect_step), std::move(new_sources));
-    return intersect_node;
+    // todo: hongzhigao1, implement IntersectStep
+    // auto intersect_step = std::make_unique<IntersectStep>(std::move(input_stream), std::move(output), std::move(output_to_inputs), result_is_distinct);
+    // PlanNodePtr intersect_node = std::make_shared<IntersectNode>(context.nextNodeId(), std::move(intersect_step), std::move(new_sources));
+    // return intersect_node;
+    return nullptr;
 }
 
 PlanNodePtr SetOperationMerge::mergeFirstSource()
@@ -120,24 +121,25 @@ PlanNodePtr SetOperationMerge::mergeFirstSource()
         output.header.insert(ColumnWithTypeAndName{col.type, col.name});
     }
 
-    if (node->getStep()->getType() == IQueryPlanStep::Type::Union)
+    if (getQueryPlanStepType(node->getStep()) == QueryPlanStepType::UnionStepExt)
     {
-        auto union_step = std::make_unique<UnionStep>(input_stream, output);
-        PlanNodePtr union_node = std::make_shared<UnionNode>(context.nextNodeId(), std::move(union_step), new_sources);
+        auto union_step = std::make_unique<UnionStepExt>(input_stream, output);
+        PlanNodePtr union_node = std::make_shared<UnionStepExtNode>(context.getOptimizerContext()->nextNodeId(), std::move(union_step), new_sources);
         return union_node;
     }
-    if (node->getStep()->getType() == IQueryPlanStep::Type::Intersect)
-    {
-        auto intersect_step = std::make_unique<IntersectStep>(std::move(input_stream), std::move(output), merged_quantifier.value());
-        PlanNodePtr intersect_node = std::make_shared<IntersectNode>(context.nextNodeId(), std::move(intersect_step), std::move(new_sources));
-        return intersect_node;
-    }
-    if (node->getStep()->getType() == IQueryPlanStep::Type::Except)
-    {
-        auto except_step = std::make_unique<ExceptStep>(input_stream, output, merged_quantifier.value());
-        PlanNodePtr except_node = std::make_shared<ExceptNode>(context.nextNodeId(), std::move(except_step), std::move(new_sources));
-        return except_node;
-    }
+    // todo: hongzhigao1, IntersectStep, ExceptStep
+    // if (node->getStep()->getType() == IQueryPlanStep::Type::Intersect)
+    // {
+    //     auto intersect_step = std::make_unique<IntersectStep>(std::move(input_stream), std::move(output), merged_quantifier.value());
+    //     PlanNodePtr intersect_node = std::make_shared<IntersectNode>(context.nextNodeId(), std::move(intersect_step), std::move(new_sources));
+    //     return intersect_node;
+    // }
+    // if (node->getStep()->getType() == IQueryPlanStep::Type::Except)
+    // {
+    //     auto except_step = std::make_unique<ExceptStep>(input_stream, output, merged_quantifier.value());
+    //     PlanNodePtr except_node = std::make_shared<ExceptNode>(context.nextNodeId(), std::move(except_step), std::move(new_sources));
+    //     return except_node;
+    // }
     return nullptr;
 }
 

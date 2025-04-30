@@ -48,14 +48,14 @@ bool FunctionIsInjectiveVisitor::visitNode(const ConstASTPtr & node, NameSet & c
 
 bool FunctionIsInjectiveVisitor::visitASTIdentifier(const ConstASTPtr & node, NameSet & c)
 {
-    auto identifier = node->as<ASTIdentifier>();
+    const auto *identifier = node->as<ASTIdentifier>();
     c.erase(identifier->name());
     return true;
 }
 
 bool FunctionIsInjectiveVisitor::visitASTFunction(const ConstASTPtr & node, NameSet & c)
 {
-    auto function = node->as<ASTFunction>();
+    const auto *function = node->as<ASTFunction>();
     FunctionOverloadResolverPtr function_builder = FunctionFactory::instance().get(function->name, context);
     ColumnsWithTypeAndName processed_arguments;
     for (auto & arg : function->arguments->children)

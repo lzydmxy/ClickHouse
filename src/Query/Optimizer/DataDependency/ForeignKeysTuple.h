@@ -5,7 +5,7 @@
 #include <vector>
 #include <Core/Types.h>
 #include <Query/Optimizer/Property/Equivalences.h>
-#include <common/types.h>
+#include <base/types.h>
 #include <Core/Names.h>
 
 namespace DB

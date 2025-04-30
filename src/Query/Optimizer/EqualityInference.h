@@ -1,6 +1,5 @@
 #pragma once
 
-#include <map>
 #include <set>
 #include <utility>
 
@@ -99,7 +98,7 @@ private:
         int getRank() const { return rank; }
         void increaseRank()
         {
-            if (parent == nullptr)
+            if (parent.getPtr() == nullptr)
             {
                 rank++;
             }

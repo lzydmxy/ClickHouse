@@ -1,6 +1,5 @@
 #pragma once
 
-#include <optional>
 #include <Core/QueryProcessingStage.h>
 #include <Query/Parsers/ASTVisitor.h>
 #include <Parsers/IAST_fwd.h>
@@ -20,8 +19,8 @@ public:
 struct QueryUseOptimizerContext
 {
     ContextMutablePtr context;
-    NameSet ctes;
-    Tables external_tables;
+    NameSet ctes = {};
+    Tables external_tables = {};
     bool disallow_with_totals = false;
     bool disallow_subquery = false;
 };

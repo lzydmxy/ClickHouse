@@ -19,10 +19,11 @@ void PlanCheck::checkFinalPlan(QueryPlanExt & plan, ContextMutablePtr context)
 void ReadNothingChecker::check(PlanNodePtr plan)
 {
     // if the whole plan is simplify to ReadNothingNode, return.
-    if (getQueryPlanStepType(plan->getStep()) == QueryPlanStepType::ReadNothing)
-    {
-        return;
-    }
+    // todo: hongzhigao1, ReadNothing
+    // if (getQueryPlanStepType(plan->getStep()) == QueryPlanStepType::ReadNothing)
+    // {
+    //     return;
+    // }
     ReadNothingChecker read_nothing_check;
     Void context{};
 
@@ -39,10 +40,11 @@ Void ReadNothingChecker::visitPlanNode(PlanNodeBase & node, Void & context)
     return {};
 }
 
-Void ReadNothingChecker::visitReadNothingNode(ReadNothingNode &, Void &)
-{
-    throw Exception(ErrorCodes::LOGICAL_ERROR, "ReadNothingNode must removed in query optimization");
-}
+// todo: hongzhigao1, ReadNothing
+// Void ReadNothingChecker::visitReadNothingNode(ReadNothingNode &, Void &)
+// {
+//     throw Exception(ErrorCodes::LOGICAL_ERROR, "ReadNothingNode must removed in query optimization");
+// }
 
 void SymbolChecker::check(QueryPlanExt & plan, ContextMutablePtr & context, bool check_filter)
 {
@@ -104,20 +106,21 @@ Void TableScanChecker::visitPlanNode(PlanNodeBase & node, ContextMutablePtr & co
     return {};
 }
 
-Void TableScanChecker::visitTableScanStepExtNode(TableScanStepExtNode & node, ContextMutablePtr & context)
+Void TableScanChecker::visitTableScanStepExtNode(TableScanStepExtNode & /*node*/, ContextMutablePtr & /*context*/)
 {
-    auto & step = node.getStep();
-    if (!context->getOptimizerContext()->getSettingsRef().allow_map_access_without_key && step->getStorage() && step->getStorage()->supportsMapImplicitColumn())
-    {
-        if (!step->getStorageSnapshot())
-            throw Exception(ErrorCodes::LOGICAL_ERROR, "StorageSnapshot is nullptr in TableScan");
-        Block header = step->getStorageSnapshot()->getSampleBlockForColumns(step->getRequiredColumns());
-        for (auto & col : header)
-        {
-            if (col.type->isByteMap())
-                throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Map column access without key is not allowed for ByteMap");
-        }
-    }
+    // todo: hongzhgiao1, need storage
+    // auto & step = node.getStep();
+    // if (!context->getOptimizerContext()->getSettingsRef().allow_map_access_without_key && step->getStorage() && step->getStorage()->supportsMapImplicitColumn())
+    // {
+    //     if (!step->getStorageSnapshot())
+    //         throw Exception(ErrorCodes::LOGICAL_ERROR, "StorageSnapshot is nullptr in TableScan");
+    //     Block header = step->getStorageSnapshot()->getSampleBlockForColumns(step->getRequiredColumns());
+    //     for (auto & col : header)
+    //     {
+    //         if (col.type->isByteMap())
+    //             throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Map column access without key is not allowed for ByteMap");
+    //     }
+    // }
     return {};
 }
 }

@@ -5,14 +5,11 @@
 #include <Query/Optimizer/SymbolsExtractor.h>
 #include <Query/Optimizer/ProjectionPlanner.h>
 #include <Query/Optimizer/makeCastFunction.h>
-// #include <Interpreters/join_common.h>
+#include <Query/Interpreters/JoinUtilsExt.h>
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTTablesInSelectQuery.h>
-#include "Query/Interpreters/JoinUtilsExt.h"
-// #include <QueryPlan/Assignment.h>
-// #include <QueryPlan/DistinctStep.h>
-// #include <QueryPlan/FilterStep.h>
-// #include <QueryPlan/ProjectionStep.h>
+#include "Core/ColumnsWithTypeAndName.h"
+#include "Query/Common/getLeastSupertypeExt.h"
 
 namespace DB
 {
@@ -114,8 +111,8 @@ std::pair<Names, Names> DecorrelationResult::buildJoinClause(PlanNodePtr & query
             {
                 auto common_type = getCommonType(
                     DataTypes{query_key_type, subquery_key_type},
-                    context->getSettingsRef().enable_implicit_arg_type_convert,
-                    context->getSettingsRef().allow_extended_type_conversion);
+                    context->getOptimizerContext()->getSettingsRef().enable_implicit_arg_type_convert,
+                    context->getOptimizerContext()->getSettingsRef().allow_extended_type_conversion);
                 query_key_name = query_planner.addColumn(makeCastFunction(query_expr, common_type)).first;
                 subquery_key_name = subquery_planner.addColumn(makeCastFunction(subquery_expr, common_type)).first;
             }
@@ -293,7 +290,7 @@ std::optional<DecorrelationResult> DecorrelationVisitor::visitProjectionStepExtN
             add_assignments.emplace_back(symbol, std::make_shared<ASTIdentifier>(symbol));
         }
 
-        NamesAndTypes input_stream_columns;
+        ColumnsWithTypeAndName input_stream_columns;
         NameToType name_to_type = node.getOutputNamesToTypes();
 
         for (auto & add_ass : add_assignments)
@@ -303,7 +300,7 @@ std::optional<DecorrelationResult> DecorrelationVisitor::visitProjectionStepExtN
             {
                 if (add_ass.first == name_and_type.name)
                 {
-                    input_stream_columns.emplace_back(add_ass.first, name_and_type.type);
+                    input_stream_columns.emplace_back(name_and_type.type, add_ass.first);
                     name_to_type[add_ass.first] = name_and_type.type;
                 }
             }

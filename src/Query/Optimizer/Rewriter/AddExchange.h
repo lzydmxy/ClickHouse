@@ -71,7 +71,7 @@ public:
     ExchangeResult visitTotalsHavingStepExtNode(TotalsHavingStepExtNode & node, ExchangeContext & cxt) override;
     ExchangeResult visitOffsetStepNode(OffsetStepNode & node, ExchangeContext & cxt) override;
     ExchangeResult visitLimitByStepNode(LimitByStepNode & node, ExchangeContext & cxt) override;
-    ExchangeResult visitSortingStepNode(SortingStepNode & node, ExchangeContext & cxt) override;
+    ExchangeResult visitSortingStepExtNode(SortingStepExtNode & node, ExchangeContext & cxt) override;
     ExchangeResult visitMergeSortingStepExtNode(MergeSortingStepExtNode & node, ExchangeContext & cxt) override;
     // todo: lizhuyu5, add PartialSortingStep
     // ExchangeResult visitPartialSortingNode(PartialSortingStepNode & node, ExchangeContext & cxt) override;

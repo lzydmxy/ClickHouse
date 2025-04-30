@@ -15,15 +15,15 @@ class IsDistinctPlanVisitor : public PlanNodeVisitor<bool, Void>
 {
 public:
     bool visitPlanNode(PlanNodeBase & node, Void & c) override;
-    bool visitValuesNode(ValuesNode & node, Void & context) override;
-    bool visitLimitNode(LimitNode & node, Void & context) override;
-    bool visitIntersectNode(IntersectNode & node, Void & context) override;
-    bool visitEnforceSingleRowNode(EnforceSingleRowNode & node, Void & context) override;
-    bool visitAggregatingNode(AggregatingNode & node, Void & context) override;
-    bool visitAssignUniqueIdNode(AssignUniqueIdNode & node, Void & context) override;
-    bool visitFilterNode(FilterNode & node, Void & context) override;
-    bool visitDistinctNode(DistinctNode & node, Void & context) override;
-    bool visitExceptNode(ExceptNode & node, Void & context) override;
-    bool visitMergingSortedNode(MergingSortedNode & node, Void & context) override;
+    bool visitValuesStepExtNode(ValuesStepExtNode & node, Void & context) override;
+    bool visitLimitStepExtNode(LimitStepExtNode & node, Void & context) override;
+    // bool visitIntersectNode(IntersectNode & node, Void & context) override;
+    bool visitEnforceSingleRowStepExtNode(EnforceSingleRowStepExtNode & node, Void & context) override;
+    bool visitAggregatingStepExtNode(AggregatingStepExtNode & node, Void & context) override;
+    bool visitAssignUniqueIdStepExtNode(AssignUniqueIdStepExtNode & node, Void & context) override;
+    bool visitFilterStepExtNode(FilterStepExtNode & node, Void & context) override;
+    bool visitDistinctStepExtNode(DistinctStepExtNode & node, Void & context) override;
+    // bool visitExceptNode(ExceptNode & node, Void & context) override;
+    bool visitMergingSortedStepExtNode(MergingSortedStepExtNode & node, Void & context) override;
 };
 }

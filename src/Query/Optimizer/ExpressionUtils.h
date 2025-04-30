@@ -2,10 +2,8 @@
 
 #include <Query/Optimizer/SimpleExpressionRewriter.h>
 #include <Query/Optimizer/Utils.h>
-#include <Parsers/ASTVisitor.h>
+#include <Query/Parsers/ASTVisitor.h>
 #include <Parsers/IAST_fwd.h>
-
-#include <unordered_map>
 
 namespace DB
 {

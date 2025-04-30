@@ -38,9 +38,9 @@ ASTPtr DomainTranslator<T>::toPredicate(const ASTPtr & symbol, const Domain & do
     ConstASTs disjuncts;
     const ValueSet & value_set = domain.getValueSet();
 
-    if (auto v = std::get_if<SortedRangeSet>(&value_set))
+    if (const auto *v = std::get_if<SortedRangeSet>(&value_set))
         disjuncts = extractDisjuncts(domain.getType(), v->getRanges(), symbol); //TODO:use std::move
-    else if (auto d = std::get_if<DiscreteValueSet>(&value_set))
+    else if (const auto *d = std::get_if<DiscreteValueSet>(&value_set))
         disjuncts = extractDisjuncts(domain.getType(), *d, symbol);
     else
         throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Case should not be reachable");
@@ -305,7 +305,7 @@ ExtractionResult<T> DomainVisitor<T>::visitASTFunction(ASTPtr & node, const bool
 template <typename T>
 ExtractionResult<T> DomainVisitor<T>::visitASTLiteral(ASTPtr & node, const bool & complement)
 {
-    auto literal = node->as<const ASTLiteral>();
+    const auto *literal = node->as<const ASTLiteral>();
 
     if (literal->value == 1u || literal->value == 1)
         return ExtractionResult<T>(complement ? TupleDomain<T>::none() : TupleDomain<T>::all(), PredicateConst::TRUE_VALUE);
@@ -529,6 +529,7 @@ std::vector<TupleDomain<T>> DomainVisitor<T>::extractTupleDomains(const std::vec
 {
     std::vector<TupleDomain<T>> res;
 
+    res.reserve(results.size());
     for (const auto & temp : results)
         res.emplace_back(temp.tuple_domain);
 
@@ -582,7 +583,7 @@ DomainVisitor<T>::canImplicitCoerceValue(Field & value, DataTypePtr & from_type_
         return convertFieldToType(value, *to_type, from_type.get());
 
     //Based on whether there is a super type between them
-    DataTypePtr super_type = tryGetLeastSupertype(DataTypes{from_type, to_type}, context->getSettingsRef().allow_extended_type_conversion);
+    DataTypePtr super_type = tryGetLeastSupertype(DataTypes{from_type, to_type}/*, context->getOptimizerContext()->getSettingsRef().allow_extended_type_conversion*/);
 
     //have super_type and super_type equals to_type, which means to_type is wider type;
     if (super_type != nullptr && super_type->equals(*to_type))
@@ -602,8 +603,9 @@ DomainVisitor<T>::canImplicitCoerceValue(Field & value, DataTypePtr & from_type_
     }
     else if (from_id == TypeIndex::String)
     {
+        // todo: hongzhigao1, add Time in TypeIndex
         if (to_id == TypeIndex::Date || to_id == TypeIndex::DateTime || to_id == TypeIndex::Date32 || to_id == TypeIndex::DateTime64
-            || to_id == TypeIndex::Time)
+            /*|| to_id == TypeIndex::Time*/)
         {
             return getConvertFieldToType(value, from_type, to_type);
         }
@@ -653,7 +655,7 @@ std::optional<ExtractionResult<T>> DomainVisitor<T>::createComparisonExtractionR
         if (isValidOperatorForComparison(operator_name))
             return ExtractionResult<T>(TupleDomain<T>::none(), PredicateConst::TRUE_VALUE);
         else
-            throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Unhandled operator" + operator_name);
+            throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Unhandled operator{}", operator_name);
     }
 
     if (isTypeOrderable(type))
@@ -730,7 +732,7 @@ std::optional<Domain> DomainVisitor<T>::extractOrderableDomain(
                     : SortedRangeSet(type, Ranges{Range::lessThanRange(type, value), Range::greaterThanRange(type, value)}),
                 false);
         }
-        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Unhandled operator" + operator_name);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Unhandled operator{}", operator_name);
     }
 
     // Handle comparisons against NaN
@@ -743,7 +745,7 @@ std::optional<Domain> DomainVisitor<T>::extractOrderableDomain(
         if (operator_name == "notEquals")
             return Domain(complement ? complementValueSet(createAll(type)) : createAll(type), false);
 
-        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Unhandled operator" + operator_name);
+        throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Unhandled operator{}", operator_name);
     }
 
     /**Handle comparisons against a non-NaN value when the compared value might be NaN
@@ -772,7 +774,7 @@ std::optional<Domain> DomainVisitor<T>::extractOrderableDomain(
     else if (operator_name == "notEquals")
         return complement ? std::make_optional<Domain>(SortedRangeSet(type, Ranges{Range::equalRange(type, value)}), false) : std::nullopt;
 
-    throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Unhandled operator" + operator_name);
+    throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Unhandled operator{}", operator_name);
 }
 
 template <typename T>
@@ -788,7 +790,7 @@ Domain DomainVisitor<T>::extractDiscreteDomain(
     if (operator_name == "notEquals")
         return Domain(complement ? createValueSet(type, Array{value}) : complementValueSet(createValueSet(type, Array{value})), false);
 
-    throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Unhandled operator" + operator_name);
+    throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Unhandled operator{}", operator_name);
 }
 
 template <typename T>
@@ -823,7 +825,7 @@ ExtractionResult<T> DomainVisitor<T>::visitInFunction(ASTPtr & node, const bool 
     if (dir_extraction_result.has_value())
         return dir_extraction_result.value();
 
-    for (ASTPtr ast : value_list)
+    for (const ASTPtr& ast : value_list)
         disjuncts.emplace_back(makeASTFunction("equals", in_fun->arguments->children[0], ast));
 
     ASTPtr ast_disjuncts = PredicateUtils::combineDisjuncts(disjuncts);
@@ -864,7 +866,7 @@ std::optional<ExtractionResult<T>> DomainVisitor<T>::processSimpleInPredicate(AS
     DataTypePtr super_type;
     in_values.reserve(value_list.size());
 
-    for (auto & value : value_list)
+    for (const auto & value : value_list)
     {
         auto field_temp = ExpressionInterpreter::evaluateConstantExpression(value, column_types, context);
         if (!field_temp.has_value())

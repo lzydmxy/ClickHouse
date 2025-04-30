@@ -29,7 +29,7 @@ Void ExpressionVisitor::visitProjectionStepExtNode(ProjectionStepExtNode & node,
 {
     const auto & step = *node.getStep();
     const auto & assignments = step.getAssignments();
-    for (auto & ass : assignments)
+    for (const auto & ass : assignments)
     {
         expressions.emplace_back(ass.second->clone());
     }

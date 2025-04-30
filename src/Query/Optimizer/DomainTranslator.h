@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Analyzers/ASTEquals.h>
-#include <Analyzers/TypeAnalyzer.h>
+#include <Query/Analyzer/ASTEquals.h>
+#include <Query/Analyzer/TypeAnalyzer.h>
 #include <Columns/ColumnSet.h>
 #include <DataTypes/getLeastSupertype.h>
 #include <Interpreters/Context.h>
@@ -14,14 +14,13 @@
 #include <Query/Optimizer/Utils.h>
 #include <Query/Optimizer/domain.h>
 #include <Parsers/ASTIdentifier.h>
-#include <Parsers/ASTVisitor.h>
+#include <Query/Parsers/ASTVisitor.h>
 #include <Parsers/IAST_fwd.h>
 #include <Common/UTF8Helpers.h>
 
 #include <optional>
 #include <type_traits>
 #include <utility>
-#include <assert.h>
 
 namespace DB::Predicate
 {
@@ -83,9 +82,9 @@ private:
     std::optional<ExtractionResult<T>> createComparisonExtractionResult(
         ASTPtr & node,
         const String & operator_name,
-        const T & column,
+        const T & symbol,
         const DataTypePtr & type,
-        const Field & field,
+        const Field & value,
         const bool & complement);
     static std::optional<Domain> extractOrderableDomain(const String & operator_name, const DataTypePtr & type, const Field & value, const bool & complement);
     static Domain extractDiscreteDomain(const String & operator_name, const DataTypePtr & type, const Field & value, const bool & complement);
@@ -121,7 +120,7 @@ template <typename T>
 class DomainTranslator
 {
 public:
-    DomainTranslator(ContextMutablePtr context_): context(context_), is_ignored(false) {}
+    explicit DomainTranslator(ContextMutablePtr context_): context(context_), is_ignored(false) {}
     ASTPtr toPredicate(const TupleDomain<T> & tuple_domain);
     ASTPtr toPredicate(const ASTPtr & symbol, const Domain & domain);
     ExtractionResult<T> getExtractionResult(ASTPtr predicate, NamesAndTypes types);

@@ -15,7 +15,7 @@ Void FunctionExtractorVisitor::visitNode(const ConstASTPtr & node, std::set<Stri
 
 Void FunctionExtractorVisitor::visitASTFunction(const ConstASTPtr & node, std::set<String> & context)
 {
-    auto & func = node->as<ASTFunction &>();
+    const auto & func = node->as<ASTFunction &>();
     context.emplace(func.name);
     return visitNode(node, context);
 }

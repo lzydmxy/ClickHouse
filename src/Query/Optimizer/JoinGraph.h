@@ -1,6 +1,7 @@
 #pragma once
 
-// #include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
+#include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
+#include <Parsers/IAST_fwd.h>
 #include <Query/Processors/QueryPlan/PlanNode.h>
 #include <Query/Processors/QueryPlan/PlanVisitor.h>
 
@@ -12,16 +13,16 @@ class Edge;
 struct JoinGraphContext;
 
 /**
- * JoinGraph represents sequence of Joins, where nodes in the graph
- * are PlanNodes that are being joined and edges are all equality join
- * conditions between a pair of nodes.
- */
+  * JoinGraph represents sequence of Joins, where nodes in the graph
+  * are PlanNodes that are being joined and edges are all equality join
+  * conditions between pair of nodes.
+  */
 class JoinGraph
 {
 public:
     /**
-     * Builds JoinGraph containing plan node.
-     */
+      * Builds JoinGraph containing plan node.
+      */
     static JoinGraph build(
         const PlanNodePtr & plan_ptr,
         ContextMutablePtr & context,
@@ -95,13 +96,13 @@ private:
 struct JoinGraphContext
 {
     void setSymbolSource(const String & symbol, const PlanNodePtr & node) { symbol_sources[symbol] = node; }
-    void addEquivalentEdges(std::map<PlanNodeId, std::vector<Edge>> & edges, const std::vector<std::pair<String, String>> & join_clauses);
+    void addEquivalentEdges(std::map<PlanNodeId, std::vector<Edge>> & edges, const std::vector<std::pair<String, String>> & join_clauses) const;
     void setEquivalentSymbols(const std::vector<std::pair<String, String>> & join_clauses);
     const PlanNodePtr & getSymbolSource(const String & symbol) const
     {
         if (symbol_sources.contains(symbol))
             return symbol_sources.at(symbol);
-        throw Exception(ErrorCodes::LOGICAL_ERROR, "Symbol not exists {}", symbol);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Symbol not exists : {}", symbol);
     }
 
     std::unordered_map<String, PlanNodePtr> symbol_sources = {};

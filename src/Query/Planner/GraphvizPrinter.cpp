@@ -266,7 +266,7 @@ void GraphvizPrinter::printLogicalPlan(PlanNodeBase &, ContextMutablePtr &, cons
     return;
 }
 
-void GraphvizPrinter::printLogicalPlan(QueryPlan &, ContextMutablePtr &, const String &, StepProfiles)
+void GraphvizPrinter::printLogicalPlan(QueryPlanExt &, ContextMutablePtr &, const String &, StepProfiles)
 {
     //todo: lizhuoyu, other feat: add impl
     return;
