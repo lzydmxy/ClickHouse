@@ -1,20 +1,18 @@
 #pragma once
 
-#include <Common/Logger.h>
+#include <vector>
 #include <Core/Block.h>
 #include <Interpreters/Context_fwd.h>
-#include <QueryPlan/AggregatingStep.h>
-#include <QueryPlan/CTERefStep.h>
-#include <QueryPlan/FilterStep.h>
-#include <QueryPlan/IQueryPlanStep.h>
-#include <QueryPlan/PlanVisitor.h>
-#include <QueryPlan/ProjectionStep.h>
-#include <QueryPlan/TableScanStep.h>
+#include <Processors/QueryPlan/IQueryPlanStep.h>
+#include <Query/Processors/QueryPlan/AggregatingStepExt.h>
+#include <Query/Processors/QueryPlan/CTERefStepExt.h>
+#include <Query/Processors/QueryPlan/ExchangeStepExt.h>
+#include <Query/Processors/QueryPlan/FilterStepExt.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/ProjectionStepExt.h>
+#include <Query/Processors/QueryPlan/TableScanStepExt.h>
 #include <Poco/Logger.h>
-#include "QueryPlan/ExchangeStep.h"
-
-#include <string>
-#include <vector>
+#include <Common/Logger.h>
 
 namespace DB
 {
@@ -69,16 +67,17 @@ public:
     {
     }
     StepAndOutputOrder normalize(QueryPlanStepPtr step, StepsAndOutputOrders && input);
+
 protected:
     StepAndOutputOrder visitStep(const IQueryPlanStep & step, StepsAndOutputOrders & inputs) override;
-    StepAndOutputOrder visitTableScanStep(const TableScanStep & step, StepsAndOutputOrders & inputs) override;
-    StepAndOutputOrder visitFilterStep(const FilterStep & step, StepsAndOutputOrders & inputs) override;
-    StepAndOutputOrder visitProjectionStep(const ProjectionStep & step, StepsAndOutputOrders & inputs) override;
-    StepAndOutputOrder visitAggregatingStep(const AggregatingStep & step, StepsAndOutputOrders & inputs) override;
-    StepAndOutputOrder visitCTERefStep(const CTERefStep & step, StepsAndOutputOrders & inputs) override;
-    StepAndOutputOrder visitJoinStep(const JoinStep & step, StepsAndOutputOrders & inputs) override;
-    StepAndOutputOrder visitRemoteExchangeSourceStep(const RemoteExchangeSourceStep & step, StepsAndOutputOrders & inputs) override;
-    StepAndOutputOrder visitTableWriteStep(const TableWriteStep & step, StepsAndOutputOrders & inputs) override;
+    // StepAndOutputOrder visitTableScanStep(const TableScanStepExt & step, StepsAndOutputOrders & inputs);
+    // StepAndOutputOrder visitFilterStep(const FilterStepExt & step, StepsAndOutputOrders & inputs);
+    // StepAndOutputOrder visitProjectionStep(const ProjectionStepExt & step, StepsAndOutputOrders & inputs);
+    StepAndOutputOrder visitAggregatingStep(const AggregatingStepExt & step, StepsAndOutputOrders & inputs);
+    StepAndOutputOrder visitCTERefStep(const CTERefStepExt & step, StepsAndOutputOrders & inputs);
+    StepAndOutputOrder visitJoinStep(const JoinStepExt & step, StepsAndOutputOrders & inputs);
+    StepAndOutputOrder visitRemoteExchangeSourceStep(const RemoteExchangeSourceStepExt & step, StepsAndOutputOrders & inputs);
+    // StepAndOutputOrder visitTableWriteStep(const TableWriteStepExt & step, StepsAndOutputOrders & inputs) override;
 
 private:
     ContextPtr context;

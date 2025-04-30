@@ -1,19 +1,15 @@
-#include <Optimizer/Signature/ExpressionReorderNormalizer.h>
-
-#include <Analyzers/ASTEquals.h>
-#include <Core/Names.h>
-#include <Functions/FunctionsLogical.h>
-#include <Interpreters/AggregateDescription.h>
-#include <Parsers/ASTVisitor.h>
-#include <Parsers/IAST_fwd.h>
-#include <QueryPlan/Assignment.h>
-#include <QueryPlan/Void.h>
-
 #include <algorithm>
 #include <string>
 #include <unordered_map>
-#include <utility>
-#include <vector>
+#include <Core/Names.h>
+#include <Functions/FunctionsLogical.h>
+#include <Interpreters/AggregateDescription.h>
+#include <Parsers/IAST_fwd.h>
+#include <Query/Analyzer/ASTEquals.h>
+#include <Query/Common/Void.h>
+#include <Query/Optimizer/Signature/ExpressionReorderNormalizer.h>
+#include <Query/Parsers/ASTVisitor.h>
+#include <Query/Processors/QueryPlan/Assignment.h>
 
 namespace DB
 {
@@ -33,9 +29,10 @@ void ExpressionReorderNormalizer::reorder(Names & names)
 
 void ExpressionReorderNormalizer::reorder(NamesWithAliases & name_alias)
 {
-    std::sort(name_alias.begin(),
-              name_alias.end(),
-              [](const NameWithAlias & left, const NameWithAlias & right) { return left.first < right.first; });
+    std::sort(
+        name_alias.begin(),
+        name_alias.end(),
+        [](const NameWithAlias & left, const NameWithAlias & right) { return left.first < right.first; });
 }
 
 void ExpressionReorderNormalizer::reorder(Assignments & assignments)
@@ -49,19 +46,24 @@ void ExpressionReorderNormalizer::reorder(Assignments & assignments)
         assignment_hashes.emplace(symbol, hash);
         res.emplace_back(std::make_pair(symbol, expr_copy));
     }
-    std::sort(res.begin(), res.end(),
-              [&assignment_hashes](const Assignment & left, const Assignment & right) {
-                  return assignment_hashes.at(left.first) < assignment_hashes.at(right.first);} );
+    std::sort(
+        res.begin(),
+        res.end(),
+        [&assignment_hashes](const Assignment & left, const Assignment & right)
+        { return assignment_hashes.at(left.first) < assignment_hashes.at(right.first); });
     assignments = Assignments(res.begin(), res.end());
 }
 
 void ExpressionReorderNormalizer::reorder(AggregateDescriptions & descriptions)
 {
-    std::sort(descriptions.begin(),
-              descriptions.end(),
-              [](const AggregateDescription & left, const AggregateDescription & right) {
-                  return std::forward_as_tuple(left.function->getName(), left.parameters, left.argument_names) <
-                      std::forward_as_tuple(right.function->getName(), right.parameters, right.argument_names); });
+    std::sort(
+        descriptions.begin(),
+        descriptions.end(),
+        [](const AggregateDescription & left, const AggregateDescription & right)
+        {
+            return std::forward_as_tuple(left.function->getName(), left.parameters, left.argument_names)
+                < std::forward_as_tuple(right.function->getName(), right.parameters, right.argument_names);
+        });
 }
 
 size_t ExpressionReorderNormalizer::reorder(ASTPtr & ast)
@@ -78,7 +80,7 @@ void ExpressionReorderNormalizer::reorder(ColumnsWithTypeAndName & columnas)
 
 size_t ExpressionReorderNormalizer::visitNode(ASTPtr & ast, Void & ctx)
 {
-    for (auto & child : ast->getChildren())
+    for (auto & child : ast->children)
         ASTVisitorUtil::accept(child, *this, ctx);
     return ASTEquality::hashTree(ast);
 }
@@ -89,14 +91,16 @@ size_t ExpressionReorderNormalizer::visitASTFunction(ASTPtr & ast, Void & ctx)
     if (isCommutative(function.name))
     {
         std::unordered_map<ASTPtr, size_t> children_hashes{};
-        auto & children = function.arguments->getChildren();
+        auto & children = function.arguments->children;
         for (auto & child : children)
         {
             size_t hash = ASTVisitorUtil::accept(child, *this, ctx);
             children_hashes.emplace(child, hash);
         }
-        std::sort(children.begin(), children.end(), [&children_hashes](const ASTPtr & left, const ASTPtr & right) {
-            return children_hashes.at(left) < children_hashes.at(right);} );
+        std::sort(
+            children.begin(),
+            children.end(),
+            [&children_hashes](const ASTPtr & left, const ASTPtr & right) { return children_hashes.at(left) < children_hashes.at(right); });
     }
     return ASTEquality::hashTree(ast);
 }

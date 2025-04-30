@@ -1,19 +1,15 @@
-#include <Optimizer/Dump/StatsLoader.h>
-
+#include <Query/Optimizer/Dump/StatsLoader.h>
 #include <Core/QualifiedTableName.h>
 #include <Interpreters/Context_fwd.h>
 #include <Poco/JSON/Object.h>
 #include <Poco/Logger.h>
-#include <Optimizer/Dump/ProtoEnumUtils.h>
-#include <Optimizer/Dump/ReproduceUtils.h>
-#include <Statistics/CatalogAdaptor.h>
-#include <Statistics/StatisticsCollector.h>
-
-#include <memory>
+#include <Query/Optimizer/Dump/ProtoEnumUtils.h>
+#include <Query/Optimizer/Dump/ReproduceUtils.h>
+#include <Query/Statistics/CatalogAdaptor.h>
+#include <Query/Statistics/StatisticsCollector.h>
 #include <string>
-#include <unordered_set>
-#include <common/logger_useful.h>
-#include "Statistics/CollectorSettings.h"
+#include <Common/logger_useful.h>
+#include <Query/Statistics/CollectorSettings.h>
 
 using namespace DB::Statistics;
 

@@ -910,7 +910,7 @@ void OptimizerTask::constructValidRules(
         // Check if we can apply the rule
         if (group_expr->hasRuleExplored(rule->getType()))
             continue;
-        if (!rule->getTargetTypes().count(group_expr->getStep()->getType()))
+        if (!rule->getTargetTypes().count(getQueryPlanStepType(group_expr->getStep())))
         {
             // match head pattern
             continue;

@@ -37,17 +37,16 @@ PlanCostMap CostCalculator::calculate(QueryPlanExt & plan, const Context & conte
 }
 
 PlanNodeCost CostCalculator::calculate(
-    QueryPlanStepExtPtr & step,
+    QueryPlanStepPtr & step,
     const PlanNodeStatisticsPtr & stats,
     const std::vector<PlanNodeStatisticsPtr> & children_stats,
     const Context & context,
     size_t worker_size)
 {
-    QueryPlanStepPtr step_without_ext = std::dynamic_pointer_cast<IQueryPlanStep>(step);
     static CostVisitor visitor;
     CostContext cost_context{
         .cost_model = CostModel{context}, .stats = stats, .children_stats = children_stats, .worker_size = worker_size};
-    return VisitorUtil::accept(step_without_ext, visitor, cost_context);
+    return VisitorUtil::accept(step, visitor, cost_context);
 }
 
 PlanNodeCost CostVisitor::visitStep(const IQueryPlanStep &, CostContext &)
@@ -253,7 +252,7 @@ CostWithCTEReferenceCounts PlanCostVisitor::visitPlanNode(PlanNodeBase & node, P
     return CostWithCTEReferenceCounts{cost, cte_reference_counts};
 }
 
-CostWithCTEReferenceCounts PlanCostVisitor::visitCTERefNode(CTERefNode & node, PlanCostMap & plan_cost_map)
+CostWithCTEReferenceCounts PlanCostVisitor::visitCTERefStepExtNode(CTERefStepExtNode & node, PlanCostMap & plan_cost_map)
 {
     const auto * cte_step = dynamic_cast<const CTERefStepExt *>(node.getStep().get());
     auto res = visitPlanNode(node, plan_cost_map);

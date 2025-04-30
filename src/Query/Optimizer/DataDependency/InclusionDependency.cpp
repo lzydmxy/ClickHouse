@@ -1,9 +1,8 @@
-#include <algorithm>
-#include <iterator>
-#include <Query/Optimizer/DataDependency/InclusionDependency.h>
-#include <common/logger_useful.h>
-#include "Optimizer/DataDependency/DependencyUtils.h"
+
+#include <Common/logger_useful.h>
 #include <Core/Names.h>
+#include <Query/Optimizer/DataDependency/InclusionDependency.h>
+#include <Query/Optimizer/DataDependency/DependencyUtils.h>
 
 namespace DB
 {

@@ -35,7 +35,7 @@ function exec_integration_test() {
 }
 
 function main() {
-    export WORKDIR=/data5/zhangdongdong/workspace/ClickHouse_new
+    export WORKDIR=${PWD}
 
     case "$1" in
     #     build)

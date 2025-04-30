@@ -9,6 +9,7 @@
 #include <Query/Optimizer/DataDependency/InclusionDependency.h>
 #include <Query/Optimizer/Property/Equivalences.h>
 #include <Storages/ForeignKeysDescription.h>
+
 namespace DB
 {
 class DataDependency;

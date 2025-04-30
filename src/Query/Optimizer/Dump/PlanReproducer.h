@@ -4,8 +4,8 @@
 #include <Common/SettingsChanges.h>
 #include <Core/QualifiedTableName.h>
 #include <Interpreters/Context_fwd.h>
-#include <Optimizer/Dump/DumpUtils.h>
-#include <Optimizer/Dump/ReproduceUtils.h>
+#include <Query/Optimizer/Dump/DumpUtils.h>
+#include <Query/Optimizer/Dump/ReproduceUtils.h>
 #include <Poco/JSON/Object.h>
 #include <Poco/Logger.h>
 

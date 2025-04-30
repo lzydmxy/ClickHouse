@@ -147,10 +147,9 @@ PlanNodePtr SetOperationNodeTranslator::appendCounts(
     {
         desc.full_sort_description.push_back(SortColumnDescription(column, 1 /* direction */, 1 /* nulls_direction */));
     }
-    // todo: hongzhigao1, Range in WindowFrame
-    // WindowFrame default_frame{
-    //     true, WindowFrame::FrameType::Range, WindowFrame::BoundaryType::Unbounded, 0, true, WindowFrame::BoundaryType::Current, 0, false};
-    // desc.frame = default_frame;
+    WindowFrame default_frame{
+        true, WindowFrame::FrameType::RANGE, WindowFrame::BoundaryType::Unbounded, 0, true, WindowFrame::BoundaryType::Current, 0, false};
+    desc.frame = default_frame;
 
     std::vector<WindowFunctionDescription> functions;
     for (size_t i = 0; i < markers.size(); i++)

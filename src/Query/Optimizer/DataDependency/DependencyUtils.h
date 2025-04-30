@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Core/Names.h>
 #include <Core/Types.h>
 #include <Parsers/ASTFunction.h>
@@ -129,13 +130,13 @@ public:
             VisitorUtil::accept(*child, *this, c);
         }
 
-        auto type = node.getStep()->getType();
+        auto *type = node.getStep().get();
         if (expected_steps.contains(type))
             c.emplace_back(node.shared_from_this());
         return Void{};
     }
 
-    Void visitCTERefNode(CTERefNode & node, PlanNodes & c) override
+    Void visitCTERefNode(CTERefStepExtNode & node, PlanNodes & c) override
     {
         auto cte_def = cte_info.getCTEDef(node.getStep()->getId());
         return VisitorUtil::accept(*cte_def, *this, c);

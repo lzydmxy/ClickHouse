@@ -2,10 +2,10 @@
 
 #include <Core/Names.h>
 #include <Interpreters/AggregateDescription.h>
-#include <Parsers/ASTVisitor.h>
 #include <Parsers/IAST_fwd.h>
-#include <QueryPlan/Assignment.h>
-#include <QueryPlan/Void.h>
+#include <Query/Common/Void.h>
+#include <Query/Parsers/ASTVisitor.h>
+#include <Query/Processors/QueryPlan/Assignment.h>
 
 namespace DB
 {

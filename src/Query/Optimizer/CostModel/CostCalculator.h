@@ -19,7 +19,7 @@ public:
     static PlanCostMap calculate(QueryPlanExt & plan, const Context & context);
 
     static PlanNodeCost calculate(
-        QueryPlanStepExtPtr & step,
+        QueryPlanStepPtr & step,
         const PlanNodeStatisticsPtr & stats,
         const std::vector<PlanNodeStatisticsPtr> & children_stats,
         const Context & context,
@@ -90,7 +90,7 @@ public:
     }
 
     CostWithCTEReferenceCounts visitPlanNode(PlanNodeBase &, PlanCostMap & map) override;
-    CostWithCTEReferenceCounts visitCTERefNode(CTERefNode & node, PlanCostMap & map) override;
+    CostWithCTEReferenceCounts visitCTERefStepExtNode(CTERefStepExtNode & node, PlanCostMap & map) override;
 
 private:
     CostModel cost_model;

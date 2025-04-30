@@ -1,4 +1,4 @@
-#include <Optimizer/Dump/QueryDumper.h>
+#include <Query/Optimizer/Dump/QueryDumper.h>
 
 #include <Interpreters/Context.h>
 #include <Interpreters/Context_fwd.h>

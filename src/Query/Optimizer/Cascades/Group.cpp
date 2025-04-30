@@ -179,7 +179,7 @@ void Group::addExpression(const GroupExprPtr & expression, CascadesContext & con
     {
         if (getQueryPlanStepType(expression->getStep()) == QueryPlanStepType::JoinStepExt)
         {
-            auto * step = dynamic_cast<JoinStep *>(expression->getStep().get());
+            auto * step = dynamic_cast<JoinStepExt *>(expression->getStep().get());
             if (JoinToMultiJoin::isSupport(*step) && !expression->hasRuleExplored(RuleType::JOIN_TO_MULTI_JOIN))
             {
                 for (const auto & multi_join : JoinToMultiJoin::createMultiJoin(
@@ -270,7 +270,7 @@ void Group::deleteExpression(const GroupExprPtr & expression)
             break;
         }
     }
-    // TODO: join_sets
+    // todo byconity join_sets
 }
 
 void Group::deleteAllExpression()
@@ -291,7 +291,7 @@ void Group::deleteAllExpression()
 PlanNodePtr Group::createLeafNode(ContextMutablePtr context) const
 {
     auto leaf_step = std::make_shared<AnyStepExt>(getStep()->getOutputStream(), id);
-    return AnyStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(leaf_step));
+    return PlanNode<AnyStepExt>::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(leaf_step));
 }
 
 

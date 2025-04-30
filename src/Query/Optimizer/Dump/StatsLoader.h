@@ -5,10 +5,9 @@
 #include <Interpreters/Context_fwd.h>
 #include <Poco/JSON/Object.h>
 #include <Poco/Logger.h>
-#include "Core/Types.h"
-#include <Statistics/CatalogAdaptor.h>
-#include <Statistics/StatisticsCollector.h>
-
+#include <Core/Types.h>
+#include <Query/Statistics/CatalogAdaptor.h>
+#include <Query/Statistics/StatisticsCollector.h>
 #include <cstddef>
 #include <string>
 #include <memory>

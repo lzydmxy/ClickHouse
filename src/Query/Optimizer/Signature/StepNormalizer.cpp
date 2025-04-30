@@ -1,38 +1,35 @@
-#include <Optimizer/Signature/StepNormalizer.h>
-
+// #include <Core/NameToType.h>
 #include <Core/Block.h>
 #include <Core/ColumnsWithTypeAndName.h>
-#include <Core/NameToType.h>
-#include <Core/Names.h>
-#include <Interpreters/AggregateDescription.h>
-#include <Optimizer/Rewriter/SQLFingerprintRewriter.h>
-#include <Optimizer/Signature/ExpressionReorderNormalizer.h>
-#include <Optimizer/Utils.h>
-#include <Parsers/ASTIdentifier.h>
-#include <Parsers/IAST_fwd.h>
-#include <Protos/plan_node.pb.h>
-#include <QueryPlan/AggregatingStep.h>
-#include <QueryPlan/Assignment.h>
-#include <QueryPlan/FilterStep.h>
-#include <QueryPlan/IQueryPlanStep.h>
-#include <QueryPlan/PlanPrinter.h>
-#include <QueryPlan/PlanVisitor.h>
-#include <QueryPlan/ProjectionStep.h>
-#include <QueryPlan/SymbolMapper.h>
-#include <QueryPlan/TableScanStep.h>
-#include <common/logger_useful.h>
-#include "Core/UUID.h"
-#include "Interpreters/DistributedStages/PlanSegment.h"
-#include "Interpreters/StorageID.h"
-#include "QueryPlan/RemoteExchangeSourceStep.h"
-#include "QueryPlan/TableWriteStep.h"
-
-#include <algorithm>
+#include <Query/Optimizer/Signature/StepNormalizer.h>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <Core/Names.h>
+#include <Core/UUID.h>
+#include <Interpreters/AggregateDescription.h>
+#include <Parsers/ASTIdentifier.h>
+#include <Parsers/IAST_fwd.h>
+#include <Query/Protos/plan_node.pb.h>
+#include <Query/Executor/PlanSegment.h>
+#include <Interpreters/StorageID.h>
+// #include <Query/Optimizer/Rewriter/SQLFingerprintRewriter.h>
+#include <Query/Optimizer/Signature/ExpressionReorderNormalizer.h>
+#include <Query/Optimizer/Utils.h>
+#include <Query/Processors/QueryPlan/AggregatingStepExt.h>
+#include <Query/Processors/QueryPlan/Assignment.h>
+#include <Query/Processors/QueryPlan/FilterStepExt.h>
+#include <Processors/QueryPlan/IQueryPlanStep.h>
+#include <Query/Processors/QueryPlan/PlanPrinter.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/ProjectionStepExt.h>
+#include <Query/Planner/SymbolMapper.h>
+#include <Query/Processors/QueryPlan/TableScanStepExt.h>
+#include <Query/Processors/QueryPlan/RemoteExchangeSourceStepExt.h>
+// #include <Query/Processors/QueryPlan/TableWriteStepExt.h>
+#include <Common/logger_useful.h>
 
 namespace DB
 {
@@ -48,10 +45,11 @@ using SymbolMapping = std::unordered_map<std::string, std::string>;
  * create reordered & symbol_mapped input streams according to children specifications,
  * also fills symbol_mapping and increments cumulative_pos for symbol mapper
  */
-DataStreams processInputStreams(const DataStreams & input_streams,
-                                const StepsAndOutputOrders & normal_children,
-                                SymbolMapping & symbol_mapping,
-                                size_t & cumulative_pos)
+DataStreams processInputStreams(
+    const DataStreams & input_streams,
+    const StepsAndOutputOrders & normal_children,
+    SymbolMapping & symbol_mapping,
+    size_t & cumulative_pos)
 {
     Utils::checkArgument(input_streams.size() == normal_children.size(), "Normalized result must be present for every input stream");
 
@@ -87,9 +85,7 @@ DataStreams processInputStreams(const DataStreams & input_streams,
  * create output symbol mapping from different sources.
  * general case is symbols from output_header which does not appear in input stream, but it can also be created from assignments / aggs
  */
-void createOutputSymbolMapping(const Block & output_header,
-                               SymbolMapping & symbol_mapping,
-                               size_t & cumulative_pos)
+void createOutputSymbolMapping(const Block & output_header, SymbolMapping & symbol_mapping, size_t & cumulative_pos)
 {
     for (const auto & column : output_header)
     {
@@ -102,9 +98,7 @@ void createOutputSymbolMapping(const Block & output_header,
     }
 }
 
-void createOutputSymbolMapping(const Assignments & assignments,
-                               SymbolMapping & symbol_mapping,
-                               size_t & cumulative_pos)
+void createOutputSymbolMapping(const Assignments & assignments, SymbolMapping & symbol_mapping, size_t & cumulative_pos)
 {
     for (const auto & [symbol, expr] : assignments)
     {
@@ -116,9 +110,7 @@ void createOutputSymbolMapping(const Assignments & assignments,
     }
 }
 
-void createOutputSymbolMapping(const AggregateDescriptions & assignments,
-                               SymbolMapping & symbol_mapping,
-                               size_t & cumulative_pos)
+void createOutputSymbolMapping(const AggregateDescriptions & assignments, SymbolMapping & symbol_mapping, size_t & cumulative_pos)
 {
     for (const auto & desc : assignments)
     {
@@ -132,8 +124,9 @@ void createOutputSymbolMapping(const AggregateDescriptions & assignments,
 
 Block getOutputOrder(const IQueryPlanStep & original, const IQueryPlanStep & normal, SymbolMapper & symbol_mapper)
 {
-    Utils::checkArgument(original.getOutputStream().header.columns() == normal.getOutputStream().header.columns(),
-                         "Normalized step should have the same number of columns.");
+    Utils::checkArgument(
+        original.getOutputStream().header.columns() == normal.getOutputStream().header.columns(),
+        "Normalized step should have the same number of columns.");
     ColumnsWithTypeAndName output_order(original.getOutputStream().header.columns());
     for (const auto & column : original.getOutputStream().header)
     {
@@ -150,13 +143,17 @@ Block getOutputOrder(const IQueryPlanStep & original, const IQueryPlanStep & nor
 StepAndOutputOrder StepNormalizer::normalize(QueryPlanStepPtr step, StepsAndOutputOrders && inputs)
 {
     StepAndOutputOrder res = VisitorUtil::accept(step, *this, inputs);
-    if (!step->getHints().empty())
-        res.normal_step->setHints(step->getHints());
+    //TODO zhangdongdong92 QueryPlanStep method getHints() is missing
+    // if (!step->getHints().empty())
+    //     res.normal_step->setHints(step->getHints());
     return res;
 }
 
 StepAndOutputOrder StepNormalizer::visitStep(const IQueryPlanStep & step, StepsAndOutputOrders & inputs)
 {
+    if (normalize_literals && normalize_storage)
+        LOG_DEBUG(log, "delete me finally");
+
     // phase 1: symbol mapping, will use input_stream + output_stream to create symbol mapper
     SymbolMapping symbol_mapping{};
     size_t cumulative_pos = 0;
@@ -166,193 +163,188 @@ StepAndOutputOrder StepNormalizer::visitStep(const IQueryPlanStep & step, StepsA
     QueryPlanStepPtr normal_step = symbol_mapper.map(step);
 
     // replace the input_stream because of reordering
-    normal_step->setInputStreams(normal_input_streams);
+    normal_step->updateInputStreams(normal_input_streams);
     Block output_order = getOutputOrder(step, *normal_step, symbol_mapper);
     return StepAndOutputOrder{normal_step, std::move(output_order)};
 }
 
-StepAndOutputOrder StepNormalizer::visitTableScanStep(const TableScanStep & step, StepsAndOutputOrders & /*inputs*/)
-{
-    // phase 1: skipped because there is no input stream
-    // phase 2: reorder column_names, column_alias, table_output_header and filters in select_query_info
-    Names column_names_sorted = step.getColumnNames();
-    ExpressionReorderNormalizer::reorder(column_names_sorted);
-    NamesWithAliases column_alias_sorted = step.getColumnAlias();
-    ExpressionReorderNormalizer::reorder(column_alias_sorted);
+// StepAndOutputOrder StepNormalizer::visitTableScanStep(const TableScanStepExt & step, StepsAndOutputOrders & /*inputs*/)
+// {
+//     // phase 1: skipped because there is no input stream
+//     // phase 2: reorder column_names, column_alias, table_output_header and filters in select_query_info
+//     Names column_names_sorted = step.getColumnNames();
+//     ExpressionReorderNormalizer::reorder(column_names_sorted);
+//     NamesWithAliases column_alias_sorted = step.getColumnAlias();
+//     ExpressionReorderNormalizer::reorder(column_alias_sorted);
 
-    Block header_sorted{};
-    for (const auto & column_alias : column_alias_sorted)
-    {
-        // for each output symbol sorted, put into the header
-        const auto & column = step.getTableOutputStream().header.getByName(column_alias.second);
-        header_sorted.insert(column);
-    }
+//     Block header_sorted{};
+//     for (const auto & column_alias : column_alias_sorted)
+//     {
+//         // for each output symbol sorted, put into the header
+//         const auto & column = step.getTableOutputStream().header.getByName(column_alias.second);
+//         header_sorted.insert(column);
+//     }
 
-    for (const auto & assignment : step.getInlineExpressions())
-    {
-        const auto & column = step.getTableOutputStream().header.getByName(assignment.first);
-        header_sorted.insert(column);
-    }
+//     for (const auto & assignment : step.getInlineExpressions())
+//     {
+//         const auto & column = step.getTableOutputStream().header.getByName(assignment.first);
+//         header_sorted.insert(column);
+//     }
 
-    // phase 3: normalize output symbols, the order is from reordered table_output_header
-    SymbolMapping symbol_mapping{};
-    size_t cumulative_pos = 0;
-    createOutputSymbolMapping(header_sorted, symbol_mapping, cumulative_pos);
-    SymbolMapper symbol_mapper = SymbolMapper::simpleMapper(symbol_mapping);
-    DataStream mapped_table_output_stream = symbol_mapper.map(DataStream{header_sorted});
-    column_alias_sorted = symbol_mapper.map(std::move(column_alias_sorted));
+//     // phase 3: normalize output symbols, the order is from reordered table_output_header
+//     SymbolMapping symbol_mapping{};
+//     size_t cumulative_pos = 0;
+//     createOutputSymbolMapping(header_sorted, symbol_mapping, cumulative_pos);
+//     SymbolMapper symbol_mapper = SymbolMapper::simpleMapper(symbol_mapping);
+//     DataStream mapped_table_output_stream = symbol_mapper.map(DataStream{header_sorted});
+//     column_alias_sorted = symbol_mapper.map(column_alias_sorted);
 
-    Assignments inline_assignments;
-    for (const auto & assignment : step.getInlineExpressions())
-        inline_assignments.emplace(symbol_mapper.map(assignment.first), assignment.second);
+//     Assignments inline_assignments;
+//     for (const auto & assignment : step.getInlineExpressions())
+//         inline_assignments.emplace(symbol_mapper.map(assignment.first), assignment.second);
 
-    auto reordered_query_info = step.getQueryInfo();
-    if (auto query = dynamic_pointer_cast<ASTSelectQuery>(reordered_query_info.query))
-    {
-        auto new_query = static_pointer_cast<ASTSelectQuery>(query->clone());
-        if (new_query->where())
-        {
-            // normalize literals
-            if (normalize_literals)
-                SQLFingerprintRewriter::rewriteAST(new_query->refWhere());
-            ExpressionReorderNormalizer::reorder(new_query->refWhere());
-        }
-        if (new_query->prewhere())
-        {
-            if (normalize_literals)
-                SQLFingerprintRewriter::rewriteAST(new_query->refPrewhere());
-            ExpressionReorderNormalizer::reorder(new_query->refPrewhere());
-        }
-        reordered_query_info.query = new_query;
-    }
+//     auto reordered_query_info = step.getQueryInfo();
+//     if (auto query = dynamic_pointer_cast<ASTSelectQuery>(reordered_query_info.query))
+//     {
+//         auto new_query = static_pointer_cast<ASTSelectQuery>(query->clone());
+//         if (new_query->where())
+//         {
+//             // normalize literals
+//             if (normalize_literals)
+//                 SQLFingerprintRewriter::rewriteAST(new_query->refWhere());
+//             ExpressionReorderNormalizer::reorder(new_query->refWhere());
+//         }
+//         if (new_query->prewhere())
+//         {
+//             if (normalize_literals)
+//                 SQLFingerprintRewriter::rewriteAST(new_query->refPrewhere());
+//             ExpressionReorderNormalizer::reorder(new_query->refPrewhere());
+//         }
+//         reordered_query_info.query = new_query;
+//     }
 
-    auto normal_table_scan = std::make_shared<TableScanStep>(
-        mapped_table_output_stream,
-        step.getStorage(),
-        step.getStorageID(),
-        step.getMetadataSnapshot(),
-        step.getStorageSnapshot(),
-        step.getOriginalTable(),
-        std::move(column_names_sorted),
-        std::move(column_alias_sorted),
-        reordered_query_info, // prewhere info
-        step.getMaxBlockSize(),
-        step.getTableAlias(), // alias
-        step.isBucketScan(),
-        PlanHints{}, // hints set later
-        inline_assignments,
-        nullptr, // push down agg
-        nullptr, // push down projection
-        nullptr, // push down filter
-        mapped_table_output_stream);
+//     auto normal_table_scan = std::make_shared<TableScanStepExt>(
+//         mapped_table_output_stream,
+//         step.getStorage(),
+//         step.getStorageID(),
+//         step.getMetadataSnapshot(),
+//         step.getStorageSnapshot(),
+//         step.getOriginalTable(),
+//         std::move(column_names_sorted),
+//         std::move(column_alias_sorted),
+//         reordered_query_info, // prewhere info
+//         step.getMaxBlockSize(),
+//         step.getTableAlias(), // alias
+//         step.isBucketScan(),
+//         inline_assignments,
+//         nullptr, // push down agg
+//         nullptr, // push down projection
+//         nullptr, // push down filter
+//         mapped_table_output_stream);
 
-    if (normalize_storage && step.getStorage())
-        normal_table_scan->setOriginalTable(
-            StorageCnchMergeTree::getOriginalTableName(normal_table_scan->getStorageID().table_name, context->getCurrentTransactionID()));
+//     // if (normalize_storage && step.getStorage())
+//     //     normal_table_scan->setOriginalTable(
+//     //         StorageCnchMergeTree::getOriginalTableName(normal_table_scan->getStorageID().table_name, context->getCurrentTransactionID()));
 
-    // for table scan, we also need to normalize push downs
-    if (const QueryPlanStepPtr & push_down_filter = step.getPushdownFilter())
-    {
-        StepsAndOutputOrders table_scan_result{StepAndOutputOrder{normal_table_scan, std::move(header_sorted)}};
-        StepAndOutputOrder filter_result = normalize(push_down_filter, std::move(table_scan_result));
-        normal_table_scan->setPushdownFilter(filter_result.normal_step);
-        normal_table_scan->formatOutputStream(context); // format because we use this output stream immediately
-        header_sorted = std::move(filter_result.output_order);
-    }
+//     // for table scan, we also need to normalize push downs
+//     if (const QueryPlanStepPtr & push_down_filter = step.getPushdownFilter())
+//     {
+//         StepsAndOutputOrders table_scan_result{StepAndOutputOrder{normal_table_scan, std::move(header_sorted)}};
+//         StepAndOutputOrder filter_result = normalize(push_down_filter, std::move(table_scan_result));
+//         normal_table_scan->setPushdownFilter(filter_result.normal_step);
+//         normal_table_scan->formatOutputStream(context); // format because we use this output stream immediately
+//         header_sorted = std::move(filter_result.output_order);
+//     }
 
-    if (const QueryPlanStepPtr & push_down_projection = step.getPushdownProjection())
-    {
-        StepsAndOutputOrders table_scan_result{StepAndOutputOrder{normal_table_scan, std::move(header_sorted)}};
-        StepAndOutputOrder projection_result = normalize(push_down_projection, std::move(table_scan_result));
-        normal_table_scan->setPushdownProjection(projection_result.normal_step);
-        normal_table_scan->formatOutputStream(context); // format because we use this output stream immediately
-        header_sorted = std::move(projection_result.output_order);
-    }
+//     if (const QueryPlanStepPtr & push_down_projection = step.getPushdownProjection())
+//     {
+//         StepsAndOutputOrders table_scan_result{StepAndOutputOrder{normal_table_scan, std::move(header_sorted)}};
+//         StepAndOutputOrder projection_result = normalize(push_down_projection, std::move(table_scan_result));
+//         normal_table_scan->setPushdownProjection(projection_result.normal_step);
+//         normal_table_scan->formatOutputStream(context); // format because we use this output stream immediately
+//         header_sorted = std::move(projection_result.output_order);
+//     }
 
-    if (const QueryPlanStepPtr & push_down_aggregation = step.getPushdownAggregation())
-    {
-        StepsAndOutputOrders table_scan_result{StepAndOutputOrder{normal_table_scan, std::move(header_sorted)}};
-        StepAndOutputOrder aggregation_result = normalize(push_down_aggregation, std::move(table_scan_result));
-        normal_table_scan->setPushdownAggregation(aggregation_result.normal_step);
-        normal_table_scan->formatOutputStream(context); // format because we use this output stream immediately
-        header_sorted = std::move(aggregation_result.output_order);
-    }
+//     if (const QueryPlanStepPtr & push_down_aggregation = step.getPushdownAggregation())
+//     {
+//         StepsAndOutputOrders table_scan_result{StepAndOutputOrder{normal_table_scan, std::move(header_sorted)}};
+//         StepAndOutputOrder aggregation_result = normalize(push_down_aggregation, std::move(table_scan_result));
+//         normal_table_scan->setPushdownAggregation(aggregation_result.normal_step);
+//         normal_table_scan->formatOutputStream(context); // format because we use this output stream immediately
+//         header_sorted = std::move(aggregation_result.output_order);
+//     }
 
-    return StepAndOutputOrder{normal_table_scan, std::move(header_sorted)};
-}
+//     return StepAndOutputOrder{normal_table_scan, std::move(header_sorted)};
+// }
 
-StepAndOutputOrder StepNormalizer::visitFilterStep(const FilterStep & step, StepsAndOutputOrders & inputs)
-{
-    if (step.getExpression())
-    {
-        LOG_DEBUG(log, "Reordering FilterStep with actions_dag is not supported");
-        return visitStep(step, inputs);
-    }
+// StepAndOutputOrder StepNormalizer::visitFilterStep(const FilterStepExt & step, StepsAndOutputOrders & inputs)
+// {
+//     if (step.getExpression())
+//     {
+//         LOG_DEBUG(log, "Reordering FilterStepExt with actions_dag is not supported");
+//         return visitStep(step, inputs);
+//     }
 
-    // phase 1: normalize input symbols
-    SymbolMapping symbol_mapping{};
-    size_t cumulative_pos = 0;
-    DataStreams normal_input_streams = processInputStreams(step.getInputStreams(), inputs, symbol_mapping, cumulative_pos);
-    SymbolMapper symbol_mapper = SymbolMapper::simpleMapper(symbol_mapping);
+//     // phase 1: normalize input symbols
+//     SymbolMapping symbol_mapping{};
+//     size_t cumulative_pos = 0;
+//     DataStreams normal_input_streams = processInputStreams(step.getInputStreams(), inputs, symbol_mapping, cumulative_pos);
+//     SymbolMapper symbol_mapper = SymbolMapper::simpleMapper(symbol_mapping);
 
-    // phase 2: reorder and/or
-    ASTPtr filter_reordered = symbol_mapper.map(step.getFilter());
-    // normalize literals before reordering
-    if (normalize_literals)
-        SQLFingerprintRewriter::rewriteAST(filter_reordered);
-    ExpressionReorderNormalizer::reorder(filter_reordered);
+//     // phase 2: reorder and/or
+//     ASTPtr filter_reordered = symbol_mapper.map(step.getFilter());
+//     // normalize literals before reordering
+//     if (normalize_literals)
+//         SQLFingerprintRewriter::rewriteAST(filter_reordered);
+//     ExpressionReorderNormalizer::reorder(filter_reordered);
 
-    // no phase 3 because there is no new symbols
+//     // no phase 3 because there is no new symbols
 
-    auto normal_filter = std::make_shared<FilterStep>(
-        normal_input_streams.front(),
-        filter_reordered,
-        step.removesFilterColumn());
+//     auto normal_filter = std::make_shared<FilterStepExt>(normal_input_streams.front(), filter_reordered, step.removesFilterColumn());
 
-    Block output_order = getOutputOrder(step, *normal_filter, symbol_mapper);
-    return StepAndOutputOrder{normal_filter, std::move(output_order)};
-}
+//     Block output_order = getOutputOrder(step, *normal_filter, symbol_mapper);
+//     return StepAndOutputOrder{normal_filter, std::move(output_order)};
+// }
 
-StepAndOutputOrder StepNormalizer::visitProjectionStep(const ProjectionStep & step, StepsAndOutputOrders & inputs)
-{
-    // phase 1: normalize input symbols
-    SymbolMapping symbol_mapping{};
-    size_t cumulative_pos = 0;
-    DataStreams normal_input_streams = processInputStreams(step.getInputStreams(), inputs, symbol_mapping, cumulative_pos);
-    SymbolMapper input_symbol_mapper = SymbolMapper::simpleMapper(symbol_mapping);
-    // map RHS only because LHS may reuse the same symbol
-    Assignments assignments_reordered = step.getAssignments();
-    for (auto & pair : assignments_reordered)
-    {
-        auto new_ast = input_symbol_mapper.map(pair.second);
-        if (normalize_literals)
-            SQLFingerprintRewriter::rewriteAST(new_ast);
-        pair.second = new_ast;
-    }
+// StepAndOutputOrder StepNormalizer::visitProjectionStep(const ProjectionStepExt & step, StepsAndOutputOrders & inputs)
+// {
+//     // phase 1: normalize input symbols
+//     SymbolMapping symbol_mapping{};
+//     size_t cumulative_pos = 0;
+//     DataStreams normal_input_streams = processInputStreams(step.getInputStreams(), inputs, symbol_mapping, cumulative_pos);
+//     SymbolMapper input_symbol_mapper = SymbolMapper::simpleMapper(symbol_mapping);
+//     // map RHS only because LHS may reuse the same symbol
+//     Assignments assignments_reordered = step.getAssignments();
+//     for (auto & pair : assignments_reordered)
+//     {
+//         auto new_ast = input_symbol_mapper.map(pair.second);
+//         if (normalize_literals)
+//             SQLFingerprintRewriter::rewriteAST(new_ast);
+//         pair.second = new_ast;
+//     }
 
-    // phase 2: reorder assignments
-    ExpressionReorderNormalizer::reorder(assignments_reordered);
+//     // phase 2: reorder assignments
+//     ExpressionReorderNormalizer::reorder(assignments_reordered);
 
-    // phase 3: normalize output symbols, the order is from reordered assignments
-    createOutputSymbolMapping(assignments_reordered, symbol_mapping, cumulative_pos);
-    SymbolMapper symbol_mapper = SymbolMapper::simpleMapper(symbol_mapping);
-    NameToType mapped_name_to_type = symbol_mapper.map(step.getNameToType()); // no need to reorder due to (ordered) map<>
-    assignments_reordered = symbol_mapper.map(std::move(assignments_reordered));
+//     // phase 3: normalize output symbols, the order is from reordered assignments
+//     createOutputSymbolMapping(assignments_reordered, symbol_mapping, cumulative_pos);
+//     SymbolMapper symbol_mapper = SymbolMapper::simpleMapper(symbol_mapping);
+//     NameToType mapped_name_to_type = symbol_mapper.map(step.getNameToType()); // no need to reorder due to (ordered) map<>
+//     assignments_reordered = symbol_mapper.map(assignments_reordered);
 
-    auto normal_projection = std::make_shared<ProjectionStep>(
-        normal_input_streams.front(),
-        assignments_reordered,
-        mapped_name_to_type,
-        step.isFinalProject(),
-        step.isIndexProject(),
-        PlanHints{}); // hints set later
+//     auto normal_projection = std::make_shared<ProjectionStepExt>(
+//         normal_input_streams.front(),
+//         assignments_reordered,
+//         mapped_name_to_type,
+//         step.isFinalProject(),
+//         step.isIndexProject()); // hints set later
 
-    Block output_order = getOutputOrder(step, *normal_projection, symbol_mapper);
-    return StepAndOutputOrder{normal_projection, std::move(output_order)};
-}
+//     Block output_order = getOutputOrder(step, *normal_projection, symbol_mapper);
+//     return StepAndOutputOrder{normal_projection, std::move(output_order)};
+// }
 
 /**
- * Constructing an AggregatingStep is rather complicated.
+ * Constructing an AggregatingStepExt is rather complicated.
  * The input header goes to header_before_aggregation in createParams and finally becomes Params.src_header
  * The keys will be converted to their position in the input header and stored as ColumnNumbers in Params.keys
  * The arguments in aggregates will be cleared and obtained from the position of argument_names in the input header
@@ -363,11 +355,11 @@ StepAndOutputOrder StepNormalizer::visitProjectionStep(const ProjectionStep & st
  * it then inserts the column_name from each aggregate desc
  * finally, is there are grouping_set_params, a __grouping_set column is added
  */
-StepAndOutputOrder StepNormalizer::visitAggregatingStep(const AggregatingStep & step, StepsAndOutputOrders & inputs)
+StepAndOutputOrder StepNormalizer::visitAggregatingStep(const AggregatingStepExt & step, StepsAndOutputOrders & inputs)
 {
     if (!step.getGroupBySortDescription().empty() || !step.getGroupings().empty() || !step.getGroupingSetsParams().empty())
     {
-        LOG_DEBUG(log, "Reordering AggregatingStep with groupBySort/groupings/groupingSets is not supported");
+        LOG_DEBUG(log, "Reordering AggregatingStepExt with groupBySort/groupings/groupingSets is not supported");
         return visitStep(step, inputs);
     }
 
@@ -391,9 +383,9 @@ StepAndOutputOrder StepNormalizer::visitAggregatingStep(const AggregatingStep & 
     SymbolMapper symbol_mapper = SymbolMapper::simpleMapper(symbol_mapping);
 
     Names mapped_keys = symbol_mapper.map(step.getKeys()); // should not reorder because order is important
-    aggregates_reordered = symbol_mapper.map(std::move(aggregates_reordered));
+    aggregates_reordered = symbol_mapper.map(aggregates_reordered);
 
-    auto normal_agg = std::make_shared<AggregatingStep>(
+    auto normal_agg = std::make_shared<AggregatingStepExt>(
         normal_input_streams.front(),
         mapped_keys,
         step.getKeysNotHashed(),
@@ -406,15 +398,14 @@ StepAndOutputOrder StepNormalizer::visitAggregatingStep(const AggregatingStep & 
         false,
         step.shouldProduceResultsInOrderOfBucketNumber(),
         step.isNoShuffle(),
-        step.isStreamingForCache(),
-        step.getHints());
+        step.isStreamingForCache());
 
     Block output_order = getOutputOrder(step, *normal_agg, symbol_mapper);
     return StepAndOutputOrder{normal_agg, std::move(output_order)};
 }
 
 // CTERefStep does not have input stream, but has input symbols. dealt with separately
-StepAndOutputOrder StepNormalizer::visitCTERefStep(const CTERefStep & step, StepsAndOutputOrders &)
+StepAndOutputOrder StepNormalizer::visitCTERefStep(const CTERefStepExt & step, StepsAndOutputOrders &)
 {
     const Block & original_output = step.getOutputStream().header;
     auto input_to_outputs = step.getReverseOutputColumns();
@@ -434,17 +425,14 @@ StepAndOutputOrder StepNormalizer::visitCTERefStep(const CTERefStep & step, Step
         normal_output.emplace_back(ColumnWithTypeAndName{output_column.column, output_column.type, new_symbol});
     }
 
-    auto normal_cte = std::make_shared<CTERefStep>(
-        DataStream{Block{normal_output}},
-        step.getId(),
-        normal_output_to_input,
-        step.hasFilter());
+    auto normal_cte
+        = std::make_shared<CTERefStepExt>(DataStream{Block{normal_output}}, step.getId(), normal_output_to_input, step.hasFilter());
 
     return StepAndOutputOrder{normal_cte, std::move(output_order)};
 }
 
 // CTERefStep does not have input stream, but has input symbols. dealt with separately
-StepAndOutputOrder StepNormalizer::visitJoinStep(const JoinStep & step, StepsAndOutputOrders & inputs)
+StepAndOutputOrder StepNormalizer::visitJoinStep(const JoinStepExt & step, StepsAndOutputOrders & inputs)
 {
     // phase 1: symbol mapping, will use input_stream + output_stream to create symbol mapper
     SymbolMapping symbol_mapping;
@@ -457,14 +445,14 @@ StepAndOutputOrder StepNormalizer::visitJoinStep(const JoinStep & step, StepsAnd
     auto output_header = normal_step->getOutputStream().header.getColumnsWithTypeAndName();
     ExpressionReorderNormalizer::reorder(output_header);
     // replace the input_stream & output_stream because of reordering
-    normal_step->setInputStreams(normal_input_streams);
+    normal_step->updateInputStreams(normal_input_streams);
     normal_step->setOutputStream(DataStream{output_header});
 
     Block output_order = getOutputOrder(step, *normal_step, symbol_mapper);
     return StepAndOutputOrder{normal_step, std::move(output_order)};
 }
 
-StepAndOutputOrder StepNormalizer::visitRemoteExchangeSourceStep(const RemoteExchangeSourceStep & step, StepsAndOutputOrders & /*inputs*/)
+StepAndOutputOrder StepNormalizer::visitRemoteExchangeSourceStep(const RemoteExchangeSourceStepExt & step, StepsAndOutputOrders & /*inputs*/)
 {
     // phase 1: symbol mapping, order output streams, will use only output_stream to create symbol mapper
     auto header_sorted = step.getOutputStream().header.getColumnsWithTypeAndName();
@@ -485,41 +473,42 @@ StepAndOutputOrder StepNormalizer::visitRemoteExchangeSourceStep(const RemoteExc
 
     // clear input
     auto normalized_remote_exchange_source
-        = std::make_shared<RemoteExchangeSourceStep>(std::move(inputs), mapped_output_stream, step.isAddTotals(), step.isAddExtremes());
+        = std::make_shared<RemoteExchangeSourceStepExt>(std::move(inputs), mapped_output_stream, step.isAddTotals(), step.isAddExtremes());
     Block output_order = getOutputOrder(step, *normalized_remote_exchange_source, symbol_mapper);
 
     return StepAndOutputOrder{normalized_remote_exchange_source, std::move(output_order)};
 }
 
-StepAndOutputOrder StepNormalizer::visitTableWriteStep(const TableWriteStep & step, StepsAndOutputOrders & inputs)
-{
-    // phase 1: symbol mapping, will use input_stream + output_stream to create symbol mapper
-    SymbolMapping symbol_mapping{};
-    size_t cumulative_pos = 0;
-    DataStreams normal_input_streams = processInputStreams(step.getInputStreams(), inputs, symbol_mapping, cumulative_pos);
-    createOutputSymbolMapping(step.getOutputStream().header, symbol_mapping, cumulative_pos);
-    SymbolMapper symbol_mapper = SymbolMapper::simpleMapper(symbol_mapping);
-    auto new_target = step.getTarget();
-    if (normalize_storage)
-    {
-        if (auto insert_target = std::dynamic_pointer_cast<TableWriteStep::InsertTarget>(new_target))
-        {
-            auto original_table_name
-                = StorageCnchMergeTree::getOriginalTableName(insert_target->getStorageID().table_name, context->getCurrentTransactionID());
-            StorageID new_storage_id
-                = StorageID(insert_target->getStorageID().getDatabaseName(), std::move(original_table_name), UUIDHelpers::Nil);
-            new_storage_id.clearUUID();
-            new_target = std::make_shared<TableWriteStep::InsertTarget>(
-                insert_target->getStorage(), new_storage_id, insert_target->getColumns(), insert_target->getQuery());
-        }
-    }
-    auto normal_table_write_step
-        = std::make_shared<TableWriteStep>(symbol_mapper.map(step.getInputStreams()[0]), new_target, step.isOutputProfiles(), "inserted_rows");
+//TODO zhangdongdong missing TableWriteStep
+// StepAndOutputOrder StepNormalizer::visitTableWriteStep(const TableWriteStep & step, StepsAndOutputOrders & inputs)
+// {
+//     // phase 1: symbol mapping, will use input_stream + output_stream to create symbol mapper
+//     SymbolMapping symbol_mapping{};
+//     size_t cumulative_pos = 0;
+//     DataStreams normal_input_streams = processInputStreams(step.getInputStreams(), inputs, symbol_mapping, cumulative_pos);
+//     createOutputSymbolMapping(step.getOutputStream().header, symbol_mapping, cumulative_pos);
+//     SymbolMapper symbol_mapper = SymbolMapper::simpleMapper(symbol_mapping);
+//     auto new_target = step.getTarget();
+//     if (normalize_storage)
+//     {
+//         if (auto insert_target = std::dynamic_pointer_cast<TableWriteStep::InsertTarget>(new_target))
+//         {
+//             auto original_table_name
+//                 = StorageCnchMergeTree::getOriginalTableName(insert_target->getStorageID().table_name, context->getCurrentTransactionID());
+//             StorageID new_storage_id
+//                 = StorageID(insert_target->getStorageID().getDatabaseName(), std::move(original_table_name), UUIDHelpers::Nil);
+//             new_storage_id.clearUUID();
+//             new_target = std::make_shared<TableWriteStep::InsertTarget>(
+//                 insert_target->getStorage(), new_storage_id, insert_target->getColumns(), insert_target->getQuery());
+//         }
+//     }
+//     auto normal_table_write_step
+//         = std::make_shared<TableWriteStep>(symbol_mapper.map(step.getInputStreams()[0]), new_target, step.isOutputProfiles(), "inserted_rows");
 
 
-    // replace the input_stream because of reordering
-    normal_table_write_step->setInputStreams(normal_input_streams);
-    Block output_order = getOutputOrder(step, *normal_table_write_step, symbol_mapper);
-    return StepAndOutputOrder{normal_table_write_step, std::move(output_order)};
-}
+//     // replace the input_stream because of reordering
+//     normal_table_write_step->setInputStreams(normal_input_streams);
+//     Block output_order = getOutputOrder(step, *normal_table_write_step, symbol_mapper);
+//     return StepAndOutputOrder{normal_table_write_step, std::move(output_order)};
+// }
 }

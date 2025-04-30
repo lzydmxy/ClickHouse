@@ -12,7 +12,7 @@
 #include <Storages/ForeignKeysDescription.h>
 #include <Storages/StorageDistributed.h>
 #include <Poco/Logger.h>
-#include <common/logger_useful.h>
+#include <Common/logger_useful.h>
 #include <Interpreters/Context_fwd.h>
 #include <Query/Optimizer/DataDependency/DataDependency.h>
 #include <Query/Optimizer/DataDependency/DependencyUtils.h>
@@ -21,7 +21,7 @@
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/ASTTablesInSelectQuery.h>
-#include <QueryPlan/Assignment.h>
+#include <Query/Processors/QueryPlan/Assignment.h>
 
 namespace DB
 {

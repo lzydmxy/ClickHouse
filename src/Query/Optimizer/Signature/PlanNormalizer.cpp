@@ -1,16 +1,11 @@
-#include <Optimizer/Signature/PlanNormalizer.h>
-
-#include <Interpreters/Context_fwd.h>
-#include <Optimizer/Signature/StepNormalizer.h>
-#include <QueryPlan/CTEVisitHelper.h>
-#include <QueryPlan/PlanNode.h>
-#include <QueryPlan/PlanVisitor.h>
-#include <QueryPlan/QueryPlan.h>
-
-#include <memory>
-#include <unordered_map>
-#include <utility>
 #include <vector>
+#include <Interpreters/Context_fwd.h>
+#include <Query/Optimizer/Signature/PlanNormalizer.h>
+#include <Query/Optimizer/Signature/StepNormalizer.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
+#include <Query/Processors/QueryPlan/CTEVisitHelper.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
 
 namespace DB
 {
@@ -21,7 +16,7 @@ StepAndOutputOrder NormalizeVisitor::visitCTERefNodeImpl(PlanNodeBase & node, Pl
         return it->second;
 
     std::vector<StepAndOutputOrder> cte_root_result{};
-    CTEId cte_id = static_pointer_cast<CTERefStep>(node.getStep())->getId();
+    CTEId cte_id = static_pointer_cast<CTERefStepExt>(node.getStep())->getId();
     cte_root_result.emplace_back(VisitorUtil::accept(cte_info.getCTEs().at(cte_id), *this, normal_steps));
     StepAndOutputOrder step_result = step_normalizer.normalize(node.getStep(), std::move(cte_root_result));
     normal_steps.emplace(node_ptr, step_result);
