@@ -201,7 +201,7 @@ GroupExprPtr CascadesContext::makeGroupExpression(const PlanNodePtr & node, Rule
     std::vector<GroupId> child_groups;
     for (auto & child : node->getChildren())
     {
-        if (getQueryPlanStepType(child->getStep()) == QueryPlanStepType::Any)
+        if (getQueryPlanStepType(child->getStep()) == QueryPlanStepType::AnyStepExt)
         {
             // Special case for LEAF
             const auto * const leaf = dynamic_cast<const AnyStepExt *>(child->getStep().get());
