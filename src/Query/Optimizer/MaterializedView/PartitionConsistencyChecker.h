@@ -5,10 +5,6 @@
 #include <Query/Processors/QueryPlan/PlanVisitor.h>
 #include <Query/Processors/QueryPlan/QueryPlanExt.h>
 
-#include <memory>
-#include <utility>
-#include <vector>
-
 namespace DB
 {
 struct PartitionCheckResult

@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <Query/Optimizer/MaterializedView/RelatedMaterializedViewsExtractor.h>
-#include "Interpreters/StorageID.h"
 
 namespace DB
 {

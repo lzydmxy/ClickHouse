@@ -16,10 +16,8 @@
 #include <Query/Processors/QueryPlan/QueryPlanExt.h>
 #include <Common/Exception.h>
 
-#include <algorithm>
 #include <cstddef>
 #include <functional>
-#include <iterator>
 #include <sstream>
 #include <string>
 #include <vector>

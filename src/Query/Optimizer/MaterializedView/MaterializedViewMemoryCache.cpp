@@ -63,8 +63,8 @@ std::optional<MaterializedViewStructurePtr>
 MaterializedViewMemoryCache::getMaterializedViewStructure(
     const StorageID & database_and_table_name,
     ContextMutablePtr context,
-    bool local_materialized_view,
-    const std::map<String, StorageID> & local_table_to_distributed_table)
+    bool /*local_materialized_view*/,
+    const std::map<String, StorageID> & /*local_table_to_distributed_table*/)
 {
     auto dependent_table = DatabaseCatalog::instance().tryGetTable(database_and_table_name, context);
     if (!dependent_table)

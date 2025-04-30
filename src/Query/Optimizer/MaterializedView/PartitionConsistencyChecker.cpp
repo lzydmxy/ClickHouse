@@ -15,7 +15,6 @@
 #include <Storages/StorageMaterializedView.h>
 
 #include <memory>
-#include <unordered_map>
 
 namespace DB
 {
@@ -36,7 +35,6 @@ checkMaterializedViewPartitionConsistency(MaterializedViewStructurePtr structure
     if (!mview)
         return {};
     // todo: hongzhigao1, need storage
-    return {};
     // auto partition_transformer = std::make_shared<PartitionTransformer>(mview->getInnerQuery()->clone(), mview->getTargetTableId(), mview->async());
     // try
     // {
@@ -123,5 +121,6 @@ checkMaterializedViewPartitionConsistency(MaterializedViewStructurePtr structure
 
     // return PartitionCheckResult{
     //     depend_base_table->storage, depend_base_table->unique_id, query_partition_filter_ast, mv_partition_filter_ast};
+    return {};
 }
 }
