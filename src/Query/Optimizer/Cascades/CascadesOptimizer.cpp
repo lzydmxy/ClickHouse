@@ -26,9 +26,7 @@
 #include <Query/Processors/IQueryPlanStepExt.h>
 #include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
 #include <Query/Processors/QueryPlan/PlanPattern.h>
-// #include <Storages/DataLakes/StorageCnchLakeBase.h>
-// #include <Storages/RemoteFile/IStorageCnchFile.h>
-// #include <Storages/StorageCnchMergeTree.h>
+#include <Storages/StorageDistributed.h>
 
 #include <memory>
 
@@ -315,14 +313,13 @@ std::optional<size_t> WorkerSizeFinder::visitPlanNode(PlanNodeBase & node, const
 std::optional<size_t> WorkerSizeFinder::visitTableScanStepExtNode(TableScanStepExtNode & node, const Context & context)
 {
     const auto storage = node.getStep()->getStorage();
-    const auto * cnch_table = dynamic_cast<StorageCnchMergeTree *>(storage.get());
-    const auto * cnch_lake = dynamic_cast<StorageCnchLakeBase *>(storage.get());
-    const auto * cnch_file = dynamic_cast<IStorageCnchFile *>(storage.get());
+    const auto * distributed_table = dynamic_cast<StorageDistributed *>(storage.get());
 
-    if (cnch_table || cnch_lake || cnch_file)
+    /// diff: byconity uses work group
+    if (distributed_table)
     {
-        const auto & worker_group = context.getCurrentWorkerGroup();
-        return worker_group->getShardsInfo().size();
+        if (auto cluster = distributed_table->getCluster())
+            return cluster->getShardCount();
     }
     return std::nullopt;
 }
