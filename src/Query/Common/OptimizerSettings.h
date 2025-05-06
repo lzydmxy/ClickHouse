@@ -476,6 +476,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_distributed_output, false, "Each worker is allowed to output query results to a file separately", 0) \
     /** Settings for Map */ \
     M(Bool, allow_map_access_without_key, true, "Allow access map column without providing key", 0) \
+    M(Bool, offloading_with_query_plan, false, "utilize query plan to offload the computation completely to worker", 0) \
     /** Just for compatible, maybe removed or implemented later */ \
     M(UInt64, max_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a query segment can consume.", 0) \
     M(UInt64, max_distributed_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a distribute query can consume.", 0) \
