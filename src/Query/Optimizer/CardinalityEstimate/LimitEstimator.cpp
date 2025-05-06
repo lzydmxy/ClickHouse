@@ -4,7 +4,9 @@ namespace DB
 {
 PlanNodeStatisticsPtr LimitEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const LimitStepExt & step)
 {
-    return step.hasPreparedParam() ? child_stats : getLimitStatistics(child_stats, step.getLimitValue());
+    /// diff: bc supports prepared param
+    // return step.hasPreparedParam() ? child_stats : getLimitStatistics(child_stats, step.getLimit());
+    return getLimitStatistics(child_stats, step.getLimit());
 }
 
 PlanNodeStatisticsPtr LimitEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const LimitByStep & step)

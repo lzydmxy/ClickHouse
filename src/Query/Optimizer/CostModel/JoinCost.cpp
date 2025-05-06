@@ -1,7 +1,7 @@
 #include <Query/Optimizer/CostModel/JoinCost.h>
 
 #include <Query/Optimizer/CostModel/CostCalculator.h>
-#include <QueryPlan/JoinStep.h>
+#include <Query/Processors/QueryPlan/JoinStepExt.h>
 
 namespace DB
 {
@@ -36,7 +36,7 @@ double getAvgProbeCost(const JoinStepExt & step, CostContext & context)
     return cache_penalty_factor;
 }
 
-PlanNodeCost JoinCost::calculate(const JoinStep & step, CostContext & context)
+PlanNodeCost JoinCost::calculate(const JoinStepExt & step, CostContext & context)
 {
     PlanNodeStatisticsPtr join_stats = context.stats;
     PlanNodeStatisticsPtr left_stats = context.children_stats[0];
