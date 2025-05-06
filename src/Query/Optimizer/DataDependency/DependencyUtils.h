@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Core/Names.h>
-#include <Core/Types.h>
 #include <Parsers/ASTFunction.h>
 #include <Query/Parsers/ASTVisitor.h>
 #include <Query/Processors/QueryPlan/PlanVisitor.h>
@@ -118,7 +117,7 @@ class CollectPlanNodeVisitor : public PlanNodeVisitor<Void, PlanNodes>
 {
 public:
     explicit CollectPlanNodeVisitor(
-        const std::unordered_set<IQueryPlanStep::Type> & expected_steps_, CTEInfo & cte_info_, ContextMutablePtr context_)
+        const std::unordered_set<QueryPlanStepType> & expected_steps_, CTEInfo & cte_info_, ContextMutablePtr context_)
         : expected_steps(expected_steps_), cte_info(cte_info_), context(context_)
     {
     }
@@ -130,13 +129,12 @@ public:
             VisitorUtil::accept(*child, *this, c);
         }
 
-        auto *type = node.getStep().get();
-        if (expected_steps.contains(type))
+        if (expected_steps.contains(getQueryPlanStepType(node.getStep())))
             c.emplace_back(node.shared_from_this());
         return Void{};
     }
 
-    Void visitCTERefNode(CTERefStepExtNode & node, PlanNodes & c) override
+    Void visitCTERefStepExtNode(CTERefStepExtNode & node, PlanNodes & c) override
     {
         auto cte_def = cte_info.getCTEDef(node.getStep()->getId());
         return VisitorUtil::accept(*cte_def, *this, c);
@@ -144,7 +142,7 @@ public:
 
     static PlanNodes collect(
         PlanNodePtr plan_node,
-        const std::unordered_set<IQueryPlanStep::Type> & expected_steps,
+        const std::unordered_set<QueryPlanStepType> & expected_steps,
         CTEInfo & cte_info,
         ContextMutablePtr context)
     {
@@ -155,7 +153,7 @@ public:
     }
 
 private:
-    std::unordered_set<IQueryPlanStep::Type> expected_steps;
+    std::unordered_set<QueryPlanStepType> expected_steps;
     CTEInfo & cte_info;
     ContextMutablePtr context;
 };
