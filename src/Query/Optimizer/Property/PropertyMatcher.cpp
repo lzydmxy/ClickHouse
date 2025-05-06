@@ -17,13 +17,13 @@ bool PropertyMatcher::matchNodePartitioning(
     const SymbolEquivalences & equivalences,
     const Constants & constants)
 {
-    if (required.getHandle() == PartitioningHandle::ARBITRARY)
+    if (required.getHandle() == Partitioning::Handle::ARBITRARY)
         return true;
 
-    if (required.getHandle() == PartitioningHandle::FIXED_HASH && context.getOptimizerContext()->getSettingsRef().enforce_round_robin
+    if (required.getHandle() == Partitioning::Handle::FIXED_HASH && context.getOptimizerContext()->getSettingsRef().enforce_round_robin
         && required.isEnforceRoundRobin() && actual.normalize(equivalences).satisfy(required.normalize(equivalences), constants))
     {
-        required.setHandle(PartitioningHandle::FIXED_ARBITRARY);
+        required.setHandle(Partitioning::Handle::FIXED_ARBITRARY);
         return false;
     }
 
@@ -38,14 +38,14 @@ bool PropertyMatcher::matchStreamPartitioning(
     const Constants & constants,
     bool match_local_exchange)
 {
-    if (required.getHandle() == PartitioningHandle::ARBITRARY)
+    if (required.getHandle() == Partitioning::Handle::ARBITRARY)
         return true;
     // todo remove
     if (!match_local_exchange)
     {
-        if (required.getHandle() == PartitioningHandle::FIXED_HASH)
+        if (required.getHandle() == Partitioning::Handle::FIXED_HASH)
             return true;
-        if (required.getHandle() == PartitioningHandle::FIXED_ARBITRARY)
+        if (required.getHandle() == Partitioning::Handle::FIXED_ARBITRARY)
             return true;
     }
 
@@ -194,26 +194,26 @@ Property PropertyMatcher::compatibleCommonRequiredProperty(const std::unordered_
 
     // check if all requries are broadcast
     bool all_broadcast = std::all_of(required_properties.begin(), required_properties.end(), [](const auto & property) {
-        return property.getNodePartitioning().getHandle() == PartitioningHandle::FIXED_BROADCAST;
+        return property.getNodePartitioning().getHandle() == Partitioning::Handle::FIXED_BROADCAST;
     });
     if (all_broadcast)
     {
-                Property common_property{Partitioning{PartitioningHandle::FIXED_BROADCAST}};
+                Property common_property{Partitioning{Partitioning::Handle::FIXED_BROADCAST}};
                 return common_property;
     }
 
     // find common partition_handle && partition_columns ignore ARBITRARY / FIXED_ARBITRARY / FIXED_BROADCAST
     bool has_partition_columns = false;
     bool has_required_handle = false;
-    std::vector<PartitioningHandle::Enum> partition_handles;
+    std::vector<Partitioning::Handle> partition_handles;
     std::vector<std::vector<String>> partition_columns;
     for (const auto & property : required_properties)
     {
         auto partition_handle = property.getNodePartitioning().getHandle();
 // don't support single / coordinator right now, as the cost of them are incorrect, caused cte to choose the wrong plan
-        if (partition_handle == PartitioningHandle::ARBITRARY || partition_handle == PartitioningHandle::FIXED_ARBITRARY
-            || partition_handle == PartitioningHandle::FIXED_BROADCAST || partition_handle == PartitioningHandle::SINGLE
-            || partition_handle == PartitioningHandle::COORDINATOR)
+        if (partition_handle == Partitioning::Handle::ARBITRARY || partition_handle == Partitioning::Handle::FIXED_ARBITRARY
+            || partition_handle == Partitioning::Handle::FIXED_BROADCAST || partition_handle == Partitioning::Handle::SINGLE
+            || partition_handle == Partitioning::Handle::COORDINATOR)
             continue;
 
         partition_handles.emplace_back(partition_handle);
@@ -224,7 +224,7 @@ has_required_handle |= property.getNodePartitioning().isRequireHandle();
 
     if (partition_handles.empty())
         return Property{};
-    PartitioningHandle::Enum common_partition_handle = partition_handles[0];
+    Partitioning::Handle common_partition_handle = partition_handles[0];
     for (size_t i = 1; i < partition_handles.size(); i++)
         if (partition_handles[i] != common_partition_handle)
             return Property{};

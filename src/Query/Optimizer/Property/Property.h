@@ -24,14 +24,13 @@ namespace DB
 
 using SymbolEquivalences = Equivalences<String>;
 using SymbolEquivalencesPtr = std::shared_ptr<SymbolEquivalences>;
-// using Handle = RHandle;
-// using Component = RPartitioningComponent;
 using ConstASTPtr = std::shared_ptr<const IAST>;
 
 namespace Protos
 {
 class Partitioning;
 }
+
 class Property;
 using PropertySet = std::vector<Property>;
 using PropertySets = std::vector<PropertySet>;

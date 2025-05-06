@@ -417,11 +417,11 @@ std::pair<String, size_t> PlanSegmentVisitor::findClusterAndParallelSize(QueryPl
 
     switch (partitionings[0])
     {
-        case PartitioningHandle::COORDINATOR:
+        case Partitioning::Handle::COORDINATOR:
             return {"", 1}; // dispatch to coordinator if server is empty
-        case PartitioningHandle::SINGLE:
+        case Partitioning::Handle::SINGLE:
             return {plan_segment_context.cluster_name, 1};
-        case PartitioningHandle::FIXED_PASSTHROUGH:
+        case Partitioning::Handle::FIXED_PASSTHROUGH:
             for (auto & input : split_context.inputs)
             {
                 if (input->getExchangeMode() == RExchangeMode::LOCAL_NO_NEED_REPARTITION)
@@ -433,8 +433,8 @@ std::pair<String, size_t> PlanSegmentVisitor::findClusterAndParallelSize(QueryPl
                 }
             }
             break;
-        case PartitioningHandle::BUCKET_TABLE:
-        case PartitioningHandle::FIXED_HASH: {
+        case Partitioning::Handle::BUCKET_TABLE:
+        case Partitioning::Handle::FIXED_HASH: {
             /// if all input are not table type, parallel size should respect distributed_max_parallel_size setting
             size_t max_parallel_size = plan_segment_context.context->getOptimizerContext()->getSettingsRef().distributed_max_parallel_size;
             if (!input_has_table && !split_context.inputs.empty() && split_context.scalable)
@@ -463,10 +463,10 @@ std::pair<String, size_t> PlanSegmentVisitor::findClusterAndParallelSize(QueryPl
     throw Exception(ErrorCodes::LOGICAL_ERROR, "Unknown partition for PlanSegmentSplitter");
 }
 
-std::vector<PartitioningHandle::Enum> SourceNodeFinder::find(QueryPlanExt::Node * node, CTENodes & cte_nodes, const Context & context)
+std::vector<Partitioning::Handle> SourceNodeFinder::find(QueryPlanExt::Node * node, CTENodes & cte_nodes, const Context & context)
 {
     SourceNodeFinder visitor{cte_nodes};
-    std::vector<PartitioningHandle::Enum> result;
+    std::vector<Partitioning::Handle> result;
     for (auto item : VisitorUtil::accept(node, visitor, context))
     {
         if (item)
@@ -475,9 +475,9 @@ std::vector<PartitioningHandle::Enum> SourceNodeFinder::find(QueryPlanExt::Node 
     return result;
 }
 
-std::vector<std::optional<PartitioningHandle::Enum>> SourceNodeFinder::visitNode(QueryPlanExt::Node * node, const Context & context)
+std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitNode(QueryPlanExt::Node * node, const Context & context)
 {
-    std::vector<std::optional<PartitioningHandle::Enum>> result;
+    std::vector<std::optional<Partitioning::Handle>> result;
     for (const auto & child : node->children)
     {
         auto item = VisitorUtil::accept(child, *this, context);
@@ -486,42 +486,42 @@ std::vector<std::optional<PartitioningHandle::Enum>> SourceNodeFinder::visitNode
     return result;
 }
 
-std::vector<std::optional<PartitioningHandle::Enum>> SourceNodeFinder::visitValuesStepExtNode(QueryPlanExt::Node *, const Context &)
+std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitValuesStepExtNode(QueryPlanExt::Node *, const Context &)
 {
-    return {{PartitioningHandle::SINGLE}};
+    return {{Partitioning::Handle::SINGLE}};
 }
 
-std::vector<std::optional<PartitioningHandle::Enum>> SourceNodeFinder::visitReadNothingStepNode(QueryPlanExt::Node *, const Context &)
+std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitReadNothingStepNode(QueryPlanExt::Node *, const Context &)
 {
-    return {{PartitioningHandle::SINGLE}};
+    return {{Partitioning::Handle::SINGLE}};
 }
 
-std::vector<std::optional<PartitioningHandle::Enum>> SourceNodeFinder::visitReadStorageRowCountStepExtNode(QueryPlanExt::Node *, const Context &)
+std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitReadStorageRowCountStepExtNode(QueryPlanExt::Node *, const Context &)
 {
-    return {{PartitioningHandle::COORDINATOR}};
+    return {{Partitioning::Handle::COORDINATOR}};
 }
 
-std::vector<std::optional<PartitioningHandle::Enum>> SourceNodeFinder::visitTableScanStepExtNode(QueryPlanExt::Node * node, const Context &)
+std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitTableScanStepExtNode(QueryPlanExt::Node * node, const Context &)
 {
-    return {{PartitioningHandle::COORDINATOR}};
+    return {{Partitioning::Handle::COORDINATOR}};
 }
 
-std::vector<std::optional<PartitioningHandle::Enum>> SourceNodeFinder::visitRemoteExchangeSourceStepExtNode(QueryPlanExt::Node * node, const Context &)
+std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitRemoteExchangeSourceStepExtNode(QueryPlanExt::Node * node, const Context &)
 {
     const auto * source_step = dynamic_cast<RemoteExchangeSourceStepExt *>(node->step.get());
     switch (source_step->getInput()[0]->getExchangeMode())
     {
         case RExchangeMode::GATHER:
-            return {{PartitioningHandle::SINGLE}};
+            return {{Partitioning::Handle::SINGLE}};
         case RExchangeMode::BROADCAST:
         case RExchangeMode::REPARTITION:
-            return {{PartitioningHandle::FIXED_HASH}};
+            return {{Partitioning::Handle::FIXED_HASH}};
         case RExchangeMode::LOCAL_NO_NEED_REPARTITION:
-            return {{PartitioningHandle::FIXED_PASSTHROUGH}};
+            return {{Partitioning::Handle::FIXED_PASSTHROUGH}};
         case RExchangeMode::BUCKET_REPARTITION:
-            return {{PartitioningHandle::FIXED_HASH}};
+            return {{Partitioning::Handle::FIXED_HASH}};
         case RExchangeMode::LOCAL_MAY_NEED_REPARTITION:
-            return {{PartitioningHandle::FIXED_PASSTHROUGH}};
+            return {{Partitioning::Handle::FIXED_PASSTHROUGH}};
         case RExchangeMode::UNKNOWN:
             throw Exception(ErrorCodes::LOGICAL_ERROR, "Unknown exchange mode");
         default:
@@ -529,16 +529,16 @@ std::vector<std::optional<PartitioningHandle::Enum>> SourceNodeFinder::visitRemo
     }
 }
 
-std::vector<std::optional<PartitioningHandle::Enum>> SourceNodeFinder::visitExchangeStepExtNode(QueryPlanExt::Node * node, const Context & context)
+std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitExchangeStepExtNode(QueryPlanExt::Node * node, const Context & context)
 {
     const auto * source_step = dynamic_cast<ExchangeStepExt *>(node->step.get());
     switch (source_step->getExchangeMode())
     {
         case RExchangeMode::GATHER:
-            return {{PartitioningHandle::SINGLE}};
+            return {{Partitioning::Handle::SINGLE}};
         case RExchangeMode::BROADCAST:
         case RExchangeMode::REPARTITION:
-            return {{PartitioningHandle::FIXED_HASH}};
+            return {{Partitioning::Handle::FIXED_HASH}};
         case RExchangeMode::LOCAL_NO_NEED_REPARTITION:
         case RExchangeMode::LOCAL_MAY_NEED_REPARTITION:
             return VisitorUtil::accept(node->children[0], *this, context);
@@ -548,7 +548,7 @@ std::vector<std::optional<PartitioningHandle::Enum>> SourceNodeFinder::visitExch
 }
 
 
-std::vector<std::optional<PartitioningHandle::Enum>> SourceNodeFinder::visitCTERefStepExtNode(QueryPlanExt::Node * node, const Context & context)
+std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitCTERefStepExtNode(QueryPlanExt::Node * node, const Context & context)
 {
     auto * step = dynamic_cast<CTERefStepExt *>(node->step.get());
     auto * cte_node = cte_nodes.at(step->getId());
@@ -562,14 +562,14 @@ void SetScalable::setScalable(QueryPlanExt::Node * node, CTENodes & cte_nodes, c
     bool scalable = true;
     for (auto partition : partitionings)
     {
-        if (partition == PartitioningHandle::BUCKET_TABLE || partition == PartitioningHandle::SINGLE)
+        if (partition == Partitioning::Handle::BUCKET_TABLE || partition == Partitioning::Handle::SINGLE)
         {
             scalable = false;
         }
     }
 
     SetScalable visitor(scalable, cte_nodes);
-    std::vector<PartitioningHandle::Enum> result;
+    std::vector<Partitioning::Handle> result;
     VisitorUtil::accept(node, visitor, context);
 }
 
