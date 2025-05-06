@@ -62,12 +62,12 @@ PropertySets DeterminerVisitor::visitLocalExchangeStepExt(const LocalExchangeSte
 
 PropertySets DeterminerVisitor::visitOffsetStep(const OffsetStep &, DeterminerContext &)
 {
-    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+    return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
 PropertySets DeterminerVisitor::visitFinishSortingStepExt(const FinishSortingStepExt &, DeterminerContext &)
 {
-    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+    return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
 PropertySets DeterminerVisitor::visitFinalSampleStepExt(const FinalSampleStepExt & step, DeterminerContext & ctx)
@@ -77,8 +77,8 @@ PropertySets DeterminerVisitor::visitFinalSampleStepExt(const FinalSampleStepExt
 
 PropertySets DeterminerVisitor::visitProjectionStepExt(const ProjectionStepExt & step, DeterminerContext & ctx)
 {
-    if (step.isFinalProject() && (ctx.getRequired().getNodePartitioning().getComponent() != Component::WORKER))
-        return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+    if (step.isFinalProject() && (ctx.getRequired().getNodePartitioning().getComponent() != Partitioning::Component::WORKER))
+        return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};
     const auto & assignments = step.getAssignments();
     std::unordered_map<String, String> identities = Utils::computeIdentityTranslations(assignments);
     auto translated = ctx.getRequired().translate(identities);
@@ -120,11 +120,11 @@ PropertySets DeterminerVisitor::visitJoinStepExt(const JoinStepExt & step, Deter
             right_keys_asof.emplace_back(right_keys[i]);
         }
 
-        Partitioning left_stream{PartitioningHandle::FIXED_HASH, left_keys_asof};
-        Partitioning right_stream{PartitioningHandle::FIXED_HASH, right_keys_asof};
+        Partitioning left_stream{Partitioning::Handle::FIXED_HASH, left_keys_asof};
+        Partitioning right_stream{Partitioning::Handle::FIXED_HASH, right_keys_asof};
 
-        Property left{Partitioning{PartitioningHandle::FIXED_HASH, left_keys_asof, false, 0, nullptr, enforce_round_robine}, left_stream};
-        Property right{Partitioning{PartitioningHandle::FIXED_HASH, right_keys_asof, false, 0, nullptr, false}, right_stream};
+        Property left{Partitioning{Partitioning::Handle::FIXED_HASH, left_keys_asof, false, 0, nullptr, enforce_round_robine}, left_stream};
+        Property right{Partitioning{Partitioning::Handle::FIXED_HASH, right_keys_asof, false, 0, nullptr, false}, right_stream};
         PropertySet set;
         set.emplace_back(left);
         set.emplace_back(right);
@@ -135,13 +135,13 @@ PropertySets DeterminerVisitor::visitJoinStepExt(const JoinStepExt & step, Deter
     {
         auto left_require = context.getRequired();
         left_require.setPreferred(true);
-        return {{left_require, Property{Partitioning{PartitioningHandle::FIXED_BROADCAST}}}};
+        return {{left_require, Property{Partitioning{Partitioning::Handle::FIXED_BROADCAST}}}};
     }
 
     if (left_keys.empty() && right_keys.empty())
     {
-        Property left{Partitioning{PartitioningHandle::SINGLE}};
-        Property right{Partitioning{PartitioningHandle::SINGLE}};
+        Property left{Partitioning{Partitioning::Handle::SINGLE}};
+        Property right{Partitioning{Partitioning::Handle::SINGLE}};
         PropertySet set;
         set.emplace_back(left);
         set.emplace_back(right);
@@ -167,10 +167,10 @@ PropertySets DeterminerVisitor::visitJoinStepExt(const JoinStepExt & step, Deter
                 sub_right_keys.emplace_back(std::get<1>(item));
             }
 
-            Partitioning left_stream{PartitioningHandle::FIXED_HASH, sub_left_keys};
-            Partitioning right_stream{PartitioningHandle::FIXED_HASH, sub_right_keys};
-            Property left{Partitioning{PartitioningHandle::FIXED_HASH, sub_left_keys, false, 0, nullptr, enforce_round_robine}, left_stream};
-            Property right{Partitioning{PartitioningHandle::FIXED_HASH, sub_right_keys, false, 0, nullptr, false}, right_stream};
+            Partitioning left_stream{Partitioning::Handle::FIXED_HASH, sub_left_keys};
+            Partitioning right_stream{Partitioning::Handle::FIXED_HASH, sub_right_keys};
+            Property left{Partitioning{Partitioning::Handle::FIXED_HASH, sub_left_keys, false, 0, nullptr, enforce_round_robine}, left_stream};
+            Property right{Partitioning{Partitioning::Handle::FIXED_HASH, sub_right_keys, false, 0, nullptr, false}, right_stream};
             PropertySet prop_set;
             prop_set.emplace_back(left);
             prop_set.emplace_back(right);
@@ -179,10 +179,10 @@ PropertySets DeterminerVisitor::visitJoinStepExt(const JoinStepExt & step, Deter
     }
     else
     {
-        Partitioning left_stream{PartitioningHandle::FIXED_HASH, left_keys};
-        Partitioning right_stream{PartitioningHandle::FIXED_HASH, right_keys};
-        Property left{Partitioning{PartitioningHandle::FIXED_HASH, left_keys, false, 0, nullptr, enforce_round_robine}, left_stream};
-        Property right{Partitioning{PartitioningHandle::FIXED_HASH, right_keys, false, 0, nullptr, false}, right_stream};
+        Partitioning left_stream{Partitioning::Handle::FIXED_HASH, left_keys};
+        Partitioning right_stream{Partitioning::Handle::FIXED_HASH, right_keys};
+        Property left{Partitioning{Partitioning::Handle::FIXED_HASH, left_keys, false, 0, nullptr, enforce_round_robine}, left_stream};
+        Property right{Partitioning{Partitioning::Handle::FIXED_HASH, right_keys, false, 0, nullptr, false}, right_stream};
         PropertySet prop_set;
         prop_set.emplace_back(left);
         prop_set.emplace_back(right);
@@ -222,7 +222,7 @@ PropertySets DeterminerVisitor::visitAggregatingStepExt(const AggregatingStepExt
     if (keys.empty())
     {
         PropertySet set;
-        set.emplace_back(Property{Partitioning{PartitioningHandle::SINGLE}});
+        set.emplace_back(Property{Partitioning{Partitioning::Handle::SINGLE}});
         return {set};
     }
 
@@ -251,21 +251,21 @@ PropertySets DeterminerVisitor::visitAggregatingStepExt(const AggregatingStepExt
         for (const auto & sub_keys : Utils::powerSet(keys))
         {
             Property prop{
-                Partitioning{PartitioningHandle::FIXED_HASH, sub_keys}, Partitioning{PartitioningHandle::FIXED_HASH, sub_keys}};
+                Partitioning{Partitioning::Handle::FIXED_HASH, sub_keys}, Partitioning{Partitioning::Handle::FIXED_HASH, sub_keys}};
             sets.emplace_back(PropertySet{prop});
         }
     }
     else
     {
         sets.emplace_back(PropertySet{
-            Property{Partitioning{PartitioningHandle::FIXED_HASH, keys}, Partitioning{PartitioningHandle::FIXED_HASH, keys}}});
+            Property{Partitioning{Partitioning::Handle::FIXED_HASH, keys}, Partitioning{Partitioning::Handle::FIXED_HASH, keys}}});
     }
 
     if (step.isGroupingSet())
     {
         keys.emplace_back("__grouping_set");
         return {PropertySet{
-            Property{Partitioning{PartitioningHandle::FIXED_HASH, keys, false, 0, nullptr, true, Component::ANY, true}}}};
+            Property{Partitioning{Partitioning::Handle::FIXED_HASH, keys, false, 0, nullptr, true, Partitioning::Component::ANY, true}}}};
     }
 
     return sets;
@@ -273,7 +273,7 @@ PropertySets DeterminerVisitor::visitAggregatingStepExt(const AggregatingStepExt
 
 PropertySets DeterminerVisitor::visitTotalsHavingStepExt(const TotalsHavingStepExt &, DeterminerContext &)
 {
-    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+    return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
 PropertySets DeterminerVisitor::visitMarkDistinctStepExt(const MarkDistinctStepExt & step, DeterminerContext &)
@@ -282,14 +282,14 @@ PropertySets DeterminerVisitor::visitMarkDistinctStepExt(const MarkDistinctStepE
     if (keys.empty())
     {
         PropertySet set;
-        set.emplace_back(Property{Partitioning{PartitioningHandle::SINGLE}});
+        set.emplace_back(Property{Partitioning{Partitioning::Handle::SINGLE}});
         return {set};
     }
 
     PropertySets sets;
 
     sets.emplace_back(PropertySet{Property{Partitioning{
-        PartitioningHandle::FIXED_HASH,
+        Partitioning::Handle::FIXED_HASH,
         keys,
     }}});
 
@@ -302,7 +302,7 @@ PropertySets DeterminerVisitor::visitMergingAggregatedStepExt(const MergingAggre
     if (keys.empty())
     {
         PropertySet set;
-        set.emplace_back(Property{Partitioning{PartitioningHandle::SINGLE}});
+        set.emplace_back(Property{Partitioning{Partitioning::Handle::SINGLE}});
         return {set};
     }
     std::vector<String> group_bys;
@@ -314,11 +314,11 @@ PropertySets DeterminerVisitor::visitMergingAggregatedStepExt(const MergingAggre
     PropertySet set;
     set.emplace_back(Property{
         Partitioning{
-            PartitioningHandle::FIXED_HASH,
+            Partitioning::Handle::FIXED_HASH,
             group_bys,
         },
         Partitioning{
-            PartitioningHandle::FIXED_HASH,
+            Partitioning::Handle::FIXED_HASH,
             group_bys,
         }
 
@@ -349,7 +349,7 @@ PropertySets DeterminerVisitor::visitIntersectOrExceptStep(const IntersectOrExce
     for (const auto & input : node.getInputStreams())
     {
         set.emplace_back(Property{Partitioning{
-            PartitioningHandle::FIXED_HASH,
+            Partitioning::Handle::FIXED_HASH,
             input.header.getNames(),
         }});
     }
@@ -391,43 +391,43 @@ PropertySets DeterminerVisitor::visitLimitStepExt(const LimitStepExt & step, Det
 {
     if (step.isPartial())
         return visitStep(step, context);
-    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+    return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
 PropertySets DeterminerVisitor::visitLimitByStep(const LimitByStep &, DeterminerContext &)
 {
-    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+    return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
 PropertySets DeterminerVisitor::visitSortingStepExt(const SortingStepExt &, DeterminerContext &)
 {
-    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+    return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
 // // todo lizhuoyu5, add SortingStep
 PropertySets DeterminerVisitor::visitMergeSortingStepExt(const MergeSortingStepExt &, DeterminerContext &)
 {
-    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+    return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
 PropertySets DeterminerVisitor::visitPartialSortingStepExt(const PartialSortingStepExt &, DeterminerContext &)
 {
-    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+    return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
 PropertySets DeterminerVisitor::visitMergingSortedStepExt(const MergingSortedStepExt &, DeterminerContext &)
 {
-    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+    return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
 PropertySets DeterminerVisitor::visitDistinctStepExt(const DistinctStepExt &, DeterminerContext &)
 {
-    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+    return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
 PropertySets DeterminerVisitor::visitExtremesStep(const ExtremesStep &, DeterminerContext &)
 {
-    return {{Property{Partitioning{PartitioningHandle::SINGLE}, Partitioning{PartitioningHandle::SINGLE}}}};
+    return {{Property{Partitioning{Partitioning::Handle::SINGLE}, Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
 PropertySets DeterminerVisitor::visitWindowStep(const WindowStep & step, DeterminerContext & context)
@@ -436,7 +436,7 @@ PropertySets DeterminerVisitor::visitWindowStep(const WindowStep & step, Determi
     if (keys.empty())
     {
         PropertySet set;
-        set.emplace_back(Property{Partitioning{PartitioningHandle::SINGLE}});
+        set.emplace_back(Property{Partitioning{Partitioning::Handle::SINGLE}});
         return {set};
     }
     std::vector<String> group_bys;
@@ -449,14 +449,14 @@ PropertySets DeterminerVisitor::visitWindowStep(const WindowStep & step, Determi
     {
         for (const auto & sub_keys : Utils::powerSet(group_bys))
         {
-            Property prop{Partitioning{PartitioningHandle::FIXED_HASH, sub_keys}};
+            Property prop{Partitioning{Partitioning::Handle::FIXED_HASH, sub_keys}};
             sets.emplace_back(PropertySet{prop});
         }
     }
     else
     {
         PropertySet set;
-        set.emplace_back(Property{Partitioning{PartitioningHandle::FIXED_HASH, group_bys, false}});
+        set.emplace_back(Property{Partitioning{Partitioning::Handle::FIXED_HASH, group_bys, false}});
         sets.emplace_back(set);
     }
     return sets;
@@ -464,12 +464,12 @@ PropertySets DeterminerVisitor::visitWindowStep(const WindowStep & step, Determi
 
 PropertySets DeterminerVisitor::visitApplyStepExt(const ApplyStepExt &, DeterminerContext &)
 {
-    return {{Property{Partitioning{PartitioningHandle::SINGLE}, Partitioning{PartitioningHandle::SINGLE}}}};
+    return {{Property{Partitioning{Partitioning::Handle::SINGLE}, Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
 PropertySets DeterminerVisitor::visitEnforceSingleRowStepExt(const EnforceSingleRowStepExt &, DeterminerContext &)
 {
-    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+    return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
 PropertySets DeterminerVisitor::visitAssignUniqueIdStepExt(const AssignUniqueIdStepExt & node, DeterminerContext & context)
@@ -484,7 +484,7 @@ PropertySets DeterminerVisitor::visitCTERefStepExt(const CTERefStepExt &, Determ
 
 PropertySets DeterminerVisitor::visitExplainAnalyzeStepExt(const ExplainAnalyzeStepExt &, DeterminerContext &)
 {
-    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+    return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
 PropertySets DeterminerVisitor::visitTopNFilteringStepExt(const TopNFilteringStepExt &, DeterminerContext & context)
@@ -496,7 +496,7 @@ PropertySets DeterminerVisitor::visitTopNFilteringStepExt(const TopNFilteringSte
 
 PropertySets DeterminerVisitor::visitFillingStep(const FillingStep &, DeterminerContext &)
 {
-    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+    return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
 PropertySets DeterminerVisitor::visitExpandStepExt(const ExpandStepExt &, DeterminerContext & context)

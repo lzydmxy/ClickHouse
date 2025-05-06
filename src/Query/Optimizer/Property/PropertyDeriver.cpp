@@ -44,7 +44,7 @@ PropertyDeriver::deriveProperty(QueryPlanStepPtr step, Property & input_property
     auto result = deriveProperty(step, input_properties, require, context);
     if (getQueryPlanStepType(step) != QueryPlanStepType::ExchangeStepExt)
     {
-        if (result.getNodePartitioning().getComponent() == Component::ANY)
+        if (result.getNodePartitioning().getComponent() == Partitioning::Component::ANY)
         {
             result.getNodePartitioningRef().setComponent(input_property.getNodePartitioning().getComponent());
         }
@@ -61,7 +61,7 @@ Property PropertyDeriver::deriveProperty(
     auto result = VisitorUtil::accept(step, visitor, deriver_context);
     if (getQueryPlanStepType(step) != QueryPlanStepType::ExchangeStepExt)
     {
-        if (result.getNodePartitioning().getComponent() == Component::ANY && !input_properties.empty())
+        if (result.getNodePartitioning().getComponent() == Partitioning::Component::ANY && !input_properties.empty())
         {
             result.getNodePartitioningRef().setComponent(input_properties[0].getNodePartitioning().getComponent());
         }
@@ -74,9 +74,9 @@ Property PropertyDeriver::deriveStorageProperty(const StoragePtr & storage, cons
 {
     if (storage->getStorageID().getDatabaseName() == "system")
     {
-        auto node = Partitioning(PartitioningHandle::SINGLE);
-        node.setComponent(Component::COORDINATOR);
-        return Property{node, Partitioning(PartitioningHandle::ARBITRARY)};
+        auto node = Partitioning(Partitioning::Handle::SINGLE);
+        node.setComponent(Partitioning::Component::COORDINATOR);
+        return Property{node, Partitioning(Partitioning::Handle::ARBITRARY)};
     }
     Sorting sorting;
     const auto & descs = storage->getInMemoryMetadataPtr()->sorting_key;
@@ -96,7 +96,7 @@ Property PropertyDeriver::deriveStorageProperty(const StoragePtr & storage, cons
         sorting = sorting.toReverseOrder();
 
     ASTPtr ast;
-    return Property{Partitioning(PartitioningHandle::UNKNOWN), Partitioning(PartitioningHandle::UNKNOWN), sorting};
+    return Property{Partitioning(Partitioning::Handle::UNKNOWN), Partitioning(Partitioning::Handle::UNKNOWN), sorting};
 }
 
 Property PropertyDeriver::deriveStoragePropertyWhatIfMode(
@@ -119,7 +119,7 @@ Property PropertyDeriver::deriveStoragePropertyWhatIfMode(
     UInt64 buckets =  actual_storage_property.getNodePartitioning().getBuckets();
 
     Partitioning new_partitioning{
-        PartitioningHandle::BUCKET_TABLE, cluster_by, true, buckets, nullptr, true, Component::ANY};
+        Partitioning::Handle::BUCKET_TABLE, cluster_by, true, buckets, nullptr, true, Partitioning::Component::ANY};
     actual_storage_property.setNodePartitioning(new_partitioning);
 
     return actual_storage_property;
@@ -133,7 +133,7 @@ Property DeriverVisitor::visitStep(const IQueryPlanStep &, DeriverContext & cont
 Property DeriverVisitor::visitOffsetStep(const OffsetStep &, DeriverContext & context)
 {
     return Property{
-        context.getInput()[0].getNodePartitioning(), Partitioning(PartitioningHandle::SINGLE), context.getInput()[0].getSorting()};
+        context.getInput()[0].getNodePartitioning(), Partitioning(Partitioning::Handle::SINGLE), context.getInput()[0].getSorting()};
 }
 
 Property DeriverVisitor::visitTotalsHavingStepExt(const TotalsHavingStepExt &, DeriverContext & context)
@@ -302,7 +302,7 @@ Property DeriverVisitor::visitProjectionStepExt(const ProjectionStepExt & step, 
     }
     if (has_bitmap_func)
     {
-        translated.getNodePartitioningRef().setComponent(Component::WORKER);
+        translated.getNodePartitioningRef().setComponent(Partitioning::Component::WORKER);
     }
     return translated;
 }
@@ -389,23 +389,23 @@ Property DeriverVisitor::visitMergingAggregatedStepExt(const MergingAggregatedSt
 Property DeriverVisitor::visitUnionStepExt(const UnionStepExt & step, DeriverContext & context)
 {
     Property first_child_property = context.getInput()[0];
-    if (first_child_property.getNodePartitioning().getHandle() == PartitioningHandle::SINGLE)
+    if (first_child_property.getNodePartitioning().getHandle() == Partitioning::Handle::SINGLE)
     {
         bool all_single = true;
         for (const auto & input : context.getInput())
         {
-            all_single &= input.getNodePartitioning().getHandle() == PartitioningHandle::SINGLE;
+            all_single &= input.getNodePartitioning().getHandle() == Partitioning::Handle::SINGLE;
         }
 
         if (all_single)
         {
             if (step.isLocal())
             {
-                return Property{Partitioning{PartitioningHandle::SINGLE}, Partitioning{PartitioningHandle::SINGLE}};
+                return Property{Partitioning{Partitioning::Handle::SINGLE}, Partitioning{Partitioning::Handle::SINGLE}};
             }
             else
             {
-                return Property{Partitioning{PartitioningHandle::SINGLE}};
+                return Property{Partitioning{Partitioning::Handle::SINGLE}};
             }
         }
     }
@@ -424,8 +424,8 @@ Property DeriverVisitor::visitUnionStepExt(const UnionStepExt & step, DeriverCon
         transformed_children_prop.emplace_back(child_prop.translate(mapping));
     }
 
-    if (first_child_property.getNodePartitioning().getHandle() == PartitioningHandle::FIXED_HASH
-        || first_child_property.getNodePartitioning().getHandle() == PartitioningHandle::BUCKET_TABLE)
+    if (first_child_property.getNodePartitioning().getHandle() == Partitioning::Handle::FIXED_HASH
+        || first_child_property.getNodePartitioning().getHandle() == Partitioning::Handle::BUCKET_TABLE)
     {
         const Names & keys = first_child_property.getNodePartitioning().getColumns();
         Names output_keys;
@@ -468,7 +468,7 @@ Property DeriverVisitor::visitUnionStepExt(const UnionStepExt & step, DeriverCon
                     first_child_property.getNodePartitioning().getComponent(),
                     false,
                     satisfy_worker},
-                Partitioning{PartitioningHandle::SINGLE}};
+                Partitioning{Partitioning::Handle::SINGLE}};
         }
         else
         {
@@ -498,7 +498,7 @@ Property DeriverVisitor::visitExchangeStepExt(const ExchangeStepExt & step, Deri
     if (mode == RExchangeMode::GATHER)
     {
         Property output = context.getInput()[0];
-        output.setNodePartitioning(Partitioning{PartitioningHandle::SINGLE});
+        output.setNodePartitioning(Partitioning{Partitioning::Handle::SINGLE});
         return output.clearSorting();
     }
 
@@ -513,7 +513,7 @@ Property DeriverVisitor::visitExchangeStepExt(const ExchangeStepExt & step, Deri
     if (mode == RExchangeMode::BROADCAST)
     {
         Property output = context.getInput()[0];
-        output.setNodePartitioning(Partitioning{PartitioningHandle::FIXED_BROADCAST});
+        output.setNodePartitioning(Partitioning{Partitioning::Handle::FIXED_BROADCAST});
         return output.clearSorting();
     }
 
@@ -555,30 +555,30 @@ Property DeriverVisitor::visitTableScanStepExt(const TableScanStepExt & step, De
 
 Property DeriverVisitor::visitReadNothingStep(const ReadNothingStep &, DeriverContext &)
 {
-    return Property{Partitioning(PartitioningHandle::SINGLE), Partitioning(PartitioningHandle::ARBITRARY)};
+    return Property{Partitioning(Partitioning::Handle::SINGLE), Partitioning(Partitioning::Handle::ARBITRARY)};
 }
 
 Property DeriverVisitor::visitReadStorageRowCountStepExt(const ReadStorageRowCountStepExt &, DeriverContext &)
 {
-    auto prop = Partitioning(PartitioningHandle::SINGLE);
-    prop.setComponent(Component::COORDINATOR);
-    return Property{prop, Partitioning(PartitioningHandle::ARBITRARY)};
+    auto prop = Partitioning(Partitioning::Handle::SINGLE);
+    prop.setComponent(Partitioning::Component::COORDINATOR);
+    return Property{prop, Partitioning(Partitioning::Handle::ARBITRARY)};
 }
 
 Property DeriverVisitor::visitValuesStepExt(const ValuesStepExt &, DeriverContext &)
 {
-    return Property{Partitioning(PartitioningHandle::SINGLE), Partitioning(PartitioningHandle::ARBITRARY)};
+    return Property{Partitioning(Partitioning::Handle::SINGLE), Partitioning(Partitioning::Handle::ARBITRARY)};
 }
 
 Property DeriverVisitor::visitLimitStepExt(const LimitStepExt &, DeriverContext & context)
 {
     return Property{
-        context.getInput()[0].getNodePartitioning(), Partitioning(PartitioningHandle::SINGLE), context.getInput()[0].getSorting()};
+        context.getInput()[0].getNodePartitioning(), Partitioning(Partitioning::Handle::SINGLE), context.getInput()[0].getSorting()};
 }
 
 Property DeriverVisitor::visitLimitByStep(const LimitByStep &, DeriverContext & context)
 {
-    return context.getInput()[0].withStreamPartitioning(Partitioning{PartitioningHandle::SINGLE});
+    return context.getInput()[0].withStreamPartitioning(Partitioning{Partitioning::Handle::SINGLE});
 }
 
 Property DeriverVisitor::visitSortingStepExt(const SortingStepExt & step, DeriverContext & context)
@@ -606,7 +606,7 @@ Property DeriverVisitor::visitPartialSortingStepExt(const PartialSortingStepExt 
 
 Property DeriverVisitor::visitMergingSortedStepExt(const MergingSortedStepExt &, DeriverContext & context)
 {
-    return Property{context.getInput()[0].getNodePartitioning(), Partitioning(PartitioningHandle::SINGLE)};
+    return Property{context.getInput()[0].getNodePartitioning(), Partitioning(Partitioning::Handle::SINGLE)};
 }
 
 Property DeriverVisitor::visitDistinctStepExt(const DistinctStepExt & step, DeriverContext & context)
@@ -615,7 +615,7 @@ Property DeriverVisitor::visitDistinctStepExt(const DistinctStepExt & step, Deri
     result.clearSorting();
     if (!step.preDistinct())
     {
-        result.setStreamPartitioning(Partitioning{PartitioningHandle::SINGLE});
+        result.setStreamPartitioning(Partitioning{Partitioning::Handle::SINGLE});
     }
     return result;
 }
@@ -637,7 +637,7 @@ Property DeriverVisitor::visitApplyStepExt(const ApplyStepExt &, DeriverContext 
 
 Property DeriverVisitor::visitEnforceSingleRowStepExt(const EnforceSingleRowStepExt &, DeriverContext & context)
 {
-    return context.getInput()[0].withStreamPartitioning(Partitioning{PartitioningHandle::SINGLE});
+    return context.getInput()[0].withStreamPartitioning(Partitioning{Partitioning::Handle::SINGLE});
 }
 
 Property DeriverVisitor::visitAssignUniqueIdStepExt(const AssignUniqueIdStepExt &, DeriverContext & context)
@@ -696,7 +696,7 @@ Property PlanDeriverVisitor::visitPlanNode(PlanNodeBase & node, ContextMutablePt
     auto result = VisitorUtil::accept(node.getStep(), visitor, deriver_context);
     if (getQueryPlanStepType(node.getStep()) != QueryPlanStepType::ExchangeStepExt)
     {
-        if (result.getNodePartitioning().getComponent() == Component::ANY && !input_properties.empty())
+        if (result.getNodePartitioning().getComponent() == Partitioning::Component::ANY && !input_properties.empty())
         {
             result.getNodePartitioningRef().setComponent(input_properties[0].getNodePartitioning().getComponent());
         }

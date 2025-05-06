@@ -51,7 +51,7 @@ bool Partitioning::satisfy(const Partitioning & requirement, const Constants & c
 
     switch (requirement.getHandle())
     {
-        case PartitioningHandle::FIXED_HASH:
+        case Partitioning::Handle::FIXED_HASH:
             return getColumns() == requirement.getColumns()
                 || (!requirement.isExactlyMatch() && this->isPartitionOn(requirement, constants));
         default:
@@ -90,12 +90,12 @@ bool Partitioning::isPartitionOn(const Partitioning & requirement, const Constan
 
 bool Partitioning::isSimpleExchangeSchema(bool /*support_bucket_shuffle*/) const
 {
-    return handle != PartitioningHandle::BUCKET_TABLE;
+    return handle != Partitioning::Handle::BUCKET_TABLE;
 }
 
 bool Partitioning::isExchangeSchema(bool /*support_bucket_shuffle*/) const
 {
-    return handle != PartitioningHandle::BUCKET_TABLE;
+    return handle != Partitioning::Handle::BUCKET_TABLE;
 }
 
 
@@ -180,11 +180,11 @@ String Partitioning::toString() const
 {
     switch (handle)
     {
-        case PartitioningHandle::SINGLE:
+        case Partitioning::Handle::SINGLE:
             return "SINGLE";
-        case PartitioningHandle::COORDINATOR:
+        case Partitioning::Handle::COORDINATOR:
             return "COORDINATOR";
-        case PartitioningHandle::FIXED_HASH:
+        case Partitioning::Handle::FIXED_HASH:
             if (columns.empty())
                 return "[]";
             else
@@ -204,13 +204,13 @@ String Partitioning::toString() const
                     result += " EM";
                 return result;
             }
-        case PartitioningHandle::FIXED_ARBITRARY:
+        case Partitioning::Handle::FIXED_ARBITRARY:
             return "FIXED_ARBITRARY";
-        case PartitioningHandle::FIXED_BROADCAST:
+        case Partitioning::Handle::FIXED_BROADCAST:
             return "BROADCAST";
-        case PartitioningHandle::SCALED_WRITER:
+        case Partitioning::Handle::SCALED_WRITER:
             return "SCALED_WRITER";
-        case PartitioningHandle::BUCKET_TABLE:
+        case Partitioning::Handle::BUCKET_TABLE:
             if (columns.empty())
                 return "BUCKET_TABLE[]";
             else
@@ -232,9 +232,9 @@ String Partitioning::toString() const
                     result += " SW";
                 return result;
             }
-        case PartitioningHandle::ARBITRARY:
+        case Partitioning::Handle::ARBITRARY:
             return "ARBITRARY";
-        case PartitioningHandle::FIXED_PASSTHROUGH:
+        case Partitioning::Handle::FIXED_PASSTHROUGH:
             return "FIXED_PASSTHROUGH";
         default:
             return "UNKNOWN";
@@ -436,7 +436,7 @@ String Property::toString() const
 {
     std::stringstream output;
     output << node_partitioning.toString();
-    if (stream_partitioning.getHandle() != PartitioningHandle::ARBITRARY)
+    if (stream_partitioning.getHandle() != Partitioning::Handle::ARBITRARY)
         output << "/" << stream_partitioning.toString();
     if (!sorting.empty())
         output << " " << sorting.toString();

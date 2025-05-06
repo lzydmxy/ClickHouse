@@ -67,21 +67,21 @@ QueryPlanStepPtr PropertyEnforcer::enforceNodePartitioning(
 
     switch (partitioning.getHandle())
     {
-        case PartitioningHandle::SINGLE:
+        case Partitioning::Handle::SINGLE:
             return std::make_unique<ExchangeStepExt>(streams, RExchangeMode::Enum::ExchangeMode_Enum_GATHER, partitioning, keep_order);
-        case PartitioningHandle::FIXED_BROADCAST:
+        case Partitioning::Handle::FIXED_BROADCAST:
             return std::make_unique<ExchangeStepExt>(streams, RExchangeMode::Enum::ExchangeMode_Enum_BROADCAST, partitioning, keep_order);
-        case PartitioningHandle::FIXED_ARBITRARY:
-            if (partitioning.getComponent() == Component::WORKER
-                && actual.getNodePartitioning().getComponent() == Component::COORDINATOR)
+        case Partitioning::Handle::FIXED_ARBITRARY:
+            if (partitioning.getComponent() == Partitioning::Component::WORKER
+                && actual.getNodePartitioning().getComponent() == Partitioning::Component::COORDINATOR)
             {
                 return std::make_unique<ExchangeStepExt>(streams, RExchangeMode::Enum::ExchangeMode_Enum_GATHER, partitioning, keep_order);
             }
             return std::make_unique<ExchangeStepExt>(streams, RExchangeMode::Enum::ExchangeMode_Enum_LOCAL_NO_NEED_REPARTITION, partitioning, keep_order);
-        case PartitioningHandle::ARBITRARY:
+        case Partitioning::Handle::ARBITRARY:
             return nullptr;
-        case PartitioningHandle::FIXED_HASH:
-        case PartitioningHandle::BUCKET_TABLE:
+        case Partitioning::Handle::FIXED_HASH:
+        case Partitioning::Handle::BUCKET_TABLE:
             return std::make_unique<ExchangeStepExt>(streams, RExchangeMode::Enum::ExchangeMode_Enum_REPARTITION, partitioning, keep_order);
         default:
             throw Exception(ErrorCodes::ILLEGAL_ENFORCE, "Property Enforce error");
@@ -98,13 +98,13 @@ PropertyEnforcer::enforceStreamPartitioning(QueryPlanStepPtr step, const Propert
     Partitioning partitioning = required.getStreamPartitioning();
     switch (partitioning.getHandle())
     {
-        case PartitioningHandle::SINGLE:
+        case Partitioning::Handle::SINGLE:
             return std::make_unique<UnionStepExt>(streams, DataStream{}, OutputToInputs{}, 0, true);
-        case PartitioningHandle::FIXED_HASH:
+        case Partitioning::Handle::FIXED_HASH:
             return std::make_unique<LocalExchangeStepExt>(streams[0], RExchangeMode::Enum::ExchangeMode_Enum_REPARTITION, partitioning);
-        case PartitioningHandle::FIXED_ARBITRARY:
+        case Partitioning::Handle::FIXED_ARBITRARY:
             return std::make_unique<LocalExchangeStepExt>(streams[0], RExchangeMode::Enum::ExchangeMode_Enum_LOCAL_NO_NEED_REPARTITION, partitioning);
-        case PartitioningHandle::ARBITRARY:
+        case Partitioning::Handle::ARBITRARY:
             return nullptr;
         default:
             throw Exception(ErrorCodes::ILLEGAL_ENFORCE, "Property Enforce error");

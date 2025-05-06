@@ -38,7 +38,7 @@ public:
 private:
     static PropertySet single()
     {
-        return {Property{Partitioning{PartitioningHandle::SINGLE}, Partitioning{PartitioningHandle::SINGLE}}};
+        return {Property{Partitioning{Partitioning::Handle::SINGLE}, Partitioning{Partitioning::Handle::SINGLE}}};
     }
 };
 
