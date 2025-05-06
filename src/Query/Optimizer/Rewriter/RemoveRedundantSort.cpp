@@ -4,8 +4,6 @@
 #include <Query/Processors/QueryPlan/CTERefStepExt.h>
 #include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
-#include <Query/Planner/SymbolAllocator.h>
-
 #include <Processors/QueryPlan/SortingStep.h>
 #include <Parsers/ASTFunction.h>
 #include <Functions/FunctionFactory.h>
@@ -123,7 +121,7 @@ PlanNodePtr RedundantSortVisitor::visitIntersectOrExceptStepNode(IntersectOrExce
     return processChildren(node, sort_context);
 }
 
-PlanNodePtr RedundantSortVisitor::visitSortingStepNode(SortingStepNode & node, RedundantSortContext & sort_context)
+PlanNodePtr RedundantSortVisitor::visitSortingStepExtNode(SortingStepExtNode & node, RedundantSortContext & sort_context)
 {
     bool remove_current = sort_context.can_sort_be_removed;
     sort_context.can_sort_be_removed = true;

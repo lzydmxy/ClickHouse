@@ -4,9 +4,7 @@
 #include <Query/Processors/QueryPlan/DistinctStepExt.h>
 #include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
-#include <Query/Processors/QueryPlan/UnionStepExt.h>
-#include <Query/Common/PredicateUtils.h>
-#include "Parsers/IAST_fwd.h"
+#include <Query/Optimizer/PredicateUtils.h>
 
 namespace DB
 {

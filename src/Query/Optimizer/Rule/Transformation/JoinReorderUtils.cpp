@@ -1,9 +1,9 @@
 #include <Query/Optimizer/Rule/Transformation/JoinReorderUtils.h>
+
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
-#include <Query/Optimizer/SymbolsExtractor.h>
 #include <Query/Processors/QueryPlan/AnyStepExt.h>
 #include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
 #include <Query/Common/NameToTypeExt.h>

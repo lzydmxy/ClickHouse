@@ -1,6 +1,7 @@
+#include <Query/Optimizer/Rule/Transformation/InnerJoinCommutation.h>
+
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>
 #include <Query/Optimizer/Rule/Patterns.h>
-#include <Query/Optimizer/Rule/Transformation/InnerJoinCommutation.h>
 
 namespace DB
 {

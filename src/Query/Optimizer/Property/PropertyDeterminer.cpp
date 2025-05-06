@@ -1,4 +1,3 @@
-#include <set>
 #include <Query/Optimizer/Property/PropertyDeterminer.h>
 
 #include <Query/Optimizer/Property/Property.h>
@@ -9,6 +8,8 @@
 #include <Query/Processors/QueryPlan/TotalsHavingStepExt.h>
 #include <Query/Processors/QueryPlan/UnionStepExt.h>
 #include <Processors/QueryPlan/WindowStep.h>
+
+#include <set>
 
 namespace DB
 {
@@ -64,11 +65,10 @@ PropertySets DeterminerVisitor::visitOffsetStep(const OffsetStep &, DeterminerCo
     return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
 }
 
-// todo lizhuoyu5 , add FinishSortingStep
-// PropertySets DeterminerVisitor::visitFinishSortingStep(const FinishSortingStep &, DeterminerContext &)
-// {
-//     return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
-// }
+PropertySets DeterminerVisitor::visitFinishSortingStepExt(const FinishSortingStepExt &, DeterminerContext &)
+{
+    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+}
 
 PropertySets DeterminerVisitor::visitFinalSampleStepExt(const FinalSampleStepExt & step, DeterminerContext & ctx)
 {
@@ -405,20 +405,20 @@ PropertySets DeterminerVisitor::visitSortingStepExt(const SortingStepExt &, Dete
 }
 
 // // todo lizhuoyu5, add SortingStep
-// PropertySets DeterminerVisitor::visitMergeSortingStep(const MergeSortingStep &, DeterminerContext &)
-// {
-//     return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
-// }
-//
-// PropertySets DeterminerVisitor::visitPartialSortingStep(const PartialSortingStep &, DeterminerContext &)
-// {
-//     return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
-// }
-//
-// PropertySets DeterminerVisitor::visitMergingSortedStep(const MergingSortedStep &, DeterminerContext &)
-// {
-//     return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
-// }
+PropertySets DeterminerVisitor::visitMergeSortingStepExt(const MergeSortingStepExt &, DeterminerContext &)
+{
+    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+}
+
+PropertySets DeterminerVisitor::visitPartialSortingStepExt(const PartialSortingStepExt &, DeterminerContext &)
+{
+    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+}
+
+PropertySets DeterminerVisitor::visitMergingSortedStepExt(const MergingSortedStepExt &, DeterminerContext &)
+{
+    return {{Property{Partitioning{PartitioningHandle::SINGLE}}}};
+}
 
 PropertySets DeterminerVisitor::visitDistinctStepExt(const DistinctStepExt &, DeterminerContext &)
 {

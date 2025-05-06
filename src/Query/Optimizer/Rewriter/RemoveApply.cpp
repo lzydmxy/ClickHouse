@@ -8,7 +8,7 @@
 #include <Query/Optimizer/CardinalityEstimate/CardinalityEstimator.h>
 #include <Query/Optimizer/Correlation.h>
 #include <Query/Optimizer/ExpressionRewriter.h>
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Optimizer/SymbolsExtractor.h>
 #include <Parsers/ASTFunction.h>

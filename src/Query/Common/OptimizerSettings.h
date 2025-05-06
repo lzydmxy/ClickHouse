@@ -177,6 +177,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_nested_loop_join, false, "Whether enable nest loop join for outer join with filter", 0)\
     M(Bool, use_grace_hash_only_repartition, false, "Only use grace hash join when exchange type is repartition", 0) \
     M(UInt64, grace_hash_join_left_side_parallel, 1, "Initial number of grace hash join left side parallel", 0) \
+    M(Bool, join_using_null_safe, 0, "Force null safe equal comparison for USING keys except the last key of ASOF join", 0) \
     /** Debug settings */ \
     M(Bool, log_segment_profiles, false, "Log profile of each segment info including runtime and planning information.", 0) \
     M(Bool, report_segment_profiles, false, "Report plan segment profile to coordinator.", 0) \
@@ -478,6 +479,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, allow_map_access_without_key, true, "Allow access map column without providing key", 0) \
     M(Bool, offloading_with_query_plan, false, "utilize query plan to offload the computation completely to worker", 0) \
     /** Just for compatible, maybe removed or implemented later */ \
+    M(UInt64, max_in_value_list_to_pushdown, 10000, "Max size of in value list in filter", 0) \
     M(UInt64, max_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a query segment can consume.", 0) \
     M(UInt64, max_distributed_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a distribute query can consume.", 0) \
     M(Float, streaming_agg_local_ratio, 0.25f, "The ratio of local streaming agg, 0-all streaming, 1-all local merged", 0) \

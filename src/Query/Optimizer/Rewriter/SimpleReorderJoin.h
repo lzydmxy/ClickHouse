@@ -3,12 +3,9 @@
 #include <Interpreters/Context.h>
 #include <Query/Optimizer/JoinGraph.h>
 #include <Query/Optimizer/Rewriter/Rewriter.h>
-#include <Query/Parsers/ASTVisitor.h>
 #include <Query/Processors/QueryPlan/PlanVisitor.h>
 #include <Query/Processors/QueryPlan/SimplePlanRewriter.h>
 #include <Query/Processors/QueryPlan/SimplePlanVisitor.h>
-
-#include <utility>
 
 namespace DB
 {

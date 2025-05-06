@@ -1,27 +1,22 @@
-#include <algorithm>
-#include <iterator>
+#include <Query/Optimizer/DataDependency/DataDependencyDeriver.h>
+
 #include <Core/Names.h>
 #include <Interpreters/StorageID.h>
-#include <Query/Optimizer/DataDependency/DataDependencyDeriver.h>
 #include <Query/Optimizer/DataDependency/ForeignKeysTuple.h>
 #include <Query/Optimizer/DataDependency/FunctionalDependency.h>
 #include <Query/Optimizer/DataDependency/InclusionDependency.h>
 #include <Query/Optimizer/DomainTranslator.h>
-#include <Query/Optimizer/SymbolsExtractor.h>
 #include <Query/Optimizer/Utils.h>
-#include <Storages/ForeignKeysDescription.h>
 #include <Storages/StorageDistributed.h>
-#include <Poco/Logger.h>
-#include <Common/logger_useful.h>
 #include <Interpreters/Context_fwd.h>
 #include <Query/Optimizer/DataDependency/DataDependency.h>
 #include <Query/Optimizer/DataDependency/DependencyUtils.h>
-#include <Query/Optimizer/SymbolUtils.h>
 #include <Parsers/ASTFunction.h>
 #include <Parsers/ASTIdentifier.h>
-#include <Parsers/ASTLiteral.h>
 #include <Parsers/ASTTablesInSelectQuery.h>
-#include <Query/Processors/QueryPlan/Assignment.h>
+
+#include <algorithm>
+
 
 namespace DB
 {
@@ -53,42 +48,43 @@ DataDependency DataDependencyDeriver::deriveDataDependency(
 }
 
 DataDependency
-DataDependencyDeriver::deriveStorageDataDependency(const StoragePtr & storage, ContextMutablePtr &)
+DataDependencyDeriver::deriveStorageDataDependency(const StoragePtr & /*storage*/, ContextMutablePtr &)
 {
     FunctionalDependencies functional_dependencies;
     InclusionDependency inclusion_dependency;
 
+    // todo: lizhuoyu5 other feat: support unique_columns and foreign_keys
     // fill functioonal_dependencies
-    std::vector<Names> unique_columns = storage->getInMemoryMetadataPtr()->getUniqueNotEnforced().getUniqueNames();
-    Names all_columns = storage->getInMemoryMetadataPtr()->getColumns().getAll().getNames();
-
-    for (const auto & unique_names : unique_columns)
-    {
-        for (const auto & dependent_column : all_columns)
-        {
-            std::unordered_set us(unique_names.begin(), unique_names.end());
-            if (!us.contains(dependent_column))
-                functional_dependencies.update(FunctionalDependency{us, {dependent_column}});
-        }
-    }
-
-    // fill inclusion_dependency using pk
-    for (const auto & unique_names : unique_columns)
-    {
-        if (unique_names.size() == 1)
-        {
-            inclusion_dependency.emplace(
-                unique_names[0], std::pair<bool, String>{false, storage->getStorageID().getTableName() + '.' + unique_names[0]});
-        }
-    }
-
-    // fill inclusion_dependency using fk
-    auto fk_tuples = storage->getInMemoryMetadataPtr()->getForeignKeys().getForeignKeysTuple();
-    for (const auto & fk_tuple : fk_tuples)
-    {
-        inclusion_dependency.emplace(
-            fk_tuple.fk_column_name, std::pair<bool, String>{true, fk_tuple.ref_table_name + '.' + fk_tuple.ref_column_name});
-    }
+    // std::vector<Names> unique_columns = storage->getInMemoryMetadataPtr()->getUniqueNotEnforced().getUniqueNames();
+    // Names all_columns = storage->getInMemoryMetadataPtr()->getColumns().getAll().getNames();
+    //
+    // for (const auto & unique_names : unique_columns)
+    // {
+    //     for (const auto & dependent_column : all_columns)
+    //     {
+    //         std::unordered_set us(unique_names.begin(), unique_names.end());
+    //         if (!us.contains(dependent_column))
+    //             functional_dependencies.update(FunctionalDependency{us, {dependent_column}});
+    //     }
+    // }
+    //
+    // // fill inclusion_dependency using pk
+    // for (const auto & unique_names : unique_columns)
+    // {
+    //     if (unique_names.size() == 1)
+    //     {
+    //         inclusion_dependency.emplace(
+    //             unique_names[0], std::pair<bool, String>{false, storage->getStorageID().getTableName() + '.' + unique_names[0]});
+    //     }
+    // }
+    //
+    // // fill inclusion_dependency using fk
+    // auto fk_tuples = storage->getInMemoryMetadataPtr()->getForeignKeys().getForeignKeysTuple();
+    // for (const auto & fk_tuple : fk_tuples)
+    // {
+    //     inclusion_dependency.emplace(
+    //         fk_tuple.fk_column_name, std::pair<bool, String>{true, fk_tuple.ref_table_name + '.' + fk_tuple.ref_column_name});
+    // }
 
     return DataDependency{functional_dependencies, inclusion_dependency};
 }
@@ -100,7 +96,7 @@ DataDependency DataDependencyDeriverVisitor::visitStep(const IQueryPlanStep &, D
     return DataDependency{};
 }
 
-DataDependency DataDependencyDeriverVisitor::visitProjectionStep(const ProjectionStep & step, DataDependencyDeriverContext & context)
+DataDependency DataDependencyDeriverVisitor::visitProjectionStepExt(const ProjectionStepExt & step, DataDependencyDeriverContext & context)
 {
     const auto & assignments = step.getAssignments();
     std::unordered_map<String, String> identities = Utils::computeIdentityTranslations(assignments);
@@ -121,7 +117,7 @@ DataDependency DataDependencyDeriverVisitor::visitProjectionStep(const Projectio
     return translated;
 }
 
-DataDependency DataDependencyDeriverVisitor::visitTableScanStep(const TableScanStep & step, DataDependencyDeriverContext & context)
+DataDependency DataDependencyDeriverVisitor::visitTableScanStepExt(const TableScanStepExt & step, DataDependencyDeriverContext & context)
 {
     NameToNameMap translation;
     for (const auto & item : step.getColumnAlias())
@@ -131,7 +127,7 @@ DataDependency DataDependencyDeriverVisitor::visitTableScanStep(const TableScanS
         .translate(translation);
 }
 
-DataDependency DataDependencyDeriverVisitor::visitJoinStep(const JoinStep & step, DataDependencyDeriverContext & context)
+DataDependency DataDependencyDeriverVisitor::visitJoinStepExt(const JoinStepExt & step, DataDependencyDeriverContext & context)
 {
     std::unordered_map<String, String> identities;
     for (const auto & item : step.getOutputStream().header)
@@ -140,7 +136,7 @@ DataDependency DataDependencyDeriverVisitor::visitJoinStep(const JoinStep & step
     }
 
     DataDependency translated;
-    if (step.getKind() == ASTTableJoin::Kind::Inner && !step.getLeftKeys().empty())
+    if (step.getKind() == JoinKind::Inner && !step.getLeftKeys().empty())
     {
         // functional dependency:
         DataDependency left_translated = context.getInput()[0].translate(identities);
@@ -156,7 +152,7 @@ DataDependency DataDependencyDeriverVisitor::visitJoinStep(const JoinStep & step
     return translated;
 }
 
-DataDependency DataDependencyDeriverVisitor::visitFilterStep(const FilterStep & step, DataDependencyDeriverContext & context)
+DataDependency DataDependencyDeriverVisitor::visitFilterStepExt(const FilterStepExt & step, DataDependencyDeriverContext & context)
 {
     // new functional dependency cases:
     // a->b, b->a when a = b in filter.
@@ -169,11 +165,11 @@ DataDependency DataDependencyDeriverVisitor::visitFilterStep(const FilterStep & 
         for (const auto & pair : equal_funcs)
         {
             auto function = pair.second->as<ASTFunction &>();
-            if (function.arguments->getChildren().size() == 2)
+            if (function.arguments->children.size() == 2)
             {
-                if (auto * arg1 = function.arguments->getChildren()[0]->as<ASTIdentifier>())
+                if (auto * arg1 = function.arguments->children[0]->as<ASTIdentifier>())
                 {
-                    if (auto * arg2 = function.arguments->getChildren()[1]->as<ASTIdentifier>())
+                    if (auto * arg2 = function.arguments->children[1]->as<ASTIdentifier>())
                     {
                         data_dependency.getFunctionalDependenciesRef().update(
                             FunctionalDependency({arg1->name()}, {arg2->name()}));
@@ -194,7 +190,7 @@ DataDependency DataDependencyDeriverVisitor::visitFilterStep(const FilterStep & 
     return data_dependency;
 }
 
-DataDependency DataDependencyDeriverVisitor::visitAggregatingStep(const AggregatingStep & step, DataDependencyDeriverContext & context)
+DataDependency DataDependencyDeriverVisitor::visitAggregatingStepExt(const AggregatingStepExt & step, DataDependencyDeriverContext & context)
 {
     if (step.getKeys().empty() || !step.isNormal())
         return context.getInput()[0].clearFunctionalDependency();
@@ -207,7 +203,7 @@ DataDependency DataDependencyDeriverVisitor::visitAggregatingStep(const Aggregat
     return data_dependency;
 }
 
-DataDependency DataDependencyDeriverVisitor::visitUnionStep(const UnionStep & step, DataDependencyDeriverContext & context)
+DataDependency DataDependencyDeriverVisitor::visitUnionStepExt(const UnionStepExt & step, DataDependencyDeriverContext & context)
 {
     std::vector<DataDependency> transformed_children_prop;
     const auto & output_to_inputs = step.getOutToInputs();
@@ -234,22 +230,22 @@ DataDependency DataDependencyDeriverVisitor::visitUnionStep(const UnionStep & st
     return result;
 }
 
-DataDependency DataDependencyDeriverVisitor::visitExchangeStep(const ExchangeStep &, DataDependencyDeriverContext & context)
+DataDependency DataDependencyDeriverVisitor::visitExchangeStepExt(const ExchangeStepExt &, DataDependencyDeriverContext & context)
 {
     return context.getInput()[0];
 }
 
-DataDependency DataDependencyDeriverVisitor::visitLimitStep(const LimitStep &, DataDependencyDeriverContext & context)
+DataDependency DataDependencyDeriverVisitor::visitLimitStepExt(const LimitStepExt &, DataDependencyDeriverContext & context)
 {
     return context.getInput()[0];
 }
 
-DataDependency DataDependencyDeriverVisitor::visitSortingStep(const SortingStep &, DataDependencyDeriverContext & context)
+DataDependency DataDependencyDeriverVisitor::visitSortingStepExt(const SortingStepExt &, DataDependencyDeriverContext & context)
 {
     return context.getInput()[0];
 }
 
-DataDependency DataDependencyDeriverVisitor::visitCTERefStep(const CTERefStep & step, DataDependencyDeriverContext & context)
+DataDependency DataDependencyDeriverVisitor::visitCTERefStepExt(const CTERefStepExt & step, DataDependencyDeriverContext & context)
 {
     if (context.getInput().empty())
         return DataDependency{};

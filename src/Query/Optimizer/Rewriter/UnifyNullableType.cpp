@@ -1,4 +1,3 @@
-#include <memory>
 #include <Query/Optimizer/Rewriter/UnifyNullableType.h>
 
 #include <AggregateFunctions/AggregateFunctionFactory.h>
@@ -7,7 +6,7 @@
 #include <Core/ColumnsWithTypeAndName.h>
 #include <Core/NamesAndTypes.h>
 #include <DataTypes/DataTypeAggregateFunction.h>
-#include <Query/Common/SymbolsExtractor.h>
+#include <Query/Optimizer/SymbolsExtractor.h>
 #include <Query/Processors/QueryPlan/AggregatingStepExt.h>
 #include <Query/Processors/QueryPlan/CTERefStepExt.h>
 #include <Query/Processors/QueryPlan/ExchangeStepExt.h>
@@ -17,10 +16,10 @@
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
 #include <Query/Processors/QueryPlan/UnionStepExt.h>
 #include <Query/Interpreters/JoinUtilsExt.h>
-
 #include <Common/Exception.h>
 #include <Common/typeid_cast.h>
 
+#include <memory>
 
 namespace DB
 {

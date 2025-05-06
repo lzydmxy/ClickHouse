@@ -1,6 +1,6 @@
 #include <Query/Optimizer/Rewriter/UnaliasSymbolReferences.h>
 
-#include <Query/Processors/QueryPlan/PlanSymbolReallocator.h>
+#include <Query/Planner/PlanSymbolReallocator.h>
 
 namespace DB
 {

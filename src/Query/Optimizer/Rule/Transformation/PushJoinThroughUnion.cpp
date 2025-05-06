@@ -1,10 +1,8 @@
 #include <Query/Optimizer/Rule/Transformation/PushJoinThroughUnion.h>
 
-#include <Core/Names.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <Query/Planner/PlanSymbolReallocator.h>
-#include <Query/Planner/SymbolAllocator.h>
 #include <Query/Planner/SymbolMapper.h>
 #include <Query/Processors/QueryPlan/UnionStepExt.h>
 

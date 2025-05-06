@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Query/Optimizer/Rule/Rule.h>
 
 namespace DB

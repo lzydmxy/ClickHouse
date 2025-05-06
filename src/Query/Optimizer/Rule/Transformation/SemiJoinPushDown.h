@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Query/Optimizer/Rule/Rule.h>
-#include <Query/Processors/QueryPlan/JoinStepExt.h>
 
 namespace DB
 {

@@ -257,23 +257,22 @@ bool compareASTPtr(ASTPtr & left, ASTPtr & right)
     return MurmurHash3Impl64::apply(left_name.c_str(), left_name.size()) < MurmurHash3Impl64::apply(right_name.c_str(), right_name.size());
 }
 
-template <bool flatten, typename T, enable_if_ast<T>>
-ASTPtr PredicateUtils::combineConjuncts(const absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> & predicates)
+template <bool flatten, typename VectorType, enable_if_ast<typename VectorType::value_type>>
+ASTPtr PredicateUtils::combineConjuncts(const VectorType & predicates)
 {
     if (predicates.empty())
     {
         return PredicateConst::TRUE_VALUE;
     }
 
-    ASTSet<T> distinct; // todo: templatize EqualityASTSet
+    ASTSet<typename VectorType::value_type> distinct; // todo: templatize EqualityASTSet
     ASTs conjuncts;
     for (const auto & predicate : predicates)
     {
         assert(predicate.get() && "predicate can't be null");
         if constexpr (flatten)
         {
-            absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> extract_predicates = extractConjuncts<T>(predicate);
-            for (auto & extract : extract_predicates)
+            for (auto & extract : extractConjuncts<typename VectorType::value_type>(predicate))
             {
                 if (!isTruePredicate(extract) && distinct.emplace(extract).second)
                 {
@@ -311,21 +310,21 @@ ASTPtr PredicateUtils::combineConjuncts(const absl::InlinedVector<T, PREDICATE_V
     return makeASTFunction(PredicateConst::AND, conjuncts);
 }
 
-template <bool flatten, typename T, enable_if_ast<T>>
-ASTPtr PredicateUtils::combineDisjuncts(const absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> & predicates)
+template <bool flatten, typename VectorType, enable_if_ast<typename VectorType::value_type>>
+ASTPtr PredicateUtils::combineDisjuncts(const VectorType & predicates)
 {
     return combineDisjunctsWithDefault<flatten>(predicates, PredicateConst::FALSE_VALUE);
 }
 
-template <bool /* flatten */, typename T, enable_if_ast<T>>
-ASTPtr PredicateUtils::combineDisjunctsWithDefault(const absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> & predicates, const ASTPtr & default_ast)
+template <bool /* flatten */, typename VectorType, enable_if_ast<typename VectorType::value_type>>
+ASTPtr PredicateUtils::combineDisjunctsWithDefault(const VectorType & predicates, const ASTPtr & default_ast)
 {
     if (predicates.empty())
         return default_ast;
     if (predicates.size() == 1)
         return predicates[0]->clone(); // TODO: remove clone, check tpcds correctness
 
-    ASTSet<T> distinct; // todo: templatize EqualityASTSet
+    ASTSet<typename VectorType::value_type> distinct; // todo: templatize EqualityASTSet
     ASTs args;
     for (auto & arg : predicates)
     {
@@ -345,8 +344,8 @@ ASTPtr PredicateUtils::combineDisjunctsWithDefault(const absl::InlinedVector<T, 
     return makeASTFunction(PredicateConst::OR, args);
 }
 
-template <bool flatten, typename T, enable_if_ast<T>>
-ASTPtr PredicateUtils::combinePredicates(const String & fun, absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> predicates)
+template <bool flatten, typename VectorType, enable_if_ast<typename VectorType::value_type>>
+ASTPtr PredicateUtils::combinePredicates(const String & fun, VectorType predicates)
 {
     if (fun == PredicateConst::AND)
     {
@@ -702,26 +701,30 @@ void PredicateUtils::subtract(ASTs & left, const ASTs & right)
     left.erase(std::remove_if(left.begin(), left.end(), [&](const auto & ast) -> bool { return set.count(ast); }), left.end());
 }
 
-template ASTPtr PredicateUtils::combineConjuncts<true, ASTPtr>(const ASTs & predicates);
-template ASTPtr PredicateUtils::combineConjuncts<false, ASTPtr>(const ASTs & predicates);
-template ASTPtr PredicateUtils::combineConjuncts<true, ConstASTPtr>(const ConstASTs & predicates);
-template ASTPtr PredicateUtils::combineConjuncts<false, ConstASTPtr>(const ConstASTs & predicates);
-template ASTPtr PredicateUtils::combineDisjuncts<true, ASTPtr>(const ASTs & predicates);
-template ASTPtr PredicateUtils::combineDisjuncts<false, ASTPtr>(const ASTs & predicates);
-template ASTPtr PredicateUtils::combineDisjuncts<true, ConstASTPtr>(const ConstASTs & predicates);
-template ASTPtr PredicateUtils::combineDisjuncts<false, ConstASTPtr>(const ConstASTs & predicates);
-template ASTPtr
-PredicateUtils::combineDisjunctsWithDefault<true, ASTPtr>(const ASTs & predicates, const ASTPtr & default_ast);
-template ASTPtr
-PredicateUtils::combineDisjunctsWithDefault<false, ASTPtr>(const ASTs & predicates, const ASTPtr & default_ast);
-template ASTPtr
-PredicateUtils::combineDisjunctsWithDefault<true, ConstASTPtr>(const ConstASTs & predicates, const ASTPtr & default_ast);
-template ASTPtr
-PredicateUtils::combineDisjunctsWithDefault<false, ConstASTPtr>(const ConstASTs & predicates, const ASTPtr & default_ast);
-template ASTPtr PredicateUtils::combinePredicates<true, ASTPtr>(const String & fun, ASTs predicates);
-template ASTPtr PredicateUtils::combinePredicates<false, ASTPtr>(const String & fun, ASTs predicates);
-template ASTPtr PredicateUtils::combinePredicates<true, ConstASTPtr>(const String & fun, ConstASTs predicates);
-template ASTPtr PredicateUtils::combinePredicates<false, ConstASTPtr>(const String & fun, ConstASTs predicates);
+using InlineASTs = absl::InlinedVector<ASTPtr, PREDICATE_VECTOR_SIZE>;
+using InlineConstASTs = absl::InlinedVector<ConstASTPtr, PREDICATE_VECTOR_SIZE>;
+template ASTPtr PredicateUtils::combineConjuncts<true, InlineASTs>(const InlineASTs & predicates);
+template ASTPtr PredicateUtils::combineConjuncts<false, InlineASTs>(const InlineASTs & predicates);
+template ASTPtr PredicateUtils::combineConjuncts<true, InlineConstASTs>(const InlineConstASTs & predicates);
+template ASTPtr PredicateUtils::combineConjuncts<false, InlineConstASTs>(const InlineConstASTs & predicates);
+template ASTPtr PredicateUtils::combineDisjuncts<true, InlineASTs>(const InlineASTs & predicates);
+template ASTPtr PredicateUtils::combineDisjuncts<false, InlineASTs>(const InlineASTs & predicates);
+template ASTPtr PredicateUtils::combineDisjuncts<true, InlineConstASTs>(const InlineConstASTs & predicates);
+template ASTPtr PredicateUtils::combineDisjuncts<false, InlineConstASTs>(const InlineConstASTs & predicates);
+
+template ASTPtr PredicateUtils::combineDisjunctsWithDefault<true, InlineASTs>(const InlineASTs & predicates,
+    const ASTPtr & default_ast);
+template ASTPtr PredicateUtils::combineDisjunctsWithDefault<false, InlineASTs>(const InlineASTs & predicates,
+    const ASTPtr & default_ast);
+template ASTPtr PredicateUtils::combineDisjunctsWithDefault<true, InlineConstASTs>(const InlineConstASTs & predicates,
+    const ASTPtr & default_ast);
+template ASTPtr PredicateUtils::combineDisjunctsWithDefault<false, InlineConstASTs>(const InlineConstASTs & predicates,
+    const ASTPtr & default_ast);
+
+template ASTPtr PredicateUtils::combinePredicates<true, InlineASTs>(const String & fun, InlineASTs predicates);
+template ASTPtr PredicateUtils::combinePredicates<false, InlineASTs>(const String & fun, InlineASTs predicates);
+template ASTPtr PredicateUtils::combinePredicates<true, InlineConstASTs>(const String & fun, InlineConstASTs predicates);
+template ASTPtr PredicateUtils::combinePredicates<false, InlineConstASTs>(const String & fun, InlineConstASTs predicates);
 template bool PredicateUtils::isTruePredicate<ASTPtr>(const ASTPtr & predicate);
 template bool PredicateUtils::isTruePredicate<ConstASTPtr>(const ConstASTPtr & predicate);
 template bool PredicateUtils::isFalsePredicate<ASTPtr>(const ASTPtr & predicate);

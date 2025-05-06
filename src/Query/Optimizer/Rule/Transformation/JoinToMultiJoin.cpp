@@ -5,10 +5,9 @@
 #include <Query/Optimizer/Graph.h>
 #include <Query/Optimizer/Rule/Pattern.h>
 #include <Query/Optimizer/Rule/Patterns.h>
-#include <Query/Optimizer/Utils.h>
 #include <<Query/Processors/QueryPlan/AnyStep.h>
 #include <<Query/Processors/QueryPlan/MultiJoinStep.h>
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 
 namespace DB
 {

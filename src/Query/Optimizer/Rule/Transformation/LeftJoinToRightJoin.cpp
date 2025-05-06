@@ -1,7 +1,7 @@
+#include <Query/Optimizer/Rule/Transformation/LeftJoinToRightJoin.h>
+
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>
 #include <Query/Optimizer/Rule/Patterns.h>
-#include <Query/Optimizer/Rule/Transformation/LeftJoinToRightJoin.h>
-#include <Query/Processors/QueryPlan/AnyStepExt.h>
 
 namespace DB
 {

@@ -2,7 +2,7 @@
 
 #include <Query/Optimizer/Cascades/GroupExpression.h>
 #include <Query/Optimizer/Rule/Rule.h>
-#include <QueryPlan/AnyStep.h>
+#include <Query/Processors/QueryPlan/AnyStepExt.h>
 
 namespace DB
 {

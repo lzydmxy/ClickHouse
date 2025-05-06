@@ -1,14 +1,9 @@
 #pragma once
 
-#include <Core/Names.h>
 #include <Core/SortDescription.h>
-#include <Core/Types.h>
-#include <Functions/FunctionsHashing.h>
 #include <Query/Optimizer/DataDependency/ForeignKeysTuple.h>
 #include <Query/Optimizer/DataDependency/FunctionalDependency.h>
 #include <Query/Optimizer/DataDependency/InclusionDependency.h>
-#include <Query/Optimizer/Property/Equivalences.h>
-// #include <Storages/ForeignKeysDescription.h>
 
 namespace DB
 {

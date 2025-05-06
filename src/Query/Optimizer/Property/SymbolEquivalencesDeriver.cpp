@@ -4,6 +4,7 @@
 
 namespace DB
 {
+
 SymbolEquivalencesPtr
 SymbolEquivalencesDeriver::deriveEquivalences(QueryPlanStepPtr step, std::vector<SymbolEquivalencesPtr> children_equivalences)
 {
@@ -11,17 +12,6 @@ SymbolEquivalencesDeriver::deriveEquivalences(QueryPlanStepPtr step, std::vector
     auto output = step->getOutputStream().header.getNames();
 
     NameSet output_set(output.begin(), output.end());
-
-    // size_t index = 0;
-    // if (step->getInputStreams().size() == children_equivalences.size())
-    // {
-    //     for (auto & item : children_equivalences)
-    //     {
-    //         auto symbols_set = step->getInputStreams()[index++].header.getNameSet();
-    //         item = item->translate(symbols_set);
-    //     }
-    // }
-
     auto result = VisitorUtil::accept(step, derive, children_equivalences);
     result->createRepresentMap(output_set);
     return result;
@@ -66,6 +56,7 @@ SymbolEquivalencesDeriverVisitor::visitAggregatingStepExt(const AggregatingStepE
 {
     return context[0];
 }
+
 SymbolEquivalencesPtr
 SymbolEquivalencesDeriverVisitor::visitExchangeStepExt(const ExchangeStepExt &, std::vector<SymbolEquivalencesPtr> & context)
 {

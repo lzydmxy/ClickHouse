@@ -4,7 +4,6 @@
 #include <Interpreters/Context.h>
 #include <Query/Optimizer/DataDependency/DataDependency.h>
 #include <Query/Optimizer/Property/Constants.h>
-#include <Query/Optimizer/Property/Equivalences.h>
 #include <Query/Optimizer/Rewriter/Rewriter.h>
 #include <Query/Processors/QueryPlan/SimplePlanRewriter.h>
 #include <Query/Processors/QueryPlan/SimplePlanVisitor.h>

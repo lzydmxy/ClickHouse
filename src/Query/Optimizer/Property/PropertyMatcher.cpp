@@ -5,7 +5,6 @@
 #include <Query/Optimizer/Property/Property.h>
 
 #include <algorithm>
-#include <optional>
 #include <vector>
 
 namespace DB

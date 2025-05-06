@@ -1,12 +1,9 @@
-#include <algorithm>
-#include <memory>
 #include <Query/Optimizer/Property/PropertyDeriver.h>
 
 #include <Core/Names.h>
 #include <Interpreters/StorageID.h>
 #include <Query/Optimizer/ExpressionRewriter.h>
 #include <Query/Optimizer/Property/Property.h>
-#include <Query/Common/SymbolsExtractor.h>
 #include <Query/Optimizer/Utils.h>
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/IAST_fwd.h>
@@ -16,6 +13,9 @@
 #include <Query/Processors/QueryPlan/UnionStepExt.h>
 #include <Poco/StringTokenizer.h>
 #include <Parsers/ASTIdentifier.h>
+
+#include <algorithm>
+#include <memory>
 
 namespace DB
 {

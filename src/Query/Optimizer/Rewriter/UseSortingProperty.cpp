@@ -1,5 +1,3 @@
-#include <algorithm>
-#include <iterator>
 #include <Query/Optimizer/Rewriter/UseSortingProperty.h>
 
 #include <Core/SortDescription.h>
@@ -13,6 +11,8 @@
 #include <Query/Processors/QueryPlan/SimplePlanRewriter.h>
 #include <Query/Planner/SymbolMapper.h>
 
+#include <algorithm>
+#include <iterator>
 
 namespace DB
 {
@@ -50,7 +50,7 @@ PlanAndPropConstants SortingOrderedSource::Rewriter::visitPlanNode(PlanNodeBase 
     return {node.shared_from_this(), prop, constants};
 }
 
-PlanAndPropConstants SortingOrderedSource::Rewriter::visitSortingStepNode(SortingStepNode & node, SortDescription &)
+PlanAndPropConstants SortingOrderedSource::Rewriter::visitSortingStepExtNode(SortingStepExtNode & node, SortDescription &)
 {
     auto step = node.getStep();
     auto required = step->getSortDescription();
@@ -59,7 +59,7 @@ PlanAndPropConstants SortingOrderedSource::Rewriter::visitSortingStepNode(Sortin
     Constants constants = ConstantsDeriver::deriveConstants(node.getStep(), {result.constants}, cte_helper.getCTEInfo(), context);
     auto prefix_sorting = PropertyMatcher::matchSorting(*context, step->getSortDescription(), result.property.getSorting(), {}, constants);
 
-    QueryPlanStepHelper::setSortingStepPrefixDescription(*step, prefix_sorting.toSortDesc());
+    step->setPrefixDescription(prefix_sorting.toSortDesc());
     Property any_prop;
     Property prop = PropertyDeriver::deriveProperty(node.getStep(), {result.property}, any_prop, context);
     return {node.shared_from_this(), prop, constants};
@@ -198,9 +198,9 @@ PlanNodePtr PruneSortingInfoRewriter::visitPlanNode(PlanNodeBase & node, SortInf
     return SimplePlanRewriter::visitPlanNode(node, s);
 }
 
-PlanNodePtr PruneSortingInfoRewriter::visitSortingStepNode(SortingStepNode & node, SortInfo &)
+PlanNodePtr PruneSortingInfoRewriter::visitSortingStepExtNode(SortingStepExtNode & node, SortInfo &)
 {
-    auto prefix_desc = QueryPlanStepHelper::getSortingStepPrefixDescription(*node.getStep());
+    auto prefix_desc = node.getStep()->getPrefixDescription();
     SortInfo s{prefix_desc, node.getStep()->getLimit()};
     return SimplePlanRewriter::visitPlanNode(node, s);
 }
@@ -218,7 +218,7 @@ PlanNodePtr PruneSortingInfoRewriter::visitAggregatingStepExtNode(AggregatingSte
 }
 
 
-// todo: lizhuoyu5 need WindowStep add
+// todo: lizhuoyu5 need WindowStep add PrefixDescription
 // PlanNodePtr PruneSortingInfoRewriter::visitWindowStepNode(WindowStepNode & node, SortInfo &)
 // {
 //     auto prefix_desc = QueryPlanStepHelper::getWindowStepPrefixDescription(*node.getStep());

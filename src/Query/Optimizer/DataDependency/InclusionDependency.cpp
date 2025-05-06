@@ -1,7 +1,7 @@
+#include <Query/Optimizer/DataDependency/InclusionDependency.h>
 
 #include <Common/logger_useful.h>
 #include <Core/Names.h>
-#include <Query/Optimizer/DataDependency/InclusionDependency.h>
 #include <Query/Optimizer/DataDependency/DependencyUtils.h>
 
 namespace DB

@@ -1,14 +1,10 @@
 #pragma once
 
 #include <Interpreters/Context.h>
-#include <Query/Processors/QueryPlan/PlanVisitor.h>
 #include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
-
 #include <Query/Optimizer/Rule/Rule.h>
 #include <Query/Optimizer/Rule/Transformation/JoinReorderUtils.h>
-
 #include <Query/Optimizer/Rule/Patterns.h>
-#include <utility>
 
 namespace DB
 {

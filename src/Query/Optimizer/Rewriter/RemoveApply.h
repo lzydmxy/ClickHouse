@@ -4,7 +4,6 @@
 #include <Query/Optimizer/Rewriter/Rewriter.h>
 #include <Query/Optimizer/Rule/Rule.h>
 #include <Query/Processors/QueryPlan/SimplePlanRewriter.h>
-#include <Query/Planner/TranslationMap.h>
 
 
 namespace DB

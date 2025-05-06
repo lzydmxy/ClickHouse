@@ -1,7 +1,7 @@
 #include <Query/Optimizer/Rule/Transformation/InnerJoinAssociate.h>
 
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
 #include <Query/Optimizer/SymbolsExtractor.h>

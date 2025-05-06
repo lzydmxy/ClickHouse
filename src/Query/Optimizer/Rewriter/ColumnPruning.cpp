@@ -13,7 +13,6 @@
 #include <Query/Optimizer/ExpressionInterpreter.h>
 #include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/SymbolsExtractor.h>
-#include <Query/Common/PredicateUtils.h>
 #include <Parsers/ASTIdentifier.h>
 #include <DataTypes/IDataType.h>
 #include <Query/Parsers/ASTQuantifiedComparisonExt.h>
@@ -141,11 +140,10 @@ PlanNodePtr ColumnPruningVisitor::visitPlanNode(PlanNodeBase & node, ColumnPruni
     return visitDefault<true>(node, column_pruning_context);
 }
 
-// todo: lizhuoyu5 need add FinishSortingStep
-// PlanNodePtr ColumnPruningVisitor::visitFinishSortingNode(FinishSortingNode & node, ColumnPruningContext & column_pruning_context)
-// {
-//     return visitPlanNode(node, column_pruning_context);
-// }
+PlanNodePtr ColumnPruningVisitor::visitFinishSortingStepExtNode(FinishSortingStepExtNode & node, ColumnPruningContext & column_pruning_context)
+{
+    return visitPlanNode(node, column_pruning_context);
+}
 
 PlanNodePtr ColumnPruningVisitor::visitOffsetStepNode(OffsetStepNode & node, ColumnPruningContext & column_pruning_context)
 {
@@ -671,7 +669,7 @@ PlanNodePtr ColumnPruningVisitor::visitMarkDistinctStepExtNode(MarkDistinctStepE
     return MarkDistinctStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(mark_distinct_step), PlanNodes{child}/*, node.getStatistics()*/);
 }
 
-PlanNodePtr ColumnPruningVisitor::visitSortingStepNode(SortingStepNode & node, ColumnPruningContext & column_pruning_context)
+PlanNodePtr ColumnPruningVisitor::visitSortingStepExtNode(SortingStepExtNode & node, ColumnPruningContext & column_pruning_context)
 {
     const auto * step = node.getStep().get();
     NameSet & require = column_pruning_context.name_set;
@@ -681,9 +679,9 @@ PlanNodePtr ColumnPruningVisitor::visitSortingStepNode(SortingStepNode & node, C
         require.insert(item.column_name);
     }
     auto child = addProjection(VisitorUtil::accept(node.getChildren()[0], *this, column_pruning_context), require);
-    auto sort_step = std::make_shared<SortingStep>(
-        child->getStep()->getOutputStream(), step->getSortDescription(), step->getLimit());
-    return SortingStepNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(sort_step), PlanNodes{child}/*, node.getStatistics()*/);
+    auto sort_step = std::make_shared<SortingStepExt>(
+        child->getStep()->getOutputStream(), step->getSortDescription(), step->getLimit(), step->getStage());
+    return SortingStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(sort_step), PlanNodes{child}/*, node.getStatistics()*/);
 }
 
 PlanNodePtr ColumnPruningVisitor::visitMergeSortingStepExtNode(MergeSortingStepExtNode & node, ColumnPruningContext & column_pruning_context)
@@ -715,21 +713,20 @@ PlanNodePtr ColumnPruningVisitor::visitMergingSortedStepExtNode(MergingSortedSte
     return MergingSortedStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(sort_step), PlanNodes{child}/*, node.getStatistics()*/);
 }
 
-// todo: lizhuoyu5 need PartialSortingStep
-// PlanNodePtr ColumnPruningVisitor::visitPartialSortingNode(PartialSortingStepNode & node, ColumnPruningContext & column_pruning_context)
-// {
-//     const auto * step = node.getStep().get();
-//     NameSet & require = column_pruning_context.name_set;
-//
-//     for (const auto & item : step->getSortDescription())
-//     {
-//         require.insert(item.column_name);
-//     }
-//     auto child = addProjection(VisitorUtil::accept(node.getChildren()[0], *this, column_pruning_context), require);
-//     auto sort_step
-//         = std::make_shared<PartialSortingStep>(child->getStep()->getOutputStream(), step->getSortDescription(), step->getLimit());
-//     return PartialSortingNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(sort_step), PlanNodes{child}/*, node.getStatistics()*/);
-// }
+PlanNodePtr ColumnPruningVisitor::visitPartialSortingStepExtNode(PartialSortingStepExtNode & node, ColumnPruningContext & column_pruning_context)
+{
+    const auto * step = node.getStep().get();
+    NameSet & require = column_pruning_context.name_set;
+
+    for (const auto & item : step->getSortDescription())
+    {
+        require.insert(item.column_name);
+    }
+    auto child = addProjection(VisitorUtil::accept(node.getChildren()[0], *this, column_pruning_context), require);
+    auto sort_step
+        = std::make_shared<PartialSortingStepExt>(child->getStep()->getOutputStream(), step->getSortDescription(), step->getLimit());
+    return PartialSortingStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(sort_step), PlanNodes{child}/*, node.getStatistics()*/);
+}
 
 PlanNodePtr ColumnPruningVisitor::visitJoinStepExtNode(JoinStepExtNode & node, ColumnPruningContext & column_pruning_context)
 {
@@ -1201,24 +1198,6 @@ PlanNodePtr ColumnPruningVisitor::convertDistinctToGroupBy(PlanNodePtr node)
         NameSet name_set{step.getColumns().begin(), step.getColumns().end()};
         NamesAndTypes arbitrary_names;
 
-        // check decimal type, which is not support for group by columns
-        // bool has_decimal_type = false;
-        // for (const auto & column : node->getStep()->getOutputStream().header)
-        // {
-        //     TypeIndex index = column.type->getTypeId();
-        //     if (index == TypeIndex::Decimal32 || index == TypeIndex::Decimal64 || index == TypeIndex::Decimal128)
-        //     {
-        //         has_decimal_type = true;
-        //         break;
-        //     }
-        //     if (!name_set.contains(column.name))
-        //         arbitrary_names.emplace_back(column.name, column.type);
-        // }
-        // if (has_decimal_type)
-        // {
-        //     return {};
-        // }
-
         AggregateDescriptions descriptions;
         for (auto & name_and_type : arbitrary_names)
         {
@@ -1333,13 +1312,12 @@ PlanNodePtr ColumnPruningVisitor::convertFilterWindowToSortingLimit(PlanNodePtr 
         limit = limit - 1;
     }
 
-    auto sorting_step = std::make_shared<SortingStep>(
+    auto sorting_step = std::make_shared<SortingStepExt>(
         window_node->getChildren()[0]->getStep()->getOutputStream(),
         window_desc.order_by,
         limit,
-        SortingStep::Settings(0),
-        false);
-    auto child_node = SortingStepNode::createPlanNode(
+        SortingStepExt::Stage::FULL);
+    auto child_node = SortingStepExtNode::createPlanNode(
         context->getOptimizerContext()->nextNodeId(), std::move(sorting_step), PlanNodes{window_node->getChildren()}/*, node.getStatistics()*/);
 
     UInt64 offset = 0;

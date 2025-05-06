@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Interpreters/Context.h>
 #include <Query/Optimizer/Rewriter/Rewriter.h>
 

@@ -1,17 +1,17 @@
-#include <utility>
 #include <Query/Optimizer/Rewriter/OptimizeTrivialCount.h>
 
 #include <Processors/QueryPlan/IQueryPlanStep.h>
-#include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <Query/Processors/QueryPlan/PlanNode.h>
 #include <Query/Common/Void.h>
 #include <AggregateFunctions/AggregateFunctionCount.h>
 #include <Interpreters/RequiredSourceColumnsVisitor.h>
 #include <Parsers/IAST_fwd.h>
 #include <Interpreters/InterpreterSelectQuery.h>
-#include <Query/Common/PredicateUtils.h>
-#include <Query/Common/SymbolsExtractor.h>
+#include <Query/Optimizer/PredicateUtils.h>
+#include <Query/Optimizer/SymbolsExtractor.h>
 #include <Query/Planner/SymbolMapper.h>
+
+#include <utility>
 
 
 namespace DB
@@ -194,7 +194,7 @@ void CountContextVisitor::visitFilterStepExtNode(FilterStepExtNode & node, Trivi
     VisitorUtil::accept(node.getChildren()[0], *this, context);
 }
 
-void CountContextVisitor::visitSortingStepNode(SortingStepNode & node, TrivialCountContext & context)
+void CountContextVisitor::visitSortingStepExtNode(SortingStepExtNode & node, TrivialCountContext & context)
 {
     VisitorUtil::accept(node.getChildren()[0], *this, context);
 }

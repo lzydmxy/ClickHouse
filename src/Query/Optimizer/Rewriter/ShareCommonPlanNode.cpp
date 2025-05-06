@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/Rewriter/ShareCommonPlanNode.h>
 
 #include <Query/Common/Void.h>
@@ -7,7 +6,7 @@
 #include <Query/Processors/QueryPlan/CTEInfo.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
 #include <Query/Processors/QueryPlan/PlanNode.h>
-#include <Query/Processors/QueryPlan/PlanSymbolReallocator.h>
+#include <Query/Planner/PlanSymbolReallocator.h>
 #include <Query/Processors/QueryPlan/PlanVisitor.h>
 #include <Query/Processors/QueryPlan/SimplePlanRewriter.h>
 #include <Query/Planner/SymbolMapper.h>

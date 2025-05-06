@@ -2,11 +2,10 @@
 
 #include <Query/Optimizer/CardinalityEstimate/CardinalityEstimator.h>
 #include <Query/Optimizer/CardinalityEstimate/JoinEstimator.h>
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/SymbolUtils.h>
 #include <Query/Processors/QueryPlan/FilterStepExt.h>
 #include <Query/Processors/QueryPlan/JoinStepExt.h>
-#include <Query/Processors/QueryPlan/PlanNodeIdAllocator.h>
 #include <Query/Processors/QueryPlan/PlanPattern.h>
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
 

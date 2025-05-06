@@ -25,7 +25,7 @@
 #include <Parsers/ASTTablesInSelectQuery.h>
 
 #include <Common/FieldVisitorConvertToNumber.h>
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Common/getLeastSupertypeExt.h>
 #include <Query/Planner/SymbolMapper.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterUtils.h>
@@ -106,8 +106,8 @@ PlanNodePtr PredicateVisitor::visitProjectionStepExtNode(ProjectionStepExtNode &
     // depend on deterministic assignments with certain limitations.
     std::vector<ConstASTPtr> deterministic_conjuncts;
     std::vector<ConstASTPtr> non_deterministic_conjuncts;
-    std::vector<ConstASTPtr> predicates = PredicateUtils::extractConjuncts(predicate_context.predicate);
-    for (auto & predicate : predicates)
+
+    for (auto & predicate : PredicateUtils::extractConjuncts(predicate_context.predicate))
     {
         std::set<std::string> symbols = SymbolsExtractor::extract(predicate);
         bool contains = true;
@@ -974,17 +974,16 @@ PlanNodePtr PredicateVisitor::visitMergeSortingStepExtNode(MergeSortingStepExtNo
     return processChild(node, predicate_context);
 }
 
-// todo: lizhuoyu5 need PartialSortingStep
-// PlanNodePtr PredicateVisitor::visitPartialSortingNode(PartialSortingNode & node, PredicateContext & predicate_context)
-// {
-//     if (node.getStep()->getLimit() != 0)
-//         return visitPlanNode(node, predicate_context);
-//     return processChild(node, predicate_context);
-// }
-
-PlanNodePtr PredicateVisitor::visitSortingStepNode(SortingStepNode & node, PredicateContext & predicate_context)
+PlanNodePtr PredicateVisitor::visitPartialSortingStepExtNode(PartialSortingStepExtNode & node, PredicateContext & predicate_context)
 {
     if (node.getStep()->getLimit() != 0)
+        return visitPlanNode(node, predicate_context);
+    return processChild(node, predicate_context);
+}
+
+PlanNodePtr PredicateVisitor::visitSortingStepExtNode(SortingStepExtNode & node, PredicateContext & predicate_context)
+{
+    if (std::get<UInt64>(node.getStep()->getLimit()) != 0)
         return visitPlanNode(node, predicate_context);
     return processChild(node, predicate_context);
 }
@@ -1304,8 +1303,7 @@ OuterJoinResult PredicateVisitor::processOuterJoin(
     outer_predicate = ExpressionDeterminism::filterDeterministicConjuncts(outer_predicate, context);
     inner_predicate = ExpressionDeterminism::filterDeterministicConjuncts(inner_predicate, context);
 
-    std::vector<ConstASTPtr> join_predicates = PredicateUtils::extractConjuncts(join_predicate);
-    for (auto & pre : join_predicates)
+    for (auto & pre : PredicateUtils::extractConjuncts(join_predicate))
     {
         if (!ExpressionDeterminism::isDeterministic(pre, context))
         {
@@ -1650,9 +1648,8 @@ ASTPtr EffectivePredicateVisitor::visitFilterStepExtNode(FilterStepExtNode & nod
     predicate = ExpressionDeterminism::filterDeterministicConjuncts(predicate, context);
 
     // Remove dynamic filters
-    std::vector<ConstASTPtr> predicates = PredicateUtils::extractConjuncts(predicate);
     std::vector<ConstASTPtr> removed_dynamic_filters;
-    for (auto & pre : predicates)
+    for (auto & pre : PredicateUtils::extractConjuncts(predicate))
     {
         if (!RuntimeFilterUtils::isInternalRuntimeFilter(pre))
         {

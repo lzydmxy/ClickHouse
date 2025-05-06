@@ -1,13 +1,8 @@
 #pragma once
+
 #include <Functions/FunctionsHashing.h>
-#include <Query/Optimizer/PredicateUtils.h>
-#include <Query/Optimizer/Property/Equivalences.h>
 #include <Query/Optimizer/Rule/Rule.h>
 #include <Query/Processors/QueryPlan/JoinStepExt.h>
-#include <boost/dynamic_bitset.hpp>
-
-#include <unordered_set>
-#include <utility>
 
 namespace DB
 {

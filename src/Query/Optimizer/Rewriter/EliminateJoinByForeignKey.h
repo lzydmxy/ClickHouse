@@ -8,12 +8,8 @@
 #include <Query/Optimizer/DataDependency/DataDependencyDeriver.h>
 #include <Query/Optimizer/DataDependency/ForeignKeysTuple.h>
 #include <Query/Optimizer/Property/Constants.h>
-#include <Query/Optimizer/Property/Equivalences.h>
 #include <Query/Optimizer/Rewriter/Rewriter.h>
 #include <Query/Processors/QueryPlan/CTEInfo.h>
-#include <Query/Processors/QueryPlan/JoinStep.h>
-#include <Query/Processors/QueryPlan/SimplePlanRewriter.h>
-#include <Query/Processors/QueryPlan/SimplePlanVisitor.h>
 
 
 namespace DB
@@ -63,7 +59,7 @@ public:
 private:
     bool isEnabled(ContextMutablePtr context) const override
     {
-        return context->getSettingsRef().enable_eliminate_join_by_fk && !context->getSettingsRef().join_using_null_safe;
+        return context->getOptimizerContext()->getSettingsRef().enable_eliminate_join_by_fk && !context->getOptimizerContext()->getSettingsRef().join_using_null_safe;
     }
     bool rewrite(QueryPlanExt & plan, ContextMutablePtr context) const override;
 
@@ -200,7 +196,7 @@ public:
     FPKeysAndOrdinaryKeys visitCTERefStepExtNode(CTERefStepExtNode &, JoinInfo &) override;
 
     FPKeysAndOrdinaryKeys visitExchangeStepExtNode(ExchangeStepExtNode &, JoinInfo &) override;
-    FPKeysAndOrdinaryKeys visitSortingStepNode(SortingStepNode &, JoinInfo &) override;
+    FPKeysAndOrdinaryKeys visitSortingStepExtNode(SortingStepExtNode &, JoinInfo &) override;
     FPKeysAndOrdinaryKeys visitAggregatingStepExtNode(AggregatingStepExtNode &, JoinInfo &) override;
     FPKeysAndOrdinaryKeys visitProjectionStepExtNode(ProjectionStepExtNode &, JoinInfo &) override;
     FPKeysAndOrdinaryKeys visitLimitStepExtNode(LimitStepExtNode &, JoinInfo &) override;
@@ -302,7 +298,7 @@ struct JoinEliminationContext
                 if (pk_current_name != identities.at(pk_current_name) && !new_pk_to_fk.contains(identities.at(pk_current_name)))
                 {
                     // create new name for fk, if pk name is updating.
-                    fk_current_name = context->getSymbolAllocator()->newSymbol(fk_current_name);
+                    fk_current_name = context->getOptimizerContext()->getSymbolAllocator()->newSymbol(fk_current_name);
                     pk_current_name = identities.at(pk_current_name);
                 }
             }

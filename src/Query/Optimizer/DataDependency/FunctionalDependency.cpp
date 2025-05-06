@@ -1,4 +1,5 @@
 #include <Query/Optimizer/DataDependency/FunctionalDependency.h>
+
 #include <Query/Optimizer/DataDependency/DependencyUtils.h>
 #include <Common/logger_useful.h>
 #include <Core/Names.h>

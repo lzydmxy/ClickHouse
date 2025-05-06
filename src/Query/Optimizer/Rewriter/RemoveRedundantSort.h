@@ -44,7 +44,7 @@ private:
     PlanNodePtr visitJoinStepExtNode(JoinStepExtNode & node, RedundantSortContext & sort_context) override;
     PlanNodePtr visitUnionStepExtNode(UnionStepExtNode & node, RedundantSortContext & sort_context) override;
     PlanNodePtr visitIntersectOrExceptStepNode(IntersectOrExceptStepNode & node, RedundantSortContext & sort_context) override;
-    PlanNodePtr visitSortingStepNode(SortingStepNode & node, RedundantSortContext & sort_context) override;
+    PlanNodePtr visitSortingStepExtNode(SortingStepExtNode & node, RedundantSortContext & sort_context) override;
     PlanNodePtr visitCTERefStepExtNode(CTERefStepExtNode & node, RedundantSortContext & sort_context) override;
 
     PlanNodePtr processChildren(PlanNodeBase & node, RedundantSortContext & sort_context);

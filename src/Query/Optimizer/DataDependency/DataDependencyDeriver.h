@@ -62,41 +62,19 @@ class DataDependencyDeriverVisitor : public StepVisitor<DataDependency, DataDepe
 public:
     DataDependency visitStep(const IQueryPlanStep &, DataDependencyDeriverContext &) override;
 
-    DataDependency visitProjectionStep(const ProjectionStep & step, DataDependencyDeriverContext & context) override;
-    DataDependency visitJoinStep(const JoinStep & step, DataDependencyDeriverContext & context) override;
-    DataDependency visitTableScanStep(const TableScanStep &, DataDependencyDeriverContext &) override;
-    DataDependency visitFilterStep(const FilterStep &, DataDependencyDeriverContext & context) override;
-    DataDependency visitAggregatingStep(const AggregatingStep & step, DataDependencyDeriverContext & context) override;
-    DataDependency visitUnionStep(const UnionStep & step, DataDependencyDeriverContext & context) override;
-    DataDependency visitExchangeStep(const ExchangeStep & step, DataDependencyDeriverContext & context) override;
-    DataDependency visitLimitStep(const LimitStep &, DataDependencyDeriverContext & context) override;
-    DataDependency visitSortingStep(const SortingStep &, DataDependencyDeriverContext & context) override;
-    DataDependency visitCTERefStep(const CTERefStep &, DataDependencyDeriverContext & context) override;
+    DataDependency visitProjectionStepExt(const ProjectionStepExt & step, DataDependencyDeriverContext & context) override;
+    DataDependency visitJoinStepExt(const JoinStepExt & step, DataDependencyDeriverContext & context) override;
+    DataDependency visitTableScanStepExt(const TableScanStepExt &, DataDependencyDeriverContext &) override;
+    DataDependency visitFilterStepExt(const FilterStepExt &, DataDependencyDeriverContext & context) override;
+    DataDependency visitAggregatingStepExt(const AggregatingStepExt & step, DataDependencyDeriverContext & context) override;
+    DataDependency visitUnionStepExt(const UnionStepExt & step, DataDependencyDeriverContext & context) override;
+    DataDependency visitExchangeStepExt(const ExchangeStepExt & step, DataDependencyDeriverContext & context) override;
+    DataDependency visitLimitStepExt(const LimitStepExt &, DataDependencyDeriverContext & context) override;
+    DataDependency visitSortingStepExt(const SortingStepExt &, DataDependencyDeriverContext & context) override;
+    DataDependency visitCTERefStepExt(const CTERefStepExt &, DataDependencyDeriverContext & context) override;
 
 private:
     static void visitFilterExpression(const ConstASTPtr & filter, DataDependency & data_dependency, DataDependencyDeriverContext & context);
-    
-    // DataDependency visitMergingAggregatedStep(const MergingAggregatedStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitArrayJoinStep(const ArrayJoinStep & step, DataDependencyDeriverContext & context) override;
-    // DataDependency visitMarkDistinctStep(const MarkDistinctStep & step, DataDependencyDeriverContext & context) override;
-    // DataDependency visitExceptStep(const ExceptStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitIntersectStep(const IntersectStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitIntersectOrExceptStep(const IntersectOrExceptStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitRemoteExchangeSourceStep(const RemoteExchangeSourceStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitSortingStep(const SortingStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitMergeSortingStep(const MergeSortingStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitPartialSortingStep(const PartialSortingStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitMergingSortedStep(const MergingSortedStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitDistinctStep(const DistinctStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitExtremesStep(const ExtremesStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitWindowStep(const WindowStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitApplyStep(const ApplyStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitEnforceSingleRowStep(const EnforceSingleRowStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitAssignUniqueIdStep(const AssignUniqueIdStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitGlobalDecodeStep(const GlobalDecodeStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitExplainAnalyzeStep(const ExplainAnalyzeStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitTopNFilteringStep(const TopNFilteringStep &, DataDependencyDeriverContext & context) override;
-    // DataDependency visitFillingStep(const FillingStep &, DataDependencyDeriverContext & context) override;
 };
 
 }

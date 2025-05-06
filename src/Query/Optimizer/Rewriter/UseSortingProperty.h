@@ -39,7 +39,7 @@ public:
     Rewriter(ContextMutablePtr context_, CTEInfo & cte_info_) : context(context_), cte_helper(cte_info_) { }
 
     PlanAndPropConstants visitPlanNode(PlanNodeBase &, SortDescription & required) override;
-    PlanAndPropConstants visitSortingStepNode(SortingStepNode &, SortDescription & required) override;
+    PlanAndPropConstants visitSortingStepExtNode(SortingStepExtNode &, SortDescription & required) override;
     PlanAndPropConstants visitAggregatingStepExtNode(AggregatingStepExtNode &, SortDescription & required) override;
     PlanAndPropConstants visitWindowStepNode(WindowStepNode &, SortDescription & required) override;
     PlanAndPropConstants visitTopNFilteringStepExtNode(TopNFilteringStepExtNode & node, SortDescription & required) override;
@@ -71,7 +71,7 @@ public:
     }
 
     PlanNodePtr visitPlanNode(PlanNodeBase & node, SortInfo & required) override;
-    PlanNodePtr visitSortingStepNode(SortingStepNode &, SortInfo &) override;
+    PlanNodePtr visitSortingStepExtNode(SortingStepExtNode &, SortInfo &) override;
     PlanNodePtr visitAggregatingStepExtNode(AggregatingStepExtNode &, SortInfo &) override;
     // PlanNodePtr visitWindowStepNode(WindowStepNode &, SortInfo &) override;
     PlanNodePtr visitTopNFilteringStepExtNode(TopNFilteringStepExtNode & node, SortInfo &) override;

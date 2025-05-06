@@ -12,9 +12,9 @@
 #include <Query/Interpreters/JoinUtilsExt.h>
 #include <Query/Optimizer/DataDependency/DependencyUtils.h>
 #include <Query/Optimizer/DataDependency/ForeignKeysTuple.h>
-#include <Query/Common/PredicateConst.h>
+#include <Query/Optimizer/PredicateConst.h>
 #include <Query/Common/NameToTypeExt.h>
-#include <Query/Common/SymbolsExtractor.h>
+#include <Query/Optimizer/SymbolsExtractor.h>
 #include <Query/Optimizer/Utils.h>
 #include <Query/Optimizer/makeCastFunction.h>
 #include <Parsers/ASTFunction.h>
@@ -522,7 +522,7 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitExchangeStepExtNode(Exch
     return VisitorUtil::accept(node.getChildren()[0], *this, c);
 }
 
-FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitSortingStepNode(SortingStepNode & node, JoinInfo & c)
+FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitSortingStepExtNode(SortingStepExtNode & node, JoinInfo & c)
 {
     return VisitorUtil::accept(node.getChildren()[0], *this, c);
 }

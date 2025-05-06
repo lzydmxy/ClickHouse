@@ -1,10 +1,10 @@
 #include <Query/Optimizer/Property/PropertyEnforcer.h>
 
-// #include <Query/Optimizer/Cascades/GroupExpression.h>
+#include <Query/Optimizer/Cascades/GroupExpression.h>
 #include <Query/Processors/QueryPlan/ExchangeStepExt.h>
-#include <Processors/QueryPlan/IQueryPlanStep.h>
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
 #include <Query/Processors/QueryPlan/UnionStepExt.h>
+#include <Processors/QueryPlan/IQueryPlanStep.h>
 
 namespace DB
 {
@@ -34,29 +34,25 @@ PlanNodePtr PropertyEnforcer::enforceStreamPartitioning(
 }
 
 GroupExprPtr PropertyEnforcer::enforceNodePartitioning(
-    const GroupExprPtr & /*group_expr*/, const Property & /*required*/, const Property & /*property*/, const Context & /*context*/)
+    const GroupExprPtr & group_expr, const Property & required, const Property & property, const Context & context)
 {
-    // todo: lizhuoyu5, need optimizer GroupExpression
-    return nullptr;
-    // QueryPlanStepPtr step_ptr = enforceNodePartitioning(group_expr->getStep(), required, property, context);
-    // if (!step_ptr)
-    // {
-    //     return nullptr;
-    // }
-    // std::vector<GroupId> children = {group_expr->getGroupId()};
-    // auto result = std::make_shared<GroupExpression>(std::move(step_ptr), children);
-    // return result;
+    QueryPlanStepPtr step_ptr = enforceNodePartitioning(group_expr->getStep(), required, property, context);
+    if (!step_ptr)
+    {
+        return nullptr;
+    }
+    std::vector<GroupId> children = {group_expr->getGroupId()};
+    auto result = std::make_shared<GroupExpression>(std::move(step_ptr), children);
+    return result;
 }
 
 GroupExprPtr PropertyEnforcer::enforceStreamPartitioning(
-    const GroupExprPtr & /*group_expr*/, const Property & /*required*/, const Property & /*property*/, const Context & /*context*/)
+    const GroupExprPtr & group_expr, const Property & required, const Property & property, const Context & context)
 {
-    // todo: lizhuoyu5, need optimizer GroupExpression
-    return nullptr;
-    // QueryPlanStepPtr step_ptr = enforceStreamPartitioning(group_expr->getStep(), required, property, context);
-    // std::vector<GroupId> children = {group_expr->getGroupId()};
-    // auto result = std::make_shared<GroupExpression>(std::move(step_ptr), children);
-    // return result;
+    QueryPlanStepPtr step_ptr = enforceStreamPartitioning(group_expr->getStep(), required, property, context);
+    std::vector<GroupId> children = {group_expr->getGroupId()};
+    auto result = std::make_shared<GroupExpression>(std::move(step_ptr), children);
+    return result;
 }
 
 QueryPlanStepPtr PropertyEnforcer::enforceNodePartitioning(
@@ -71,7 +67,6 @@ QueryPlanStepPtr PropertyEnforcer::enforceNodePartitioning(
 
     switch (partitioning.getHandle())
     {
-        //todo: zhangwanyun, need optimizer: need Partitioning from Optimizer/Property/Property.h
         case PartitioningHandle::SINGLE:
             return std::make_unique<ExchangeStepExt>(streams, RExchangeMode::Enum::ExchangeMode_Enum_GATHER, partitioning, keep_order);
         case PartitioningHandle::FIXED_BROADCAST:

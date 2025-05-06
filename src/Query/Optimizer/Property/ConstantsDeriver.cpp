@@ -1,9 +1,13 @@
-#include <algorithm>
-#include <Query/Optimizer/Utils.h>
 #include <Query/Optimizer/Property/ConstantsDeriver.h>
-#include <Query/Common/SymbolsExtractor.h>
-#include <Query/Common/PredicateUtils.h>
+
+#include <Query/Optimizer/Utils.h>
+#include <Query/Optimizer/SymbolsExtractor.h>
+#include <Query/Optimizer/PredicateUtils.h>
+#include <Query/Optimizer/FunctionInvoker.h>
+#include <Query/Optimizer/DomainTranslator.h>
 #include <Query/Processors/QueryPlan/PlanVisitor.h>
+
+#include <algorithm>
 
 namespace DB
 {
@@ -43,25 +47,24 @@ Constants ConstantsDeriverVisitor::visitStep(const IQueryPlanStep &, ConstantsDe
 
 Constants ConstantsDeriverVisitor::visitFilterStepExt(const FilterStepExt & step, ConstantsDeriverContext & context)
 {
-    // todo: lizhuoyu5, need optimizer
-    // Predicate::DomainTranslator<String> translator{context.getContext()};
-    // // TODO, remove clone. step.getFilter()->clone()
-    // Predicate::ExtractionResult<String> result
-    //     = translator.getExtractionResult(step.getFilter()->clone(), step.getOutputStream().header.getNamesAndTypes());
-    // auto values = result.tuple_domain.extractFixedValues();
+    Predicate::DomainTranslator<String> translator{context.getContext()};
+    // TODO, remove clone. step.getFilter()->clone()
+    Predicate::ExtractionResult<String> result
+        = translator.getExtractionResult(step.getFilter()->clone(), step.getOutputStream().header.getNamesAndTypes());
+    auto values = result.tuple_domain.extractFixedValues();
     std::map<String, FieldWithType> filter_values;
     const Constants & origin_constants = context.getInput()[0];
     for (const auto & value : origin_constants.getValues())
     {
         filter_values[value.first] = value.second;
     }
-    // if (values)
-    // {
-    //     for (auto & value : values.value())
-    //     {
-    //         filter_values[value.first] = value.second;
-    //     }
-    // }
+    if (values)
+    {
+        for (auto & value : values.value())
+        {
+            filter_values[value.first] = value.second;
+        }
+    }
 
     for (const auto & conjunct : PredicateUtils::extractConjuncts(step.getFilter()->clone()))
     {

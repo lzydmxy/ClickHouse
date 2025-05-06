@@ -1,6 +1,7 @@
 #include <Query/Optimizer/Property/Constants.h>
 
 #include <Query/Core/FieldExt.h>
+#include <Query/Optimizer/FunctionInvoker.h>
 
 namespace DB
 {

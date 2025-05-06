@@ -73,8 +73,7 @@ public:
     ExchangeResult visitLimitByStepNode(LimitByStepNode & node, ExchangeContext & cxt) override;
     ExchangeResult visitSortingStepExtNode(SortingStepExtNode & node, ExchangeContext & cxt) override;
     ExchangeResult visitMergeSortingStepExtNode(MergeSortingStepExtNode & node, ExchangeContext & cxt) override;
-    // todo: lizhuyu5, add PartialSortingStep
-    // ExchangeResult visitPartialSortingNode(PartialSortingStepNode & node, ExchangeContext & cxt) override;
+    ExchangeResult visitPartialSortingStepExtNode(PartialSortingStepExtNode & node, ExchangeContext & cxt) override;
     ExchangeResult visitMergingSortedStepExtNode(MergingSortedStepExtNode & node, ExchangeContext & cxt) override;
     ExchangeResult visitIntersectOrExceptStepNode(IntersectOrExceptStepNode & node, ExchangeContext & cxt) override;
     ExchangeResult visitDistinctStepExtNode(DistinctStepExtNode & node, ExchangeContext & cxt) override;

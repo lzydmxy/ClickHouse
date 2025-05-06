@@ -1,16 +1,18 @@
 #include <Query/Optimizer/Rewriter/GroupByKeysPruning.h>
 
-#include <algorithm>
-#include <iterator>
-#include <vector>
 #include <AggregateFunctions/AggregateFunctionFactory.h>
 #include <Core/Names.h>
 #include <Interpreters/AggregateDescription.h>
 #include <Query/Optimizer/DataDependency/DataDependency.h>
 #include <Query/Optimizer/Property/Constants.h>
 #include <Query/Optimizer/Property/ConstantsDeriver.h>
-#include <Parsers/ASTLiteral.h>
+#include <Query/Optimizer/DataDependency/DataDependencyDeriver.h>
 #include <Query/Optimizer/LiteralEncoder.h>
+#include <Query/Optimizer/FunctionInvoker.h>
+
+#include <algorithm>
+#include <iterator>
+#include <vector>
 
 namespace DB
 {
@@ -52,7 +54,7 @@ PlanAndDataDependencyWithConstants GroupByKeysPruning::Rewriter::visitPlanNode(P
 }
 
 
-PlanAndDataDependencyWithConstants GroupByKeysPruning::Rewriter::visitAggregatingNode(AggregatingNode & node, Void & v)
+PlanAndDataDependencyWithConstants GroupByKeysPruning::Rewriter::visitAggregatingStepExtNode(AggregatingStepExtNode & node, Void & v)
 {
     if (node.getStep()->getKeys().empty() || !node.getStep()->getGroupBySortDescription().empty() || !node.getStep()->getGroupings().empty() || !node.getStep()->getGroupingSetsParams().empty())
         return visitPlanNode(node, v);
@@ -148,7 +150,7 @@ PlanAndDataDependencyWithConstants GroupByKeysPruning::Rewriter::visitAggregatin
         }
     }
 
-    auto new_agg_step = std::make_shared<AggregatingStep>(
+    auto new_agg_step = std::make_shared<AggregatingStepExt>(
         node.getChildren()[0]->getStep()->getOutputStream(),
         new_agg_keys,
         new_keys_not_participate_in_calculating,
@@ -161,8 +163,7 @@ PlanAndDataDependencyWithConstants GroupByKeysPruning::Rewriter::visitAggregatin
         false,
         agg_step->shouldProduceResultsInOrderOfBucketNumber(),
         agg_step->isNoShuffle(),
-        agg_step->isStreamingForCache(),
-        agg_step->getHints());
+        agg_step->isStreamingForCache());
     node_ptr = PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(new_agg_step), node.getChildren());
 
 
@@ -172,7 +173,7 @@ PlanAndDataDependencyWithConstants GroupByKeysPruning::Rewriter::visitAggregatin
         Assignments new_assignments;
         NameToType new_name_to_type;
 
-        for (const auto & [name, type] : node_ptr->getCurrentDataStream().getNamesAndTypes())
+        for (const auto & [name, type] : node_ptr->getCurrentDataStream().header.getNamesAndTypes())
         {
             new_assignments.emplace(name, std::make_shared<ASTIdentifier>(name));
             new_name_to_type[name] = type;

@@ -3,7 +3,6 @@
 #include <Query/Optimizer/Property/Property.h>
 #include <Query/Optimizer/Property/PropertyDeriver.h>
 #include <Query/Optimizer/Property/PropertyDeterminer.h>
-#include <Query/Optimizer/Property/PropertyMatcher.h>
 #include <Query/Processors/QueryPlan/CTERefStepExt.h>
 #include <Query/Processors/QueryPlan/PlanNode.h>
 #include <Query/Planner/SymbolMapper.h>

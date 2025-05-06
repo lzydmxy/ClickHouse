@@ -66,7 +66,7 @@ class CountContextVisitor : public PlanNodeVisitor<void, TrivialCountContext>
 private:
     void visitProjectionStepExtNode(ProjectionStepExtNode & node, TrivialCountContext &) override;
     void visitFilterStepExtNode(FilterStepExtNode & node, TrivialCountContext & context) override;
-    void visitSortingStepNode(SortingStepNode & node, TrivialCountContext &) override;
+    void visitSortingStepExtNode(SortingStepExtNode & node, TrivialCountContext &) override;
     void visitTableScanStepExtNode(TableScanStepExtNode & node, TrivialCountContext &) override;
     void visitPlanNode(PlanNodeBase & node, TrivialCountContext &) override;
 };

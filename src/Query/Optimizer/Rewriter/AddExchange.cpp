@@ -197,7 +197,7 @@ ExchangeResult ExchangeVisitor::visitTotalsHavingStepExtNode(TotalsHavingStepExt
     return enforceNodeAndStream(node, cxt);
 }
 
-ExchangeResult ExchangeVisitor::visitSortingStepNode(SortingStepNode & node, ExchangeContext & cxt)
+ExchangeResult ExchangeVisitor::visitSortingStepExtNode(SortingStepExtNode & node, ExchangeContext & cxt)
 {
     return enforceNodeAndStream(node, cxt);
 }
@@ -207,10 +207,10 @@ ExchangeResult ExchangeVisitor::visitMergeSortingStepExtNode(MergeSortingStepExt
     return enforceNodeAndStream(node, cxt);
 }
 
-// ExchangeResult ExchangeVisitor::visitPartialSortingNode(PartialSortingNode & node, ExchangeContext & cxt)
-// {
-//     return enforceNode(node, cxt);
-// }
+ExchangeResult ExchangeVisitor::visitPartialSortingStepExtNode(PartialSortingStepExtNode & node, ExchangeContext & cxt)
+{
+    return enforceNode(node, cxt);
+}
 
 ExchangeResult ExchangeVisitor::visitMergingSortedStepExtNode(MergingSortedStepExtNode & node, ExchangeContext & cxt)
 {

@@ -3,15 +3,9 @@
 #include <Query/Optimizer/CardinalityEstimate/JoinEstimator.h>
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>
 #include <Query/Optimizer/JoinGraph.h>
-#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/Rule/Patterns.h>
-#include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
-#include <Query/Optimizer/SymbolsExtractor.h>
-#include <Parsers/ASTIdentifier.h>
-#include <Parsers/IAST_fwd.h>
 #include <Query/Processors/QueryPlan/AnyStepExt.h>
 #include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
-#include <boost/range/adaptor/map.hpp>
 #include <boost/range/algorithm/copy.hpp>
 
 namespace DB

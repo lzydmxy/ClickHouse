@@ -73,14 +73,14 @@ public:
      */
     static ConstASTPtr distributePredicate(ConstASTPtr or_predicate, ContextMutablePtr & context);
 
-    template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combineConjuncts(const absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> & predicates);
-    template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combineDisjuncts(const absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> & predicates);
-    template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combineDisjunctsWithDefault(const absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> & predicates, const ASTPtr & default_ast);
-    template <bool flatten = true, typename T, enable_if_ast<T> = true>
-    static ASTPtr combinePredicates(const String & fun, absl::InlinedVector<T, PREDICATE_VECTOR_SIZE> predicates);
+    template <bool flatten = true, typename VectorType, enable_if_ast<typename VectorType::value_type> = true>
+    static ASTPtr combineConjuncts(const VectorType & predicates);
+    template <bool flatten = true, typename VectorType, enable_if_ast<typename VectorType::value_type> = true>
+    static ASTPtr combineDisjuncts(const VectorType & predicates);
+    template <bool flatten = true, typename VectorType, enable_if_ast<typename VectorType::value_type> = true>
+    static ASTPtr combineDisjunctsWithDefault(const VectorType & predicates, const ASTPtr & default_ast);
+    template <bool flatten = true, typename VectorType, enable_if_ast<typename VectorType::value_type> = true>
+    static ASTPtr combinePredicates(const String & fun, VectorType predicates);
 
     template <typename T, enable_if_ast<T> = true>
     static bool isTruePredicate(const T & predicate);

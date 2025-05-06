@@ -13,7 +13,6 @@
 
 #include <fmt/format.h>
 
-
 #include <algorithm>
 #include <functional>
 
@@ -68,7 +67,7 @@ namespace
             QueryPlanStepType::FilterStepExt,
             QueryPlanStepType::TableScanStepExt,
             // IQueryPlanStep::Type::Window,
-            QueryPlanStepType::SortingStep,
+            QueryPlanStepType::SortingStepExt,
             // IQueryPlanStep::Type::PartialSorting,
             // IQueryPlanStep::Type::MergeSorting,
             // IQueryPlanStep::Type::MergingSorted,

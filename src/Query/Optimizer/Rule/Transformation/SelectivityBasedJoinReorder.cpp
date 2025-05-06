@@ -3,14 +3,11 @@
 #include <Query/Optimizer/CardinalityEstimate/CardinalityEstimator.h>
 #include <Query/Optimizer/CardinalityEstimate/JoinEstimator.h>
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>
-#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Optimizer/Rule/Rule.h>
 #include <Query/Optimizer/Rule/Transformation/JoinReorderUtils.h>
 #include <Query/Optimizer/SymbolUtils.h>
 #include <Query/Optimizer/Utils.h>
-#include <Query/Processors/QueryPlan/FilterStepExt.h>
-#include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <Query/Processors/QueryPlan/PlanPattern.h>
 #include <Query/Optimizer/JoinOrderUtils.h>
 

@@ -1,6 +1,6 @@
 #include <Query/Optimizer/Rule/Transformation/PullOuterJoin.h>
 
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Common/NameToTypeExt.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Processors/QueryPlan/JoinStepExt.h>

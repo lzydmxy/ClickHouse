@@ -1,8 +1,6 @@
 #include <Query/Optimizer/Rule/Transformation/SemiJoinPushDown.h>
 
-#include <Core/Names.h>
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>
-#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Optimizer/SymbolsExtractor.h>
 #include <Query/Optimizer/Utils.h>
@@ -11,9 +9,7 @@
 #include <Query/Processors/QueryPlan/Assignment.h>
 #include <Query/Processors/QueryPlan/PlanNode.h>
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
-#include <Query/Planner/SymbolAllocator.h>
 #include <Query/Planner//SymbolMapper.h>
-#include <Query/Processors/QueryPlan/Assignment.h>
 
 #include <memory>
 #include <unordered_set>
@@ -48,15 +44,6 @@ TransformResult SemiJoinPushDown::transformImpl(PlanNodePtr node, const Captures
         if (!a_outer_columns.contains(col))
             return {};
     }
-
-    // NameSet require_semi_output;
-    // auto keys = join_node->getStep()->getLeftKeys();
-    // require_semi_output.insert(keys.begin(), keys.end());
-    // keys = join_node->getStep()->getRightKeys();
-    // require_semi_output.insert(keys.begin(), keys.end());
-    // auto key_set = SymbolsExtractor::extract(join_node->getStep()->getFilter());
-    // require_semi_output.insert(key_set.begin(), key_set.end());
-
 
     DataStream output_stream;
     for (const auto & col : semi_join_node->getChildren()[0]->getChildren()[0]->getCurrentDataStream().header)

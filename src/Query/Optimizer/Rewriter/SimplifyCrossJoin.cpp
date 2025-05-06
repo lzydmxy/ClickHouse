@@ -1,6 +1,5 @@
 #include <Query/Optimizer/Rewriter/SimplifyCrossJoin.h>
 
-#include <queue>
 #include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/Iterative/IterativeRewriter.h>
 #include <Query/Optimizer/Rewriter/ColumnPruning.h>
@@ -9,12 +8,12 @@
 #include <Query/Optimizer/Rule/Rules.h>
 #include <Query/Optimizer/SymbolUtils.h>
 #include <Query/Optimizer/Utils.h>
-#include <Query/Common/PredicateUtils.h>
 #include <Query/Processors/QueryPlan/FilterStepExt.h>
 #include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <Query/Processors/QueryPlan/PlanPattern.h>
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
 
+#include <queue>
 
 namespace DB
 {
