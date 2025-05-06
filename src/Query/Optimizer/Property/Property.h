@@ -24,10 +24,14 @@ namespace DB
 
 using SymbolEquivalences = Equivalences<String>;
 using SymbolEquivalencesPtr = std::shared_ptr<SymbolEquivalences>;
-using PartitioningHandle = RPartitioningHandle;
-using Component = RPartitioningComponent;
+// using Handle = RHandle;
+// using Component = RPartitioningComponent;
 using ConstASTPtr = std::shared_ptr<const IAST>;
 
+namespace Protos
+{
+class Partitioning;
+}
 class Property;
 using PropertySet = std::vector<Property>;
 using PropertySets = std::vector<PropertySet>;
@@ -39,16 +43,39 @@ class Constants;
 class Partitioning
 {
 public:
-    Partitioning(const Names & columns_) : Partitioning(PartitioningHandle::FIXED_HASH, columns_) { }
+    ENUM_WITH_PROTO_CONVERTER(
+        Handle, // enum name
+        Protos::Partitioning::Handle, // proto enum message
+        (SINGLE, 0),
+        (COORDINATOR, 1),
+        (FIXED_HASH, 2),
+        (FIXED_ARBITRARY, 3),
+        (FIXED_BROADCAST, 4),
+        (SCALED_WRITER, 5),
+        // Corresponding to this sharding key definition syntax: bucket(column_name, buckets),
+        // only the BUCKET_TABLE type can use BUCKET_REPARTITION.
+        (BUCKET_TABLE, 6),
+        (ARBITRARY, 7),
+        (FIXED_PASSTHROUGH, 8),
+        (UNKNOWN, 9));
+    
+    ENUM_WITH_PROTO_CONVERTER(
+        Component, // enum name
+        Protos::Partitioning::Component, // proto enum message
+        (ANY, 0),
+        (COORDINATOR, 1),
+        (WORKER, 2));
+
+    Partitioning(const Names & columns_) : Partitioning(Handle::FIXED_HASH, columns_) { }
 
     Partitioning(
-        PartitioningHandle::Enum handle_ = PartitioningHandle::UNKNOWN,
+        Handle handle_ = Handle::UNKNOWN,
         Names columns_ = {},
         bool require_handle_ = false,
         UInt64 buckets_ = 0,
         ASTPtr bucket_expr_ = nullptr,
         bool enforce_round_robin_ = true,
-        Component::Enum component_ = Component::ANY,
+        Component component_ = Component::ANY,
         bool exactly_match_ = false,
         bool satisfy_worker_ = false)
         : handle(handle_)
@@ -62,8 +89,8 @@ public:
         , satisfy_worker(satisfy_worker_)
     {
     }
-    void setHandle(PartitioningHandle::Enum handle_) { handle = handle_; }
-    PartitioningHandle::Enum getHandle() const { return handle; }
+    void setHandle(Handle handle_) { handle = handle_; }
+    Handle getHandle() const { return handle; }
     const Names & getColumns() const { return columns; }
     void setColumns(Names columns_)
     {
@@ -75,11 +102,11 @@ public:
     void setEnforceRoundRobin(bool enforce_round_robin_) { enforce_round_robin = enforce_round_robin_; }
     bool isRequireHandle() const { return require_handle; }
     void setRequireHandle(bool require_handle_) { require_handle = require_handle_; }
-    Component::Enum getComponent() const { return component; }
-    void setComponent(Component::Enum component_) { component = component_; }
+    Component getComponent() const { return component; }
+    void setComponent(Component component_) { component = component_; }
     bool isExactlyMatch() const { return exactly_match; }
 
-    bool isPartitionHandle() const { return handle == PartitioningHandle::BUCKET_TABLE || handle == PartitioningHandle::FIXED_HASH; }
+    bool isPartitionHandle() const { return handle == Handle::BUCKET_TABLE || handle == Handle::FIXED_HASH; }
 
     bool isExchangeSchema(bool support_bucket_shuffle) const;
     bool isSimpleExchangeSchema(bool support_bucket_shuffle) const;
@@ -97,7 +124,7 @@ public:
             return;
         }
         this->columns = {};
-        this->handle = PartitioningHandle::UNKNOWN;
+        this->handle = Handle::UNKNOWN;
         this->bucket_expr = nullptr;
         this->buckets = 0;
     }
@@ -136,13 +163,13 @@ public:
     static Partitioning fromProto(const Protos::Partitioning & proto);
 
 private:
-    PartitioningHandle::Enum handle;
+    Handle handle;
     Names columns;
     bool require_handle;
     UInt64 buckets;
     ASTPtr bucket_expr;
     bool enforce_round_robin;
-    Component::Enum component;
+    Component component;
     bool exactly_match;
     bool satisfy_worker;
     bool preferred = false;
@@ -290,7 +317,7 @@ public:
 class CTEDescription
 {
 public:
-    CTEDescription() : CTEDescription(false, PartitioningHandle::ARBITRARY)
+    CTEDescription() : CTEDescription(false, Partitioning::Handle::ARBITRARY)
     {
     }
 
@@ -310,7 +337,7 @@ public:
     Partitioning & getNodePartitioningRef() { return node_partitioning; }
     bool isInlined() const { return is_inlined; }
     bool isShared() const { return !is_inlined; }
-    bool isArbitrary() const { return !is_inlined && node_partitioning.getHandle() == PartitioningHandle::ARBITRARY; }
+    bool isArbitrary() const { return !is_inlined && node_partitioning.getHandle() == Partitioning::Handle::ARBITRARY; }
 
     static Property createCTEDefGlobalProperty(const Property & property, CTEId cte_id);
     static Property
@@ -363,8 +390,8 @@ class Property
 {
 public:
     explicit Property(
-        Partitioning node_partitioning_ = Partitioning(PartitioningHandle::ARBITRARY),
-        Partitioning stream_partitioning_ = Partitioning(PartitioningHandle::ARBITRARY),
+        Partitioning node_partitioning_ = Partitioning(Partitioning::Handle::ARBITRARY),
+        Partitioning stream_partitioning_ = Partitioning(Partitioning::Handle::ARBITRARY),
         Sorting sorting_ = {})
         : node_partitioning(std::move(node_partitioning_))
         , stream_partitioning(std::move(stream_partitioning_))

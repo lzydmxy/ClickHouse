@@ -18,6 +18,7 @@
 #include <Query/Processors/IQueryPlanStepExt.h>
 #include <Query/Common/StopwatchExt.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <Query/Core/BlockHelper.h>
 
 #include <algorithm>
 
@@ -621,9 +622,9 @@ bool OptimizeInput::checkJoinInputProperties(const PropertySet & requried_input_
         auto right_equivalences = context->getMemo().getGroupById(group_expr->getChildrenGroups()[1])->getEquivalences();
 
         auto left_output_symbols
-            = context->getMemo().getGroupById(group_expr->getChildrenGroups()[0])->getStep()->getOutputStream().header.getNameSet();
+            = BlockHelper::getNameSet(context->getMemo().getGroupById(group_expr->getChildrenGroups()[0])->getStep()->getOutputStream().header);
         auto right_output_symbols
-            = context->getMemo().getGroupById(group_expr->getChildrenGroups()[1])->getStep()->getOutputStream().header.getNameSet();
+            = BlockHelper::getNameSet(context->getMemo().getGroupById(group_expr->getChildrenGroups()[1])->getStep()->getOutputStream().header);
 
         NameToNameSetMap right_join_key_to_left;
         DefaultTMap<String> before_left_rep_map, before_right_rep_map;
@@ -810,7 +811,7 @@ void OptimizeCTE::execute()
 {
     StopwatchGuard<Stopwatch> stop_watch_guard(elapsed_ns);
 
-    const auto * const cte_step = dynamic_cast<const CTERefStep *>(group_expr->getStep().get());
+    const auto * const cte_step = dynamic_cast<const CTERefStepExt *>(group_expr->getStep().get());
     CTEId cte_id = cte_step->getId();
     auto cte_def_group = context->getMemo().getCTEDefGroupByCTEId(cte_id);
 

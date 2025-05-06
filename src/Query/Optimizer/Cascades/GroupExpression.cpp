@@ -5,7 +5,6 @@
 #include <Query/Optimizer/Cascades/Memo.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Processors/QueryPlan/AnyStepExt.h>
-#include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
 #include <Common/Exception.h>
 
 namespace DB
@@ -38,7 +37,7 @@ GroupBindingIterator::GroupBindingIterator(const Memo & memo_, GroupId id_, Patt
 }
 bool GroupBindingIterator::hasNext()
 {
-    if (pattern->getTargetType() == QueryPlanStepType::Any || pattern->getTargetType() == QueryPlanStepType::Tree)
+    if (pattern->getTargetType() == QueryPlanStepType::AnyStepExt || pattern->getTargetType() == QueryPlanStepType::Tree)
     {
         return current_item_index == 0;
     }
@@ -75,7 +74,7 @@ bool GroupBindingIterator::hasNext()
 
 PlanNodePtr GroupBindingIterator::next()
 {
-    if (pattern->getTargetType() == QueryPlanStepType::Any || pattern->getTargetType() == QueryPlanStepType::Tree)
+    if (pattern->getTargetType() == QueryPlanStepType::AnyStepExt || pattern->getTargetType() == QueryPlanStepType::Tree)
     {
         current_item_index = num_group_items + 1;
         PlanNodes children;
