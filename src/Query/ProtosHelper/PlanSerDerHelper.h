@@ -13,6 +13,7 @@
 #include <Query/Processors/QueryPlan/Assignment.h>
 #include <Query/ProtosHelper/DataTypeHelper.h>
 #include <Query/ProtosHelper/QueryProto.h>
+#include <Query/ProtosHelper/FieldHelper.h>
 
 namespace DB
 {
@@ -216,14 +217,13 @@ auto deserializeOrderedMapFromProto(const ProtoType & proto) -> std::map<Key, Va
 
 // this made for struct Array, struct Tuple and struct Map
 template <typename T>
-void serializeFieldVectorToProto(const T & /*field_vector*/, RFieldVector & /*proto*/)
+void serializeFieldVectorToProto(const T & field_vector, RFieldVector & proto)
 {
     static_assert(std::is_base_of_v<FieldVector, T>, "not a FieldVector, see Core/Field.h");
-    //TODO: Need toProto method in T class
-    // for (auto & element : field_vector)
-    // {
-    //     element.toProto(*proto.add_fields());
-    // }
+    for (auto & element : field_vector)
+    {
+     FieldToProto(element, *proto.add_fields());
+    }
 }
 
 // this made for struct Array, struct Tuple and struct Map
@@ -233,11 +233,10 @@ T deserializeFieldVectorFromProto(const RFieldVector & proto)
     static_assert(std::is_base_of_v<FieldVector, T>, "not a FieldVector, see Core/Field.h");
     T res;
     res.resize(proto.fields_size());
-    //TODO: Need fromProto method in T class
-    // for (int i = 0; i < proto.fields_size(); ++i)
-    // {
-    //     res[i].fromProto(proto.fields(i));
-    // }
+    for (int i = 0; i < proto.fields_size(); ++i)
+    {
+        FieldFillFromProto(res[i], proto.fields(i));
+    }
     return res;
 }
 

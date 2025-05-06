@@ -208,14 +208,17 @@ QueryPlanStepPtr QueryPlanStepHelper::fromProto(Protos::QueryPlanStep & proto, C
     switch (proto.step_case())
     {
 // todo: all, need all steps with proto implementing fromProto, see PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT and PROTOBUF_STEP_TYPES_AND_NAMES
-// 1. StepExt with proto uses macros to execute fromProto, see PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT
-// #define CASE_DEF(TYPE, VAR_NAME) \
-//     case Protos::QueryPlanStep::StepCase::k##TYPE: { \
-//         return deserializeQueryPlanStepFromProtoImpl<TYPE, Protos::TYPE>(proto.VAR_NAME##_step(), context); \
-//     }
-//         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(CASE_DEF)
-// #undef CASE_DEF
+  // #define CASE_DEF(TYPE, VAR_NAME) \
+  //     case Protos::QueryPlanStep::StepCase::k##TYPE: { \
+  //         return TYPE##::fromProto(dynamic_cast<Protos::TYPE &>(proto), context);\
+  //     }
+  //         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(CASE_DEF)
+  // #undef CASE_DEF
 
+        // case Protos::QueryPlanStep::StepCase::kAggregatingStepExt:
+        // {
+        //     return AggregatingStepExt::fromProto(dynamic_cast<Protos::AggregatingStepExt &>(proto), context);
+        // }
         // 2. Step with proto needs implementing fromProto manually, see PROTOBUF_STEP_TYPES_AND_NAMES
         case Protos::QueryPlanStep::StepCase::kFillingStep:
         {

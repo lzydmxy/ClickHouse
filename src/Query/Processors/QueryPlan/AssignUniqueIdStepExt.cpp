@@ -31,7 +31,7 @@ std::shared_ptr<IQueryPlanStep> AssignUniqueIdStepExt::copy(ContextPtr) const
     return std::make_unique<AssignUniqueIdStepExt>(input_streams[0], unique_id);
 }
 
-std::shared_ptr<AssignUniqueIdStepExt> AssignUniqueIdStepExt::fromProto(const Protos::AssignUniqueIdStep & proto, ContextPtr)
+std::shared_ptr<AssignUniqueIdStepExt> AssignUniqueIdStepExt::fromProto(const Protos::AssignUniqueIdStepExt & proto, ContextPtr)
 {
     auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
     auto unique_id = proto.unique_id();
@@ -40,7 +40,7 @@ std::shared_ptr<AssignUniqueIdStepExt> AssignUniqueIdStepExt::fromProto(const Pr
     return step;
 }
 
-void AssignUniqueIdStepExt::toProto(Protos::AssignUniqueIdStep & proto, bool) const
+void AssignUniqueIdStepExt::toProto(Protos::AssignUniqueIdStepExt & proto, bool) const
 {
     ProtosSerDerHelper::serializeToProtoBase(*this,*proto.mutable_query_plan_base());
     proto.set_unique_id(unique_id);

@@ -10,7 +10,7 @@
 
 namespace DB
 {
-class MergingAggregatedStepExt : public MergingAggregatedStep
+class  MergingAggregatedStepExt : public MergingAggregatedStep
 {
 public:
     MergingAggregatedStepExt(
@@ -54,6 +54,9 @@ public:
     const SortDescription & getGroupBySortDescription() const {return group_by_sort_description;}
 
     void updateOutputStream() override;
+
+    void toProto(Protos::MergingAggregatedStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<MergingAggregatedStepExt> fromProto(const Protos::MergingAggregatedStepExt & proto, ContextPtr context);
 private:
     Names keys;
     GroupingSetsParamsExtList grouping_sets_params;

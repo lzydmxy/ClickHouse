@@ -379,4 +379,89 @@ Block ProtosSerDerHelper::deserializeFromProtoBase(const Protos::ISourceStep & p
     return output_header;
 }
 
+
+void ProtosSerDerHelper::toProto(const Aggregator::Params & agg_params, Protos::AggregatorParams & proto)
+{
+    for (const auto & element : agg_params.keys)
+        proto.add_keys(element);
+    for (const auto & element : agg_params.aggregates)
+        toProto(element, *proto.add_aggregates());
+    proto.set_overflow_row(agg_params.overflow_row);
+    proto.set_max_rows_to_group_by(agg_params.max_rows_to_group_by);
+    proto.set_group_by_overflow_mode(OverflowModeConverter::toProto(agg_params.group_by_overflow_mode));
+    proto.set_group_by_two_level_threshold(agg_params.group_by_two_level_threshold);
+    proto.set_group_by_two_level_threshold_bytes(agg_params.group_by_two_level_threshold_bytes);
+    proto.set_max_bytes_before_external_group_by(agg_params.max_bytes_before_external_group_by);
+    proto.set_empty_result_for_aggregation_by_empty_set(agg_params.empty_result_for_aggregation_by_empty_set);
+    proto.set_max_threads(agg_params.max_threads);
+    proto.set_min_free_disk_space(agg_params.min_free_disk_space);
+    proto.set_compile_aggregate_expressions(agg_params.compile_aggregate_expressions);
+    proto.set_min_count_to_compile_aggregate_expression(agg_params.min_count_to_compile_aggregate_expression);
+    proto.set_max_block_size(agg_params.max_block_size);
+    proto.set_only_merge(agg_params.only_merge);
+    proto.set_enable_prefetch(agg_params.enable_prefetch);
+    proto.set_optimize_group_by_constant_keys(agg_params.optimize_group_by_constant_keys);
+    proto.set_min_hit_rate_to_use_consecutive_keys_optimization(agg_params.min_hit_rate_to_use_consecutive_keys_optimization);
+}
+
+Aggregator::Params ProtosSerDerHelper::fromProto(const Protos::AggregatorParams & proto, ContextPtr context)
+{
+    Names keys;
+    for (const auto & element : proto.keys())
+        keys.emplace_back(element);
+
+    AggregateDescriptions aggregates;
+    for (const auto & proto_element : proto.aggregates())
+    {
+        AggregateDescription element;
+        fillFromProto(element, proto_element);
+        aggregates.emplace_back(std::move(element));
+    }
+
+    return Aggregator::Params(keys, aggregates, proto.overflow_row(), proto.max_rows_to_group_by(), OverflowModeConverter::fromProto(proto.group_by_overflow_mode()),
+        proto.group_by_two_level_threshold(), proto.group_by_two_level_threshold_bytes(), proto.max_bytes_before_external_group_by(), proto.empty_result_for_aggregation_by_empty_set(),
+        context ? context->getTempDataOnDisk() : nullptr, proto.max_threads(), proto.min_free_disk_space(), proto.compile_aggregate_expressions(),
+        proto.min_count_to_compile_aggregate_expression(), proto.max_block_size(), proto.enable_prefetch(), proto.only_merge(),
+        proto.optimize_group_by_constant_keys(), proto.min_hit_rate_to_use_consecutive_keys_optimization(), {});
+
+}
+
+void ProtosSerDerHelper::toProto(const ArrayJoinAction & array_join_action, Protos::ArrayJoinAction & proto)
+{
+    for (const auto & element : array_join_action.columns)
+        proto.add_columns(element);
+    std::sort(proto.mutable_columns()->begin(), proto.mutable_columns()->end());
+    proto.set_is_left(array_join_action.is_left);
+}
+
+std::shared_ptr<ArrayJoinAction> ProtosSerDerHelper::fromProto(const Protos::ArrayJoinAction & proto, ContextPtr context)
+{
+    std::unordered_set<String> columns;
+    for (const auto & element : proto.columns())
+        columns.emplace(element);
+    auto is_left = proto.is_left();
+    auto step = std::make_shared<ArrayJoinAction>(columns, is_left, context);
+
+    return step;
+}
+
+void ProtosSerDerHelper::toProto(const SelectQueryInfo & select_query_info, Protos::SelectQueryInfo & proto)
+{
+    serializeASTToProto(select_query_info.query, *proto.mutable_query());
+    serializeASTToProto(select_query_info.view_query, *proto.mutable_view_query());
+    // serializeASTToProto(select_query_info.partition_filter, *proto.mutable_partition_filter());
+    // cache_info.toProto(*proto.mutable_cache_info());
+    if (select_query_info.input_order_info)
+        toProto(*select_query_info.input_order_info, *proto.mutable_input_order_info());
+}
+
+void ProtosSerDerHelper::fillFromProto(SelectQueryInfo & select_query_info, const Protos::SelectQueryInfo & proto)
+{
+    select_query_info.query = deserializeASTFromProto(proto.query());
+    select_query_info.view_query = deserializeASTFromProto(proto.view_query());
+    //select_query_info.partition_filter = deserializeASTFromProto(proto.partition_filter());
+    select_query_info.input_order_info = proto.has_input_order_info() ? fillFromProto(proto.input_order_info()) : nullptr;
+    //select_query_info.cache_info.fillFromProto(proto.cache_info());
+}
+
 }

@@ -2,10 +2,7 @@
 
 #include <Query/Processors/QueryPlan/Assignment.h>
 #include <Query/Processors/QueryPlan/PlanNode.h>
-#include <Storages/IStorage_fwd.h>
-#include <unordered_map>
 #include <DataTypes/IDataType.h>
-#include <Core/UUID.h>
 #include <Core/DecimalFunctions.h>
 #include <time.h>
 

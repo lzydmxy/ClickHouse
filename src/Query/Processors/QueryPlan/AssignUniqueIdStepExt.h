@@ -16,8 +16,8 @@ public:
     void updateInputStreams(const DataStreams & input_streams_);
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 
-    void toProto(Protos::AssignUniqueIdStep & proto, bool for_hash_equals = false) const;
-    static std::shared_ptr<AssignUniqueIdStepExt> fromProto(const Protos::AssignUniqueIdStep & proto, ContextPtr);
+    void toProto(Protos::AssignUniqueIdStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<AssignUniqueIdStepExt> fromProto(const Protos::AssignUniqueIdStepExt & proto, ContextPtr);
 
     String getUniqueId() const { return unique_id; }
     friend class QueryPlanStepHelper;

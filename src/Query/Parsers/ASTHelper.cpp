@@ -17,28 +17,6 @@ extern const int LOGICAL_ERROR;
 extern const int NOT_IMPLEMENTED;
 }
 
-namespace
-{
-    void serializeASTWithAlias(const IAST & ast, WriteBuffer & buf)
-    {
-        if (const auto * casted = ast.as<ASTWithAlias>())
-        {
-            writeBinary(casted->alias, buf);
-            writeBinary(casted->prefer_alias_to_column_name, buf);
-
-            return;
-        }
-
-        throw Exception(ErrorCodes::LOGICAL_ERROR, "Can not convert {} to ASTWithAlias", toString(getAstType(ast)));
-    }
-
-    void deserializeASTWithAlias(ASTWithAlias & ast, ReadBuffer & buf)
-    {
-        readBinary(ast.alias, buf);
-        readBinary(ast.prefer_alias_to_column_name, buf);
-    }
-}
-
 void astToLowerCase(const ASTPtr & ast)
 {
     if (auto * casted_ast = ast->as<ASTConstraintDeclaration>())
@@ -280,7 +258,8 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
     else if (const auto * casted = ast.as<ASTIdentifier>())
     {
         //parent serialize
-        serializeASTWithAlias(ast, buf);
+        writeBinary(casted->alias, buf);
+        writeBinary(casted->prefer_alias_to_column_name, buf);
  
         writeBinary(casted->full_name, buf);
         writeBinary(casted->name_parts, buf);
@@ -304,8 +283,8 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
     }
     else if (const auto * casted = ast.as<ASTTableIdentifier>())
     {
-        //parent serialize
-        serializeASTWithAlias(ast, buf);
+        writeBinary(casted->alias, buf);
+        writeBinary(casted->prefer_alias_to_column_name, buf);
 
         writeBinary(casted->full_name, buf);
         writeBinary(casted->name_parts, buf);
@@ -368,8 +347,8 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
     }
     else if (const auto * casted = ast.as<ASTFunction>())
     {
-        /// serialize alias
-        serializeASTWithAlias(ast, buf);
+        writeBinary(casted->alias, buf);
+        writeBinary(casted->prefer_alias_to_column_name, buf);
 
         // serialize function
         writeBinary(casted->name, buf);
@@ -562,10 +541,17 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
         }
         case ASTType::ASTIdentifier:
         {
-            auto ast = std::make_shared<ASTIdentifier>("");
-            deserializeASTWithAlias(*ast, buf);
+            String full_name;
+            String alias;
+            bool prefer_alias_to_column_name;
 
-            readBinary(ast->full_name, buf);
+            readBinary(alias, buf);
+            readBinary(prefer_alias_to_column_name, buf);
+            readBinary(full_name, buf);
+            auto ast = std::make_shared<ASTIdentifier>(full_name);
+            ast->alias = alias;
+            ast->prefer_alias_to_column_name = prefer_alias_to_column_name;
+
             readBinary(ast->name_parts, buf);
         
             bool has_semantic;
@@ -593,7 +579,8 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
         case ASTType::ASTTableIdentifier:
         {
             auto ast = std::make_shared<ASTTableIdentifier>("");
-            deserializeASTWithAlias(*ast, buf);
+            readBinary(ast->alias, buf);
+            readBinary(ast->prefer_alias_to_column_name, buf);
 
             readBinary(ast->full_name, buf);
             readBinary(ast->name_parts, buf);
@@ -689,8 +676,8 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
         case ASTType::ASTFunction:
         {
             auto ast = std::make_shared<ASTFunction>();
-            // deserialize alias
-            deserializeASTWithAlias(*ast, buf);
+            readBinary(ast->alias, buf);
+            readBinary(ast->prefer_alias_to_column_name, buf);
             // deserialize function
             readBinary(ast->name, buf);
             ast->arguments = deserializeASTWithChildren(ast->children, buf);

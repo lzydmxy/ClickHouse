@@ -2,7 +2,8 @@
 
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Processors/Transforms/MergingAggregatedTransform.h>
-
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <DataTypes/DataTypesNumber.h>
 
 namespace DB
@@ -113,5 +114,72 @@ std::shared_ptr<IQueryPlanStep> MergingAggregatedStepExt::copy(ContextPtr) const
         memory_efficient_merge_threads, max_block_size, memory_bound_merging_max_block_bytes, group_by_sort_description, memory_bound_merging_of_aggregation_results_enabled);
 }
 
+void MergingAggregatedStepExt::toProto(Protos::MergingAggregatedStepExt & proto, bool) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
+    for (const auto & element : keys)
+        proto.add_keys(element);
+    for (const auto & element : grouping_sets_params)
+        element.toProto(*proto.add_grouping_sets_params());
+    for (const auto & element : groupings)
+        element.toProto(*proto.add_groupings());
+
+    ProtosSerDerHelper::toProto(params, *proto.mutable_params());
+    proto.set_memory_efficient_aggregation(memory_efficient_aggregation);
+    proto.set_max_threads(max_threads);
+    proto.set_memory_efficient_merge_threads(memory_efficient_merge_threads);
+
+    proto.set_final(final);
+    proto.set_max_block_size(max_block_size);
+    proto.set_memory_bound_merging_max_block_bytes(memory_bound_merging_max_block_bytes);
+    for (const auto & element : group_by_sort_description)
+        ProtosSerDerHelper::toProto(element, *proto.add_group_by_sort_description());
+
+    proto.set_overwritten_sort_scope( DataStreamSortScopeConverter::toProto(overwritten_sort_scope));
+    proto.set_should_produce_results_in_order_of_bucket_number(should_produce_results_in_order_of_bucket_number);
+    proto.set_memory_bound_merging_of_aggregation_results_enabled(memory_bound_merging_of_aggregation_results_enabled);
+}
+
+std::shared_ptr<MergingAggregatedStepExt> MergingAggregatedStepExt::fromProto(const Protos::MergingAggregatedStepExt & proto, ContextPtr context)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+
+    Names keys;
+    for (const auto & element : proto.keys())
+        keys.emplace_back(element);
+    GroupingSetsParamsExtList grouping_sets_params;
+    for (const auto & proto_element : proto.grouping_sets_params())
+    {
+        GroupingSetsParamsExt element;
+        element.fillFromProto(proto_element);
+        grouping_sets_params.emplace_back(std::move(element));
+    }
+
+    GroupingDescriptions groupings;
+    for (const auto & proto_element : proto.groupings())
+    {
+        GroupingDescription element;
+        element.fillFromProto(proto_element);
+        groupings.emplace_back(std::move(element));
+    }
+    auto params = ProtosSerDerHelper::fromProto(proto.params(), context);
+
+    SortDescription group_by_sort_description;
+    for (const auto & element : proto.group_by_sort_description())
+    {
+        SortColumnDescription sort_column_description;
+        ProtosSerDerHelper::fillFromProto(sort_column_description, element);
+        group_by_sort_description.emplace_back(std::move(sort_column_description));
+    }
+
+
+    auto step = std::make_shared<MergingAggregatedStepExt>(
+        base_input_stream, std::move(keys), std::move(grouping_sets_params), std::move(groupings), proto.final(),
+        std::move(params),proto.memory_efficient_aggregation(), proto.max_threads(),
+        proto.memory_efficient_merge_threads(), proto.max_block_size(), proto.memory_bound_merging_max_block_bytes(),
+        std::move(group_by_sort_description), proto.memory_bound_merging_of_aggregation_results_enabled());
+    step->setStepDescription(step_description);
+    return step;
+}
 
 }

@@ -4,6 +4,8 @@
 #include <Storages/SelectQueryInfo.h>
 #include <Interpreters/WindowDescription.h>
 #include <Processors/QueryPlan/ISourceStep.h>
+#include <Interpreters/Aggregator.h>
+#include <Interpreters/ArrayJoinAction.h>
 
 namespace DB
 {
@@ -77,6 +79,14 @@ public:
 
     static void serializeToProtoBase(const ISourceStep & step, Protos::ISourceStep & proto);
     static Block deserializeFromProtoBase(const Protos::ISourceStep & proto);
+    static void toProto(const Aggregator::Params & agg_params, Protos::AggregatorParams & proto);
+    static Aggregator::Params fromProto(const Protos::AggregatorParams & proto, ContextPtr context);
+
+    static void toProto(const ArrayJoinAction & array_join_action, Protos::ArrayJoinAction & proto);
+    static std::shared_ptr<ArrayJoinAction> fromProto(const Protos::ArrayJoinAction & proto, ContextPtr context);
+
+    static void toProto(const SelectQueryInfo & select_query_info, Protos::SelectQueryInfo & proto);
+    static void fillFromProto(SelectQueryInfo & select_query_info, const Protos::SelectQueryInfo & proto);
 };
 
 }

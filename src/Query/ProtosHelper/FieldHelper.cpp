@@ -21,8 +21,7 @@ void readFieldBinary(Field & field, ReadBuffer & buf)
 {
     UInt8 read_type = 0;
     readBinary(read_type, buf);
-    auto type = static_cast<Field::Types::Which>(read_type);
-    field = dispatchField(FieldVisitorReadBinary(buf), type);
+    field = getBinaryValue(read_type, buf);
 }
 
 void FieldToProto(const Field & field, Protos::Field & proto)
@@ -34,6 +33,7 @@ void FieldToProto(const Field & field, Protos::Field & proto)
 
 void FieldFillFromProto(Field & field, const Protos::Field & proto)
 {
+    auto s = proto.blob();
     ReadBufferFromString buf(proto.blob());
     readFieldBinary(field, buf);
 }
