@@ -54,6 +54,7 @@
 #include <Query/Processors/QueryPlan/PartialSortingStepExt.h>
 #include <Query/Processors/QueryPlan/SortingStepExt.h>
 #include <Query/Processors/QueryPlan/FinishSortingStepExt.h>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
 
 namespace DB
 {
@@ -219,6 +220,11 @@ public:
             return false;
 
         return true;
+    }
+
+    static bool isQueryPlanStepEqual(const IQueryPlanStep & lhs, const IQueryPlanStep & rhs)
+    {
+        return isPlanStepEqual(lhs, rhs);
     }
 
     static QueryPlanStepPtr copyQueryPlanStep(const QueryPlanStepPtr & query_plan_step, ContextPtr context);
