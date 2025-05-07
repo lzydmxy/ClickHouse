@@ -65,7 +65,7 @@ PlanNodeStatisticsPtr JoinEstimator::estimate(
             FilterEstimatorContext estimator_context{
                 .context = context,
                 .interpreter = interpreter,
-                .default_selectivity = context->getOptimizerContext()->getSettingsRef().stats_estimator_join_filter_selectivity};
+                .default_selectivity = context->getOptimizerContext()->getSettingsRef().stats_estimator_join_filter_selectivity, 0.0};
             FilterEstimateResult result = FilterEstimator::estimateFilter(*res, filter, estimator_context);
 
             selectivity = result.first.value_or(estimator_context.default_selectivity);
@@ -82,7 +82,7 @@ PlanNodeStatisticsPtr JoinEstimator::estimate(
         }
 
         auto before_filter_row_count = res->getRowCount();
-        UInt64 filtered_row_count = std::round(res->getRowCount() * selectivity);
+        UInt64 filtered_row_count = static_cast<UInt64>(std::round(res->getRowCount() * selectivity));
         // make row count at least 1.
         res->updateRowCount(filtered_row_count > 1 ? filtered_row_count : 1);
                 for (auto & symbol_statistics : res->getSymbolStatistics())
@@ -322,7 +322,7 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
     {
         double adjust_correlated_coefficient
             = std::pow(context.getOptimizerContext()->getSettingsRef().multi_join_keys_correlated_coefficient, left_keys.size() - 1);
-        join_card *= adjust_correlated_coefficient;
+        join_card *= static_cast<UInt64>(adjust_correlated_coefficient);
     }
 
     // All rows from left side should be in the result.
@@ -330,7 +330,7 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
     {
         if (strictness == JoinStrictness::Anti)
         {
-            join_card = left_rows * context.getOptimizerContext()->getSettingsRef().stats_estimator_anti_join_filter_coefficient;
+            join_card = static_cast<UInt64>(left_rows * context.getOptimizerContext()->getSettingsRef().stats_estimator_anti_join_filter_coefficient);
             if (left_rows > join_card)
                 join_card = std::max(join_card, left_rows - join_card);
         }
@@ -348,7 +348,7 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
     {
         if (strictness == JoinStrictness::Anti)
         {
-            join_card = right_rows * context.getOptimizerContext()->getSettingsRef().stats_estimator_anti_join_filter_coefficient;
+            join_card = static_cast<UInt64>(right_rows * context.getOptimizerContext()->getSettingsRef().stats_estimator_anti_join_filter_coefficient);
             if (right_rows > join_card)
                 join_card = std::max(join_card, right_rows - join_card);
         }
@@ -541,7 +541,7 @@ UInt64 JoinEstimator::computeCardinalityByFKPK(
     }
 
 
-    return join_card;
+    return static_cast<UInt64>(join_card);
 }
 
 static bool isInnerOrLeftSemi(JoinKind kind, JoinStrictness strictness)
@@ -627,7 +627,7 @@ UInt64 JoinEstimator::computeCardinalityByHistogram(
             }
         }
 
-    return join_card;
+    return static_cast<UInt64>(join_card);
 }
 
 UInt64 JoinEstimator::computeCardinalityByNDV(
@@ -668,7 +668,7 @@ UInt64 JoinEstimator::computeCardinalityByNDV(
                 join_output_statistics[item.first]->setNdv(min_ndv);
             }
         }
-    return join_card;
+    return static_cast<UInt64>(join_card);
 }
 
 }

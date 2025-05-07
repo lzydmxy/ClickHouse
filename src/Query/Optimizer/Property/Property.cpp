@@ -148,27 +148,27 @@ Partitioning Partitioning::translate(const std::unordered_map<String, String> & 
 
 void Partitioning::toProto(Protos::Partitioning & proto) const
 {
-    proto.set_handle(handle);
+    proto.set_handle(Partitioning::HandleConverter::toProto(handle));
     for (const auto & element : columns)
         proto.add_columns(element);
     proto.set_require_handle(require_handle);
     proto.set_buckets(buckets);
     proto.set_enforce_round_robin(enforce_round_robin);
-    proto.set_component(component);
+    proto.set_component(Partitioning::ComponentConverter::toProto(component));
     proto.set_exactly_match(exactly_match);
     serializeASTToProto(bucket_expr, *proto.mutable_bucket_expr());
 }
 
 Partitioning Partitioning::fromProto(const Protos::Partitioning & proto)
 {
-    auto handle = proto.handle();
+    auto handle = Partitioning::HandleConverter::fromProto(proto.handle());
     std::vector<String> columns;
     for (const auto & element : proto.columns())
         columns.emplace_back(element);
     auto require_handle = proto.require_handle();
     auto buckets = proto.buckets();
     auto enforce_round_robin = proto.enforce_round_robin();
-    auto component = proto.component();
+    auto component = Partitioning::ComponentConverter::fromProto(proto.component());
     auto exactly_match = proto.exactly_match();
     ASTPtr bucket_expr = nullptr;
     if (proto.has_bucket_expr())
