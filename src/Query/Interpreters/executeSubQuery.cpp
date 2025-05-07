@@ -6,7 +6,7 @@
 #include <Interpreters/executeQuery.h>
 #include <Processors/Executors/PullingPipelineExecutor.h>
 #include <Common/CurrentThread.h>
-#include <Common/ThreadStatus.h>
+#include <Query/Core/UUIDExt.h>
 #include <Interpreters/Context.h>
 #include <Query/Executor/QueryMPPManager.h>
 

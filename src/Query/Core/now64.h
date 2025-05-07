@@ -1,41 +1,13 @@
 #pragma once
 
-#include <Query/Processors/QueryPlan/Assignment.h>
-#include <Query/Processors/QueryPlan/PlanNode.h>
-#include <DataTypes/IDataType.h>
-#include <Core/DecimalFunctions.h>
 #include <time.h>
+#include <Core/DecimalFunctions.h>
 
-namespace DB
-{
+namespace DB {
 
 namespace ErrorCodes
 {
     extern const int CANNOT_CLOCK_GETTIME;
-}
-
-class ProjectionStep;
-struct AggregateDescription;
-
-namespace Utils
-{
-
-void checkArgument(bool expression);
-void checkArgument(bool expression, const String & msg);
-
-void checkState(bool expression);
-void checkState(bool expression, const String & msg);
-
-bool isIdentity(const String & symbol, const ConstASTPtr & expression);
-bool isIdentity(const Assignment & assignment);
-bool isIdentity(const Assignments & assignments);
-bool isIdentity(const ProjectionStep & project);
-
-}
-
-namespace UUIDHelpers
-{
-String UUIDToString(const UUID & uuid);
 }
 
 inline DateTime64 nowSubsecondDt64(UInt32 scale)
@@ -44,7 +16,7 @@ inline DateTime64 nowSubsecondDt64(UInt32 scale)
 
     timespec spec{};
     if (clock_gettime(CLOCK_REALTIME, &spec))
-        throw ErrnoException(ErrorCodes::CANNOT_CLOCK_GETTIME, "Cannot clock_gettime.");
+        throw Exception(ErrorCodes::CANNOT_CLOCK_GETTIME, "Cannot clock_gettime.");
 
     DecimalUtils::DecimalComponents<DateTime64> components{spec.tv_sec, spec.tv_nsec};
 
@@ -59,4 +31,5 @@ inline DateTime64 nowSubsecondDt64(UInt32 scale)
         components.fractional /= intExp10(adjust_scale);
     return DecimalUtils::decimalFromComponents<DateTime64>(components, scale);
 }
+
 }

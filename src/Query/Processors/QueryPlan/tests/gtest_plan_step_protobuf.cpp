@@ -37,54 +37,54 @@ TEST_F(ProtobufTest, AssignUniqueIdStepExt)
     compareStep(step, step2);
 }
 
-// TEST_F(ProtobufTest, EnforceSingleRowStepExt)
-// {
-//     std::default_random_engine eng(42);
-//     // construct valid step
-//     auto step = [&] {
-//         std::string step_description = fmt::format("description {}", eng() % 100);
-//         auto base_input_stream = generateDataStream(eng);
-//         auto result = std::make_shared<EnforceSingleRowStepExt>(base_input_stream);
-//         result->setStepDescription(step_description);
-//         return result;
-//     }();
-//
-//     // serialize to protobuf
-//     Protos::EnforceSingleRowStepExt pb;
-//     step->toProto(pb);
-//     // deserialize from protobuf
-//     auto step2 = EnforceSingleRowStepExt::fromProto(pb, context);
-//     // re-serialize to protobuf
-//     Protos::EnforceSingleRowStepExt pb2;
-//     step2->toProto(pb2);
-//     compareProto(pb, pb2);
-//     compareStep(step, step2);
-// }
-//
-// TEST_F(ProtobufTest, ExtremesStep)
-// {
-//     std::default_random_engine eng(42);
-//     // construct valid step
-//     auto step = [&] {
-//         std::string step_description = fmt::format("description {}", eng() % 100);
-//         auto base_input_stream = generateDataStream(eng);
-//         auto result = std::make_shared<ExtremesStepExt>(base_input_stream);
-//         result->setStepDescription(step_description);
-//         return result;
-//     }();
-//
-//     // serialize to protobuf
-//     Protos::ExtremesStep pb;
-//     step->toProto(pb);
-//     // deserialize from protobuf
-//     auto step2 = ExtremesStep::fromProto(pb, context);
-//     // re-serialize to protobuf
-//     Protos::ExtremesStep pb2;
-//     step2->toProto(pb2);
-//     compareProto(pb, pb2);
-//     compareStep(step, step2);
-// }
-//
+TEST_F(ProtobufTest, EnforceSingleRowStepExt)
+{
+    std::default_random_engine eng(42);
+    // construct valid step
+    auto step = [&] {
+        std::string step_description = fmt::format("description {}", eng() % 100);
+        auto base_input_stream = generateDataStream(eng);
+        auto result = std::make_shared<EnforceSingleRowStepExt>(base_input_stream);
+        result->setStepDescription(step_description);
+        return result;
+    }();
+
+    // serialize to protobuf
+    Protos::EnforceSingleRowStepExt pb;
+    step->toProto(pb);
+    // deserialize from protobuf
+    auto step2 = EnforceSingleRowStepExt::fromProto(pb, context);
+    // re-serialize to protobuf
+    Protos::EnforceSingleRowStepExt pb2;
+    step2->toProto(pb2);
+    compareProto(pb, pb2);
+    compareStep(step, step2);
+}
+
+TEST_F(ProtobufTest, ExtremesStep)
+{
+    std::default_random_engine eng(42);
+    // construct valid step
+    auto step = [&] {
+        std::string step_description = fmt::format("description {}", eng() % 100);
+        auto base_input_stream = generateDataStream(eng);
+        auto result = std::make_shared<ExtremesStep>(base_input_stream);
+        result->setStepDescription(step_description);
+        return result;
+    }();
+
+    // serialize to protobuf
+    Protos::ExtremesStep pb;
+    QueryPlanStepHelper::toProto(*step, pb);
+    // deserialize from protobuf
+    auto step2 = ExtremesStep(pb, context);
+    // re-serialize to protobuf
+    Protos::ExtremesStep pb2;
+    step2->toProto(pb2);
+    compareProto(pb, pb2);
+    compareStep(step, step2);
+}
+
 // TEST_F(ProtobufTest, FillingStep)
 // {
 //     std::default_random_engine eng(42);

@@ -8,7 +8,7 @@ namespace DB
 using NameToType = std::map<String, DataTypePtr>;
 using NamesAndTypes = std::vector<NameAndTypePair>;
 
-NameToType ToNameToType(const ColumnsWithTypeAndName & data)
+inline NameToType ToNameToType(const ColumnsWithTypeAndName & data)
 {
     NameToType res;
     for (const auto & column : data)
@@ -17,7 +17,7 @@ NameToType ToNameToType(const ColumnsWithTypeAndName & data)
     return res;
 }
 
-ColumnsWithTypeAndName ToColumnsWithTypeAndName(const NameToType & data)
+inline ColumnsWithTypeAndName ToColumnsWithTypeAndName(const NameToType & data)
 {
     ColumnsWithTypeAndName res;
     for (const auto & [name, type] : data)
@@ -26,7 +26,7 @@ ColumnsWithTypeAndName ToColumnsWithTypeAndName(const NameToType & data)
     return res;
 }
 
-NamesAndTypes ToNamesAndTypes(const ColumnsWithTypeAndName & data)
+inline NamesAndTypes ToNamesAndTypes(const ColumnsWithTypeAndName & data)
 {
     NamesAndTypes res;
     for (const auto & column : data)
@@ -35,7 +35,7 @@ NamesAndTypes ToNamesAndTypes(const ColumnsWithTypeAndName & data)
     return res;
 }
 
-ColumnsWithTypeAndName ToColumnsWithTypeAndName(const NamesAndTypes & data)
+inline ColumnsWithTypeAndName ToColumnsWithTypeAndName(const NamesAndTypes & data)
 {
     ColumnsWithTypeAndName res;
     for (const auto & [name, type] : data)
@@ -44,7 +44,7 @@ ColumnsWithTypeAndName ToColumnsWithTypeAndName(const NamesAndTypes & data)
     return res;
 }
 
-NameSet ToNameSet(const NamesAndTypes & data)
+inline NameSet ToNameSet(const NamesAndTypes & data)
 {
     NameSet res;
     res.reserve(data.size());

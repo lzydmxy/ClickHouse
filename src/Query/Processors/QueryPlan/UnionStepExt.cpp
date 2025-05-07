@@ -8,7 +8,7 @@
 #include <Parsers/ASTExpressionList.h>
 #include <Processors/Sources/NullSource.h>
 #include <Processors/Transforms/ExpressionTransform.h>
-#include <Query/Common/Utils.h>
+#include <Query/Optimizer/Utils.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>

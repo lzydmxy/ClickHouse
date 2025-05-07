@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Query/Parsers/ASTVisitor.h>
 #include <Parsers/IAST_fwd.h>
 #include <Query/Processors/QueryPlan/PlanNode.h>
 

@@ -762,11 +762,6 @@ std::shared_ptr<ExpandStepExt> SymbolMapper::map(const ExpandStepExt & step)
         map(step.getGroupIdNonNullSymbol()));
 }
 
-std::shared_ptr<AggregatingProjectionStep> SymbolMapper::map(const AggregatingProjectionStep & step)
-{
-    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Need Imp AggregatingStep first");
-}
-
 class SymbolMapper::SymbolMapperVisitor : public StepVisitor<QueryPlanStepPtr, SymbolMapper>
 {
 protected:

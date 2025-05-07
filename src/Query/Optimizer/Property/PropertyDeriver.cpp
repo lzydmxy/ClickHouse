@@ -141,19 +141,18 @@ Property DeriverVisitor::visitTotalsHavingStepExt(const TotalsHavingStepExt &, D
     return context.getInput()[0];
 }
 
-// todo: lizhuoyu5, need SortingSteps
-// Property DeriverVisitor::visitFinishSortingStepExt(const FinishSortingStepExt & step, DeriverContext & context)
-// {
-//     auto prop = context.getInput()[0];
-//     Sorting sorting;
-//     for (auto item : step.getResultDescription())
-//     {
-//         sorting.emplace_back(item);
-//     }
-//
-//     prop.setSorting(sorting);
-//     return prop;
-// }
+Property DeriverVisitor::visitFinishSortingStepExt(const FinishSortingStepExt & step, DeriverContext & context)
+{
+    auto prop = context.getInput()[0];
+    Sorting sorting;
+    for (auto item : step.getResultDescription())
+    {
+        sorting.emplace_back(item);
+    }
+
+    prop.setSorting(sorting);
+    return prop;
+}
 
 Property DeriverVisitor::visitPartitionTopNStepExt(const PartitionTopNStepExt &, DeriverContext & context)
 {

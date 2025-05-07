@@ -15,7 +15,11 @@ extern const int LOGIGAL_ERROR;
 namespace DB::QueryStatistics
 {
 CatalogAdaptorPtr createCatalogAdaptorMemory(ContextPtr context);
-CatalogAdaptorPtr createCatalogAdaptorCnch(ContextPtr context);
+CatalogAdaptorPtr createCatalogAdaptorCnch(ContextPtr)
+{
+    // todo lizhuoyu, maybe we should remove it
+    return nullptr;
+};
 CatalogAdaptorPtr createCatalogAdaptor(ContextPtr context)
 {
     if (context->getOptimizerContext()->getSettingsRef().enable_memory_catalog)

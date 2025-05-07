@@ -2,7 +2,6 @@
 
 #include <Interpreters/Context_fwd.h>
 #include <Query/Interpreters/InterpreterSelectQueryUseOptimizer.h>
-#include <Query/Common/Utils.h>
 
 namespace DB
 {

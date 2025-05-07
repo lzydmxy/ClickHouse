@@ -12,6 +12,7 @@
 #include <Query/Statistics/SubqueryHelper.h>
 #include <Query/Statistics/TypeUtils.h>
 #include <Storages/ColumnsDescription.h>
+#include <Query/Core/now64.h>
 
 #include <boost/range/adaptor/reversed.hpp>
 #include <boost/algorithm/string/join.hpp>
