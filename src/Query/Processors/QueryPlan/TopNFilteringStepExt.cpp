@@ -78,7 +78,7 @@ std::shared_ptr<IQueryPlanStep> TopNFilteringStepExt::copy(ContextPtr) const
     return std::make_shared<TopNFilteringStepExt>(input_streams[0], sort_description, size, model, algorithm);
 }
 
-std::shared_ptr<TopNFilteringStepExt> TopNFilteringStepExt::fromProto(const Protos::TopNFilteringStep & proto, ContextPtr)
+std::shared_ptr<TopNFilteringStepExt> TopNFilteringStepExt::fromProto(const Protos::TopNFilteringStepExt & proto, ContextPtr)
 {
     auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
     SortDescription sort_description;
@@ -96,7 +96,7 @@ std::shared_ptr<TopNFilteringStepExt> TopNFilteringStepExt::fromProto(const Prot
     return step;
 }
 
-void TopNFilteringStepExt::toProto(Protos::TopNFilteringStep & proto, bool) const
+void TopNFilteringStepExt::toProto(Protos::TopNFilteringStepExt & proto, bool) const
 {
     ProtosSerDerHelper::serializeToProtoBase(*this ,*proto.mutable_query_plan_base());
     for (const auto & element : sort_description)

@@ -21,8 +21,8 @@ public:
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
-    void toProto(Protos::MarkDistinctStep & proto, bool for_hash_equals = false) const;
-    static std::shared_ptr<MarkDistinctStepExt> fromProto(const Protos::MarkDistinctStep & proto, ContextPtr);
+    void toProto(Protos::MarkDistinctStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<MarkDistinctStepExt> fromProto(const Protos::MarkDistinctStepExt & proto, ContextPtr);
     void updateInputStreams(const DataStreams & input_streams_);
 
     String getMarkerSymbol() const { return marker_symbol;}

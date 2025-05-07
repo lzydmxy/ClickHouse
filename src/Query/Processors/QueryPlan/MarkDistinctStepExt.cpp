@@ -35,7 +35,7 @@ std::shared_ptr<IQueryPlanStep> MarkDistinctStepExt::copy(ContextPtr) const
     return std::make_shared<MarkDistinctStepExt>(input_streams[0], marker_symbol, distinct_symbols);
 }
 
-std::shared_ptr<MarkDistinctStepExt> MarkDistinctStepExt::fromProto(const Protos::MarkDistinctStep & proto, ContextPtr)
+std::shared_ptr<MarkDistinctStepExt> MarkDistinctStepExt::fromProto(const Protos::MarkDistinctStepExt & proto, ContextPtr)
 {
     auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
     auto marker_symbol = proto.marker_symbol();
@@ -47,7 +47,7 @@ std::shared_ptr<MarkDistinctStepExt> MarkDistinctStepExt::fromProto(const Protos
     return step;
 }
 
-void MarkDistinctStepExt::toProto(Protos::MarkDistinctStep & proto, bool) const
+void MarkDistinctStepExt::toProto(Protos::MarkDistinctStepExt & proto, bool) const
 {
     ProtosSerDerHelper::serializeToProtoBase(*this ,*proto.mutable_query_plan_base());
     proto.set_marker_symbol(marker_symbol);

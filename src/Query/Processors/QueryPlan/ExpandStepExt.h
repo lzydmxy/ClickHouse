@@ -63,8 +63,8 @@ public:
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings) override;
-    void toProto(Protos::ExpandStep & proto, bool for_hash_equals = false) const;
-    static std::shared_ptr<ExpandStepExt> fromProto(const Protos::ExpandStep & proto, ContextPtr context);
+    void toProto(Protos::ExpandStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<ExpandStepExt> fromProto(const Protos::ExpandStepExt & proto, ContextPtr context);
     
     const Assignments & getAssignments() const { return assignments; }
     const NameToType & getNameToType() const { return name_to_type; }

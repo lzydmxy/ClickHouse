@@ -146,7 +146,7 @@ std::shared_ptr<IQueryPlanStep> ExpandStepExt::copy(ContextPtr) const
         input_streams[0], assignments.copy(), name_to_type, group_id_symbol, group_id_value, group_id_non_null_symbol);
 }
 
-void ExpandStepExt::toProto(Protos::ExpandStep & proto, bool) const
+void ExpandStepExt::toProto(Protos::ExpandStepExt & proto, bool) const
 {
     ProtosSerDerHelper::serializeToProtoBase(*this ,*proto.mutable_query_plan_base());
     serializeAssignmentsToProto(assignments, *proto.mutable_assignments());
@@ -157,7 +157,7 @@ void ExpandStepExt::toProto(Protos::ExpandStep & proto, bool) const
     serializeOrderedMapToProto(group_id_non_null_symbol, *proto.mutable_group_id_non_null_symbol());
 }
 
-std::shared_ptr<ExpandStepExt> ExpandStepExt::fromProto(const Protos::ExpandStep & proto, ContextPtr)
+std::shared_ptr<ExpandStepExt> ExpandStepExt::fromProto(const Protos::ExpandStepExt & proto, ContextPtr)
 {
     auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
     auto assignments = deserializeAssignmentsFromProto(proto.assignments());

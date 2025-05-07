@@ -17,7 +17,7 @@ PatternPtr GroupExprBindingIterator::any = Patterns::any().result();
 
 size_t GroupExpression::hash()
 {
-    size_t hash = step->hash();
+    size_t hash = hashPlanStep(*step, true);
     hash = MurmurHash3Impl64::combineHashes(hash, IntHash64Impl::apply(child_groups.size()));
     for (auto child_group : child_groups)
     {

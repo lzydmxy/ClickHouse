@@ -25,6 +25,8 @@
 #include <Query/ProtosHelper/ProgressHelper.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <Query/Protos/ReadWriteProtobuf.h>
+
 
 //#include <Protos/ReadWriteProtobuf.h>
 // #include <Processors/QueryPlan/AggregatingStep.h>
@@ -274,138 +276,70 @@ std::tuple<AggregateFunctionPtr, Array, DataTypes> deserializeAggregateFunctionF
     return {std::move(function), std::move(parameters), std::move(arg_types)};
 }
 
-template <typename Step, typename ProtoType>
-inline void serializeQueryPlanStepToProtoImpl(const QueryPlanStepPtr & origin_step, ProtoType & proto)
-{
-    auto step = std::dynamic_pointer_cast<Step>(origin_step);
-    if (!step)
-    {
-        throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Step type unmatched");
-    }
-    step->toProto(proto);
-}
-
 void serializeQueryPlanStepToProto(const QueryPlanStepPtr & step, RQueryPlanStep & proto)
 {
-    switch (getQueryPlanStepType(step))
-    {
-        case QueryPlanStepType::JoinStepExt: {
-            serializeQueryPlanStepToProtoImpl<JoinStepExt, Protos::JoinStepExt>(step, *proto.mutable_join_step_ext());
-            return;
-        }
-        case QueryPlanStepType::AggregatingStepExt: {
-            serializeQueryPlanStepToProtoImpl<AggregatingStepExt, Protos::AggregatingStepExt>(step, *proto.mutable_aggregating_step_ext());
-            return;
-        }
-        default:
-            break;
-// #define CASE_DEF(TYPE, VAR_NAME) \
-//     case QueryPlanStepType::TYPE: { \
-//         serializeQueryPlanStepToProtoImpl<TYPE, Protos::TYPE>(step, *proto.mutable_##VAR_NAME##_step()); \
-//         return; \
-//     }
-//             APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
-// #undef CASE_DEF
-//         default: {
-//             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Not implemented step: {}"), static_cast<int>(getQueryPlanStepType(step));
-//         }
-    }
-}
-
-template <typename Step, typename ProtoType>
-inline QueryPlanStepPtr deserializeQueryPlanStepFromProtoImpl(const ProtoType & proto, ContextPtr context)
-{
-    auto step = Step::fromProto(proto, context);
-    return step;
+    QueryPlanStepHelper::toProto(*step.get(), proto);
 }
 
 QueryPlanStepPtr deserializeQueryPlanStepFromProto(const RQueryPlanStep & proto, ContextPtr context)
 {
-    switch (proto.step_case())
-    {
-        case RQueryPlanStep::StepCase::kAggregatingStepExt: {
-            return deserializeQueryPlanStepFromProtoImpl<AggregatingStepExt, Protos::AggregatingStepExt>(
-                proto.aggregating_step_ext(), context);
-        }
-        default:
-            break;
-// #define CASE_DEF(TYPE, VAR_NAME) \
-//     case RQueryPlanStep::StepCase::k##TYPE##Step: { \
-//         return deserializeQueryPlanStepFromProtoImpl<TYPE##Step, Protos::TYPE##Step>(proto.VAR_NAME##_step(), context); \
-//     }
-//             APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
-// #undef CASE_DEF
-//         default: {
-//             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Not implemented protobuf step: {}"), static_cast<int>(proto.step_case());
-//         }
-    }
-    return nullptr;
+    return QueryPlanStepHelper::fromProto(proto, context);
 }
 
-template <typename StepType, typename ProtoType>
 bool isPlanStepEqualImpl(const IQueryPlanStep & a, const IQueryPlanStep & b)
 {
-    const auto & sa = reinterpret_cast<const StepType &>(a);
-    const auto & sb = reinterpret_cast<const StepType &>(b);
-    ProtoType pb_a;
-    ProtoType pb_b;
-    sa.toProto(pb_a, true);
-    sb.toProto(pb_b, true);
+    RQueryPlanStep pb_a;
+    RQueryPlanStep pb_b;
+    QueryPlanStepHelper::toProto(a, pb_a, true);
+    QueryPlanStepHelper::toProto(b, pb_b, true);
 
     auto is_equal = google::protobuf::util::MessageDifferencer::Equals(pb_a, pb_b);
     return is_equal;
 }
 
-bool isPlanStepEqual(const IQueryPlanStep & /*a*/, const IQueryPlanStep & /*b*/)
+bool isPlanStepEqual(const IQueryPlanStep & a, const IQueryPlanStep & b)
 {
-// TODO:: Need type's definition in IQueryPlanStep
-//     if (a.getType() != b.getType())
-//         return false;
+    if (getQueryPlanStepType(a) != getQueryPlanStepType(b))
+        return false;
 
-//     switch (a.getType())
-//     {
-// #define CASE_DEF(TYPE, VAR_NAME) \
-//     case IQueryPlanStep::Type::TYPE: { \
-//         return isPlanStepEqualImpl<TYPE##Step, Protos::TYPE##Step>(a, b); \
-//     }
+    switch (getQueryPlanStepType(a))
+    {
+#define CASE_DEF(TYPE, VAR_NAME) \
+    case QueryPlanStepType::TYPE: { \
+        return isPlanStepEqualImpl(a, b); \
+    }
 
-//         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
+        APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
 
-//         default:
-//             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Unsupported step {}", a.getName());
-// #undef CASE_DEF
-//     }
-    return false;
+        default:
+            throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Unsupported step {}", a.getName());
+#undef CASE_DEF
+    }
 }
 
-template <typename StepType, typename ProtoType>
-UInt64 hashPlanStepImpl(const IQueryPlanStep & raw_step, bool ignore_output_stream)
+UInt64 hashPlanStepImpl(const IQueryPlanStep & step, bool ignore_output_stream)
 {
-    const auto & step = reinterpret_cast<const StepType &>(raw_step);
-    ProtoType proto;
-    step.toProto(proto, ignore_output_stream);
-
+    RQueryPlanStep proto;
+    QueryPlanStepHelper::toProto(step, proto, ignore_output_stream);
     auto res = sipHash64Protobuf(proto);
     return res;
 }
 
-UInt64 hashPlanStep(const IQueryPlanStep & /*step*/, bool /*ignore_output_stream*/)
+UInt64 hashPlanStep(const IQueryPlanStep & step, bool ignore_output_stream)
 {
-// TODO: Need type's definition in IQueryPlanStep
-//     switch (step.getType())
-//     {
-// #define CASE_DEF(TYPE, VAR_NAME) \
-//     case IQueryPlanStep::Type::TYPE: { \
-//         return hashPlanStepImpl<TYPE##Step, Protos::TYPE##Step>(step, ignore_output_stream); \
-//     }
+    switch (getQueryPlanStepType(step))
+    {
+#define CASE_DEF(TYPE, VAR_NAME) \
+    case QueryPlanStepType::TYPE: { \
+        return hashPlanStepImpl(step, ignore_output_stream); \
+    }
 
-//         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
+        APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
 
-//         default:
-//             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Unsupported step");
-// #undef CASE_DEF
-//     }
-    return 0;
+        default:
+            throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "Unsupported step");
+#undef CASE_DEF
+    }
 }
 
 void serializeHeaderToProto(const Block & block, Protos::Block & proto)

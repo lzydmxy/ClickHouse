@@ -65,7 +65,7 @@ namespace DB
     M(ApplyStepExt, apply_step_ext) \
     M(AssignUniqueIdStepExt, assign_unique_id_step_ext) \
     M(BufferStepExt, buffer_step_ext) \
-    M(CTERefStepExt, cte_ref_step_ext) \
+    M(CTERefStepExt, c_t_e_ref_step_ext) \
     M(DistinctStepExt, distinct_step_ext) \
     M(EnforceSingleRowStepExt, enforce_single_row_step_ext) \
     M(ExchangeStepExt, exchange_step_ext) \
@@ -98,7 +98,6 @@ namespace DB
 // protobuf's types and names for Step with proto
 #define APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(M) \
     APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(M) \
-    M(AggregatingProjectionStep, aggregating_projection_step) \
     M(ArrayJoinStep, array_join_step) \
     M(ExtremesStep, extremes_step) \
     M(FillingStep, filling_step) \
@@ -116,6 +115,7 @@ namespace DB
 // types for Step without proto
 #define APPLY_NOPROTOBUF_STEP_TYPES(M) \
     APPLY_NOPROTOBUF_STEP_TYPES_FOR_EXT(M) \
+    M(AggregatingProjectionStep) \
     M(ReadFromMergeTree) \
     M(ReadFromPreparedSource) \
     M(CreatingSetStep) \
@@ -229,8 +229,8 @@ public:
 
     static QueryPlanStepPtr copyQueryPlanStep(const QueryPlanStepPtr & query_plan_step, ContextPtr context);
 
-    static void toProto(const QueryPlanStepPtr & query_plan_step, Protos::QueryPlanStep & proto, bool for_hash_equals = false);
-    static QueryPlanStepPtr fromProto(Protos::QueryPlanStep & proto, ContextPtr context);
+    static void toProto(const IQueryPlanStep & query_plan_step, Protos::QueryPlanStep & proto, bool for_hash_equals = false);
+    static QueryPlanStepPtr fromProto(const Protos::QueryPlanStep & proto, ContextPtr context);
 
     static const Names & getLimitByStepColumns(const LimitByStep & limit) { return limit.columns; }
     static size_t getLimitByStepGroupLength(const LimitByStep & limit) { return limit.group_length; }
@@ -279,6 +279,16 @@ ENUM_TO_PROTO_CONVERTER(
     (Unbounded),
     (Current),
     (Offset));
+
+using ASTSelectIntersectExceptQueryOperator = ASTSelectIntersectExceptQuery::Operator;
+ENUM_TO_PROTO_CONVERTER(
+    ASTSelectIntersectExceptQueryOperator, // enum name
+    Protos::IntersectExceptOperator, // proto enum message
+    (UNKNOWN),
+    (EXCEPT_ALL),
+    (EXCEPT_DISTINCT),
+    (INTERSECT_ALL),
+    (INTERSECT_DISTINCT));
 
 /// diff bc has ExcludeType
 

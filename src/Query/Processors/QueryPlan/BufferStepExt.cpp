@@ -30,9 +30,8 @@ std::shared_ptr<IQueryPlanStep> BufferStepExt::copy(ContextPtr) const
     return std::make_shared<BufferStepExt>(input_streams[0]);
 }
 
-void BufferStepExt::toProto(Protos::BufferStepExt & proto, bool for_hash_equals = false) const
+void BufferStepExt::toProto(Protos::BufferStepExt & proto, bool) const
 {
-    (void)for_hash_equals;
     ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
 }
 

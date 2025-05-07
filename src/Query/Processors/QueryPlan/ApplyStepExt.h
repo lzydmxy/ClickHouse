@@ -54,7 +54,7 @@ public:
 
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
-    [[noreturn]] void toProto(Protos::ApplyStepExt &, bool for_hash_equals) const
+    [[noreturn]] void toProto(Protos::ApplyStepExt &, [[maybe_unused]] bool for_hash_equals = false) const
     {
         throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "unimplemented");
     }

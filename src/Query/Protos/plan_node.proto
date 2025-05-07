@@ -366,7 +366,7 @@ message LimitStepExt {
     SizeOrVariable offset_or_var = 9;
 }
 
-message MarkDistinctStep {
+message MarkDistinctStepExt {
     ITransformingStep query_plan_base = 1;
     string marker_symbol = 2;
     repeated string distinct_symbols = 3;
@@ -487,7 +487,7 @@ message ApplyStepExt {
         }
 }
 
-message TopNFilteringStep {
+message TopNFilteringStepExt {
     ITransformingStep query_plan_base = 1;
     repeated SortColumnDescription sort_description = 2;
     uint64 size = 3;
@@ -827,7 +827,7 @@ message SampleRatioStep {
     float sample_ratio = 2;
 }
 
-message ExpandStep {
+message ExpandStepExt {
     ITransformingStep query_plan_base = 1;
     Assignments assignments = 2;
     map<string, DataType> name_to_type = 3;
@@ -861,7 +861,7 @@ message QueryPlanStep {
         JoinStepExt join_step_ext = 15;
         LimitByStep limit_by_step = 16;
         LimitStepExt limit_step_ext = 17;
-        MarkDistinctStep mark_distinct_step = 18;
+        MarkDistinctStepExt mark_distinct_step_ext = 18;
         MergeSortingStepExt merge_sorting_step_ext = 19;
         MergingAggregatedStepExt merging_aggregated_step_ext = 20;
         MergingSortedStepExt merging_sorted_step_ext = 21;
@@ -876,7 +876,7 @@ message QueryPlanStep {
         TableFinishStep table_finish_step = 30;
         TableScanStepExt table_scan_step_ext = 31;
         TableWriteStep table_write_step = 32;
-        TopNFilteringStep top_n_filtering_step = 33;
+        TopNFilteringStepExt top_n_filtering_step_ext = 33;
         UnionStepExt union_step_ext = 34;
         WindowStep window_step = 35;
         ValuesStepExt values_step_ext = 36;
@@ -891,7 +891,7 @@ message QueryPlanStep {
         LocalExchangeStepExt local_exchange_step_ext = 54;
         MultiJoinStepExt multi_join_step_ext = 55;
         SampleRatioStep sample_ratio_step = 56;
-        ExpandStep expand_step = 57;
+        ExpandStepExt expand_step_ext = 57;
     }
 }
 

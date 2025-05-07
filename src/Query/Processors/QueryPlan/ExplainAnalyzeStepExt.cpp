@@ -44,7 +44,7 @@ std::shared_ptr<IQueryPlanStep> ExplainAnalyzeStepExt::copy(ContextPtr) const
     return std::make_shared<ExplainAnalyzeStepExt>(input_streams[0], getOutputName(), kind, context, query_plan_ptr, settings);
 }
 
-void ExplainAnalyzeStepExt::toProto(Protos::ExplainAnalyzeStepExt & proto, bool for_hash_equals = false) const
+void ExplainAnalyzeStepExt::toProto(Protos::ExplainAnalyzeStepExt &, bool) const
 {
     // do nothing
 }
