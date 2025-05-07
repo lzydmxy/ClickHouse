@@ -70,13 +70,13 @@ public:
 
 protected:
     StepAndOutputOrder visitStep(const IQueryPlanStep & step, StepsAndOutputOrders & inputs) override;
-    // StepAndOutputOrder visitTableScanStep(const TableScanStepExt & step, StepsAndOutputOrders & inputs);
-    // StepAndOutputOrder visitFilterStep(const FilterStepExt & step, StepsAndOutputOrders & inputs);
-    // StepAndOutputOrder visitProjectionStep(const ProjectionStepExt & step, StepsAndOutputOrders & inputs);
-    StepAndOutputOrder visitAggregatingStep(const AggregatingStepExt & step, StepsAndOutputOrders & inputs);
-    StepAndOutputOrder visitCTERefStep(const CTERefStepExt & step, StepsAndOutputOrders & inputs);
-    StepAndOutputOrder visitJoinStep(const JoinStepExt & step, StepsAndOutputOrders & inputs);
-    StepAndOutputOrder visitRemoteExchangeSourceStep(const RemoteExchangeSourceStepExt & step, StepsAndOutputOrders & inputs);
+    StepAndOutputOrder visitTableScanStepExt(const TableScanStepExt & step, StepsAndOutputOrders & inputs) override;
+    StepAndOutputOrder visitFilterStepExt(const FilterStepExt & step, StepsAndOutputOrders & inputs) override;
+    StepAndOutputOrder visitProjectionStepExt(const ProjectionStepExt & step, StepsAndOutputOrders & inputs) override;
+    StepAndOutputOrder visitAggregatingStepExt(const AggregatingStepExt & step, StepsAndOutputOrders & inputs) override;
+    StepAndOutputOrder visitCTERefStepExt(const CTERefStepExt & step, StepsAndOutputOrders & inputs) override;
+    StepAndOutputOrder visitJoinStepExt(const JoinStepExt & step, StepsAndOutputOrders & inputs) override;
+    StepAndOutputOrder visitRemoteExchangeSourceStepExt(const RemoteExchangeSourceStepExt & step, StepsAndOutputOrders & inputs) override;
     // StepAndOutputOrder visitTableWriteStep(const TableWriteStepExt & step, StepsAndOutputOrders & inputs) override;
 
 private:

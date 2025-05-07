@@ -21,7 +21,7 @@ public:
     ASTPtr visitASTLiteral(ASTPtr & node, Void & context) override
     {
         auto literal_ptr = std::dynamic_pointer_cast<ASTLiteral>(node);
-        literal_ptr->updateField("?");
+        literal_ptr->value = Field("?");
         return visitNode(node, context);
     }
 
@@ -33,9 +33,9 @@ public:
         return visitNode(node, context);
     }
 
-    ASTPtr visitASTSelectQuery(ASTPtr & node, Void & context) override
+    ASTPtr visitASTSelectQueryExt(ASTPtr & node, Void & context) override
     {
-        auto select_ptr = std::dynamic_pointer_cast<ASTSelectQuery>(node);
+        auto select_ptr = std::dynamic_pointer_cast<ASTSelectQueryExt>(node);
         select_ptr->removeSettingsAndOutputFormat();
         return visitNode(node, context);
     }
