@@ -22,7 +22,7 @@ struct IterativeRewriterContext
     ExcludedRulesMap * excluded_rules_map;
     Stopwatch watch{CLOCK_THREAD_CPUTIME_ID};
     // for debugging
-    QueryPlan & plan;
+    QueryPlanExt & plan;
     int rule_apply_count = 0;
 };
 

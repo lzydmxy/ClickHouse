@@ -130,7 +130,7 @@ bool IterativeRewriter::exploreNode(PlanNodePtr & node, IterativeRewriterContext
                                 ctx.plan,
                                 ctx.globalContext,
                                 toString(ctx.globalContext->getOptimizerContext()->getRuleId()) + "_Iterative_" + name() + "_"
-                                    + toString(ctx.rule_apply_count++) + "_" + rule->getName() + "_" + std::to_string(node_id) + "_"
+                                    + toString(ctx.rule_apply_count++) + "_" + rule->getName() + "_" + toString(node_id) + "_"
                                     + toString(node->getId()));
                         }
                     }

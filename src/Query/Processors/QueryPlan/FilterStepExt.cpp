@@ -69,7 +69,7 @@ ConstASTPtr FilterStepExt::rewriteRuntimeFilter(const ConstASTPtr & filter, Quer
 
     bool only_bf = build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().enable_rewrite_bf_into_prewhere;
 
-    ASTs predicates = std::move(filters.second);
+    ConstASTs predicates = std::move(filters.second);
 
     if (build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().enable_two_stages_prewhere)
     {

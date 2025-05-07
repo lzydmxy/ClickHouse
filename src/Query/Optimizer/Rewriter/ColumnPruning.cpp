@@ -1231,7 +1231,7 @@ PlanNodePtr ColumnPruningVisitor::convertFilterWindowToSortingLimit(PlanNodePtr 
         return node;
 
     const auto & window_step = dynamic_cast<WindowStep &>(*window_node->getStep());
-    const auto & window_desc = QueryPlanStepHelper::getWindowStepWindow(*window_step);
+    const auto & window_desc = QueryPlanStepHelper::getWindowStepWindow(window_step);
     if (window_desc.order_by.empty() || !window_desc.partition_by.empty() || window_desc.window_functions.size() != 1)
         return node;
 
@@ -1267,7 +1267,7 @@ PlanNodePtr ColumnPruningVisitor::convertFilterWindowToSortingLimit(PlanNodePtr 
 
     auto conjuncts = PredicateUtils::extractConjuncts(filter);
     absl::InlinedVector<ConstASTPtr, 7> new_conjuncts;
-    size_t limit;
+    size_t limit = 0;
 
     String func_name;
 
@@ -1285,7 +1285,7 @@ PlanNodePtr ColumnPruningVisitor::convertFilterWindowToSortingLimit(PlanNodePtr 
             return std::nullopt;
 
         auto rhs = interpreter.evaluateConstantExpression(func->arguments->children[1]);
-        if (!rhs || !isNativeInteger(rhs->first) || !WhichDataType(rhs->first).isUInt)
+        if (!rhs || !isNativeInteger(rhs->first) || !WhichDataType(rhs->first).isUInt())
             return std::nullopt;
 
         auto uint_val = convertFieldToType(rhs->second, DataTypeUInt64());

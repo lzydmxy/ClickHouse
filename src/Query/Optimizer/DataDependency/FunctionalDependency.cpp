@@ -23,7 +23,7 @@ NameSet FunctionalDependencies::simplify(NameSet srcs) const
     std::string str;
     for (const auto & name : srcs)
         str += name + ",";
-    LOG_INFO(getLogger("DataDependency"), "FunctionalDependencies::simplify srcs -- " + str);
+    LOG_INFO(getLogger("DataDependency"), "FunctionalDependencies::simplify srcs -- {}", str);
 
     // LOG_INFO(getLogger("DataDependency"), "FDS: " + string());
 

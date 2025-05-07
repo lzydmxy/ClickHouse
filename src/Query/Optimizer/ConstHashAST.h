@@ -28,7 +28,7 @@ public:
     const IAST * get() const { return ptr.get(); }
     const IAST & operator*() const { return *ptr; }
     const IAST * operator->() const { return ptr.get(); }
-    explicit operator ConstASTPtr() const { return ptr; }
+    operator ConstASTPtr() const { return ptr; }
 
     bool operator==(const ConstHashAST & x) const { return ptr == x.ptr; }
     bool operator!=(const ConstHashAST & x) const { return ptr != x.ptr; }

@@ -37,10 +37,10 @@ public:
     static ConstASTPtr createRuntimeFilterExpression(const RuntimeFilterDescription & description);
 
     static RuntimeFilterId extractId(const ConstASTPtr & runtime_filter);
-    static std::optional<RuntimeFilterDescription> extractDescription(const ASTPtr & runtime_filter);
+    static std::optional<RuntimeFilterDescription> extractDescription(const ConstASTPtr & runtime_filter);
 
     /* runtime_filters, static_filters */
-    static std::pair<ASTs, ASTs> extractRuntimeFilters(const ConstASTPtr & conjuncts);
+    static std::pair<ConstASTs, ConstASTs> extractRuntimeFilters(const ConstASTPtr & conjuncts);
     static std::pair<ASTs, ASTs> extractExecutableRuntimeFiltersAndPush1stRf(const ASTPtr & conjuncts);
     static std::pair<ASTs, ASTs> extractExecutableRuntimeFilters(const ASTPtr & conjuncts);
     static bool isInternalRuntimeFilter(const ConstASTPtr & expr);

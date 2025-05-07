@@ -158,10 +158,10 @@ std::pair<ASTs, ASTs> RuntimeFilterUtils::extractExecutableRuntimeFilters(const 
     return std::make_pair(runtime_filters, static_filters);
 }
 
-std::pair<ASTs, ASTs> RuntimeFilterUtils::extractRuntimeFilters(const ConstASTPtr & conjuncts)
+std::pair<ConstASTs, ConstASTs> RuntimeFilterUtils::extractRuntimeFilters(const ConstASTPtr & conjuncts)
 {
-    ASTs runtime_filters;
-    ASTs static_filters;
+    ConstASTs runtime_filters;
+    ConstASTs static_filters;
     if (!conjuncts)
         return std::make_pair(runtime_filters, static_filters);
 
@@ -195,7 +195,7 @@ RuntimeFilterId RuntimeFilterUtils::extractId(const ConstASTPtr & runtime_filter
     return id->as<ASTLiteral &>().value.get<RuntimeFilterId>();
 }
 
-std::optional<RuntimeFilterDescription> RuntimeFilterUtils::extractDescription(const ASTPtr & runtime_filter)
+std::optional<RuntimeFilterDescription> RuntimeFilterUtils::extractDescription(const ConstASTPtr & runtime_filter)
 {
     if (getAstType(runtime_filter) != ASTType::ASTFunction)
         return {};
