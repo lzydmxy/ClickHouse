@@ -33,7 +33,7 @@ PlanNodePtr SetOperationMerge::merge()
 {
     auto & sources = node->getChildren();
 
-    bool result_is_distinct = false;
+    // bool result_is_distinct = false;
     bool rewritten = false;
 
     std::unordered_map<String, std::vector<String>> output_to_inputs;
@@ -45,7 +45,7 @@ PlanNodePtr SetOperationMerge::merge()
         if (merged_quantifier.has_value())
         {
             addMergedMappings(sources[i], i, output_to_inputs);
-            result_is_distinct |= merged_quantifier.value();
+            // result_is_distinct |= merged_quantifier.value();
             rewritten = true;
         }
         else

@@ -65,7 +65,7 @@ void SymbolStatistics::normalize()
         {
             if (ndv > max - min + 1)
             {
-                ndv = max - min + 1;
+                ndv = static_cast<UInt64>(max - min + 1);
             }
         }
     }

@@ -52,7 +52,7 @@ PlanNodePtr InlineCTE::reoptimize(CTEId cte_id, const PlanNodePtr & node, CTEInf
 {
     if (context->getOptimizerContext()->getSettingsRef().print_graphviz)
         GraphvizPrinter::printLogicalPlan(
-            *node, context, fmt::format("{}_cte_{}__inlined", context->getOptimizerContext()->getRuleId()));
+            *node, context, fmt::format("{}_cte_{}__inlined", context->getOptimizerContext()->getRuleId(), cte_id));
 
     static Rewriters rewriters
         = {std::make_shared<ColumnPruning>(),

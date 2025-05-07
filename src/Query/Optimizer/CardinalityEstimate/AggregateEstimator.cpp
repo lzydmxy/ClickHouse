@@ -69,7 +69,7 @@ PlanNodeStatisticsPtr AggregateEstimator::estimate(PlanNodeStatisticsPtr & child
     for (const auto & key : step.getKeys())
         group_keys.push_back(key);
 
-    double row_count = estimateGroupBy(symbol_statistics, child_stats, group_keys, step.getKeysNotHashed(), context->getOptimizerContext()->getSettingsRef().multi_agg_keys_correlated_coefficient, context);
+    UInt64 row_count = static_cast<UInt64>(estimateGroupBy(symbol_statistics, child_stats, group_keys, step.getKeysNotHashed(), context->getOptimizerContext()->getSettingsRef().multi_agg_keys_correlated_coefficient, context));
 
     std::unordered_map<String, DataTypePtr> name_to_type;
     for (const auto & item : step.getOutputStream().header)
@@ -95,7 +95,7 @@ PlanNodeStatisticsPtr AggregateEstimator::estimate(PlanNodeStatisticsPtr & child
 
     std::unordered_map<String, SymbolStatisticsPtr> symbol_statistics;
     const Names & group_keys = step.getKeys();
-    double row_count = estimateGroupBy(symbol_statistics, child_stats, group_keys, {}, 1.0, context);
+    UInt64 row_count = static_cast<UInt64>(estimateGroupBy(symbol_statistics, child_stats, group_keys, {}, 1.0, context));
 
     const AggregateDescriptions & agg_descs = step.getAggregates();
     std::unordered_map<String, DataTypePtr> name_to_type;

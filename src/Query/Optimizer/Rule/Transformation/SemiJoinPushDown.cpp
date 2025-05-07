@@ -57,56 +57,56 @@ TransformResult SemiJoinPushDown::transformImpl(PlanNodePtr node, const Captures
             output_stream.header.insert(col);
     }
 
-    auto step = *semi_join_node->getStep();
+    auto step = semi_join_node->getStep();
     DataStreams streams
         = {semi_join_node->getChildren()[0]->getStep()->getInputStreams()[1], semi_join_node->getChildren()[1]->getCurrentDataStream()};
     auto new_semi_step = std::make_shared<JoinStepExt>(
         streams,
         output_stream,
-        step.getKind(),
-        step.getStrictness(),
-        step.getMaxStreams(),
-        step.getKeepLeftReadInOrder(),
-        step.getLeftKeys(),
-        step.getRightKeys(),
-        step.getKeyIdsNullSafe(),
-        step.getFilter(),
-        step.isHasUsing(),
-        step.getRequireRightKeys(),
+        step->getKind(),
+        step->getStrictness(),
+        step->getMaxStreams(),
+        step->getKeepLeftReadInOrder(),
+        step->getLeftKeys(),
+        step->getRightKeys(),
+        step->getKeyIdsNullSafe(),
+        step->getFilter(),
+        step->isHasUsing(),
+        step->getRequireRightKeys(),
         ASOFJoinInequality::GreaterOrEquals,
         DistributionType::UNKNOWN,
         JoinAlgorithm::AUTO,
-        step.isMagic(),
-        step.isOrdered(),
-        step.isSimpleReordered(),
-        step.getRuntimeFilterBuilders());
+        step->isMagic(),
+        step->isOrdered(),
+        step->isSimpleReordered(),
+        step->getRuntimeFilterBuilders());
     auto new_semi_node = std::make_shared<JoinStepExtNode>(
         rule_context.context->getOptimizerContext()->nextNodeId(),
         new_semi_step,
         PlanNodes{semi_join_node->getChildren()[0]->getChildren()[0], semi_join_node->getChildren()[1]});
 
-    step = *join_node->getStep();
+    step = join_node->getStep();
     streams = {new_semi_step->getOutputStream(), join_node->getChildren()[1]->getCurrentDataStream()};
     auto output_step = std::make_shared<JoinStepExt>(
         streams,
         semi_join_node->getStep()->getOutputStream(),
-        step.getKind(),
-        step.getStrictness(),
-        step.getMaxStreams(),
-        step.getKeepLeftReadInOrder(),
-        step.getLeftKeys(),
-        step.getRightKeys(),
-        step.getKeyIdsNullSafe(),
-        step.getFilter(),
-        step.isHasUsing(),
-        step.getRequireRightKeys(),
+        step->getKind(),
+        step->getStrictness(),
+        step->getMaxStreams(),
+        step->getKeepLeftReadInOrder(),
+        step->getLeftKeys(),
+        step->getRightKeys(),
+        step->getKeyIdsNullSafe(),
+        step->getFilter(),
+        step->isHasUsing(),
+        step->getRequireRightKeys(),
         ASOFJoinInequality::GreaterOrEquals,
         DistributionType::UNKNOWN,
         JoinAlgorithm::AUTO,
         false,
-        step.isOrdered(),
-        step.isSimpleReordered(),
-        step.getRuntimeFilterBuilders());
+        step->isOrdered(),
+        step->isSimpleReordered(),
+        step->getRuntimeFilterBuilders());
     return PlanNodeBase::createPlanNode(
         rule_context.context->getOptimizerContext()->nextNodeId(), output_step, PlanNodes{new_semi_node, join_node->getChildren()[1]});
 }

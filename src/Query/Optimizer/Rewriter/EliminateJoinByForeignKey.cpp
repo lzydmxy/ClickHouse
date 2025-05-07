@@ -143,7 +143,7 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitPlanNode(PlanNodeBase & 
 {
     size_t children_size = node.getChildren().size();
     if (children_size != 1)
-        throw Exception(ErrorCodes::NOT_IMPLEMENTED, "unsupported step type -- " + node.getStep()->getName() + ", skip it by setting enable_eliminate_join_by_fk=0");
+        throw Exception(ErrorCodes::NOT_IMPLEMENTED, "unsupported step type -- {}, skip it by setting enable_eliminate_join_by_fk=0", node.getStep()->getName() );
 
     FPKeysAndOrdinaryKeys translated = VisitorUtil::accept(node.getChildren()[0], *this, join_info);
 
@@ -187,10 +187,10 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitJoinStepExtNode(JoinStep
 
     auto & winners = join_info.getWinnersRef();
     const auto & candidate = node.shared_from_this();
-    auto step = static_cast<const JoinStepExt &>(*node.getStep());
+    auto step = node.getStep();
 
     std::unordered_map<String, String> identities;
-    for (const auto & item : step.getOutputStream().header)
+    for (const auto & item : step->getOutputStream().header)
     {
         identities[item.name] = item.name;
     }
@@ -215,13 +215,13 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitJoinStepExtNode(JoinStep
 
     // LOG_INFO(getLogger("DataDependency"), "visitJoinStepExtNode=" + std::to_string(node.getId()) + ", winners=" + std::to_string(join_info.getWinners().size()) + ". " + translated.keysStr());
 
-    bool is_inner_join = step.getKind() == JoinKind::Inner;
-    bool is_outer_join = step.isOuterJoin() && step.getKind() != JoinKind::Full; // only allow left outer/right outer join.
-    bool is_semi_join = (step.getKind() == JoinKind::Left || step.getKind() == JoinKind::Right) && step.getStrictness() == JoinStrictness::Semi;
+    bool is_inner_join = step->getKind() == JoinKind::Inner;
+    bool is_outer_join = step->isOuterJoin() && step->getKind() != JoinKind::Full; // only allow left outer/right outer join.
+    bool is_semi_join = (step->getKind() == JoinKind::Left || step->getKind() == JoinKind::Right) && step->getStrictness() == JoinStrictness::Semi;
 
     NameSet invalid_tables;
     // Only one condition in join can be accepted in foreign key dependency optimization.
-    if (step.getLeftKeys().size() == 1 && (is_inner_join || is_outer_join || is_semi_join))
+    if (step->getLeftKeys().size() == 1 && (is_inner_join || is_outer_join || is_semi_join))
     {
         if (!left_fp_keys.empty() && !right_fp_keys.empty())
         {
@@ -234,23 +234,23 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitJoinStepExtNode(JoinStep
             bool is_left_fk_column = false;
             bool is_right_fk_column = false;
 
-            if (auto keys = left_fp_keys.getPrimaryKeySet().getKeysInCurrentNames(step.getLeftKeys()); !keys.empty())
+            if (auto keys = left_fp_keys.getPrimaryKeySet().getKeysInCurrentNames(step->getLeftKeys()); !keys.empty())
             {
                 is_left_pk_column = true;
                 left_table_column = TableColumn{keys.begin()->getTableName(), keys.begin()->getColumnName()};
             }
-            if (auto keys = right_fp_keys.getPrimaryKeySet().getKeysInCurrentNames(step.getRightKeys()); !keys.empty())
+            if (auto keys = right_fp_keys.getPrimaryKeySet().getKeysInCurrentNames(step->getRightKeys()); !keys.empty())
             {
                 is_right_pk_column = true;
                 right_table_column = TableColumn{keys.begin()->getTableName(), keys.begin()->getColumnName()};
             }
 
-            if (auto keys = left_fp_keys.getForeignKeySet().getKeysInCurrentNames(step.getLeftKeys()); !keys.empty() && left_table_column.empty())
+            if (auto keys = left_fp_keys.getForeignKeySet().getKeysInCurrentNames(step->getLeftKeys()); !keys.empty() && left_table_column.empty())
             {
                 is_left_fk_column = true;
                 left_table_column = TableColumn{keys.begin()->getTableName(), keys.begin()->getColumnName()};
             }
-            if (auto keys = right_fp_keys.getForeignKeySet().getKeysInCurrentNames(step.getRightKeys()); !keys.empty() && right_table_column.empty())
+            if (auto keys = right_fp_keys.getForeignKeySet().getKeysInCurrentNames(step->getRightKeys()); !keys.empty() && right_table_column.empty())
             {
                 is_right_fk_column = true;
                 right_table_column = TableColumn{keys.begin()->getTableName(), keys.begin()->getColumnName()};
@@ -295,11 +295,11 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitJoinStepExtNode(JoinStep
             }
             else if (is_outer_join)
             {
-                if (step.getKind() == JoinKind::Left)
+                if (step->getKind() == JoinKind::Left)
                     invalid_tables.insert(right_table_column.tbl_name);
                 else
                 {
-                    assert(step.getKind() == JoinKind::Right);
+                    assert(step->getKind() == JoinKind::Right);
                     invalid_tables.insert(left_table_column.tbl_name);
                 }
             }
@@ -307,11 +307,11 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitJoinStepExtNode(JoinStep
             {
                 assert(is_semi_join);
 
-                if (step.getKind() == JoinKind::Left)
+                if (step->getKind() == JoinKind::Left)
                     invalid_tables.insert(left_table_column.tbl_name);
                 else
                 {
-                    assert(step.getKind() == JoinKind::Right);
+                    assert(step->getKind() == JoinKind::Right);
                     invalid_tables.insert(right_table_column.tbl_name);
                 }
             }
@@ -327,8 +327,8 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitJoinStepExtNode(JoinStep
                 // fk left outer/semi join pk: allow and elect
                 // pk right outer/semi join fk: allow and elect
 
-                ForeignKeyOrPrimaryKeys internal_left_fp_keys = fp_keys.getKeysInCurrentNames(step.getLeftKeys());
-                ForeignKeyOrPrimaryKeys internal_right_fp_keys = fp_keys.getKeysInCurrentNames(step.getRightKeys());
+                ForeignKeyOrPrimaryKeys internal_left_fp_keys = fp_keys.getKeysInCurrentNames(step->getLeftKeys());
+                ForeignKeyOrPrimaryKeys internal_right_fp_keys = fp_keys.getKeysInCurrentNames(step->getRightKeys());
 
                 // Check whether the join condition has valid fk and pk.
                 String fk_current_name;
@@ -341,7 +341,7 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitJoinStepExtNode(JoinStep
                 {
                     for (const auto & right_fk : internal_right_fp_keys.getForeignKeySet())
                     {
-                        if (step.getKind() == JoinKind::Right || step.getKind() == JoinKind::Inner)
+                        if (step->getKind() == JoinKind::Right || step->getKind() == JoinKind::Inner)
                         {
                             if (info.fk_to_pk.at({right_fk.getTableName(), right_fk.getColumnName()})
                                 == TableColumn{left_pk.getTableName(), left_pk.getColumnName()})
@@ -360,7 +360,7 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitJoinStepExtNode(JoinStep
                 {
                     for (const auto & left_fk : internal_left_fp_keys.getForeignKeySet())
                     {
-                        if (step.getKind() == JoinKind::Left || step.getKind() == JoinKind::Inner)
+                        if (step->getKind() == JoinKind::Left || step->getKind() == JoinKind::Inner)
                         {
                             if (info.fk_to_pk.at({left_fk.getTableName(), left_fk.getColumnName()})
                                 == TableColumn{right_pk.getTableName(), right_pk.getColumnName()})
@@ -410,8 +410,8 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitJoinStepExtNode(JoinStep
                 NameSet converted_pk_tables; // contains pk from fk.
                 NameSet invalid_pk_tables;
 
-                NameSet join_keys(step.getLeftKeys().begin(), step.getLeftKeys().end());
-                join_keys.insert(step.getRightKeys().begin(), step.getRightKeys().end());
+                NameSet join_keys(step->getLeftKeys().begin(), step->getLeftKeys().end());
+                join_keys.insert(step->getRightKeys().begin(), step->getRightKeys().end());
                 ForeignKeyOrPrimaryKeys join_fp_keys = fp_keys.getKeysInCurrentNames(join_keys);
 
                 for (const auto & fk : join_fp_keys.getForeignKeySet())
@@ -430,7 +430,7 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitJoinStepExtNode(JoinStep
                         if (common_pk_tables.contains(pk.getTableName())) // `pk_1 join pk_2`.
                             invalid_pk_tables.erase(pk.getTableName());
 
-                        if (step.getKind() == JoinKind::Inner)
+                        if (step->getKind() == JoinKind::Inner)
                             pk_tables.insert(pk.getTableName());
                     }
                 }
@@ -468,7 +468,7 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitJoinStepExtNode(JoinStep
             invalid_tables.insert(partial_invalid_tables.begin(), partial_invalid_tables.end());
         }
 
-        NameSet filter_invalid_tables = visitFilterExpression(step.getFilter(), translated);
+        NameSet filter_invalid_tables = visitFilterExpression(step->getFilter(), translated);
         invalid_tables.insert(filter_invalid_tables.begin(), filter_invalid_tables.end());
     }
     else
@@ -531,36 +531,36 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitAggregatingStepExtNode(A
 {
     auto result = VisitorUtil::accept(node.getChildren()[0], *this, c);
 
-    auto step = static_cast<const AggregatingStepExt &>(*node.getStep());
+    auto step = dynamic_cast<AggregatingStepExt*>(node.getStep().get());
 
-    if (step.getKeys().empty() || !step.isNormal())
+    if (step->getKeys().empty() || !step->isNormal())
         return result.clearFPKeys();
 
     // fk-pk dependency
     if (!result.getFPKeys().empty())
     {
         NameSet agg_argu_names;
-        for (const auto & agg : step.getAggregates())
+        for (const auto & agg : step->getAggregates())
             agg_argu_names.insert(agg.argument_names.begin(), agg.argument_names.end());
 
         NameSet invalid_tables;
         // Invalidate tables whose pk column exists in aggregate function.
         for (const auto & pf_key : result.getFPKeys().getPrimaryKeySet().getKeysInCurrentNames(agg_argu_names))
         {
-            if (!step.getKeysNotHashed().contains(pf_key.getCurrentName()))
+            if (!step->getKeysNotHashed().contains(pf_key.getCurrentName()))
                 invalid_tables.insert(pf_key.getTableName());
         }
 
         for (const auto & ordinary_key : result.getOrdinaryKeys().getKeysInCurrentNames(agg_argu_names))
         {
-            if (!step.getKeysNotHashed().contains(ordinary_key.getCurrentName()))
+            if (!step->getKeysNotHashed().contains(ordinary_key.getCurrentName()))
                 invalid_tables.insert(ordinary_key.getTableName());
         }
 
         // Invalidate those tables whose ordinary columns are in the group by keys.
-        for (const auto & ordinary_key : result.getOrdinaryKeys().getKeysInCurrentNames(step.getKeys()))
+        for (const auto & ordinary_key : result.getOrdinaryKeys().getKeysInCurrentNames(step->getKeys()))
         {
-            if (!step.getKeysNotHashed().contains(ordinary_key.getCurrentName()))
+            if (!step->getKeysNotHashed().contains(ordinary_key.getCurrentName()))
                 invalid_tables.insert(ordinary_key.getTableName());
         }
         result.downgradePkTables(invalid_tables);
@@ -573,9 +573,9 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitAggregatingStepExtNode(A
 
 FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitProjectionStepExtNode(ProjectionStepExtNode & node, JoinInfo & c)
 {
-    auto step = static_cast<const ProjectionStepExt &>(*node.getStep());
+    auto step = node.getStep();
 
-    const auto & assignments = step.getAssignments();
+    const auto & assignments = step->getAssignments();
     std::unordered_map<String, String> identities = Utils::computeIdentityTranslations(assignments);
     std::unordered_map<String, String> revert_identifies;
 
@@ -591,7 +591,7 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitProjectionStepExtNode(Pr
 
     FPKeysAndOrdinaryKeys translated = result.translate(revert_identifies);
 
-    const auto & names_and_types = ToNamesAndTypes(step.getInputStreams()[0].header.getColumnsWithTypeAndName());;
+    const auto & names_and_types = ToNamesAndTypes(step->getInputStreams()[0].header.getColumnsWithTypeAndName());;
     // In special cases, projection adds a assignment function with parameters related to other keys in pk table.
     // we consider the new assignment is a other key.
     // The same is true of aggregating.
@@ -662,7 +662,7 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitFilterStepExtNode(Filter
 
 FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitUnionStepExtNode(UnionStepExtNode & node, JoinInfo & join_info)
 {
-    auto step = static_cast<const UnionStepExt &>(*node.getStep());
+    auto step = node.getStep().get();
 
     std::vector<FPKeysAndOrdinaryKeys> input_keys;
     size_t children_size = node.getChildren().size();
@@ -706,7 +706,7 @@ FPKeysAndOrdinaryKeys EliminateJoinByFK::Rewriter::visitUnionStepExtNode(UnionSt
     }
 
     std::vector<FPKeysAndOrdinaryKeys> transformed_children_prop;
-    const auto & output_to_inputs = step.getOutToInputs();
+    const auto & output_to_inputs = step->getOutToInputs();
     size_t index = 0;
     while (index < children_size)
     {
@@ -921,7 +921,7 @@ PlanNodePtr EliminateJoinByFK::Eliminator::visitJoinStepExtNode(JoinStepExtNode 
             for (const auto & [pk, fk] : iter->second.current_pk_to_fk)
             {
                 if (!name_to_type.contains(fk))
-                    throw Exception(ErrorCodes::LOGICAL_ERROR, "key not found when eliminateing bottom join - " + fk);
+                    throw Exception(ErrorCodes::LOGICAL_ERROR, "key not found when eliminateing bottom join - {}", fk);
                 c.current_pk_to_fk.emplace(pk, std::pair<String, DataTypePtr>(fk, name_to_type.at(fk)));
             }
 

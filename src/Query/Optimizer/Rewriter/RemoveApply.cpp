@@ -550,7 +550,7 @@ PlanNodePtr CorrelatedInSubqueryVisitor::visitApplyStepExtNode(ApplyStepExtNode 
     if (!result.has_value())
     {
         throw Exception(
-            ErrorCodes::REMOVE_SUBQUERY_ERROR, "Correlated In subquery de-correlation error, correlation filter not exists: " + printVector(correlation));
+            ErrorCodes::REMOVE_SUBQUERY_ERROR, "Correlated In subquery de-correlation error, correlation filter not exists: {}", printVector(correlation));
     }
 
     DecorrelationResult & result_value = result.value();
@@ -1739,7 +1739,7 @@ PlanNodePtr CorrelatedQuantifiedComparisonSubqueryVisitor::visitApplyStepExtNode
     if (!result.has_value())
     {
         throw Exception(
-            ErrorCodes::REMOVE_SUBQUERY_ERROR, "Correlated quantified comparison subquery de-correlation error, correlation filter not exists: " + printVector(correlation));
+            ErrorCodes::REMOVE_SUBQUERY_ERROR, "Correlated quantified comparison subquery de-correlation error, correlation filter not exists: {}", printVector(correlation));
     }
 
     DecorrelationResult & result_value = result.value();
@@ -1836,10 +1836,12 @@ PlanNodePtr CorrelatedQuantifiedComparisonSubqueryVisitor::visitApplyStepExtNode
     AggregateFunctionProperties properties;
     String num_of_matching_is_zero_symbol = context->getOptimizerContext()->getSymbolAllocator()->newSymbol("whether_num_of_matching_join_result_is_zero");
     AggregateDescription count_if_agg_desc
-        = {.function = AggregateFunctionFactory::instance().get("count", NullsAction::EMPTY, {std::make_shared<DataTypeUInt8>()}, Array(), properties),
-           .parameters = Array(),
-           .argument_names = Names{non_null},
-           .column_name = num_of_matching_is_zero_symbol};
+        = { .function = AggregateFunctionFactory::instance().get("count", NullsAction::EMPTY, {std::make_shared<DataTypeUInt8>()}, Array(), properties),
+            .parameters = Array(),
+            .arguments = {},
+            .argument_names = Names{non_null},
+            .column_name = num_of_matching_is_zero_symbol,
+            .mask_column = ""};
     aggregate_descriptions.emplace_back(count_if_agg_desc);
 
     Names keys;
@@ -1958,23 +1960,31 @@ void makeAggDescriptionsMinMaxCountCount2(
     AggregateDescription min_agg_desc
         = {.function = AggregateFunctionFactory::instance().get("min", NullsAction::EMPTY, argument_types, Array(), properties),
            .parameters = Array(),
+           .arguments = {},
            .argument_names = qc_right,
-           .column_name = min_value};
+           .column_name = min_value,
+           .mask_column = ""};
     AggregateDescription max_agg_desc
-        = {.function = AggregateFunctionFactory::instance().get("max", NullsAction::EMPTY, argument_types, Array(), properties),
-           .parameters = Array(),
-           .argument_names = qc_right,
-           .column_name = max_value};
+        = { .function = AggregateFunctionFactory::instance().get("max", NullsAction::EMPTY, argument_types, Array(), properties),
+            .parameters = Array(),
+            .arguments = {},
+            .argument_names = qc_right,
+            .column_name = max_value,
+            .mask_column = ""};
     AggregateDescription count_all_value_agg_desc
-        = {.function = AggregateFunctionFactory::instance().get("count", NullsAction::EMPTY, {}, Array(), properties),
-           .parameters = Array(),
-           .argument_names = {},
-           .column_name = count_all_value};
+        = { .function = AggregateFunctionFactory::instance().get("count", NullsAction::EMPTY, {}, Array(), properties),
+            .parameters = Array(),
+            .arguments = {},
+            .argument_names = {},
+            .column_name = count_all_value,
+            .mask_column = ""};
     AggregateDescription count_non_null_value_agg_desc
-        = {.function = AggregateFunctionFactory::instance().get("count", NullsAction::EMPTY, argument_types, Array(), properties),
-           .parameters = Array(),
-           .argument_names = qc_right,
-           .column_name = count_non_null_value};
+        = { .function = AggregateFunctionFactory::instance().get("count", NullsAction::EMPTY, argument_types, Array(), properties),
+            .parameters = Array(),
+            .arguments = {},
+            .argument_names = qc_right,
+            .column_name = count_non_null_value,
+            .mask_column = ""};
     aggregate_descriptions.emplace_back(min_agg_desc);
     aggregate_descriptions.emplace_back(max_agg_desc);
     aggregate_descriptions.emplace_back(count_all_value_agg_desc);

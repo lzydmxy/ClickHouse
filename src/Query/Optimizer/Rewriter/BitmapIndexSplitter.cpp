@@ -43,14 +43,11 @@ PlanNodePtr createProjection(PlanNodes children, Assignments array_set_check_fun
         expr_map[item.second] = ConstHashAST::make(std::make_shared<ASTIdentifier>(item.first));
     }
 
-
     auto projection = std::make_shared<ProjectionStepExt>(child->getCurrentDataStream(), assignments, name_to_type, false, true);
-    LOG_DEBUG(
-        getLogger("createProjection"),
-        fmt::format(
-            "projection input: {}, output: {}",
-            projection->getInputStreams()[0].header.dumpStructure(),
-            projection->getOutputStream().header.dumpStructure()));
+    auto input_dump = projection->getInputStreams()[0].header.dumpStructure();
+    auto output_dump = projection->getOutputStream().header.dumpStructure();
+
+    LOG_DEBUG(getLogger("createProjection"), "projection input: {}, output: {}", input_dump, output_dump);
 
     return PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(projection), children);
 }
@@ -193,6 +190,7 @@ ConstASTPtr CollectFuncs::visitASTFunction(const ConstASTPtr & node, Assignments
 {
     visitNode(node, assignments);
 
+    (void)name_to_type;
     // todo: lizhuoyu5, other feat: BitmapIndex is not necessary for the optimizer at this stage.
     // todo: However, we might implement it in the future. For now, we have added the class definition without implementing its functionality.
     // if (const auto * func = node->as<ASTFunction>())

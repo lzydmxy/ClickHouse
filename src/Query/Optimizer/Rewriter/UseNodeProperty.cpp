@@ -13,8 +13,8 @@ namespace DB
 {
 bool UseNodeProperty::rewrite(QueryPlanExt & plan, ContextMutablePtr context) const
 {
-    auto single = Property{Partitioning{PartitioningHandle::SINGLE}};
-    single.getNodePartitioningRef().setComponent(Component::COORDINATOR);
+    auto single = Property{Partitioning{Partitioning::Handle::SINGLE}};
+    single.getNodePartitioningRef().setComponent(Partitioning::Component::COORDINATOR);
     UseNodeProperty::ExchangeRewriter exchange_rewriter{context, plan.getCTEInfo()};
     auto new_plan = VisitorUtil::accept(plan.getPlanNode(), exchange_rewriter, single);
 
@@ -50,7 +50,7 @@ PlanNodePtr UseNodeProperty::ExchangeRewriter::visitTableScanStepExtNode(TableSc
 {
     Property prop = PropertyDeriver::deriveProperty(node.getStep(), context, require);
     if (!require.getNodePartitioning().getColumns().empty()
-        && prop.getNodePartitioning().getHandle() ==PartitioningHandle::BUCKET_TABLE
+        && prop.getNodePartitioning().getHandle() ==Partitioning::Handle::BUCKET_TABLE
         && !prop.getNodePartitioning().getColumns().empty())
     {
         node.getStep()->setBucketScan(true);

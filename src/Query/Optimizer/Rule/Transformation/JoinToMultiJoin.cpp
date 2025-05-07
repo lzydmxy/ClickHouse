@@ -5,8 +5,8 @@
 #include <Query/Optimizer/Graph.h>
 #include <Query/Optimizer/Rule/Pattern.h>
 #include <Query/Optimizer/Rule/Patterns.h>
-#include <<Query/Processors/QueryPlan/AnyStep.h>
-#include <<Query/Processors/QueryPlan/MultiJoinStep.h>
+#include <Query/Processors/QueryPlan/AnyStepExt.h>
+#include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
 #include <Query/Optimizer/PredicateUtils.h>
 
 namespace DB

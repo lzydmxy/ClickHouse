@@ -18,7 +18,7 @@ public:
 
 private:
     bool rewrite(QueryPlanExt & plan, ContextMutablePtr context) const override;
-    bool isEnabled(ContextMutablePtr context) const override { return context->getSettingsRef().eliminate_cross_joins; }
+    bool isEnabled(ContextMutablePtr context) const override { return context->getOptimizerContext()->getSettingsRef().eliminate_cross_joins; }
 };
 
 class SimplifyCrossJoinVisitor : public SimplePlanRewriter<Void>

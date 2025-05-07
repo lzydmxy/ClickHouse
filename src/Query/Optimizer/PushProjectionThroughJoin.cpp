@@ -1,7 +1,7 @@
 #include <Query/Optimizer/PushProjectionThroughJoin.h>
 
 #include <Query/Optimizer/ExpressionDeterminism.h>
-#include <Query/Optimizer/Rule/Rewrite/InlineProjections.h>
+// #include <Query/Optimizer/Rule/Rewrite/InlineProjections.h>
 #include <Query/Optimizer/SymbolUtils.h>
 #include <Query/Optimizer/SymbolsExtractor.h>
 
@@ -222,7 +222,9 @@ PlanNodePtr PushProjectionThroughJoin::inlineProjections(PlanNodePtr parent_proj
     {
         return parent_projection;
     }
-    auto result = InlineProjections::inlineProjections(parent_projection, child, context, false);
+    // todo lizhuoyu5 need InlineProjections
+    // auto result = InlineProjections::inlineProjections(parent_projection, child, context, false);
+    auto result = std::optional<PlanNodePtr>();
     if (result.has_value())
     {
         return inlineProjections(result.value(), context);

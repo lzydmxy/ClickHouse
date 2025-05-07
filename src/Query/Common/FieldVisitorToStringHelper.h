@@ -110,10 +110,10 @@ public:
         Field f(x);
         return removeQuoted(applyVisitor(FieldVisitorToString(), f));
     }
-    String operator()(const BitMap64 & x) const
-    {
-        Field f(x);
-        return removeQuoted(applyVisitor(FieldVisitorToString(), f));
-    }
+    // String operator()(const BitMap64 & x) const
+    // {
+    //     Field f(x);
+    //     return removeQuoted(applyVisitor(FieldVisitorToString(), f));
+    // }
 };
 }

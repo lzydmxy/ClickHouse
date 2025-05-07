@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Interpreters/Context.h>
+#include <Query/Common/OptimizerSettings.h>
+#include <Query/Common/OptimizerContext.h>
 
 namespace DB
 {

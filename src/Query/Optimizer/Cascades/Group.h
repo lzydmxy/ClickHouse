@@ -62,7 +62,7 @@ public:
             return it->second;
         }
         throw Exception(ErrorCodes::PLAN_BUILD_ERROR,
-            "Cascades can not build plan, Group " + toString(id) + " " + property_set.toString());
+            "Cascades can not build plan, Group {} {}", id, property_set.toString());
     }
 
     bool hasWinner(const Property & property_set) const { return lowest_cost_expressions.contains(property_set); }

@@ -20,7 +20,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_push_limit_into_distinct;
+        return context->getOptimizerContext()->getSettingsRef().enable_push_limit_into_distinct;
     }
 
     ConstRefPatternPtr getPattern() const override;
@@ -42,7 +42,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_push_limit_through_projetion;
+        return context->getOptimizerContext()->getSettingsRef().enable_push_limit_through_projetion;
     }
 
     ConstRefPatternPtr getPattern() const override;
@@ -64,7 +64,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_push_limit_through_extremes;
+        return context->getOptimizerContext()->getSettingsRef().enable_push_limit_through_extremes;
     }
 
     ConstRefPatternPtr getPattern() const override;
@@ -108,7 +108,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_push_limit_through_union;
+        return context->getOptimizerContext()->getSettingsRef().enable_push_limit_through_union;
     }
 
     ConstRefPatternPtr getPattern() const override;
@@ -149,7 +149,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_push_limit_through_outer_join;
+        return context->getOptimizerContext()->getSettingsRef().enable_push_limit_through_outer_join;
     }
 
     ConstRefPatternPtr getPattern() const override;
@@ -171,7 +171,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_limit_zero_to_read_nothing;
+        return context->getOptimizerContext()->getSettingsRef().enable_limit_zero_to_read_nothing;
     }
 
     ConstRefPatternPtr getPattern() const override;
@@ -193,7 +193,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_push_down_limit_into_window;
+        return context->getOptimizerContext()->getSettingsRef().enable_push_down_limit_into_window;
     }
 
     ConstRefPatternPtr getPattern() const override;
@@ -215,7 +215,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_push_limit_into_sorting_rule;
+        return context->getOptimizerContext()->getSettingsRef().enable_push_limit_into_sorting_rule;
     }
 
     ConstRefPatternPtr getPattern() const override;
@@ -237,7 +237,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_push_limit_through_buffer;
+        return context->getOptimizerContext()->getSettingsRef().enable_push_limit_through_buffer;
     }
 
     ConstRefPatternPtr getPattern() const override;

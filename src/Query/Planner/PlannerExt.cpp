@@ -18,9 +18,6 @@
 #include <Parsers/ASTSelectQuery.h>
 
 #include <Planner/Utils.h>
-
-#include <Query/Common/PredicateUtils.h>
-
 #include <Query/Planner/PlannerCommon.h>
 #include <Query/Planner/TranslationMap.h>
 #include <Query/Planner/PlanBuilder.h>

@@ -32,7 +32,7 @@ IterativeRewriter::IterativeRewriter(const std::vector<RulePtr> & rules_, std::s
     {
         for (auto target_type : rule->getTargetTypes())
         {
-            if (target_type != QueryPlanStepType::Any)
+            if (target_type != QueryPlanStepType::AnyStepExt)
                 rules[target_type].emplace_back(rule);
             else
             {
@@ -178,8 +178,7 @@ void IterativeRewriter::checkTimeoutNotExhausted(const String & rule_name, const
     if (duration >= context.optimizer_timeout)
     {
         throw Exception(ErrorCodes::OPTIMIZER_TIMEOUT,
-        "The optimizer with rule [ " + rule_name + " ] exhausted the time limit of " + std::to_string(context.optimizer_timeout)
-            + " ms");
+        "The optimizer with rule [ {} ] exhausted the time limit of {} ms", std::to_string(context.optimizer_timeout), rule_name);
     }
 }
 

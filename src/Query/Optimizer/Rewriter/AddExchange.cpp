@@ -14,9 +14,9 @@ namespace DB
 bool AddExchange::rewrite(QueryPlanExt & plan, ContextMutablePtr context) const
 {
     ExchangeVisitor visitor{};
-    Property required{Partitioning{PartitioningHandle::SINGLE}};
+    Property required{Partitioning{Partitioning::Handle::SINGLE}};
 
-    required.getNodePartitioningRef().setComponent(Component::COORDINATOR);
+    required.getNodePartitioningRef().setComponent(Partitioning::Component::COORDINATOR);
     ExchangeContext cxt{context, required};
     ExchangeResult result = VisitorUtil::accept(plan.getPlanNode(), visitor, cxt);
 

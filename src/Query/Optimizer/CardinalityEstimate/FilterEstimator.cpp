@@ -39,7 +39,7 @@ PlanNodeStatisticsPtr FilterEstimator::estimate(
     if (!is_on_base_table)
     {
         // Prefer default selectivity when is_on_base_table flag is false.
-        UInt64 row_count = std::round(filter_stats->getRowCount() * default_selectivity);
+        UInt64 row_count = static_cast<UInt64>(std::round(filter_stats->getRowCount() * default_selectivity));
 
         // make row count at least 1.
         row_count = row_count > 1 ? row_count : 1;
@@ -58,7 +58,7 @@ PlanNodeStatisticsPtr FilterEstimator::estimate(
         .context = context,
         .interpreter = interpreter,
         .default_selectivity = default_selectivity,
-        .like_selectivity = QueryPlanStepType.stats_estimator_like_selectivity};
+        .like_selectivity = context->getOptimizerContext()->getSettingsRef().stats_estimator_like_selectivity};
     FilterEstimateResult result = estimateFilter(*filter_stats, predicate, estimator_context);
 
     double selectivity = result.first.value_or(default_selectivity);
@@ -73,7 +73,7 @@ PlanNodeStatisticsPtr FilterEstimator::estimate(
         selectivity = 0;
     }
 
-    UInt64 filtered_row_count = std::round(filter_stats->getRowCount() * selectivity);
+    UInt64 filtered_row_count = static_cast<UInt64>(std::round(static_cast<double>(filter_stats->getRowCount()) * selectivity));
     // make row count at least 1.
     filter_stats->updateRowCount(filtered_row_count > 0 ? filtered_row_count : std::min(UInt64(1), opt_child_stats->getRowCount()));
     std::unordered_map<String, SymbolStatisticsPtr> & symbol_statistics_in_filter = result.second;
@@ -188,12 +188,10 @@ FilterEstimator::estimateFilter(PlanNodeStatistics & stats, const ConstASTPtr & 
 FilterEstimateResult
 FilterEstimator::estimateAndFilter(PlanNodeStatistics & stats, const ConstASTPtr & predicate, FilterEstimatorContext & context)
 {
-    std::vector<ConstASTPtr> conjuncts = PredicateUtils::extractConjuncts(predicate);
-
     FilterEstimateResults results;
     double selectivity = 1.0;
     bool all_empty = true;
-    for (auto & conjunct : conjuncts)
+    for (auto & conjunct : PredicateUtils::extractConjuncts(predicate))
     {
         FilterEstimateResult result = estimateFilter(stats, conjunct, context);
         if (!results.empty() && all_empty && result.first.has_value())
@@ -228,13 +226,12 @@ FilterEstimator::estimateAndFilter(PlanNodeStatistics & stats, const ConstASTPtr
 FilterEstimateResult
 FilterEstimator::estimateOrFilter(PlanNodeStatistics & stats, const ConstASTPtr & predicate, FilterEstimatorContext & context)
 {
-    std::vector<ConstASTPtr> disjuncts = PredicateUtils::extractDisjuncts(predicate);
     FilterEstimateResults results;
     double selectivity = -1;
     double sum_selectivity = 0.0;
     double multiply_selectivity = 1.0;
     bool all_empty = true;
-    for (auto & disjunct : disjuncts)
+    for (auto & disjunct : PredicateUtils::extractDisjuncts(predicate))
     {
         // for each or predicate, use origin statistics to estimate.
         PlanNodeStatisticsPtr or_stats = stats.copy();

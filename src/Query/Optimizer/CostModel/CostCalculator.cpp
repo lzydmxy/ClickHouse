@@ -94,7 +94,7 @@ PlanNodeCost CostVisitor::visitMergingAggregatedStepExt(const MergingAggregatedS
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitUnionStep(const UnionStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitUnionStepExt(const UnionStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }
@@ -134,7 +134,7 @@ PlanNodeCost CostVisitor::visitValuesStepExt(const ValuesStepExt & step, CostCon
 {
     return ValuesCost::calculate(step, context);
 }
-PlanNodeCost CostVisitor::visitLimitStep(const LimitStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitLimitStepExt(const LimitStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }

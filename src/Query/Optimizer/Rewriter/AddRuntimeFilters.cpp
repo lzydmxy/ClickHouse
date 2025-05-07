@@ -2,7 +2,7 @@
 
 #include <Query/Executor/PlanSegment.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterBuilder.h>
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/CardinalityEstimate/CardinalityEstimator.h>
 #include <Query/Optimizer/Property/SymbolEquivalencesDeriver.h>
 #include <Query/Optimizer/Property/Property.h>
@@ -118,8 +118,8 @@ PlanPropEquivalences AddRuntimeFilters::AddRuntimeFilterRewriter::visitCTERefSte
 
 static bool isFixedHashShuffleOrBucketTableShuffle(const Property & property)
 {
-    return property.getNodePartitioning().getHandle() == PartitioningHandle::FIXED_HASH
-        || property.getNodePartitioning().getHandle() == PartitioningHandle::BUCKET_TABLE;
+    return property.getNodePartitioning().getHandle() == Partitioning::Handle::FIXED_HASH
+        || property.getNodePartitioning().getHandle() == Partitioning::Handle::BUCKET_TABLE;
 }
 
 PlanPropEquivalences AddRuntimeFilters::AddRuntimeFilterRewriter::visitJoinStepExtNode(JoinStepExtNode & node, Void & c)
@@ -695,7 +695,7 @@ PlanNodePtr AddRuntimeFilters::AddExchange::visitBufferStepExtNode(BufferStepExt
         std::make_unique<ExchangeStepExt>(
             DataStreams{res->getCurrentDataStream()},
             RExchangeMode::LOCAL_NO_NEED_REPARTITION,
-            Partitioning{PartitioningHandle::FIXED_ARBITRARY},
+            Partitioning{Partitioning::Handle::FIXED_ARBITRARY},
             context->getOptimizerContext()->getSettingsRef().enable_shuffle_with_order),
         PlanNodes{res}/*, res->getStatistics()*/);
 }
@@ -724,7 +724,7 @@ PlanNodePtr AddRuntimeFilters::AddExchange::visitFilterStepExtNode(FilterStepExt
         std::make_unique<ExchangeStepExt>(
             DataStreams{child->getCurrentDataStream()},
             RExchangeMode::LOCAL_NO_NEED_REPARTITION,
-            Partitioning{PartitioningHandle::FIXED_ARBITRARY},
+            Partitioning{Partitioning::Handle::FIXED_ARBITRARY},
             context->getOptimizerContext()->getSettingsRef().enable_shuffle_with_order),
         PlanNodes{child}/*, node.getStatistics()*/);
 }

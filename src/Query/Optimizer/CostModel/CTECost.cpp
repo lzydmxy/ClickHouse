@@ -1,7 +1,6 @@
 #include <Query/Optimizer/CostModel/CTECost.h>
 
 #include <Query/Optimizer/CostModel/CostCalculator.h>
-#include <QueryPlan/CTERefStep.h>
 
 namespace DB
 {

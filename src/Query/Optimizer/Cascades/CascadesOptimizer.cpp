@@ -4,11 +4,8 @@
 #include <Query/Interpreters/DistributedStages/PlanSegmentSplitter.h>
 #include <Query/Optimizer/Cascades/GroupExpression.h>
 #include <Query/Optimizer/Cascades/Task.h>
-#include <Query/Optimizer/OptimizerMetrics.h>
 #include <Query/Optimizer/Property/PropertyEnforcer.h>
 #include <Query/Optimizer/Rule/Implementation/SetJoinDistribution.h>
-#include <Query/Optimizer/Rule/Rewrite/PullProjectionOnJoinThroughJoin.h>
-#include <Query/Optimizer/Rule/Rewrite/PushAggThroughJoinRules.h>
 #include <Query/Optimizer/Rule/Transformation/CardinalityBasedJoinReorder.h>
 #include <Query/Optimizer/Rule/Transformation/InlineCTE.h>
 #include <Query/Optimizer/Rule/Transformation/InnerJoinAssociate.h>
@@ -78,7 +75,7 @@ bool CascadesOptimizer::rewrite(QueryPlanExt & plan, ContextMutablePtr context) 
         GraphvizPrinter::printMemo(cascades_context.getMemo(), root_id, context, toString(id) + "_CascadesOptimizer-Memo-Graph");
         throw;
     }
-    LOG_DEBUG(cascades_context.getLog(), cascades_context.getInfo());
+    LOG_DEBUG(cascades_context.getLog(), "{}", cascades_context.getInfo());
     GraphvizPrinter::printMemo(cascades_context.getMemo(), root_id, context, toString(id) + "_CascadesOptimizer-Memo-Graph");
 
     auto result = buildPlanNode(root_id, cascades_context, single);
@@ -123,13 +120,12 @@ WinnerPtr CascadesOptimizer::optimize(GroupId root_group_id, CascadesContext & c
         if (duration >= context.getTaskExecutionTimeout())
         {
             throw Exception(ErrorCodes::OPTIMIZER_TIMEOUT, 
-                "Cascades exhausted the time limit of " + toString(context.getTaskExecutionTimeout()) + " ms");
+                "Cascades exhausted the time limit of {} ms", context.getTaskExecutionTimeout());
         }
         if (context.getTaskStack().size() > 100000)
         {
             throw Exception(ErrorCodes::OPTIMIZER_TIMEOUT, 
-                "Cascades exhausted the task limit of " + toString(100000) + ", there are "
-                    + std::to_string(context.getTaskStack().size()) + " tasks");
+                "Cascades exhausted the task limit of 100000), there are {} tasks", context.getTaskStack().size());
         }
     }
 
