@@ -63,9 +63,10 @@ PlanNodeStatisticsPtr JoinEstimator::estimate(
             name_to_type.insert(name_to_type2.begin(), name_to_type2.end());
             auto interpreter = ExpressionInterpreter::basicInterpreter(name_to_type, context);
             FilterEstimatorContext estimator_context{
-                .context = context,
-                .interpreter = interpreter,
-                .default_selectivity = context->getOptimizerContext()->getSettingsRef().stats_estimator_join_filter_selectivity, 0.0};
+                context,
+                interpreter,
+                context->getOptimizerContext()->getSettingsRef().stats_estimator_join_filter_selectivity,
+                0.0};
             FilterEstimateResult result = FilterEstimator::estimateFilter(*res, filter, estimator_context);
 
             selectivity = result.first.value_or(estimator_context.default_selectivity);
