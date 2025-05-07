@@ -4,8 +4,8 @@
 #include <farmhash.h>
 #include <metrohash.h>
 #include <wyhash.h>
-#include <MurmurHash2.h>
-#include <MurmurHash3.h>
+#include <murmurhash/MurmurHash2.h>
+#include <murmurhash/MurmurHash3.h>
 
 #include "config.h"
 
