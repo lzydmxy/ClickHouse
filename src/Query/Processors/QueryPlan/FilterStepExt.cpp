@@ -16,6 +16,11 @@
 namespace DB
 {
 
+FilterStepExt::FilterStepExt(const DataStream & input_stream_, ActionsDAGPtr actions_dag_, String filter_column_name_, bool remove_filter_column_)
+:  FilterStep(input_stream_, actions_dag_, filter_column_name_, remove_filter_column_)
+{
+}
+
 FilterStepExt::FilterStepExt(const DataStream & input_stream_, const ConstASTPtr & filter_, bool remove_filter_column_)
     : FilterStep(input_stream_, nullptr, filter_->getColumnName(), remove_filter_column_)
     , filter(filter_)

@@ -1,6 +1,27 @@
+#include <DataTypes/DataTypeArray.h>
 #include <DataTypes/DataTypeFactory.h>
+#include <DataTypes/DataTypesNumber.h>
 #include <Functions/FunctionFactory.h>
+#include <Interpreters/Aggregator.h>
+#include <Interpreters/ArrayJoinAction.h>
+#include <Processors/QueryPlan/ArrayJoinStep.h>
+#include <Processors/QueryPlan/ExpressionStep.h>
+#include <Processors/QueryPlan/ExtremesStep.h>
+#include <Processors/QueryPlan/FillingStep.h>
+#include <Processors/QueryPlan/LimitByStep.h>
+#include <Processors/QueryPlan/OffsetStep.h>
+#include <Processors/QueryPlan/ReadNothingStep.h>
 #include <Query/Processors/QueryPlan/AggregatingStepExt.h>
+#include <Query/Processors/QueryPlan/DistinctStepExt.h>
+#include <Query/Processors/QueryPlan/FilterStepExt.h>
+#include <Query/Processors/QueryPlan/FinishSortingStepExt.h>
+#include <Query/Processors/QueryPlan/LimitStepExt.h>
+#include <Query/Processors/QueryPlan/MergeSortingStepExt.h>
+#include <Query/Processors/QueryPlan/MergingAggregatedStepExt.h>
+#include <Query/Processors/QueryPlan/MergingSortedStepExt.h>
+#include <Query/Processors/QueryPlan/PartialSortingStepExt.h>
+#include <Query/Processors/QueryPlan/TotalsHavingStepExt.h>
+#include <Query/Processors/QueryPlan/UnionStepExt.h>
 #include <Query/ProtosHelper/PlanSerDerHelper.h>
 #include <Common/tests/gtest_global_context.h>
 #include <Common/tests/gtest_global_register.h>
@@ -80,6 +101,14 @@ AggregatorExt::Params createAggregatorExtParams()
         {});
 }
 
+Aggregator::Params createAggregatorParams()
+{
+    Names keys;
+    AggregateDescriptions aggregates;
+
+    return Aggregator::Params(keys, aggregates, false, 5, 0, 0.5);
+}
+
 QueryPlanStepPtr createAggregatingStepExt()
 {
     DataStream input_stream{.header = Block()};
@@ -125,7 +154,7 @@ TEST(QueryPlanTest, QueryPlanSerialization)
 {
     auto agg_step = createAggregatingStepExt();
     auto new_agg_step = serializeQueryPlanStep(agg_step);
-    std::cout << new_agg_step->getName() << std::endl;
+    // std::cout << new_agg_step->getName() << std::endl;
     EXPECT_EQ(agg_step->getName(), new_agg_step->getName());
     EXPECT_EQ(
         dynamic_cast<AggregatingStepExt *>(agg_step.get())->getParams().src_header.dumpStructure(),
@@ -139,144 +168,136 @@ void TestSingleSimpleStep(QueryPlanStepPtr step)
     EXPECT_EQ(step->getName(), new_step->getName());
 }
 
-// todo: liyang
-// QueryPlanStepPtr createReadNothingStep()
-// {
-//     Block block = createBlock();
-//     return std::make_unique<ReadNothingStep>(block);
-// }
+QueryPlanStepPtr createReadNothingStep()
+{
+    Block block = createBlock();
+    return std::make_unique<ReadNothingStep>(block);
+}
 
-// todo: wujianchao
-// QueryPlanStepPtr createPartialSortingStep()
-// {
-//     DataStream stream = createDataStream();
-//     SortDescription desc = createSortDescription();
-//     SizeLimits limits = createSizeLimits();
-//     return std::make_unique<PartialSortingStep>(stream, desc, 0, limits);
-// }
+QueryPlanStepPtr createPartialSortingStepExt()
+{
+    DataStream stream = createDataStream();
+    SortDescription desc = createSortDescription();
+    SizeLimits limits = createSizeLimits();
+    return std::make_unique<PartialSortingStepExt>(stream, desc, 0, limits);
+}
 
-// todo: liyang
-// QueryPlanStepPtr createOffsetStep()
-// {
-//     DataStream stream = createDataStream();
-//     return std::make_unique<OffsetStep>(stream, 0);
-// }
+QueryPlanStepPtr createOffsetStep()
+{
+    DataStream stream = createDataStream();
+    return std::make_unique<OffsetStep>(stream, 0);
+}
 
-// todo: wujianchao
-// QueryPlanStepPtr createMergingSortedStep()
-// {
-//     DataStream stream = createDataStream();
-//     SortDescription desc = createSortDescription();
-//     return std::make_unique<MergingSortedStep>(stream, desc, 0, 0);
-// }
+QueryPlanStepPtr createMergingSortedStepExt()
+{
+    DataStream stream = createDataStream();
+    SortDescription desc = createSortDescription();
+    return std::make_unique<MergingSortedStepExt>(stream, desc, 0, 0);
+}
 
-// todo: wujianchao
-// QueryPlanStepPtr createMergeSortingStep()
-// {
-//     DataStream stream = createDataStream();
-//     SortDescription desc = createSortDescription();
-//     return std::make_unique<MergeSortingStep>(stream, desc, 0, 0, 0, 0, 0, nullptr, 0, false);
-// }
+QueryPlanStepPtr createMergeSortingStepExt()
+{
+    DataStream stream = createDataStream();
+    SortDescription desc = createSortDescription();
+    return std::make_unique<MergeSortingStepExt>(stream, desc, 0, 0, 0, 0, 0, nullptr, 0);
+}
 
-// todo: liyang
-// QueryPlanStepPtr createLimitStep()
-// {
-//     DataStream stream = createDataStream();
-//     return std::make_unique<LimitStep>(stream, UInt64(0), UInt64(0));
-// }
+QueryPlanStepPtr createLimitStepExt()
+{
+    DataStream stream = createDataStream();
+    return std::make_unique<LimitStepExt>(stream, UInt64(0), UInt64(0));
+}
 
-// todo: liyang
-// QueryPlanStepPtr createLimitByStep()
-// {
-//     DataStream stream = createDataStream();
-//     Names columns;
-//     return std::make_unique<LimitByStep>(stream, 0, 0, columns);
-// }
+QueryPlanStepPtr createLimitByStep()
+{
+    DataStream stream = createDataStream();
+    Names columns;
+    return std::make_unique<LimitByStep>(stream, 0, 0, columns);
+}
 
-// todo: wujianchao
-// QueryPlanStepPtr createFinishSortingStep()
-// {
-//     DataStream stream = createDataStream();
-//     SortDescription desc1 = createSortDescription();
-//     SortDescription desc2 = createSortDescription();
-//     return std::make_unique<FinishSortingStep>(stream, desc1, desc2, 0, 0);
-// }
+QueryPlanStepPtr createFinishSortingStepExt()
+{
+    DataStream stream = createDataStream();
+    SortDescription desc1 = createSortDescription();
+    SortDescription desc2 = createSortDescription();
+    return std::make_unique<FinishSortingStepExt>(stream, desc1, desc2, 0, 0);
+}
 
-// todo: wujianchao
-// QueryPlanStepPtr createFillingStep()
-// {
-//     DataStream stream = createDataStream();
-//     stream.has_single_port = true;
-//     SortDescription desc = createSortDescription();
-//     return std::make_unique<FillingStep>(stream, desc);
-// }
+QueryPlanStepPtr createFillingStep()
+{
+    DataStream stream = createDataStream();
+    stream.has_single_port = true;
+    SortDescription desc1 = createSortDescription();
+    SortDescription desc2 = createSortDescription();
+    return std::make_unique<FillingStep>(stream, desc1, desc2, nullptr, false);
+}
 
-// todo: liyang
-// QueryPlanStepPtr createExtremesStep()
-// {
-//     DataStream stream = createDataStream();
-//     return std::make_unique<ExtremesStep>(stream);
-// }
+QueryPlanStepPtr createExtremesStep()
+{
+    DataStream stream = createDataStream();
+    return std::make_unique<ExtremesStep>(stream);
+}
 
-// todo: liyang
-// QueryPlanStepPtr createDistinctStep()
-// {
-//     DataStream stream = createDataStream();
-//     SizeLimits limits = createSizeLimits();
-//     Names columns;
-//     return std::make_unique<DistinctStep>(stream, limits, 0, columns, false, true);
-// }
+QueryPlanStepPtr createDistinctStepExt()
+{
+    DataStream stream = createDataStream();
+    SizeLimits limits = createSizeLimits();
+    Names columns;
+    return std::make_unique<DistinctStepExt>(stream, limits, 0, columns, false, true, false);
+}
 
-// todo: lizhuoyu
-// QueryPlanStepPtr createUnionStep()
-// {
-//     DataStreams streams;
-//     streams.push_back(createDataStream());
-//     streams.push_back(createDataStream());
-//     return std::make_unique<UnionStep>(streams);
-// }
+QueryPlanStepPtr createUnionStepExt()
+{
+    DataStreams streams;
+    streams.push_back(createDataStream());
+    streams.push_back(createDataStream());
+    return std::make_unique<UnionStepExt>(streams);
+}
 
-// todo: wujianchao
-// QueryPlanStepPtr createMergingAggregatedStep()
-// {
-//     DataStream stream = createDataStream();
-//     AggregatingTransformParamsPtr params = std::make_shared<AggregatingTransformParams>(createAggregatorExtParams(), true);
-//     return std::make_unique<MergingAggregatedStep>(stream, params, false, 0, 0);
-// }
+QueryPlanStepPtr createMergingAggregatedStepExt()
+{
+    DataStream stream = createDataStream();
+    Names keys;
+    GroupingSetsParamsExtList grouping_sets_params;
+    GroupingDescriptions groupings;
+    Aggregator::Params params = createAggregatorParams();
+    SortDescription desc = createSortDescription();
+    return std::make_unique<MergingAggregatedStepExt>(
+        stream, keys, grouping_sets_params, groupings, false, params, false, 0, 0, 0, 0, desc, false);
+}
 
-// todo: liyang
+// todo: hongzhigao1, other feat: if migrate CubeStep or not
 // QueryPlanStepPtr createCubeStep()
 // {
 //     DataStream stream = createDataStream();
-//     AggregatingTransformParamsPtr params = std::make_shared<AggregatingTransformParams>(createAggregatorExtParams(), true);
-//     return std::make_unique<CubeStep>(stream, params);
+//     AggregatingTransformParamsExtPtr params = std::make_shared<AggregatingTransformParamsExt>(createAggregatorExtParams(), true);
+//     return std::make_unique<CubeStep>(stream, params, false, false);
 // }
 
-// todo: liyang
+// todo: hongzhigao1, other feat: if migrate RollupStep or not
 // QueryPlanStepPtr createRollupStep()
 // {
 //     DataStream stream = createDataStream();
-//     AggregatingTransformParamsPtr params = std::make_shared<AggregatingTransformParams>(createAggregatorExtParams(), true);
+//     AggregatingTransformParamsExtPtr params = std::make_shared<AggregatingTransformParamsExt>(createAggregatorExtParams(), true);
 //     return std::make_unique<RollupStep>(stream, params);
 // }
 
 TEST(QueryPlanTest, SimpleStepTest)
 {
-    // TestSingleSimpleStep(createReadNothingStep());
-    // TestSingleSimpleStep(createPartialSortingStep());
-    // TestSingleSimpleStep(createOffsetStep());
-    // TestSingleSimpleStep(createMergeSortingStep());
-    // TestSingleSimpleStep(createMergingSortedStep());
-    // TestSingleSimpleStep(createLimitStep());
-    // TestSingleSimpleStep(createLimitByStep());
-    // TestSingleSimpleStep(createLimitByStep());
-    // TestSingleSimpleStep(createFinishSortingStep());
-    // TestSingleSimpleStep(createFillingStep());
-    // TestSingleSimpleStep(createExtremesStep());
-    // TestSingleSimpleStep(createDistinctStep());
-    // TestSingleSimpleStep(createUnionStep());
+    TestSingleSimpleStep(createReadNothingStep());
+    TestSingleSimpleStep(createPartialSortingStepExt());
+    TestSingleSimpleStep(createOffsetStep());
+    TestSingleSimpleStep(createMergeSortingStepExt());
+    TestSingleSimpleStep(createMergingSortedStepExt());
+    TestSingleSimpleStep(createLimitStepExt());
+    TestSingleSimpleStep(createLimitByStep());
+    TestSingleSimpleStep(createFinishSortingStepExt());
+    TestSingleSimpleStep(createFillingStep());
+    TestSingleSimpleStep(createExtremesStep());
+    TestSingleSimpleStep(createDistinctStepExt());
+    TestSingleSimpleStep(createUnionStepExt());
 
-    // TestSingleSimpleStep(createMergingAggregatedStep());
+    TestSingleSimpleStep(createMergingAggregatedStepExt());
     // TestSingleSimpleStep(createCubeStep());
     // TestSingleSimpleStep(createRollupStep());
 }
@@ -316,54 +337,51 @@ void TestSingleActionsStep(QueryPlanStepPtr step)
     // todo test for others
 }
 
-// todo: liyang
-// QueryPlanStepPtr createExpressionStep()
-// {
-//     DataStream stream = createDataStream();
-//     ActionsDAGPtr actions = createActionsDAG();
+QueryPlanStepPtr createExpressionStep()
+{
+    DataStream stream = createDataStream();
+    ActionsDAGPtr actions = createActionsDAG();
 
-//     return std::make_unique<ExpressionStep>(stream, std::move(actions));
-// }
+    return std::make_unique<ExpressionStep>(stream, std::move(actions));
+}
 
-// todo: wujianchao
-// QueryPlanStepPtr createFilterStep()
-// {
-//     DataStream stream = createDataStream();
-//     ActionsDAGPtr actions = createActionsDAG();
+QueryPlanStepPtr createFilterStepExt()
+{
+    DataStream stream = createDataStream();
+    ActionsDAGPtr actions = createActionsDAG();
 
-//     return std::make_unique<FilterStep>(stream, std::move(actions), "RES", false);
-// }
+    return std::make_unique<FilterStepExt>(stream, std::move(actions), "RES", false);
+}
 
-// todo: liyang
-// QueryPlanStepPtr createTotalsHavingStep()
-// {
-//     DataStream stream = createDataStream();
-//     ActionsDAGPtr actions = createActionsDAG();
+QueryPlanStepPtr createTotalsHavingStepExt()
+{
+    DataStream stream = createDataStream();
+    ActionsDAGPtr actions = createActionsDAG();
 
-//     return std::make_unique<TotalsHavingStep>(stream, false, std::move(actions), "TEST", TotalsMode::AFTER_HAVING_AUTO, 1.0, false);
-// }
+    return std::make_unique<TotalsHavingStepExt>(
+        stream, AggregateDescriptions{}, false, nullptr, std::move(actions), "TEST", false, TotalsMode::AFTER_HAVING_AUTO, 1.0, false);
+}
 
-// todo: liyang
-// QueryPlanStepPtr createArrayJoinStep()
-// {
-//     const auto & context = getContext().context;
+QueryPlanStepPtr createArrayJoinStep()
+{
+    const auto & context = getContext().context;
 
-//     auto val = ColumnUInt32::create();
-//     auto off = ColumnUInt64::create();
+    auto val = ColumnUInt32::create();
+    auto off = ColumnUInt64::create();
 
-//     ColumnsWithTypeAndName columns;
-//     columns.emplace_back(ColumnWithTypeAndName(
-//         ColumnArray::create(std::move(val), std::move(off)), std::make_shared<DataTypeArray>(std::make_shared<DataTypeUInt32>()), "Array"));
+    ColumnsWithTypeAndName columns;
+    columns.emplace_back(ColumnWithTypeAndName(
+        ColumnArray::create(std::move(val), std::move(off)), std::make_shared<DataTypeArray>(std::make_shared<DataTypeUInt32>()), "Array"));
 
-//     return std::make_unique<ArrayJoinStep>(
-//         DataStream{.header = Block(columns)}, std::make_shared<ArrayJoinAction>(NameSet{"Array"}, false, context));
-// }
+    return std::make_unique<ArrayJoinStep>(
+        DataStream{.header = Block(columns)}, std::make_shared<ArrayJoinAction>(NameSet{"Array"}, false, context));
+}
 
 TEST(QueryPlanTest, ActionsStepTest)
 {
-    // TestSingleActionsStep(createExpressionStep());
-    // TestSingleActionsStep(createFilterStep());
-    // TestSingleActionsStep(createTotalsHavingStep());
+    TestSingleActionsStep(createExpressionStep());
+    TestSingleActionsStep(createFilterStepExt());
+    TestSingleActionsStep(createTotalsHavingStepExt());
 
-    // TestSingleActionsStep(createArrayJoinStep());
+    TestSingleActionsStep(createArrayJoinStep());
 }

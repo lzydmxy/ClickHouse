@@ -9,6 +9,12 @@ namespace DB
 class FilterStepExt : public FilterStep
 {
 public:
+    FilterStepExt(
+        const DataStream & input_stream_,
+        ActionsDAGPtr actions_dag_,
+        String filter_column_name_,
+        bool remove_filter_column_);
+
     FilterStepExt(const DataStream & input_stream_, const ConstASTPtr & filter_, bool remove_filter_column_ = true);
 
     const ConstASTPtr & getFilter() const { return filter; }
