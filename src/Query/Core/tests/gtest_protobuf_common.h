@@ -305,13 +305,14 @@ public:
 
         res.function = AggregateFunctionFactory::instance().get("count", NullsAction::EMPTY, {}, {}, properties);
         res.parameters = {};
+        // todo, lizhuoyu5 open
         // generate ColumnNumbers
         // for (int i = 0; i < 2; ++i)
         // res.arguments.emplace_back(eng() % 3);
         // generate Names
         // for (int i = 0; i < 10; ++i)
         // res.argument_names.emplace_back(fmt::format("text{}", eng() % 100));
-        res.column_name = "col_" + std::to_string(i);
+        // res.column_name = "col_" + std::to_string(i);
         res.mask_column = res.column_name;
         return res;
     }
@@ -519,14 +520,14 @@ public:
 
     static Partitioning generatePartitioning(std::default_random_engine & eng)
     {
-        auto handle = static_cast<PartitioningHandle::Enum>(eng() % 3);
+        auto handle = static_cast<Partitioning::Handle>(eng() % 3);
         Names columns;
         for (int i = 0; i < 10; ++i)
             columns.emplace_back(fmt::format("text{}", eng() % 100));
         auto require_handle = eng() % 2 == 1;
         auto buckets = eng() % 1000;
         auto enforce_round_robin = eng() % 2 == 1;
-        auto component = static_cast<Component::Enum>(eng() % 3);
+        auto component = static_cast<Partitioning::Component>(eng() % 3);
         auto result = Partitioning(handle, columns, require_handle, buckets, nullptr, enforce_round_robin, component);
         return result;
     }

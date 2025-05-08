@@ -23,6 +23,10 @@ public:
     PlanNormalizer(PlanNormalizer &&) = default;
     PlanNormalizer(const PlanNormalizer &) = default;
 
+    explicit PlanNormalizer(const CTEInfo & _cte_info, ContextPtr _context): cte_info(_cte_info), context(_context)
+    {
+    }
+
     static PlanNormalizer from(const QueryPlanExt & plan, ContextPtr _context) { return PlanNormalizer(plan.getCTEInfo(), _context); }
 
     QueryPlanStepPtr computeNormalStep(PlanNodePtr node, PlanNormalizerOptions options = {})
@@ -39,7 +43,7 @@ public:
     }
 
 protected:
-    virtual StepAndOutputOrder computeNormalStepImpl(PlanNodePtr node, PlanNormalizerOptions options);
+    StepAndOutputOrder computeNormalStepImpl(PlanNodePtr node, PlanNormalizerOptions options);
 
 private:
     const CTEInfo & cte_info;

@@ -1,3 +1,5 @@
+#pragma once
+
 #pragma clang diagnostic push
 #pragma clang system_header
 #pragma GCC diagnostic ignored "-Wall"
