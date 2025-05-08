@@ -6,7 +6,7 @@
 #include <Parsers/IAST_fwd.h>
 #include <Poco/JSON/Object.h>
 #include <Poco/Logger.h>
-#include <Query/Processors/QueryPlan/QueryPlanExt.h>
+#include <Query/Parsers/ASTHelper.h>
 #include <string>
 
 // helpers for reproducing queries

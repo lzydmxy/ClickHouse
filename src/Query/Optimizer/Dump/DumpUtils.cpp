@@ -2,12 +2,14 @@
 
 #include <Poco/JSON/Object.h>
 #include <Poco/Path.h>
-#include <Poco/Zip/Compress.h>
-#include <Poco/Zip/ZipCommon.h>
+#include <Poco/DirectoryIterator.h>
+#include <IO/Archives/ZipArchiveWriter.h>
 
 #include <filesystem>
 #include <fstream>
 #include <string>
+
+#include "IO/WriteBufferFromFileBase.h"
 
 namespace DB::DumpUtils
 {
@@ -42,10 +44,18 @@ void zipDirectory(const std::string & simplified_path_to_folder)
     Poco::Path src_dir_path{simplified_path_to_folder + '/'};
     src_dir_path.makeDirectory();
     std::ofstream out_stream(simplified_path_to_folder + ".zip", std::ios::binary);
-    Poco::Zip::Compress compress(out_stream, true);
-    compress.addRecursive(src_dir_path, Poco::Zip::ZipCommon::CL_NORMAL);
-    compress.close();
-    out_stream.close();
+    Poco::DirectoryIterator it(src_dir_path);
+    Poco::DirectoryIterator end;
+    ZipArchiveWriter zip_writer(simplified_path_to_folder + ".zip");
+    for (; it != end; ++it)
+    {
+        if (it->isFile())
+        {
+            auto write_buffer = zip_writer.writeFile(it.path().getFileName());
+            write_buffer->finalize();
+        }
+    }
+    zip_writer.finalize();
 }
 
 void createFolder(const std::string & simplified_path_to_folder)

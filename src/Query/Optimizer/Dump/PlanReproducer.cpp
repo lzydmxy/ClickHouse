@@ -58,7 +58,7 @@ namespace
 PlanReproducer::Query PlanReproducer::getQuery(const std::string & query_id)
 {
     if (!queries || !queries->has(query_id))
-        throw Exception(ErrorCodes::LOGICAL_ERROR, "query " + query_id + " is not found in source " + reproduce_path);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "query {} is not found in source {}", query_id, reproduce_path);
     Poco::JSON::Object::Ptr query_json = queries->getObject(query_id);
     if (!query_json)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "invalid query json");
@@ -313,7 +313,7 @@ void PlanReproducer::updateTransaction()
     // auto & txn_coordinator = latest_context->getCnchTransactionCoordinator();
     // TransactionCnchPtr txn = txn_coordinator.createTransaction(CreateTransactionOption().setContext(latest_context));
     // todo wujianchao5 transaction
-    latest_context->setCurrentTransaction(nullptr, true);
+    latest_context->setCurrentTransaction(nullptr);
 }
 
 }

@@ -12,7 +12,7 @@
 #include <Parsers/ASTExplainQuery.h>
 #include <Poco/JSON/Object.h>
 #include <Poco/JSON/Parser.h>
-#include <Poco/Zip/Decompress.h>
+#include <IO/Archives/ZipArchiveReader.h>
 #include <Query/Planner/PlannerExt.h>
 #include <filesystem>
 #include <fstream>
@@ -104,10 +104,14 @@ std::string getFolder(const std::string & file_path)
         std::filesystem::path zip_path = std::filesystem::path(file_path);
         if (!std::filesystem::exists(zip_path))
             throw Exception(ErrorCodes::FILE_NOT_FOUND, "zip file not found: " + file_path);
-        std::ifstream in_stream(file_path, std::ios::binary);
-        Poco::Zip::Decompress decompress(in_stream, folder_path + '/');
-        decompress.decompressAllFiles();
-        in_stream.close();
+        ZipArchiveReader zip_reader(file_path);
+        for (auto & file : zip_reader.getAllFiles())
+        {
+            auto in = zip_reader.readFile(file, /*throw_on_not_found=*/true);
+            WriteBufferFromFile out(file);
+            copyData(*in, out);
+            out.finalize();
+        }
         folder_path = folder_path + '/' + DumpUtils::DUMP_RESULT_FILE;
     }
 
