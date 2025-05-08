@@ -1,24 +1,19 @@
 #include <Query/Optimizer/Dump/ReproduceUtils.h>
-#include <Analyzers/Analysis.h>
-#include <Analyzers/QueryAnalyzer.h>
-#include <Analyzers/QueryRewriter.h>
-#include <Common/ErrorCodes.h>
-#include <Interpreters/InterpreterExplainQuery.h>
+#include <Query/Analyzer/Analysis.h>
+#include <Query/Interpreters/InterpreterExplainQueryExt.h>
 #include <IO/ReadBufferFromString.h>
 #include <IO/WriteBufferFromString.h>
 #include <Query/Optimizer/Dump/DumpUtils.h>
+#include <Query/Parsers/ParserSettings.h>
 #include <Parsers/IAST_fwd.h>
-#include <Parsers/IParserBase.h>
 #include <Parsers/ParserQuery.h>
 #include <Parsers/formatAST.h>
 #include <Parsers/parseQuery.h>
 #include <Parsers/ASTExplainQuery.h>
-#include <Poco/Exception.h>
 #include <Poco/JSON/Object.h>
 #include <Poco/JSON/Parser.h>
 #include <Poco/Zip/Decompress.h>
-#include <QueryPlan/QueryPlanner.h>
-#include <Query/Processors/QueryPlan/QueryPlanExt.h>
+#include <Query/Planner/PlannerExt.h>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -36,9 +31,15 @@ ASTPtr parse(const std::string & query, ContextPtr query_context)
     const char * begin = query.data();
     const char * end = begin + query.size();
 
-    ParserQuery parser(end, ParserSettings::valueOf(query_context->getSettingsRef()));
-    return parseQuery(parser, begin, end,
-                      "", query_context->getSettingsRef().max_query_size, query_context->getSettingsRef().max_parser_depth);
+    ParserQuery parser(end, false);
+    return parseQuery(
+        parser,
+        begin,
+        end,
+        "",
+        query_context->getSettingsRef().max_query_size,
+        query_context->getSettingsRef().max_parser_depth,
+        query_context->getSettingsRef().max_parser_backtracks);
 }
 
 void executeDDL(ConstASTPtr query, ContextMutablePtr query_context)
@@ -48,8 +49,8 @@ void executeDDL(ConstASTPtr query, ContextMutablePtr query_context)
     ReadBufferFromString is1(query_str);
     WriteBufferFromString os1(res);
 
-    query_context->setCurrentTransaction(nullptr, false);
-    DB::executeQuery(is1, os1, false, query_context, {}, {}, true);
+    query_context->setCurrentTransaction(nullptr);
+    executeQuery(is1, os1, false, query_context, {}, {}, std::nullopt);
 }
 
 std::string obtainExplainString(const std::string & select_query, ContextMutablePtr query_context)
@@ -57,7 +58,7 @@ std::string obtainExplainString(const std::string & select_query, ContextMutable
     ASTPtr ast = parse(select_query, query_context);
     auto explain_query = std::make_shared<ASTExplainQuery>(ASTExplainQuery::QueryPlan);
     explain_query->setExplainedQuery(ast);
-    InterpreterExplainQuery interpreter(explain_query, query_context);
+    InterpreterExplainQueryExt interpreter(explain_query, query_context);
     auto explain_result = interpreter.execute().getInputStream();
     Block explain_block = explain_result->read();
     while (explain_block && !explain_block.rows())
@@ -66,7 +67,7 @@ std::string obtainExplainString(const std::string & select_query, ContextMutable
     }
     if (!explain_block.rows())
     {
-        throw Exception("explain result is empty", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "explain result is empty");
     }
     // there is only one block with one column
     const auto & column = *(explain_block.getByPosition(0).column);
@@ -102,7 +103,7 @@ std::string getFolder(const std::string & file_path)
     {
         std::filesystem::path zip_path = std::filesystem::path(file_path);
         if (!std::filesystem::exists(zip_path))
-            throw Exception("zip file not found: " + file_path, ErrorCodes::FILE_NOT_FOUND);
+            throw Exception(ErrorCodes::FILE_NOT_FOUND, "zip file not found: " + file_path);
         std::ifstream in_stream(file_path, std::ios::binary);
         Poco::Zip::Decompress decompress(in_stream, folder_path + '/');
         decompress.decompressAllFiles();
@@ -117,7 +118,7 @@ Poco::JSON::Object::Ptr readJsonFromAbsolutePath(const std::string & absolute_pa
 {
     std::filesystem::path file_path(absolute_path);
     if (!std::filesystem::exists(file_path))
-        throw Exception("file not found: " + absolute_path, ErrorCodes::FILE_NOT_FOUND);
+        throw Exception(ErrorCodes::FILE_NOT_FOUND, "file not found: " + absolute_path);
     std::ifstream fin(file_path);
     std::stringstream buffer;
     buffer << fin.rdbuf();

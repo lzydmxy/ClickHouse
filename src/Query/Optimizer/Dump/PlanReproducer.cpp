@@ -1,24 +1,25 @@
 #include <Query/Optimizer/Dump/PlanReproducer.h>
 
-#include <Common/SettingsChanges.h>
 #include <Core/QualifiedTableName.h>
 #include <Core/UUID.h>
 #include <Interpreters/Context_fwd.h>
 #include <Interpreters/DatabaseCatalog.h>
+#include <Parsers/ASTCreateQuery.h>
+#include <Parsers/ASTDropQuery.h>
+#include <Parsers/ASTFunction.h>
+#include <Parsers/IAST_fwd.h>
 #include <Query/Optimizer/Dump/DumpUtils.h>
 #include <Query/Optimizer/Dump/ReproduceUtils.h>
 #include <Query/Optimizer/Dump/StatsLoader.h>
-#include <Parsers/IAST_fwd.h>
-#include <Query/Parsers/ASTCreateQuery.h>
-#include <Query/Parsers/ASTDropQuery.h>
 #include <Poco/JSON/Object.h>
 #include <Poco/Logger.h>
+#include <Common/SettingsChanges.h>
 
 #include <string>
 #include <optional>
 #include <unordered_map>
 
-using namespace DB::Statistics;
+using namespace DB::QueryStatistics;
 using namespace DB::DumpUtils;
 
 namespace DB
@@ -57,10 +58,10 @@ namespace
 PlanReproducer::Query PlanReproducer::getQuery(const std::string & query_id)
 {
     if (!queries || !queries->has(query_id))
-        throw Exception("query " + query_id + " is not found in source " + reproduce_path, ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "query " + query_id + " is not found in source " + reproduce_path);
     Poco::JSON::Object::Ptr query_json = queries->getObject(query_id);
     if (!query_json)
-        throw Exception("invalid query json", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "invalid query json");
     return Query{query_id,
                  tryGetQueryInfo(query_json, QueryInfo::query).value(),
                  tryGetQueryInfo(query_json, QueryInfo::current_database).value(),
@@ -134,11 +135,11 @@ void PlanReproducer::createTable(const std::string & ddl)
         return;
     }
 
-    std::string database_name = create->database;
+    std::string database_name = create->getDatabase();
     if (database_name.empty())
         database_name = latest_context->getCurrentDatabase();
 
-    std::string table_name = create->table;
+    std::string table_name = create->getTable();
 
     QualifiedTableName qualified_table{database_name, table_name};
 
@@ -194,7 +195,7 @@ void PlanReproducer::createDatabase(const std::string & database_name)
         return;
     }
 
-    if (DatabaseCatalog::instance().isDatabaseExist(database_name, latest_context))
+    if (DatabaseCatalog::instance().isDatabaseExist(database_name))
     {
         LOG_DEBUG(log, "using existing database {}", database_name);
         database_status[database_name] = ReproduceUtils::DDLStatus::reused;
@@ -203,7 +204,7 @@ void PlanReproducer::createDatabase(const std::string & database_name)
 
     auto create = std::make_shared<ASTCreateQuery>();
     create->uuid = UUIDHelpers::Nil;
-    create->database = database_name;
+    create->setDatabase(database_name);
     if (cluster)
         create->cluster = cluster.value();
 
@@ -227,7 +228,7 @@ ContextMutablePtr PlanReproducer::makeQueryContext(
 
     if (database_name.has_value())
     {
-        if (!DatabaseCatalog::instance().isDatabaseExist(database_name.value(), latest_context))
+        if (!DatabaseCatalog::instance().isDatabaseExist(database_name.value()))
             createDatabase(database_name.value());
         query_context->setCurrentDatabase(database_name.value());
     }
@@ -237,9 +238,9 @@ ContextMutablePtr PlanReproducer::makeQueryContext(
         SettingsChanges memory_catalog = {{"enable_memory_catalog", true}, {"memory_catalog_worker_size", memory_catalog_worker_size.value()}};
         query_context->applySettingsChanges(memory_catalog); // note: use the vector version
     }
-    query_context->createPlanNodeIdAllocator();
-    query_context->createSymbolAllocator();
-    query_context->createOptimizerMetrics();
+    query_context->getOptimizerContext()->createPlanNodeIdAllocator();
+    query_context->getOptimizerContext()->createSymbolAllocator();
+    query_context->getOptimizerContext()->createOptimizerMetrics();
     query_context->makeQueryContext();
 
     return query_context;
@@ -247,7 +248,7 @@ ContextMutablePtr PlanReproducer::makeQueryContext(
 
 void PlanReproducer::dropDatabase(const std::string & database_name)
 {
-    if (!DatabaseCatalog::instance().isDatabaseExist(database_name, latest_context))
+    if (!DatabaseCatalog::instance().isDatabaseExist(database_name))
     {
         LOG_DEBUG(log, "database {} is already dropped", database_name);
         return;
@@ -260,7 +261,7 @@ void PlanReproducer::dropDatabase(const std::string & database_name)
     }
 
     auto drop = std::make_shared<ASTDropQuery>();
-    drop->database = database_name;
+    drop->setDatabase(database_name);
     if (cluster)
         drop->cluster = cluster.value();
 
@@ -273,7 +274,7 @@ void PlanReproducer::dropDatabase(const std::string & database_name)
 
 void PlanReproducer::dropTable(const QualifiedTableName & table)
 {
-    if (!DatabaseCatalog::instance().isDatabaseExist(table.database, latest_context))
+    if (!DatabaseCatalog::instance().isDatabaseExist(table.database))
     {
         LOG_DEBUG(log, "database {} is already dropped", table.database);
         return;
@@ -293,8 +294,8 @@ void PlanReproducer::dropTable(const QualifiedTableName & table)
     }
 
     auto drop = std::make_shared<ASTDropQuery>();
-    drop->database = table.database;
-    drop->table = table.table;
+    drop->setDatabase(table.database);
+    drop->setTable(table.table);
     if (cluster)
         drop->cluster = cluster.value();
 
@@ -309,9 +310,10 @@ void PlanReproducer::updateTransaction()
 {
     if (!latest_context->getCurrentTransaction())
         return;
-    auto & txn_coordinator = latest_context->getCnchTransactionCoordinator();
-    TransactionCnchPtr txn = txn_coordinator.createTransaction(CreateTransactionOption().setContext(latest_context));
-    latest_context->setCurrentTransaction(txn, true);
+    // auto & txn_coordinator = latest_context->getCnchTransactionCoordinator();
+    // TransactionCnchPtr txn = txn_coordinator.createTransaction(CreateTransactionOption().setContext(latest_context));
+    // todo wujianchao5 transaction
+    latest_context->setCurrentTransaction(nullptr, true);
 }
 
 }

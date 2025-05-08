@@ -3,6 +3,7 @@
 #include <Interpreters/Context.h>
 #include <Interpreters/Context_fwd.h>
 #include <Poco/JSON/Object.h>
+#include <Query/Common/OptimizerContext.h>
 
 using namespace DB::DumpUtils;
 
@@ -17,9 +18,9 @@ ContextMutablePtr QueryDumper::Query::buildQueryContextFrom(ContextPtr context) 
         query_context->applySettingsChanges(settings->changes());
     }
     query_context->setCurrentDatabase(current_database);
-    query_context->createPlanNodeIdAllocator();
-    query_context->createSymbolAllocator();
-    query_context->createOptimizerMetrics();
+    query_context->getOptimizerContext()->createPlanNodeIdAllocator();
+    query_context->getOptimizerContext()->createSymbolAllocator();
+    query_context->getOptimizerContext()->createOptimizerMetrics();
     query_context->makeQueryContext();
     return query_context;
 }
@@ -37,6 +38,7 @@ Poco::JSON::Object::Ptr QueryDumper::getJsonDumpResult()
         {
             Poco::JSON::Object::Ptr settings_change(new Poco::JSON::Object);
             query.settings->dumpToJSON(*settings_change);
+            // todo wujianchao dump optimizer settings
             query_object->set(toString(QueryInfo::settings), settings_change);
         }
         for (const auto & info : query.info)

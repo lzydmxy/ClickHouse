@@ -7,7 +7,7 @@
 #include <Query/Optimizer/Dump/DumpUtils.h>
 #include <Query/Optimizer/Dump/ReproduceUtils.h>
 #include <Poco/JSON/Object.h>
-#include <Poco/Logger.h>
+#include <Interpreters/Context.h>
 
 #include <string>
 #include <optional>

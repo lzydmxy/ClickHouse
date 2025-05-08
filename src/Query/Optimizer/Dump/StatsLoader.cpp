@@ -11,7 +11,7 @@
 #include <Common/logger_useful.h>
 #include <Query/Statistics/CollectorSettings.h>
 
-using namespace DB::Statistics;
+using namespace DB::QueryStatistics;
 
 namespace DB
 {
