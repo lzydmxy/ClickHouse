@@ -82,6 +82,16 @@ void Settings::dumpToMapColumn(IColumn * column, bool changed_only)
     offsets.push_back(offsets.back() + size);
 }
 
+void Settings::dumpToJSON(Poco::JSON::Object & dumpJson) const
+{
+    for (const auto & setting : all(SKIP_UNCHANGED))
+    {
+        auto name = setting.getName();
+        auto value = setting.getValueString();
+        dumpJson.set(name, value);
+    }
+}
+
 void Settings::checkNoSettingNamesAtTopLevel(const Poco::Util::AbstractConfiguration & config, const String & config_path)
 {
     if (config.getBool("skip_check_for_incorrect_settings", false))

@@ -5,7 +5,7 @@
 #include <Core/BaseSettings.h>
 #include <Core/SettingsEnums.h>
 #include <Poco/Util/AbstractConfiguration.h>
-#include <IO/WriteBufferFromString.h>
+#include <Poco/JSON/Object.h>
 
 namespace DB
 {
@@ -537,6 +537,16 @@ struct OptimizerSettings : public BaseSettings<OptimizerSettingsTraits>
             res.emplace(field.getName(), field.getValueString());
         }
         return res;
+    }
+
+    void dumpToJSON(Poco::JSON::Object & dumpJson) const
+    {
+        for (const auto & setting : all(SKIP_UNCHANGED))
+        {
+            auto name = setting.getName();
+            auto value = setting.getValueString();
+            dumpJson.set(name, value);
+        }
     }
 };
 

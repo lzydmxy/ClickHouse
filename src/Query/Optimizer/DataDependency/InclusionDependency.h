@@ -32,7 +32,8 @@ public:
         for (const auto & [cur_name, inclusion_element] : *this)
         {
             ostr << "\n\tcur_name=" + cur_name;
-            ostr << ", is_included=" + std::to_string(inclusion_element.first) + ", original_name=" + inclusion_element.second;
+            ostr << ", is_included=" + inclusion_element.first;
+            ostr << ", original_name=" + inclusion_element.second;
         }
         return ostr.str();
     }

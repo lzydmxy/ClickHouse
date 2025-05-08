@@ -6,6 +6,7 @@
 #include <Core/Defines.h>
 #include <IO/ReadSettings.h>
 #include <base/unit.h>
+#include <Poco/JSON/Object.h>
 
 
 namespace Poco::Util
@@ -1236,6 +1237,8 @@ struct Settings : public BaseSettings<SettingsTraits>, public IHints<2>
 
     /// Dumps profile events to column of type Map(String, String)
     void dumpToMapColumn(IColumn * column, bool changed_only = true);
+
+    void dumpToJSON(Poco::JSON::Object & dumpJson) const;
 
     /// Check that there is no user-level settings at the top level in config.
     /// This is a common source of mistake (user don't know where to write user-level setting).
