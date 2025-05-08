@@ -71,10 +71,7 @@ public:
         // CREATE_PLAN_NODE(Any)
         // CREATE_PLAN_NODE(MultiJoin)
 #undef CREATE_PLAN_NODE
-
-        // PlanNodePtr plan_node;
-        //todo: hongzhigao, need optimizer: Statistics
-        // plan_node->setStatistics(statistics_);
+        plan_node->setStatistics(statistics_);
         return plan_node;
     }
 
@@ -106,13 +103,10 @@ public:
     void setStep(StepPtr & step_) { step = step_; }
     const DataStream & getCurrentDataStream() const override { return step->getOutputStream(); }
 
-    //todo: hongzhigao, need optimizer: Statistics
-    //static PlanNodePtr createPlanNode(PlanNodeId id_, StepPtr step_, const PlanNodes & children_ = {}, const PlanNodeStatisticsEstimate & statistics_ = {})
-    static PlanNodePtr createPlanNode(PlanNodeId id_, StepPtr step_, const PlanNodes & children_ = {})
+    static PlanNodePtr createPlanNode(PlanNodeId id_, StepPtr step_, const PlanNodes & children_ = {}, const PlanNodeStatisticsEstimate & statistics_ = {})
     {
         PlanNodePtr plan_node = std::make_shared<PlanNode<Step>>(id_, std::move(step_), children_);
-        //todo: hongzhigao, need optimizer: Statistics
-        //plan_node->setStatistics(statistics_);
+        plan_node->setStatistics(statistics_);
         return plan_node;
     }
 
