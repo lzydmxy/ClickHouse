@@ -12,6 +12,8 @@
 namespace DB
 {
 
+namespace
+{
 UInt64 getMaxRowsToUseTopnFiltering(const ContextPtr & context)
 {
     UInt64 res = context->getOptimizerContext()->getSettingsRef().max_rows_to_use_topn_filtering;
@@ -44,6 +46,7 @@ bool createTopNFilteringForAggLike( PlanNodePtr cur_node, const NameSet & agg_ke
     cur_node->replaceChildren(PlanNodes{topn_filter_node});
 
     return true;
+}
 }
 
 ConstRefPatternPtr CreateTopNFilteringForAggregating::getPattern() const

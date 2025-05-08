@@ -19,10 +19,9 @@ class PlanNormalizer
 {
 public:
     using NormalSteps = std::unordered_map<PlanNodePtr, StepAndOutputOrder>;
-    ~PlanNormalizer() = default;
+    virtual ~PlanNormalizer() = default;
     PlanNormalizer(PlanNormalizer &&) = default;
     PlanNormalizer(const PlanNormalizer &) = default;
-
     explicit PlanNormalizer(const CTEInfo & _cte_info, ContextPtr _context): cte_info(_cte_info), context(_context)
     {
     }

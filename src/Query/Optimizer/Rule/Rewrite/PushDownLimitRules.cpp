@@ -320,7 +320,7 @@ ConstRefPatternPtr PushLimitThroughBuffer::getPattern() const
     return pattern;
 }
 
-TransformResult PushLimitThroughBuffer::transformImpl(PlanNodePtr node, const Captures & /*captures*/, RuleContext & /*context*/)
+TransformResult PushLimitThroughBuffer::transformImpl(PlanNodePtr node, const Captures &, RuleContext &)
 {
     auto buffer = node->getChildren()[0];
     node->replaceChildren({buffer->getChildren()[0]});

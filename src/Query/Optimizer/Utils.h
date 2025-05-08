@@ -101,7 +101,6 @@ Map<V, K> reverseMap(const Map<K, V> & map)
     return reversed;
 }
 
-std::string getVersionFromSystem();
 }
 
 }

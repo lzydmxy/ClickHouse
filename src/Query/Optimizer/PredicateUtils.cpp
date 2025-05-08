@@ -712,6 +712,15 @@ template ASTPtr PredicateUtils::combineDisjuncts<false, InlineASTs>(const Inline
 template ASTPtr PredicateUtils::combineDisjuncts<true, InlineConstASTs>(const InlineConstASTs & predicates);
 template ASTPtr PredicateUtils::combineDisjuncts<false, InlineConstASTs>(const InlineConstASTs & predicates);
 
+template ASTPtr PredicateUtils::combineConjuncts<true, std::vector<ASTPtr>>(const std::vector<ASTPtr> & predicates);
+template ASTPtr PredicateUtils::combineConjuncts<false, std::vector<ASTPtr>>(const std::vector<ASTPtr> & predicates);
+template ASTPtr PredicateUtils::combineConjuncts<true, std::vector<ConstASTPtr>>(const std::vector<ConstASTPtr> & predicates);
+template ASTPtr PredicateUtils::combineConjuncts<false, std::vector<ConstASTPtr>>(const std::vector<ConstASTPtr> & predicates);
+template ASTPtr PredicateUtils::combineDisjuncts<true, std::vector<ASTPtr>>(const std::vector<ASTPtr> & predicates);
+template ASTPtr PredicateUtils::combineDisjuncts<false, std::vector<ASTPtr>>(const std::vector<ASTPtr> & predicates);
+template ASTPtr PredicateUtils::combineDisjuncts<true, std::vector<ConstASTPtr>>(const std::vector<ConstASTPtr> & predicates);
+template ASTPtr PredicateUtils::combineDisjuncts<false, std::vector<ConstASTPtr>>(const std::vector<ConstASTPtr> & predicates);
+
 template ASTPtr PredicateUtils::combineDisjunctsWithDefault<true, InlineASTs>(const InlineASTs & predicates,
     const ASTPtr & default_ast);
 template ASTPtr PredicateUtils::combineDisjunctsWithDefault<false, InlineASTs>(const InlineASTs & predicates,

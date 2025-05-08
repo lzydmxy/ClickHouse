@@ -301,11 +301,5 @@ std::optional<NameToType> extractNameToType(const PlanNodeBase & node)
     return res;
 }
 
-std::string getVersionFromSystem()
-{
-    if(build_version != nullptr && build_version[0] != '\0')
-        return std::string(build_version);
-    return "";
-}
 }
 }

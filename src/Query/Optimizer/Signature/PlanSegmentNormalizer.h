@@ -2,7 +2,6 @@
 
 #include <Query/Optimizer/Signature/PlanNormalizer.h>
 #include <Query/Processors/QueryPlan/CTEInfo.h>
-#include <Query/Processors/QueryPlan/QueryPlanExt.h>
 
 namespace DB
 {

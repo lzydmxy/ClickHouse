@@ -25,6 +25,7 @@
 #include <Query/Parsers/ASTTableColumnReference.h>
 #include <Parsers/formatAST.h>
 #include <Query/Statistics/TypeUtils.h>
+#include <Query/Interpreters/ActionsVisitorExt.h>
 #include <Poco/String.h>
 #include <Common/FieldVisitorConvertToNumber.h>
 #include "Interpreters/PreparedSets.h"

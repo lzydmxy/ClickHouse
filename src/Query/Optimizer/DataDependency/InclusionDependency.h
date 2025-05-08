@@ -31,9 +31,9 @@ public:
         std::ostringstream ostr;
         for (const auto & [cur_name, inclusion_element] : *this)
         {
-            ostr << "\n\tcur_name=" + cur_name;
-            ostr << ", is_included=" + inclusion_element.first;
-            ostr << ", original_name=" + inclusion_element.second;
+            ostr << "\n\tcur_name=" << cur_name;
+            ostr << ", is_included=" << inclusion_element.first;
+            ostr << ", original_name=" << inclusion_element.second;
         }
         return ostr.str();
     }
