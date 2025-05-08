@@ -27,7 +27,7 @@ using namespace DB::DumpUtils;
 
 namespace DB
 {
-using namespace Statistics;
+using namespace QueryStatistics;
 
 void DDLDumper::addTable(const std::string & database_name, const std::string & table_name, ContextPtr context)
 {
@@ -44,7 +44,7 @@ void DDLDumper::addTable(const QualifiedTableName & qualified_table, ContextPtr 
     const auto & database = qualified_table.database;
     const auto & table = qualified_table.table;
 
-    if (!DatabaseCatalog::instance().isDatabaseExist(database, context)) {
+    if (!DatabaseCatalog::instance().isDatabaseExist(database)) {
         LOG_WARNING(log, "database {} not found", database);
         return;
     }
@@ -73,7 +73,7 @@ void DDLDumper::addTable(const QualifiedTableName & qualified_table, ContextPtr 
     else if (auto materialized_view = dynamic_pointer_cast<const StorageMaterializedView>(storage))
     {
         // for mv, we need to redirect the create-statement to its inner table if not already done
-        ASTPtr inner_query = materialized_view->getInnerQuery();
+        ASTPtr inner_query = materialized_view->getInMemoryMetadataPtr()->select.inner_query->clone();
         addTableFromSelectQuery(inner_query, context);
         auto target_id = materialized_view->getTargetTableId();
         addTable(target_id.getQualifiedName(), context);
@@ -135,7 +135,7 @@ std::optional<size_t> DDLDumper::addTableFromSelectQuery(ASTPtr query_ptr, Conte
         return shard_count;
     }
 
-    throw Exception("Dump only supports select query", ErrorCodes::LOGICAL_ERROR);
+    throw Exception(ErrorCodes::LOGICAL_ERROR, "Dump only supports select query");
 }
 
 std::optional<size_t> DDLDumper::addTableFromAST(ASTPtr ast, ContextPtr context, const NameSet & with_tables_context)
@@ -220,7 +220,7 @@ void DDLDumper::addTableFromDatabase(const std::string & database_name, ContextP
 
 void DDLDumper::addTableAll(ContextPtr context)
 {
-    Databases databases = DatabaseCatalog::instance().getDatabases(context);
+    Databases databases = DatabaseCatalog::instance().getDatabases();
     for (const auto & elem : databases)
     {
         if (elem.first != DatabaseCatalog::SYSTEM_DATABASE)
@@ -269,14 +269,14 @@ void DDLDumper::dumpStats(const std::optional<std::string> & absolute_path)
 Poco::JSON::Object::Ptr DDLDumper::getTableStats(const std::string & database_name, const std::string & table_name, ContextPtr context)
 {
     Poco::JSON::Object::Ptr json(new Poco::JSON::Object);
-    auto catalog = Statistics::createCatalogAdaptor(context);
+    auto catalog = QueryStatistics::createCatalogAdaptor(context);
     auto table_id = catalog->getTableIdByName(database_name, table_name);
     if (!table_id)
         return json;
 
     try
     {
-        Statistics::StatisticsCollector collector(context, catalog, table_id.value(), CollectorSettings{});
+        QueryStatistics::StatisticsCollector collector(context, catalog, table_id.value(), CollectorSettings{});
         collector.readAllFromCatalog();
         auto table_collection = collector.getTableStats().writeToCollection();
         if (table_collection.empty())
@@ -284,7 +284,7 @@ Poco::JSON::Object::Ptr DDLDumper::getTableStats(const std::string & database_na
 
         for (auto & [table_tag, table_stats] : table_collection)
         {
-            if (table_tag != Statistics::StatisticsTag::Invalid)
+            if (table_tag != QueryStatistics::StatisticsTag::Invalid)
                 json->set(ProtoEnumUtils::statisticsTagToString(table_tag),
                           Poco::JSON::Parser().parse(table_stats->serializeToJson())); // todo: may not need to parse
         }
@@ -299,7 +299,7 @@ Poco::JSON::Object::Ptr DDLDumper::getTableStats(const std::string & database_na
             Poco::JSON::Object::Ptr column_json(new Poco::JSON::Object);
             for (auto & [column_tag, column_stats] : column_collection)
             {
-                if (column_tag != Statistics::StatisticsTag::Invalid)
+                if (column_tag != QueryStatistics::StatisticsTag::Invalid)
                     column_json->set(
                         ProtoEnumUtils::statisticsTagToString(column_tag),
                         Poco::JSON::Parser().parse(column_stats->serializeToJson()));
