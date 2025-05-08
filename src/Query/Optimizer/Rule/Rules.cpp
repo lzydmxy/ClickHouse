@@ -1,11 +1,11 @@
 
 // todo: lizhuoyu5, add Rule in Rewrite
 // #include <memory>
-// #include <Query/Optimizer/Rule/Rules.h>
+#include <Query/Optimizer/Rule/Rules.h>
 //
 // #include <Query/Optimizer/Rewriter/RemoveApply.h>
 // #include <Query/Optimizer/Rule/Rewrite/CrossJoinToUnion.h>
-// #include <Query/Optimizer/Rule/Rewrite/AddRepartitionColumn.h>
+#include <Query/Optimizer/Rule/Rewrite/AddRepartitionColumn.h>
 // #include <Query/Optimizer/Rule/Rewrite/DistinctToAggregate.h>
 // #include <Query/Optimizer/Rule/Rewrite/EagerAggregation.h>
 // #include <Query/Optimizer/Rule/Rewrite/ExplainAnalyzeRules.h>
@@ -20,22 +20,22 @@
 // #include <Query/Optimizer/Rule/Rewrite/PullProjectionOnJoinThroughJoin.h>
 // #include <Query/Optimizer/Rule/Rewrite/PushAggThroughJoinRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/PushDownApplyRules.h>
-// #include <Query/Optimizer/Rule/Rewrite/PushDownLimitRules.h>
+#include <Query/Optimizer/Rule/Rewrite/PushDownLimitRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/PushIntoTableScanRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/PushPartialStepThroughExchangeRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/PushProjectionRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/PushThroughExchangeRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/PushUnionThroughJoin.h>
-// #include <Query/Optimizer/Rule/Rewrite/RemoveRedundantRules.h>
-// #include <Query/Optimizer/Rule/Rewrite/SimplifyExpressionRules.h>
+#include <Query/Optimizer/Rule/Rewrite/RemoveRedundantRules.h>
+#include <Query/Optimizer/Rule/Rewrite/SimplifyExpressionRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/SingleDistinctAggregationToGroupBy.h>
 // #include <Query/Optimizer/Rule/Rewrite/SumIfToCountIf.h>
 // #include <Query/Optimizer/Rule/Rewrite/SwapAdjacentRules.h>
-// #include <Query/Optimizer/Rule/Rewrite/TopNRules.h>
+#include <Query/Optimizer/Rule/Rewrite/TopNRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/JoinUsingToJoinOn.h>
-//
-// namespace DB
-// {
+
+namespace DB
+{
 // std::vector<RulePtr> Rules::mergeSetRules()
 // {
 //     return {std::make_shared<MergeUnionRule>(), std::make_shared<MergeIntersectRule>(), std::make_shared<MergeExceptRule>()};
@@ -45,12 +45,12 @@
 // {
 //     return {std::make_shared<ImplementIntersectRule>(), std::make_shared<ImplementExceptRule>()};
 // }
-//
-// std::vector<RulePtr> Rules::normalizeExpressionRules()
-// {
-//     return {std::make_shared<CommonPredicateRewriteRule>(), std::make_shared<CommonJoinFilterRewriteRule>()};
-// }
-//
+
+std::vector<RulePtr> Rules::normalizeExpressionRules()
+{
+    return {std::make_shared<CommonPredicateRewriteRule>(), std::make_shared<CommonJoinFilterRewriteRule>()};
+}
+
 // std::vector<RulePtr> Rules::swapPredicateRules()
 // {
 //     return {std::make_shared<SwapPredicateRewriteRule>()};
@@ -60,17 +60,17 @@
 // {
 //     return {std::make_shared<SumIfToCountIf>()};
 // }
-//
-// std::vector<RulePtr> Rules::simplifyExpressionRules()
-// {
-//     return {
-//         std::make_shared<SimplifyPredicateRewriteRule>(),
-//         std::make_shared<UnWarpCastInPredicateRewriteRule>(),
-//         std::make_shared<SimplifyJoinFilterRewriteRule>(),
-//         std::make_shared<SimplifyExpressionRewriteRule>(),
-//         std::make_shared<MergePredicatesUsingDomainTranslator>()};
-// }
-//
+
+std::vector<RulePtr> Rules::simplifyExpressionRules()
+{
+    return {
+        std::make_shared<SimplifyPredicateRewriteRule>(),
+        std::make_shared<UnWarpCastInPredicateRewriteRule>(),
+        std::make_shared<SimplifyJoinFilterRewriteRule>(),
+        std::make_shared<SimplifyExpressionRewriteRule>(),
+        std::make_shared<MergePredicatesUsingDomainTranslator>()};
+}
+
 // std::vector<RulePtr> Rules::inlineProjectionRules()
 // {
 //     // todo@kaixi: remove InlineProjectionIntoJoin
@@ -99,42 +99,42 @@
 //     return {std::make_shared<OptimizeMemoryEfficientAggregation>()};
 // }
 //
-// std::vector<RulePtr> Rules::removeRedundantRules()
-// {
-//     return {
-//         std::make_shared<RemoveRedundantFilter>(),
-//         std::make_shared<RemoveRedundantProjection>(),
-//         std::make_shared<RemoveRedundantEnforceSingleRow>(),
-//         std::make_shared<RemoveRedundantUnion>(),
-//         std::make_shared<RemoveRedundantCrossJoin>(),
-//         std::make_shared<RemoveRedundantJoin>(),
-//         std::make_shared<RemoveRedundantLimit>(),
-//         // std::make_shared<RemoveRedundantOuterJoin>()
-//         std::make_shared<RemoveRedundantTwoApply>(),
-//         std::make_shared<RemoveRedundantAggregateWithReadNothing>(),
-//     };
-// }
-//
+std::vector<RulePtr> Rules::removeRedundantRules()
+{
+    return {
+        std::make_shared<RemoveRedundantFilter>(),
+        std::make_shared<RemoveRedundantProjection>(),
+        std::make_shared<RemoveRedundantEnforceSingleRow>(),
+        std::make_shared<RemoveRedundantUnion>(),
+        std::make_shared<RemoveRedundantCrossJoin>(),
+        std::make_shared<RemoveRedundantJoin>(),
+        std::make_shared<RemoveRedundantLimit>(),
+        // std::make_shared<RemoveRedundantOuterJoin>()
+        std::make_shared<RemoveRedundantTwoApply>(),
+        std::make_shared<RemoveRedundantAggregateWithReadNothing>(),
+    };
+}
+
 // std::vector<RulePtr> Rules::pushAggRules()
 // {
 //     return {std::make_shared<PushAggThroughOuterJoin>(), std::make_shared<EagerAggregation>()};
 // }
 //
-// std::vector<RulePtr> Rules::pushDownLimitRules()
-// {
-//     return {
-//         std::make_shared<LimitZeroToReadNothing>(),
-//         std::make_shared<PushLimitIntoDistinct>(),
-//         std::make_shared<PushLimitThroughProjection>(),
-//         std::make_shared<PushLimitThroughExtremesStep>(),
-//         std::make_shared<PushLimitThroughOuterJoin>(),
-//         std::make_shared<PushLimitThroughUnion>(),
-//         std::make_shared<PushdownLimitIntoWindow>(),
-//         std::make_shared<PushTopNThroughProjection>(),
-//         std::make_shared<PushSortThroughProjection>(),
-//         std::make_shared<PushLimitIntoSorting>()};
-// }
-//
+std::vector<RulePtr> Rules::pushDownLimitRules()
+{
+    return {
+        std::make_shared<LimitZeroToReadNothing>(),
+        std::make_shared<PushLimitIntoDistinct>(),
+        std::make_shared<PushLimitThroughProjection>(),
+        std::make_shared<PushLimitThroughExtremesStep>(),
+        std::make_shared<PushLimitThroughOuterJoin>(),
+        std::make_shared<PushLimitThroughUnion>(),
+        std::make_shared<PushdownLimitIntoWindow>(),
+        std::make_shared<PushTopNThroughProjection>(),
+        std::make_shared<PushSortThroughProjection>(),
+        std::make_shared<PushLimitIntoSorting>()};
+}
+
 // std::vector<RulePtr> Rules::distinctToAggregateRules()
 // {
 //     return {
@@ -188,11 +188,11 @@
 //     return {std::make_shared<ExplainAnalyze>()};
 // }
 //
-// std::vector<RulePtr> Rules::pushDownTopNRules()
-// {
-//     return {std::make_shared<PushTopNThroughProjection>(), std::make_shared<PushSortThroughProjection>()};
-// }
-//
+std::vector<RulePtr> Rules::pushDownTopNRules()
+{
+    return {std::make_shared<PushTopNThroughProjection>(), std::make_shared<PushSortThroughProjection>()};
+}
+
 // std::vector<RulePtr> Rules::createTopNFilteringRules()
 // {
 //     return {
@@ -237,12 +237,12 @@
 // {
 //     return {std::make_shared<PushUnionThroughJoin>(), std::make_shared<PushUnionThroughProjection>()};
 // }
-//
-// std::vector<RulePtr> Rules::addRepartitionColumn()
-// {
-//     return {std::make_shared<AddRepartitionColumn>()};
-// }
-//
+
+std::vector<RulePtr> Rules::addRepartitionColumn()
+{
+    return {std::make_shared<AddRepartitionColumn>()};
+}
+
 // std::vector<RulePtr> Rules::joinUsingToJoinOn()
 // {
 //     return {std::make_shared<JoinUsingToJoinOn>()};
@@ -257,5 +257,5 @@
 // {
 //     return {std::make_shared<PushPartialTopNDistinctThroughExchange>()};
 // }
-//
-// }
+
+}

@@ -20,7 +20,7 @@ void checkArgument(bool expression, const String & msg);
 bool isIdentity(const String & symbol, const ConstASTPtr & expression);
 bool isIdentity(const Assignment & assignment);
 bool isIdentity(const Assignments & assignments);
-bool isIdentity(const ProjectionStep & project);
+bool isIdentity(const ProjectionStepExt & project);
 bool isAlias(const Assignment & assignment);
 bool isAlias(const Assignments & assignments);
 
