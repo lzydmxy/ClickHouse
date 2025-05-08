@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Query/Optimizer/Rule/Rule.h>
+#include <Query/Optimizer/Rule/Patterns.h>
 
 namespace DB
 {
@@ -20,7 +21,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_create_topn_filtering_for_aggregating;
+        return context->getOptimizerContext()->getSettingsRef().enable_create_topn_filtering_for_aggregating;
     }
 
     bool excludeIfTransformSuccess() const override
@@ -47,7 +48,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_create_topn_filtering_for_aggregating;
+        return context->getOptimizerContext()->getSettingsRef().enable_create_topn_filtering_for_aggregating;
     }
 
     bool excludeIfTransformSuccess() const override
@@ -74,7 +75,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_create_topn_filtering_for_aggregating;
+        return context->getOptimizerContext()->getSettingsRef().enable_create_topn_filtering_for_aggregating;
     }
 
     bool excludeIfTransformSuccess() const override
@@ -101,7 +102,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_create_topn_filtering_for_aggregating;
+        return context->getOptimizerContext()->getSettingsRef().enable_create_topn_filtering_for_aggregating;
     }
 
     bool excludeIfTransformSuccess() const override
@@ -128,7 +129,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_push_topn_through_projection;
+        return context->getOptimizerContext()->getSettingsRef().enable_push_topn_through_projection;
     }
 
     ConstRefPatternPtr getPattern() const override;
@@ -150,7 +151,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_push_sort_through_projection;
+        return context->getOptimizerContext()->getSettingsRef().enable_push_sort_through_projection;
     }
 
     ConstRefPatternPtr getPattern() const override
@@ -175,7 +176,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_push_topn_filtering_through_projection;
+        return context->getOptimizerContext()->getSettingsRef().enable_push_topn_filtering_through_projection;
     }
 
     ConstRefPatternPtr getPattern() const override;
@@ -197,7 +198,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_push_topn_filtering_through_union;
+        return context->getOptimizerContext()->getSettingsRef().enable_push_topn_filtering_through_union;
     }
 
     ConstRefPatternPtr getPattern() const override;

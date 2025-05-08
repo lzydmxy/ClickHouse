@@ -1,9 +1,7 @@
 #pragma once
 
 #include <Interpreters/Context_fwd.h>
-#include <Optimizer/Signature/PlanNormalizer.h>
-#include <QueryPlan/CTEInfo.h>
-#include <QueryPlan/QueryPlan.h>
+#include <Query/Optimizer/Signature/PlanNormalizer.h>
 
 namespace DB
 {
