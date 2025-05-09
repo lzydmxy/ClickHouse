@@ -2,6 +2,7 @@
 
 #include <Query/Executor/PlanSegment.h>
 #include <Query/ProtosHelper/ExchangeMode.h>
+#include <Query/Optimizer/Cascades/GroupExpression.h>
 
 #include <Processors/QueryPlan/QueryPlan.h>
 
@@ -427,6 +428,16 @@ void GraphvizPrinter::appendPlanSegmentNode(std::stringstream & out, const PlanS
 // {
 //     throw Exception(ErrorCodes::NOT_IMPLEMENTED, "GraphvizPrinter::printMemo: not implemented");
 // }
+
+void GraphvizPrinter::printMemo(const Memo & memo, const ContextMutablePtr & context, const String & name)
+{
+    printMemo(memo, UNDEFINED_GROUP, context, name);
+}
+
+void GraphvizPrinter::printMemo(const Memo & memo, GroupId root_id, const ContextMutablePtr & context, const String & name)
+{
+    //todo: lizhuoyu, other feat: Should imp Memo
+}
 
 String GraphvizPrinter::printMemo(const Memo & memo, GroupId root)
 {

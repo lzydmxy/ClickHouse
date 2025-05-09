@@ -260,17 +260,16 @@ LinkedHashMap<String, RuntimeFilter> SymbolMapper::map(const LinkedHashMap<Strin
 //         std::make_optional(std::make_shared<PlanNodeStatistics>(estimate.value()->getRowCount(), std::move(symbol_statistics)))};
 // }
 
-// Todo lizhuoyu5, need Aggregate
-// AggregateDescription SymbolMapper::map(const AggregateDescription & desc)
-// {
-//     return AggregateDescription{
-//         desc.function,
-//         desc.parameters,
-//         desc.arguments,
-//         map(desc.argument_names),
-//         map(desc.column_name),
-//         desc.mask_column.empty() ? desc.mask_column : map(desc.mask_column)};
-// }
+AggregateDescription SymbolMapper::map(const AggregateDescription & desc)
+{
+    return AggregateDescription{
+        desc.function,
+        desc.parameters,
+        desc.arguments,
+        map(desc.argument_names),
+        map(desc.column_name),
+        desc.mask_column.empty() ? desc.mask_column : map(desc.mask_column)};
+}
 
 WindowFunctionDescription SymbolMapper::map(const WindowFunctionDescription & desc)
 {

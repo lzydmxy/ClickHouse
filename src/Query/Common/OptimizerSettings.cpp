@@ -30,6 +30,11 @@ IMPLEMENT_SETTING_ENUM(QueryDryRunMode, ErrorCodes::BAD_ARGUMENTS,
      {"skip_execute_segment", QueryDryRunMode::SKIP_EXECUTE_SEGMENT},
      {"skip_execute_query", QueryDryRunMode::SKIP_EXECUTE_QUERY}})
 
+IMPLEMENT_SETTING_ENUM(ExpandMode, ErrorCodes::BAD_ARGUMENTS,
+    {{"EXPAND", ExpandMode::EXPAND},
+     {"UNION", ExpandMode::UNION},
+     {"CTE", ExpandMode::CTE}})
+
 IMPLEMENT_SETTING_ENUM(CTEMode, ErrorCodes::BAD_ARGUMENTS,
     {{"INLINED", CTEMode::INLINED},
      {"SHARED", CTEMode::SHARED},
@@ -54,6 +59,10 @@ IMPLEMENT_SETTING_ENUM(StatisticsCachePolicy, ErrorCodes::BAD_ARGUMENTS,
     {{"default", StatisticsCachePolicy::Default},
      {"cache", StatisticsCachePolicy::Cache},
      {"catalog", StatisticsCachePolicy::Catalog}})
+
+IMPLEMENT_SETTING_ENUM(MaterializedViewConsistencyCheckMethod, ErrorCodes::BAD_ARGUMENTS,
+    {{"NONE", MaterializedViewConsistencyCheckMethod::NONE},
+     {"PARTITION", MaterializedViewConsistencyCheckMethod::PARTITION}})
 
 void OptimizerSettings::loadFromConfig(const String & config_elem, const Poco::Util::AbstractConfiguration & config)
 {
