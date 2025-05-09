@@ -1,10 +1,8 @@
 #include <Query/Planner/GraphvizPrinter.h>
 
 #include <Query/Executor/PlanSegment.h>
-#include <Query/ProtosHelper/ExchangeMode.h>
 #include <Query/Optimizer/Cascades/GroupExpression.h>
-
-#include <Processors/QueryPlan/QueryPlan.h>
+#include <Interpreters/ProcessList.h>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <string>
@@ -199,6 +197,80 @@ void appendASTEdge(std::stringstream & out, std::vector<std::pair<UInt16, UInt16
     {
         out << "ast_" << edge.first << " -> "
             << "ast_" << edge.second << ";" << std::endl;
+    }
+}
+
+void cleanDotFiles(const ContextMutablePtr & context)
+{
+    // when in the processing of sub query, DO NOT clean graphviz files.
+    if (context->getOptimizerContext()->getExecuteSubQueryPath() != "")
+    {
+        return;
+    }
+
+    std::filesystem::path graphviz_path(context->getOptimizerContext()->getSettingsRef().graphviz_path.toString());
+
+    try
+    {
+        if (!std::filesystem::exists(graphviz_path))
+        {
+            std::filesystem::create_directory(graphviz_path);
+            return;
+        }
+
+        auto query_id = context->getInitialQueryId();
+
+        for (auto & dir_entry : std::filesystem::directory_iterator(graphviz_path))
+        {
+            if (dir_entry.is_regular_file() && dir_entry.path().extension() == ".dot")
+            {
+                if (dir_entry.path().filename().string().find(query_id) != std::string::npos)
+                {
+                    continue;
+                }
+                std::filesystem::remove_all(dir_entry.path());
+            }
+        }
+    }
+    catch (...)
+    {
+    }
+}
+
+void cleanDotFiles(const ContextPtr & context)
+{
+    // when in the processing of sub query, DO NOT clean graphviz files.
+    if (!context->getOptimizerContext()->getExecuteSubQueryPath().empty())
+    {
+        return;
+    }
+
+    std::filesystem::path graphviz_path(context->getOptimizerContext()->getSettingsRef().graphviz_path.toString());
+
+    try
+    {
+        if (!std::filesystem::exists(graphviz_path))
+        {
+            std::filesystem::create_directory(graphviz_path);
+            return;
+        }
+
+        auto query_id = context->getInitialQueryId();
+
+        for (const auto & dir_entry : std::filesystem::directory_iterator(graphviz_path))
+        {
+            if (dir_entry.is_regular_file() && dir_entry.path().extension() == ".dot")
+            {
+                if (dir_entry.path().filename().string().find(query_id) != std::string::npos)
+                {
+                    continue;
+                }
+                std::filesystem::remove_all(dir_entry.path());
+            }
+        }
+    }
+    catch (...)
+    {
     }
 }
 
@@ -429,16 +501,6 @@ void GraphvizPrinter::appendPlanSegmentNode(std::stringstream & out, const PlanS
 //     throw Exception(ErrorCodes::NOT_IMPLEMENTED, "GraphvizPrinter::printMemo: not implemented");
 // }
 
-void GraphvizPrinter::printMemo(const Memo & memo, const ContextMutablePtr & context, const String & name)
-{
-    printMemo(memo, UNDEFINED_GROUP, context, name);
-}
-
-void GraphvizPrinter::printMemo(const Memo & memo, GroupId root_id, const ContextMutablePtr & context, const String & name)
-{
-    //todo: lizhuoyu, other feat: Should imp Memo
-}
-
 String GraphvizPrinter::printMemo(const Memo & memo, GroupId root)
 {
     //todo: lizhuoyu, other feat: Should imp Memo
@@ -477,6 +539,33 @@ void GraphvizPrinter::printAST(const ASTPtr & astPtr, ContextMutablePtr & contex
         // QueryStatusPtr process_list_elem = context->getProcessListElement();
         // if (process_list_elem)
         //     process_list_elem->addGraphviz(visitor, graphviz);
+    }
+}
+
+void GraphvizPrinter::printMemo(const Memo & memo, const ContextMutablePtr & context, const String & name)
+{
+    printMemo(memo, UNDEFINED_GROUP, context, name);
+}
+
+void GraphvizPrinter::printMemo(const Memo & memo, GroupId root_id, const ContextMutablePtr & context, const String & name)
+{
+    if (context->getOptimizerContext()->getSettingsRef().print_graphviz)
+    {
+        auto const graphviz = GraphvizPrinter::printMemo(memo, root_id);
+        cleanDotFiles(context);
+
+        std::stringstream path;
+        path << context->getOptimizerContext()->getSettingsRef().graphviz_path.toString();
+        path << context->getOptimizerContext()->getExecuteSubQueryPath() << name << "-" << context->getInitialQueryId() << ".dot";
+
+        std::ofstream out(path.str());
+        out << graphviz;
+        out.close();
+
+        // todo: lizhuoyu5, other feat storing the graphs of ASTs, plans, and pipelines in QueryStatus
+        // auto process_list_elem = context->getProcessListElement();
+        // if (process_list_elem)
+        //     process_list_elem->addGraphviz(name, graphviz);
     }
 }
 

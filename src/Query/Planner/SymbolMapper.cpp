@@ -1,19 +1,16 @@
-#include <memory>
+#include <Query/Planner/SymbolMapper.h>
 
 #include <Common/Exception.h>
-
 #include <Interpreters/ArrayJoinAction.h>
-
 #include <Query/Processors/QueryPlan/AssignUniqueIdStepExt.h>
 #include <Query/Processors/QueryPlan/DistinctStepExt.h>
-
-
-#include <Query/Planner/SymbolMapper.h>
 #include <Query/Optimizer/SimpleExpressionRewriter.h>
-// #include <Query/Optimizer/CardinalityEstimate/PlanNodeStatisticsEstimate.h>
-
+#include <Query/Optimizer/CardinalityEstimate/PlanNodeStatisticsEstimate.h>
+#include <Query/Processors/Transforms/AggregatingTransformExt.h>
 #include <Query/Processors/QueryPlan/PlanVisitor.h>
 #include <Query/Common/Void.h>
+
+#include <memory>
 
 namespace DB
 {
@@ -243,22 +240,22 @@ LinkedHashMap<String, RuntimeFilter> SymbolMapper::map(const LinkedHashMap<Strin
     return res;
 }
 
-// Todo lizhuoyu5, need PlanNodeStatisticsEstimate
-// PlanNodeStatisticsEstimate SymbolMapper::map(const PlanNodeStatisticsEstimate & estimate)
-// {
-//     if (!estimate.has_value())
-//     {
-//         return estimate;
-//     }
-//
-//     std::unordered_map<String, SymbolStatisticsPtr> symbol_statistics;
-//     for (const auto & entry : estimate.value()->getSymbolStatistics())
-//     {
-//         symbol_statistics.emplace(map(entry.first), entry.second);
-//     }
-//     return PlanNodeStatisticsEstimate{
-//         std::make_optional(std::make_shared<PlanNodeStatistics>(estimate.value()->getRowCount(), std::move(symbol_statistics)))};
-// }
+PlanNodeStatisticsEstimate SymbolMapper::map(const PlanNodeStatisticsEstimate & estimate)
+{
+    if (!estimate.has_value())
+    {
+        return estimate;
+    }
+
+    std::unordered_map<String, SymbolStatisticsPtr> symbol_statistics;
+    for (const auto & entry : estimate.value()->getSymbolStatistics())
+    {
+        symbol_statistics.emplace(map(entry.first), entry.second);
+    }
+    return PlanNodeStatisticsEstimate{
+        std::make_optional(std::make_shared<PlanNodeStatistics>(estimate.value()->getRowCount(), std::move(symbol_statistics)))};
+}
+
 
 AggregateDescription SymbolMapper::map(const AggregateDescription & desc)
 {
@@ -302,73 +299,79 @@ SortColumnDescription SymbolMapper::map(const SortColumnDescription & desc)
     return res;
 }
 
-// GroupingDescription SymbolMapper::map(const GroupingDescription & desc)
-// {
-//     return GroupingDescription{map(desc.argument_names), map(desc.output_name)};
-// }
-//
-// GroupingSetsParams SymbolMapper::map(const GroupingSetsParams & param)
-// {
-//     GroupingSetsParams res{map(param.used_key_names)};
-//     res.used_keys = param.used_keys;
-//     res.missing_keys = param.missing_keys;
-//     return res;
-// }
-//
-// Aggregator::Params SymbolMapper::map(const Aggregator::Params & params)
-// {
-//     auto header = map(params.src_header);
-//     auto intermediate_header = map(params.intermediate_header);
-//     ColumnNumbers keys;
-//     std::unordered_set<String> distinct_keys;
-//     if (params.src_header.columns() != 0)
-//     {
-//         for (const auto & key : params.keys)
-//         {
-//             auto name = map(params.src_header.getByPosition(key).name);
-//             if (distinct_keys.emplace(name).second)
-//                 keys.emplace_back(header.getPositionByName(name));
-//         }
-//     }
-//     else
-//     {
-//         for (const auto & key : params.keys)
-//         {
-//             auto name = map(params.intermediate_header.getByPosition(key).name);
-//             if (distinct_keys.emplace(name).second)
-//                 keys.emplace_back(intermediate_header.getPositionByName(name));
-//         }
-//     }
-//
-//     return {
-//         header,
-//         keys,
-//         map(params.aggregates),
-//         params.overflow_row,
-//         params.max_rows_to_group_by,
-//         params.group_by_overflow_mode,
-//         params.group_by_two_level_threshold,
-//         params.group_by_two_level_threshold_bytes,
-//         params.max_bytes_before_external_group_by,
-//         params.enable_adaptive_spill,
-//         params.spill_buffer_bytes_before_external_group_by,
-//         params.empty_result_for_aggregation_by_empty_set,
-//         params.tmp_volume,
-//         params.max_threads,
-//         params.min_free_disk_space,
-//         params.compile_aggregate_expressions,
-//         params.min_count_to_compile_aggregate_expression,
-//         intermediate_header,
-//         params.enable_lc_group_by_opt};
-// }
-//
-// AggregatingTransformParamsPtr SymbolMapper::map(const AggregatingTransformParamsPtr & param)
-// {
-//     if (param->aggregator_list_ptr && param->aggregator_list_ptr->size() > 1)
-//         throw Exception(ErrorCodes::LOGICAL_ERROR, "Symbol mapper is unable to handle parallel aggregate param.");
-//
-//     return std::make_shared<AggregatingTransformParams>(map(param->params), param->final);
-// }
+GroupingDescription SymbolMapper::map(const GroupingDescription & desc)
+{
+    return GroupingDescription{map(desc.argument_names), map(desc.output_name)};
+}
+
+GroupingSetsParamsExt SymbolMapper::map(const GroupingSetsParamsExt & param)
+{
+    GroupingSetsParamsExt res{map(param.used_key_names)};
+    res.used_keys = param.used_keys;
+    res.missing_keys = param.missing_keys;
+    return res;
+}
+
+AggregatorExt::Params SymbolMapper::map(const AggregatorExt::Params & params)
+{
+    auto header = map(params.src_header);
+    auto intermediate_header = map(params.intermediate_header);
+    ColumnNumbers keys;
+    std::unordered_set<String> distinct_keys;
+    if (params.src_header.columns() != 0)
+    {
+        for (const auto & key : params.keys)
+        {
+            auto name = map(params.src_header.getByPosition(key).name);
+            if (distinct_keys.emplace(name).second)
+                keys.emplace_back(header.getPositionByName(name));
+        }
+    }
+    else
+    {
+        for (const auto & key : params.keys)
+        {
+            auto name = map(params.intermediate_header.getByPosition(key).name);
+            if (distinct_keys.emplace(name).second)
+                keys.emplace_back(intermediate_header.getPositionByName(name));
+        }
+    }
+
+    return AggregatorExt::Params{
+        header,
+        keys,
+        map(params.aggregates),
+        params.overflow_row,
+        params.max_rows_to_group_by,
+        params.group_by_overflow_mode,
+        params.group_by_two_level_threshold,
+        params.group_by_two_level_threshold_bytes,
+        params.max_bytes_before_external_group_by,
+        params.enable_adaptive_spill,
+        params.spill_buffer_bytes_before_external_group_by,
+        params.empty_result_for_aggregation_by_empty_set,
+        params.tmp_data_scope,
+        params.max_threads,
+        params.min_free_disk_space,
+        params.compile_aggregate_expressions,
+        params.min_count_to_compile_aggregate_expression,
+        params.max_block_size,
+        params.enable_prefetch,
+        params.only_merge,
+        params.optimize_group_by_constant_keys,
+        params.min_hit_rate_to_use_consecutive_keys_optimization,
+        params.stats_collecting_params,
+        intermediate_header,
+        params.enable_lc_group_by_opt};
+}
+
+AggregatingTransformParamsExtPtr SymbolMapper::map(const AggregatingTransformParamsExtPtr & param)
+{
+    if (param->aggregator_ext_list_ptr && param->aggregator_ext_list_ptr->size() > 1)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Symbol mapper is unable to handle parallel aggregate param.");
+
+    return std::make_shared<AggregatingTransformParamsExt>(map(param->params), param->final);
+}
 
 ArrayJoinActionPtr SymbolMapper::map(const ArrayJoinActionPtr & array_join_action)
 {

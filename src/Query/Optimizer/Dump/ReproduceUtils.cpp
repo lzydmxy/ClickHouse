@@ -1,6 +1,7 @@
 #include <Query/Optimizer/Dump/ReproduceUtils.h>
 #include <Query/Analyzer/Analysis.h>
 #include <Query/Interpreters/InterpreterExplainQueryExt.h>
+#include <Processors/Executors/PullingAsyncPipelineExecutor.h>
 #include <IO/ReadBufferFromString.h>
 #include <IO/WriteBufferFromString.h>
 #include <Query/Optimizer/Dump/DumpUtils.h>
@@ -59,11 +60,14 @@ std::string obtainExplainString(const std::string & select_query, ContextMutable
     auto explain_query = std::make_shared<ASTExplainQuery>(ASTExplainQuery::QueryPlan);
     explain_query->setExplainedQuery(ast);
     InterpreterExplainQueryExt interpreter(explain_query, query_context);
-    auto explain_result = interpreter.execute().getInputStream();
-    Block explain_block = explain_result->read();
-    while (explain_block && !explain_block.rows())
+    auto io = interpreter.execute();
+    PullingAsyncPipelineExecutor executor(io.pipeline);
+    io.pipeline.setProgressCallback(query_context->getProgressCallback());
+    io.pipeline.setProcessListElement(query_context->getProcessListElement());
+    Block explain_block;
+
+    while (explain_block.rows() == 0 && executor.pull(explain_block))
     {
-        explain_block = explain_result->read();
     }
     if (!explain_block.rows())
     {
@@ -103,7 +107,7 @@ std::string getFolder(const std::string & file_path)
     {
         std::filesystem::path zip_path = std::filesystem::path(file_path);
         if (!std::filesystem::exists(zip_path))
-            throw Exception(ErrorCodes::FILE_NOT_FOUND, "zip file not found: " + file_path);
+            throw Exception(ErrorCodes::FILE_NOT_FOUND, "zip file not found: {}", file_path);
         ZipArchiveReader zip_reader(file_path);
         for (auto & file : zip_reader.getAllFiles())
         {
@@ -122,7 +126,7 @@ Poco::JSON::Object::Ptr readJsonFromAbsolutePath(const std::string & absolute_pa
 {
     std::filesystem::path file_path(absolute_path);
     if (!std::filesystem::exists(file_path))
-        throw Exception(ErrorCodes::FILE_NOT_FOUND, "file not found: " + absolute_path);
+        throw Exception(ErrorCodes::FILE_NOT_FOUND, "file not found: {}", absolute_path);
     std::ifstream fin(file_path);
     std::stringstream buffer;
     buffer << fin.rdbuf();

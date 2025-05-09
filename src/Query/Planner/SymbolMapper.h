@@ -6,13 +6,16 @@
 #include <Interpreters/WindowDescription.h>
 #include <Parsers/IAST_fwd.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
-#include <Query/Executor/RuntimeFilter/RuntimeFilterBuilder.h>
 
 #include <string>
 #include <unordered_map>
 
 namespace DB
 {
+
+class PlanNodeStatisticsEstimate;
+struct AggregatingTransformParamsExt;
+using AggregatingTransformParamsExtPtr = std::shared_ptr<AggregatingTransformParamsExt>;
 
 /**
  * Copy a step and replace its all symbol using mapping_function.
@@ -44,12 +47,12 @@ public:
      */
     static SymbolMapper symbolReallocator(std::unordered_map<Symbol, Symbol> & mapping, SymbolAllocator & symbolAllocator);
 
-    std::string map(const Symbol & symbol) { return mapping_function(symbol); }
+    std::string map(const Symbol & symbol) {return mapping_function(symbol);}
     template <typename T>
     std::vector<T> map(const std::vector<T> & items)
     {
         std::vector<T> ret;
-        std::transform(items.begin(), items.end(), std::back_inserter(ret), [&](const auto & param) { return map(param); });
+        std::transform(items.begin(), items.end(), std::back_inserter(ret), [&](const auto & param) { return SymbolMapper::map(param); });
         return ret;
     }
 
@@ -77,19 +80,19 @@ public:
     ASTPtr map(const ConstASTPtr & expr);
     Partitioning map(const Partitioning & partition);
     AggregateDescription map(const AggregateDescription & desc);
-    GroupingSetsParams map(const GroupingSetsParams & param);
+    GroupingSetsParamsExt map(const GroupingSetsParamsExt & param);
     WindowFunctionDescription map(const WindowFunctionDescription & desc);
     WindowDescription map(const WindowDescription & desc);
     SortColumnDescription map(const SortColumnDescription & desc);
-    Aggregator::Params map(const Aggregator::Params & params);
-    AggregatingTransformParamsPtr map(const AggregatingTransformParamsPtr & param);
+    AggregatorExt::Params map(const AggregatorExt::Params & params);
+    AggregatingTransformParamsExtPtr map(const AggregatingTransformParamsExtPtr & param);
     ArrayJoinActionPtr map(const ArrayJoinActionPtr & array_join_action);
-    // GroupingDescription map(const GroupingDescription & desc);
+    GroupingDescription map(const GroupingDescription & desc);
     SortDescription map(const SortDescription & sort_desc);
     std::map<Int32, Names> map(const std::map<Int32, Names> & group_id_non_null_symbol);
 
     LinkedHashMap<String, RuntimeFilter> map(const LinkedHashMap<String, RuntimeFilter> & infos);
-    // PlanNodeStatisticsEstimate map(const PlanNodeStatisticsEstimate & estimate);
+    PlanNodeStatisticsEstimate map(const PlanNodeStatisticsEstimate & estimate);
 
 #define VISITOR_DEF(TYPE) std::shared_ptr<TYPE> map(const TYPE &);
     APPLY_PROTOBUF_STEP_TYPES(VISITOR_DEF)

@@ -383,7 +383,7 @@ StepAndOutputOrder StepNormalizer::visitAggregatingStepExt(const AggregatingStep
     SymbolMapper symbol_mapper = SymbolMapper::simpleMapper(symbol_mapping);
 
     Names mapped_keys = symbol_mapper.map(step.getKeys()); // should not reorder because order is important
-    aggregates_reordered = symbol_mapper.map(aggregates_reordered);
+    aggregates_reordered = symbol_mapper.map<AggregateDescription>(aggregates_reordered);
 
     auto normal_agg = std::make_shared<AggregatingStepExt>(
         normal_input_streams.front(),
