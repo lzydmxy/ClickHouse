@@ -59,11 +59,14 @@ std::string obtainExplainString(const std::string & select_query, ContextMutable
     auto explain_query = std::make_shared<ASTExplainQuery>(ASTExplainQuery::QueryPlan);
     explain_query->setExplainedQuery(ast);
     InterpreterExplainQueryExt interpreter(explain_query, query_context);
-    auto explain_result = interpreter.execute().getInputStream();
-    Block explain_block = explain_result->read();
+    //todo: liyang453, other feat: need getInputStream() in BlockIO
+    //auto explain_result = interpreter.execute().getInputStream();
+    //Block explain_block = explain_result->read();
+    Block explain_block; 
     while (explain_block && !explain_block.rows())
     {
-        explain_block = explain_result->read();
+        //todo: liyang453, other feat: need getInputStream() in BlockIO
+        //explain_block = explain_result->read();
     }
     if (!explain_block.rows())
     {
@@ -103,7 +106,7 @@ std::string getFolder(const std::string & file_path)
     {
         std::filesystem::path zip_path = std::filesystem::path(file_path);
         if (!std::filesystem::exists(zip_path))
-            throw Exception(ErrorCodes::FILE_NOT_FOUND, "zip file not found: " + file_path);
+            throw Exception(ErrorCodes::FILE_NOT_FOUND, "zip file not found: {}", file_path);
         ZipArchiveReader zip_reader(file_path);
         for (auto & file : zip_reader.getAllFiles())
         {
@@ -122,7 +125,7 @@ Poco::JSON::Object::Ptr readJsonFromAbsolutePath(const std::string & absolute_pa
 {
     std::filesystem::path file_path(absolute_path);
     if (!std::filesystem::exists(file_path))
-        throw Exception(ErrorCodes::FILE_NOT_FOUND, "file not found: " + absolute_path);
+        throw Exception(ErrorCodes::FILE_NOT_FOUND, "file not found: {}", absolute_path);
     std::ifstream fin(file_path);
     std::stringstream buffer;
     buffer << fin.rdbuf();

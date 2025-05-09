@@ -32,15 +32,6 @@ enum class SchedulerMode
 };
 DECLARE_SETTING_ENUM(SchedulerMode);
 
-enum class ExpandMode
-{
-    EXPAND,
-    UNION,
-    CTE,
-};
-
-DECLARE_SETTING_ENUM(ExpandMode)
-
 enum class CTEMode
 {
     INLINED,
@@ -89,14 +80,6 @@ enum class StatisticsCachePolicy
     Catalog,
 };
 DECLARE_SETTING_ENUM(StatisticsCachePolicy)
-
-enum class MaterializedViewConsistencyCheckMethod
-{
-    NONE,
-    PARTITION,
-};
-
-DECLARE_SETTING_ENUM(MaterializedViewConsistencyCheckMethod);
 
 constexpr UInt64 RUNTIME_FILTER_BLOOM_BUILD_THRESHOLD = 2048000; // Default threshold of right table to build bloom filter
 constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold of right table to build value set filter

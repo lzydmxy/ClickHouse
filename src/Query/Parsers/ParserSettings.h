@@ -84,8 +84,6 @@ struct ParserSettings
                 case DialectType::CLICKHOUSE: return CLICKHOUSE;
                 case DialectType::ANSI: return ANSI;
                 case DialectType::MYSQL: return MYSQL;
-                default:
-                    throw std::invalid_argument("Unsupported DialectType");
             }
         }();
         setting_impl.changeMutableSettings(s);

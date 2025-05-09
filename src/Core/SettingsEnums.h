@@ -371,4 +371,13 @@ enum class LogExplainAnalyzeType
 
 DECLARE_SETTING_ENUM(LogExplainAnalyzeType)
 
+enum class ExpandMode
+{
+    EXPAND,
+    UNION,
+    CTE,
+};
+
+DECLARE_SETTING_ENUM(ExpandMode)
+
 }
