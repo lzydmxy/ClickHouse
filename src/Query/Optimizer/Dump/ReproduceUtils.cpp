@@ -60,14 +60,14 @@ std::string obtainExplainString(const std::string & select_query, ContextMutable
     auto explain_query = std::make_shared<ASTExplainQuery>(ASTExplainQuery::QueryPlan);
     explain_query->setExplainedQuery(ast);
     InterpreterExplainQueryExt interpreter(explain_query, query_context);
-    auto io = interpreter.execute();
-    PullingAsyncPipelineExecutor executor(io.pipeline);
-    io.pipeline.setProgressCallback(query_context->getProgressCallback());
-    io.pipeline.setProcessListElement(query_context->getProcessListElement());
-    Block explain_block;
-
-    while (explain_block.rows() == 0 && executor.pull(explain_block))
+    //todo: liyang453, other feat: need getInputStream() in BlockIO
+    //auto explain_result = interpreter.execute().getInputStream();
+    //Block explain_block = explain_result->read();
+    Block explain_block; 
+    while (explain_block && !explain_block.rows())
     {
+        //todo: liyang453, other feat: need getInputStream() in BlockIO
+        //explain_block = explain_result->read();
     }
     if (!explain_block.rows())
     {
