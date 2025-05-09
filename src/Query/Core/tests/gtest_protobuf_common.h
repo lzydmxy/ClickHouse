@@ -298,26 +298,25 @@ public:
         return res;
     }
 
-    static AggregateDescription generateAggregateDescription(std::default_random_engine & /*eng*/, int i)
+    static AggregateDescription generateAggregateDescription(std::default_random_engine & eng, int i)
     {
         AggregateDescription res;
         AggregateFunctionProperties properties;
 
         res.function = AggregateFunctionFactory::instance().get("count", NullsAction::EMPTY, {}, {}, properties);
         res.parameters = {};
-        // todo, lizhuoyu5 open
         // generate ColumnNumbers
-        // for (int i = 0; i < 2; ++i)
-        // res.arguments.emplace_back(eng() % 3);
+        for (int i = 0; i < 2; ++i)
+        res.arguments.emplace_back(eng() % 3);
         // generate Names
-        // for (int i = 0; i < 10; ++i)
-        // res.argument_names.emplace_back(fmt::format("text{}", eng() % 100));
-        // res.column_name = "col_" + std::to_string(i);
+        for (int i = 0; i < 10; ++i)
+        res.argument_names.emplace_back(fmt::format("text{}", eng() % 100));
+        res.column_name = "col_" + std::to_string(i);
         res.mask_column = res.column_name;
         return res;
     }
 
-    static AggregatorExt::Params generateAggregatorParams(std::default_random_engine & eng)
+    static AggregatorExt::Params generateAggregatorParamsExt(std::default_random_engine & eng)
     {
         auto src_header = generateBlock(eng);
         auto intermediate_header = generateBlock(eng);
@@ -372,9 +371,61 @@ public:
         return step;
     }
 
+    static Aggregator::Params generateAggregatorParams(std::default_random_engine & eng)
+    {
+        auto src_header = generateBlock(eng);
+        auto intermediate_header = generateBlock(eng);
+        ColumnNumbers column_numbers;
+        Names keys;
+        for (int i = 0; i < 2; ++i)
+            column_numbers.emplace_back(eng() % 3);
+
+        for (const auto & number : column_numbers)
+            keys.push_back(src_header.getByPosition(number).name);
+
+        AggregateDescriptions aggregates;
+        for (int i = 0; i < 2; ++i)
+            aggregates.emplace_back(generateAggregateDescription(eng, i));
+        auto overflow_row = eng() % 2 == 1;
+        auto max_rows_to_group_by = eng() % 1000;
+        auto group_by_overflow_mode = static_cast<OverflowMode>(eng() % 3);
+        auto group_by_two_level_threshold = eng() % 1000;
+        auto group_by_two_level_threshold_bytes = eng() % 1000;
+        auto max_bytes_before_external_group_by = eng() % 1000;
+        auto empty_result_for_aggregation_by_empty_set = eng() % 2 == 1;
+        auto tmp_volume = nullptr;
+        auto max_threads = eng() % 1000;
+        auto min_free_disk_space = eng() % 1000;
+        auto compile_aggregate_expressions = eng() % 2 == 1;
+        auto min_count_to_compile_aggregate_expression = eng() % 1000;
+        auto step = Aggregator::Params(
+            keys,
+            aggregates,
+            overflow_row,
+            max_rows_to_group_by,
+            group_by_overflow_mode,
+            group_by_two_level_threshold,
+            group_by_two_level_threshold_bytes,
+            max_bytes_before_external_group_by,
+            empty_result_for_aggregation_by_empty_set,
+            tmp_volume,
+            max_threads,
+            min_free_disk_space,
+            compile_aggregate_expressions,
+            min_count_to_compile_aggregate_expression,
+            DEFAULT_BLOCK_SIZE,
+            false,
+            false,
+            false,
+            false,
+            {});
+
+        return step;
+    }
+
     static AggregatingTransformParamsExtPtr generateAggregatingTransformParams(std::default_random_engine & eng)
     {
-        auto params = generateAggregatorParams(eng);
+        auto params = generateAggregatorParamsExt(eng);
         auto final = eng() % 2 == 1;
         auto step = std::make_shared<AggregatingTransformParamsExt>(params, final);
 

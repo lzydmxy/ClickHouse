@@ -208,11 +208,11 @@ TEST_F(ProtobufTest, AggregateDescription)
     compareProto(pb, pb2);
 }
 
-TEST_F(ProtobufTest, AggregatorParams)
+TEST_F(ProtobufTest, AggregatorParamsExt)
 {
     std::default_random_engine eng(42);
     // construct valid step
-    auto step = generateAggregatorParams(eng);
+    auto step = generateAggregatorParamsExt(eng);
 
     // serialize to protobuf
     Protos::AggregatorExtParams pb;

@@ -1,7 +1,5 @@
 #include <Query/Statistics/CatalogAdaptorProxy.h>
 #include <Query/Statistics/StatisticsBase.h>
-#include <Query/Statistics/StatisticsCache.h>
-#include <Query/Statistics/StatisticsCollector.h>
 #include <Query/Statistics/StatsDummy.h>
 #include <Interpreters/Context.h>
 #include <Interpreters/DDLWorker.h>

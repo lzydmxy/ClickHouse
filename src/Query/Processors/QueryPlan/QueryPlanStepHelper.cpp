@@ -7,7 +7,6 @@
 
 namespace DB
 {
-
 QueryPlanStepPtr QueryPlanStepHelper::copyQueryPlanStep(const QueryPlanStepPtr & query_plan_step, ContextPtr context)
 {
     if (auto step_ptr = std::dynamic_pointer_cast<OffsetStep>(query_plan_step))
@@ -145,12 +144,12 @@ QueryPlanStepPtr QueryPlanStepHelper::copyQueryPlanStep(const QueryPlanStepPtr &
     else if (auto step_ptr = std::dynamic_pointer_cast<CreatingSetsStep>(query_plan_step))
         return std::make_shared<CreatingSetsStep>(step_ptr->getInputStreams());
 
-// StepExt uses macros to execute copy
+    // StepExt uses macros to execute copy
 #define CHECK_AND_COPY_QUERY_PLAN_STEP_EXT(type) \
-    if (auto step_ptr = std::dynamic_pointer_cast<type>(query_plan_step)) \
-    { \
-        return step_ptr->copy(context); \
-    }
+if (auto step_ptr = std::dynamic_pointer_cast<type>(query_plan_step)) \
+{ \
+return step_ptr->copy(context); \
+}
 
     APPLY_ALL_STEP_TYPES_FOR_EXT(CHECK_AND_COPY_QUERY_PLAN_STEP_EXT)
 #undef CHECK_AND_COPY_QUERY_PLAN_STEP_EXT
@@ -158,6 +157,78 @@ QueryPlanStepPtr QueryPlanStepHelper::copyQueryPlanStep(const QueryPlanStepPtr &
     return nullptr;
 }
 
+template <typename StepType, typename ProtoType>
+void QueryPlanStepHelper::toProto(const StepType & step, ProtoType & proto, bool for_hash_equals)
+{
+    step.toProto(proto, for_hash_equals);
+}
+
+template <>
+void QueryPlanStepHelper::toProto(const FillingStep & step, Protos::FillingStep & proto_step, bool)
+{
+    ProtosSerDerHelper::serializeToProtoBase(step, *proto_step.mutable_query_plan_base());
+    for (const auto & element : step.sort_description)
+        ProtosSerDerHelper::toProto(element, *proto_step.add_sort_description());
+    for (const auto & element : step.fill_description)
+        ProtosSerDerHelper::toProto(element, *proto_step.add_fill_description());
+    proto_step.set_use_with_fill_by_sorting_prefix(step.use_with_fill_by_sorting_prefix);
+}
+
+template <>
+void QueryPlanStepHelper::toProto(const IntersectOrExceptStep & step, Protos::IntersectOrExceptStep & proto_step, bool)
+{
+    for (const auto & element : step.input_streams)
+        ProtosSerDerHelper::toProto(element, *proto_step.add_input_streams());
+    proto_step.set_current_operator(ASTSelectIntersectExceptQueryOperatorConverter::toProto(step.current_operator));
+    proto_step.set_max_threads(step.max_threads);
+}
+
+template <>
+void QueryPlanStepHelper::toProto(const ReadNothingStep & step, Protos::ReadNothingStep & proto_step, bool)
+{
+    serializeHeaderToProto(step.output_stream->header, *proto_step.mutable_query_plan_base()->mutable_output_header());
+}
+
+template <>
+void QueryPlanStepHelper::toProto(const OffsetStep & step, Protos::OffsetStep & proto_step, bool)
+{
+    ProtosSerDerHelper::serializeToProtoBase(step, *proto_step.mutable_query_plan_base());
+    proto_step.set_offset(step.offset);
+}
+
+template <>
+void QueryPlanStepHelper::toProto(const LimitByStep & step, Protos::LimitByStep & proto_step, bool)
+{
+    ProtosSerDerHelper::serializeToProtoBase(step, *proto_step.mutable_query_plan_base());
+    proto_step.set_group_length(step.group_length);
+    proto_step.set_group_offset(step.group_offset);
+
+    for (const auto & element : step.columns)
+        proto_step.add_columns(element);
+}
+
+template <>
+void QueryPlanStepHelper::toProto(const ExtremesStep & step, Protos::ExtremesStep & proto_step, bool)
+{
+    ProtosSerDerHelper::serializeToProtoBase(step, *proto_step.mutable_query_plan_base());
+}
+
+template <>
+void QueryPlanStepHelper::toProto(const ArrayJoinStep & step, Protos::ArrayJoinStep & proto_step, bool)
+{
+    ProtosSerDerHelper::serializeToProtoBase(step, *proto_step.mutable_query_plan_base());
+    ProtosSerDerHelper::toProto(*step.arrayJoin(), *proto_step.mutable_array_join());
+}
+
+template <>
+void QueryPlanStepHelper::toProto(const WindowStep & step, Protos::WindowStep & proto_step, bool)
+{
+    ProtosSerDerHelper::serializeToProtoBase(step, *proto_step.mutable_query_plan_base());
+    ProtosSerDerHelper::toProto(step.window_description, *proto_step.mutable_window_description());
+    for (const auto & element : step.window_functions)
+        ProtosSerDerHelper::toProto(element, *proto_step.add_window_functions());
+    proto_step.set_streams_fan_out(step.streams_fan_out);
+}
 
 void QueryPlanStepHelper::toProto(const IQueryPlanStep & query_plan_step, Protos::QueryPlanStep & proto, bool for_hash_equals)
 {
@@ -168,8 +239,8 @@ void QueryPlanStepHelper::toProto(const IQueryPlanStep & query_plan_step, Protos
     case QueryPlanStepType::TYPE: { \
         const auto & step = dynamic_cast<const TYPE &>(query_plan_step); \
         auto *proto_step = proto.mutable_##VAR_NAME(); \
-        step.toProto(*proto_step, for_hash_equals); \
-        return; \
+        toProto<TYPE, Protos::TYPE>(step, *proto_step, for_hash_equals); \
+        break; \
     }
 
     APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(CASE_DEF)
@@ -180,75 +251,56 @@ void QueryPlanStepHelper::toProto(const IQueryPlanStep & query_plan_step, Protos
         {
             const auto & step= dynamic_cast<const FillingStep &>(query_plan_step);
             auto *proto_step = proto.mutable_filling_step();
-            ProtosSerDerHelper::serializeToProtoBase(step, *proto_step->mutable_query_plan_base());
-            for (const auto & element : step.sort_description)
-                ProtosSerDerHelper::toProto(element, *proto_step->add_sort_description());
-            for (const auto & element : step.fill_description)
-                ProtosSerDerHelper::toProto(element, *proto_step->add_fill_description());
-            proto_step->set_use_with_fill_by_sorting_prefix(step.use_with_fill_by_sorting_prefix);
+            toProto(step, *proto_step);
             break;
         }
         case QueryPlanStepType::IntersectOrExceptStep:
         {
             const auto & step= dynamic_cast<const IntersectOrExceptStep &>(query_plan_step);
             auto *proto_step = proto.mutable_intersect_or_except_step();
-            for (const auto & element : step.input_streams)
-                ProtosSerDerHelper::toProto(element, *proto_step->add_input_streams());
-            proto_step->set_current_operator(ASTSelectIntersectExceptQueryOperatorConverter::toProto(step.current_operator));
-            proto_step->set_max_threads(step.max_threads);
+            toProto(step, *proto_step);
             break;
         }
         case QueryPlanStepType::ReadNothingStep:
         {
             const auto & step= dynamic_cast<const ReadNothingStep &>(query_plan_step);
             auto *proto_step = proto.mutable_read_nothing_step();
-            serializeHeaderToProto(step.output_stream->header, *proto_step->mutable_query_plan_base()->mutable_output_header());
+            toProto(step, *proto_step);
             break;
         }
         case QueryPlanStepType::OffsetStep:
         {
             const auto & step= dynamic_cast<const OffsetStep &>(query_plan_step);
             auto *proto_step = proto.mutable_offset_step();
-            ProtosSerDerHelper::serializeToProtoBase(step, *proto_step->mutable_query_plan_base());
-            proto_step->set_offset(step.offset);
+            toProto(step, *proto_step);
             break;
         }
         case QueryPlanStepType::LimitByStep:
         {
             const auto & step= dynamic_cast<const LimitByStep &>(query_plan_step);
             auto *proto_step = proto.mutable_limit_by_step();
-            ProtosSerDerHelper::serializeToProtoBase(step, *proto_step->mutable_query_plan_base());
-            proto_step->set_group_length(step.group_length);
-            proto_step->set_group_offset(step.group_offset);
-
-            for (const auto & element : step.columns)
-                proto_step->add_columns(element);
+            toProto(step, *proto_step);
             break;
         }
         case QueryPlanStepType::ExtremesStep:
         {
             const auto & step= dynamic_cast<const ExtremesStep &>(query_plan_step);
             auto *proto_step = proto.mutable_extremes_step();
-            ProtosSerDerHelper::serializeToProtoBase(step, *proto_step->mutable_query_plan_base());
+            toProto(step, *proto_step);
             break;
         }
         case QueryPlanStepType::ArrayJoinStep:
         {
             const auto & step = dynamic_cast<const ArrayJoinStep &>(query_plan_step);
             auto *proto_step = proto.mutable_array_join_step();
-            ProtosSerDerHelper::serializeToProtoBase(step, *proto_step->mutable_query_plan_base());
-            ProtosSerDerHelper::toProto(*step.arrayJoin(), *proto_step->mutable_array_join());
+            toProto(step, *proto_step);
             break;
         }
         case QueryPlanStepType::WindowStep:
         {
             const auto & step = dynamic_cast<const WindowStep &>(query_plan_step);
             auto *proto_step = proto.mutable_window_step();
-            ProtosSerDerHelper::serializeToProtoBase(step, *proto_step->mutable_query_plan_base());
-            ProtosSerDerHelper::toProto(step.window_description, *proto_step->mutable_window_description());
-            for (const auto & element : step.window_functions)
-                ProtosSerDerHelper::toProto(element, *proto_step->add_window_functions());
-            proto_step->set_streams_fan_out(step.streams_fan_out);
+            toProto(step, *proto_step);
             break;
         }
         default: {
@@ -257,6 +309,113 @@ void QueryPlanStepHelper::toProto(const IQueryPlanStep & query_plan_step, Protos
     }
 }
 
+
+QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::FillingStep & proto_step, ContextPtr)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
+    SortDescription sort_description;
+    for (const auto & proto_element : proto_step.sort_description())
+    {
+        SortColumnDescription element;
+        ProtosSerDerHelper::fillFromProto(element, proto_element);
+        sort_description.emplace_back(std::move(element));
+    }
+    SortDescription fill_description;
+    for (const auto & proto_element : proto_step.fill_description())
+    {
+        SortColumnDescription element;
+        ProtosSerDerHelper::fillFromProto(element, proto_element);
+        fill_description.emplace_back(std::move(element));
+    }
+    auto step = std::make_shared<FillingStep>(base_input_stream, sort_description, fill_description, nullptr, proto_step.use_with_fill_by_sorting_prefix());
+    step->setStepDescription(step_description);
+    return step;
+}
+
+QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::IntersectOrExceptStep & proto_step, ContextPtr)
+{
+    DataStreams input_streams;
+    for (const auto & proto_element : proto_step.input_streams())
+    {
+        DataStream element;
+        ProtosSerDerHelper::fillFromProto(element, proto_element);
+        input_streams.emplace_back(std::move(element));
+    }
+    auto current_operator = ASTSelectIntersectExceptQueryOperatorConverter::fromProto(proto_step.current_operator());
+    auto max_threads = proto_step.max_threads();
+    auto step = std::make_shared<IntersectOrExceptStep>(input_streams, current_operator, max_threads);
+    return step;
+}
+
+QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::ReadNothingStep & proto_step, ContextPtr)
+{
+    return std::make_shared<ReadNothingStep>(deserializeHeaderFromProto(proto_step.query_plan_base().output_header()));
+}
+
+QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::OffsetStep & proto_step, ContextPtr)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
+    auto offset = proto_step.offset();
+    auto step = std::make_shared<OffsetStep>(base_input_stream, offset);
+    step->setStepDescription(step_description);
+    return step;
+}
+
+QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::LimitByStep & proto_step, ContextPtr)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
+    auto group_length = proto_step.group_length();
+    auto group_offset = proto_step.group_offset();
+    std::vector<String> columns;
+    for (const auto & element : proto_step.columns())
+        columns.emplace_back(element);
+    auto step = std::make_shared<LimitByStep>(base_input_stream, group_length, group_offset, columns);
+    step->setStepDescription(step_description);
+    return step;
+}
+
+QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::ExtremesStep & proto_step, ContextPtr)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
+    auto step = std::make_shared<ExtremesStep>(base_input_stream);
+    step->setStepDescription(step_description);
+    return step;
+}
+
+QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::ArrayJoinStep & proto_step, ContextPtr context)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
+    auto array_join = ProtosSerDerHelper::fromProto(proto_step.array_join(), context);
+    auto step = std::make_shared<ArrayJoinStep>(base_input_stream, array_join);
+    step->setStepDescription(step_description);
+    return step;
+}
+
+QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::WindowStep & proto_step, ContextPtr)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
+    WindowDescription window_description = *ProtosSerDerHelper::fillFromProto(proto_step.window_description());
+    std::vector<WindowFunctionDescription> window_functions;
+    for (const auto & proto_element : proto_step.window_functions())
+    {
+        WindowFunctionDescription element = *ProtosSerDerHelper::fillFromProto(proto_element);
+        window_functions.emplace_back(std::move(element));
+    }
+    auto streams_fan_out = proto_step.streams_fan_out();
+    auto step = std::make_shared<WindowStep>(base_input_stream, window_description, window_functions, streams_fan_out);
+    step->setStepDescription(step_description);
+    return step;
+}
+
+#define FROM_PROTO_EXT_IMP(TYPE, VAR_NAME) \
+QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::TYPE & proto, ContextPtr context) \
+{ \
+    return TYPE::fromProto(proto, context);\
+}
+
+APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(FROM_PROTO_EXT_IMP)
+#undef FROM_PROTO_EXT_IMP
+
 QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::QueryPlanStep & proto, ContextPtr context)
 {
     switch (proto.step_case())
@@ -264,7 +423,7 @@ QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::QueryPlanStep & pr
   // 1. StepExt with proto uses macros to execute fromProto, see PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT
 #define CASE_DEF(TYPE, VAR_NAME) \
     case Protos::QueryPlanStep::StepCase::k##TYPE: { \
-        return TYPE::fromProto(dynamic_cast<const Protos::TYPE &>(proto), context); \
+        return fromProto(proto.VAR_NAME(), context); \
     }
 
         APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(CASE_DEF)
@@ -273,100 +432,35 @@ QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::QueryPlanStep & pr
         // 2. Step with proto needs implementing fromProto manually, see PROTOBUF_STEP_TYPES_AND_NAMES
         case Protos::QueryPlanStep::StepCase::kFillingStep:
         {
-            const auto & proto_step = proto.filling_step();
-            auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
-            SortDescription sort_description;
-            for (const auto & proto_element : proto_step.sort_description())
-            {
-                SortColumnDescription element;
-                ProtosSerDerHelper::fillFromProto(element, proto_element);
-                sort_description.emplace_back(std::move(element));
-            }
-            SortDescription fill_description;
-            for (const auto & proto_element : proto_step.fill_description())
-            {
-                SortColumnDescription element;
-                ProtosSerDerHelper::fillFromProto(element, proto_element);
-                fill_description.emplace_back(std::move(element));
-            }
-            auto step = std::make_shared<FillingStep>(base_input_stream, sort_description, fill_description, nullptr, proto_step.use_with_fill_by_sorting_prefix());
-            step->setStepDescription(step_description);
-            return step;
+            return fromProto(proto.filling_step(), context);
         }
         case Protos::QueryPlanStep::StepCase::kIntersectOrExceptStep:
         {
-            const auto & proto_step = proto.intersect_or_except_step();
-            DataStreams input_streams;
-            for (const auto & proto_element : proto_step.input_streams())
-            {
-                DataStream element;
-                ProtosSerDerHelper::fillFromProto(element, proto_element);
-                input_streams.emplace_back(std::move(element));
-            }
-            auto current_operator = ASTSelectIntersectExceptQueryOperatorConverter::fromProto(proto_step.current_operator());
-            auto max_threads = proto_step.max_threads();
-            auto step = std::make_shared<IntersectOrExceptStep>(input_streams, current_operator, max_threads);
-            return step;
+            return fromProto(proto.intersect_or_except_step(), context);
         }
         case Protos::QueryPlanStep::StepCase::kReadNothingStep:
         {
-            const auto & proto_step = proto.read_nothing_step();
-            return std::make_shared<ReadNothingStep>(deserializeHeaderFromProto(proto_step.query_plan_base().output_header()));
+            return fromProto(proto.read_nothing_step(), context);
         }
         case Protos::QueryPlanStep::StepCase::kOffsetStep:
         {
-            const auto & proto_step = proto.offset_step();
-            auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
-            auto offset = proto_step.offset();
-            auto step = std::make_shared<OffsetStep>(base_input_stream, offset);
-            step->setStepDescription(step_description);
-            return step;
+            return fromProto(proto.offset_step(), context);
         }
         case Protos::QueryPlanStep::StepCase::kLimitByStep:
         {
-            const auto & proto_step = proto.limit_by_step();
-            auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
-            auto group_length = proto_step.group_length();
-            auto group_offset = proto_step.group_offset();
-            std::vector<String> columns;
-            for (const auto & element : proto_step.columns())
-                columns.emplace_back(element);
-            auto step = std::make_shared<LimitByStep>(base_input_stream, group_length, group_offset, columns);
-            step->setStepDescription(step_description);
-            return step;
+            return fromProto(proto.limit_by_step(), context);
         }
         case Protos::QueryPlanStep::StepCase::kExtremesStep:
         {
-            const auto & proto_step = proto.extremes_step();
-            auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
-            auto step = std::make_shared<ExtremesStep>(base_input_stream);
-            step->setStepDescription(step_description);
-            return step;
+            return fromProto(proto.extremes_step(), context);
         }
         case Protos::QueryPlanStep::StepCase::kArrayJoinStep:
         {
-            const auto & proto_step = proto.array_join_step();
-            auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
-            auto array_join = ProtosSerDerHelper::fromProto(proto_step.array_join(), context);
-            auto step = std::make_shared<ArrayJoinStep>(base_input_stream, array_join);
-            step->setStepDescription(step_description);
-            return step;
+            return fromProto(proto.array_join_step(), context);
         }
         case Protos::QueryPlanStep::StepCase::kWindowStep:
         {
-            const auto & proto_step = proto.window_step();
-            auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
-            WindowDescription window_description = *ProtosSerDerHelper::fillFromProto(proto_step.window_description());
-            std::vector<WindowFunctionDescription> window_functions;
-            for (const auto & proto_element : proto_step.window_functions())
-            {
-                WindowFunctionDescription element = *ProtosSerDerHelper::fillFromProto(proto_element);
-                window_functions.emplace_back(std::move(element));
-            }
-            auto streams_fan_out = proto_step.streams_fan_out();
-            auto step = std::make_shared<WindowStep>(base_input_stream, window_description, window_functions, streams_fan_out);
-            step->setStepDescription(step_description);
-            return step;
+            return fromProto(proto.window_step(), context);
         }
         default: {
             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "not implemented step: {}", static_cast<int>(proto.step_case()));

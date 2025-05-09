@@ -229,7 +229,18 @@ public:
 
     static QueryPlanStepPtr copyQueryPlanStep(const QueryPlanStepPtr & query_plan_step, ContextPtr context);
 
+    template <typename StepType, typename ProtoType>
+    static void toProto(const StepType & query_plan_step, ProtoType & proto, bool for_hash_equals = false);
+
     static void toProto(const IQueryPlanStep & query_plan_step, Protos::QueryPlanStep & proto, bool for_hash_equals = false);
+
+
+#define FROM_PROTO_DEF(TYPE, VAR_NAME) \
+    static QueryPlanStepPtr fromProto(const Protos::TYPE & proto, ContextPtr context);
+
+    APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(FROM_PROTO_DEF)
+#undef FROM_PROTO_DEF
+
     static QueryPlanStepPtr fromProto(const Protos::QueryPlanStep & proto, ContextPtr context);
 
     static const Names & getLimitByStepColumns(const LimitByStep & limit) { return limit.columns; }
