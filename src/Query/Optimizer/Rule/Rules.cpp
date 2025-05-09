@@ -12,12 +12,12 @@
 // #include <Query/Optimizer/Rule/Rewrite/ExtractBitmapImplicitFilter.h>
 // #include <Query/Optimizer/Rule/Rewrite/FilterWindowToPartitionTopN.h>
 // #include <Query/Optimizer/Rule/Rewrite/ImplementSetOperationRules.h>
-// #include <Query/Optimizer/Rule/Rewrite/InlineProjections.h>
+#include <Query/Optimizer/Rule/Rewrite/InlineProjections.h>
 // #include <Query/Optimizer/Rule/Rewrite/MergeSetOperationRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/MultipleDistinctAggregationToExpandAggregate.h>
 // #include <Query/Optimizer/Rule/Rewrite/MultipleDistinctAggregationToMarkDistinct.h>
 // #include <Query/Optimizer/Rule/Rewrite/OptimizeAggregateRules.h>
-// #include <Query/Optimizer/Rule/Rewrite/PullProjectionOnJoinThroughJoin.h>
+#include <Query/Optimizer/Rule/Rewrite/PullProjectionOnJoinThroughJoin.h>
 // #include <Query/Optimizer/Rule/Rewrite/PushAggThroughJoinRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/PushDownApplyRules.h>
 #include <Query/Optimizer/Rule/Rewrite/PushDownLimitRules.h>
@@ -29,7 +29,7 @@
 #include <Query/Optimizer/Rule/Rewrite/RemoveRedundantRules.h>
 #include <Query/Optimizer/Rule/Rewrite/SimplifyExpressionRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/SingleDistinctAggregationToGroupBy.h>
-// #include <Query/Optimizer/Rule/Rewrite/SumIfToCountIf.h>
+#include <Query/Optimizer/Rule/Rewrite/SumIfToCountIf.h>
 // #include <Query/Optimizer/Rule/Rewrite/SwapAdjacentRules.h>
 #include <Query/Optimizer/Rule/Rewrite/TopNRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/JoinUsingToJoinOn.h>
@@ -51,15 +51,15 @@ std::vector<RulePtr> Rules::normalizeExpressionRules()
     return {std::make_shared<CommonPredicateRewriteRule>(), std::make_shared<CommonJoinFilterRewriteRule>()};
 }
 
-// std::vector<RulePtr> Rules::swapPredicateRules()
-// {
-//     return {std::make_shared<SwapPredicateRewriteRule>()};
-// }
-//
-// std::vector<RulePtr> Rules::sumIfToCountIf()
-// {
-//     return {std::make_shared<SumIfToCountIf>()};
-// }
+std::vector<RulePtr> Rules::swapPredicateRules()
+{
+    return {std::make_shared<SwapPredicateRewriteRule>()};
+}
+
+std::vector<RulePtr> Rules::sumIfToCountIf()
+{
+    return {std::make_shared<SumIfToCountIf>()};
+}
 
 std::vector<RulePtr> Rules::simplifyExpressionRules()
 {
@@ -71,16 +71,16 @@ std::vector<RulePtr> Rules::simplifyExpressionRules()
         std::make_shared<MergePredicatesUsingDomainTranslator>()};
 }
 
-// std::vector<RulePtr> Rules::inlineProjectionRules()
-// {
-//     // todo@kaixi: remove InlineProjectionIntoJoin
-//     return {
-//         std::make_shared<InlineProjectionIntoJoin>(),
-//         std::make_shared<InlineProjectionOnJoinIntoJoin>(),
-//         std::make_shared<InlineProjections>(),
-//         std::make_shared<PullProjectionOnJoinThroughJoin>()};
-// }
-//
+std::vector<RulePtr> Rules::inlineProjectionRules()
+{
+    // todo@kaixi: remove InlineProjectionIntoJoin
+    return {
+        std::make_shared<InlineProjectionIntoJoin>(),
+        std::make_shared<InlineProjectionOnJoinIntoJoin>(),
+        std::make_shared<InlineProjections>(),
+        std::make_shared<PullProjectionOnJoinThroughJoin>()};
+}
+
 // std::vector<RulePtr> Rules::pushPartialStepRules()
 // {
 //     return {
