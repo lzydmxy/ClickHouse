@@ -912,9 +912,7 @@ InterpretIMResult ExpressionInterpreter::visitInFunction(const ASTFunction & fun
     columns_with_types.emplace_back(left_arg_result.type, "");
     // columns_with_types.emplace_back(const_column_set, std::make_shared<DataTypeSet>(), "");
     auto overload_resolver = FunctionFactory::instance().tryGet(function.name, context);
-    // todo: hongzhigao1, getReturnType is private
-    // return {overload_resolver->getReturnType(columns_with_types), simplified_in_func};
-    return {};
+    return {overload_resolver->getReturnType(columns_with_types), simplified_in_func};
 }
 
 }
