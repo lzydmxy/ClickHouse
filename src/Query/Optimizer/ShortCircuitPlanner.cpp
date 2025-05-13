@@ -49,7 +49,7 @@ public:
     {
         auto constraints = extractConstraints(filter);
         auto metadata = table_scan.getStorage()->getInMemoryMetadataPtr();
-        // todo: hongzhigao1, no unique_key now
+        // todo: hongzhigao1, other feat: unique_key
         // return isPointScan(metadata->getUniqueKey(), constraints);
         return false;
     }

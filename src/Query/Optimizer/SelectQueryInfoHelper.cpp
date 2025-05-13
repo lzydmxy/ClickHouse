@@ -41,10 +41,6 @@ SelectQueryInfo buildSelectQueryInfoForQuery(const ASTPtr & query, ContextPtr co
     // fill prepared_set
     auto query_analyzer
         = std::make_unique<SelectQueryExpressionAnalyzer>(query_info.query, query_info.syntax_analyzer_result, context, metadata_snapshot);
-
-    // todo: hongzhigao1, implement makeSetsForIndex
-    // query_analyzer->makeSetsForIndex(select_query->where());
-    // query_analyzer->makeSetsForIndex(select_query->prewhere());
     query_info.prepared_sets = query_analyzer->getPreparedSets();
 
     return query_info;

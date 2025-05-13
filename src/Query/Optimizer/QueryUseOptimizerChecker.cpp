@@ -115,7 +115,7 @@ bool QueryUseOptimizerChecker::check(ASTPtr node, ContextMutablePtr context, boo
     // will execute query : INSERT INTO test.parallel_replicas_backup_4313395779120660490 (d, x, u, s) SELECT d, x, u, s FROM test.parallel_replicas )
     // will execute query : SELECT d, x, u, s FROM test.parallel_replicas_4313395779120660490
     // in worker.
-    // todo: hongzhigao1, no chch
+    // todo: hongzhigao1, other feat: chch
     // if (context->getServerType() == ServerType::cnch_worker)
     // {
     //     turnOffOptimizer(context, node);
@@ -140,7 +140,7 @@ bool QueryUseOptimizerChecker::check(ASTPtr node, ContextMutablePtr context, boo
             reason = "unsupported explain type";
         return explain_plan && check(explain->getExplainedQuery(), context, throw_exception);
     }
-    // todo: hongzhigao1, implement ASTCreatePreparedStatementQuery
+    // todo: hongzhigao1, other feat: ASTCreatePreparedStatementQuery
     // if (auto * prepare = node->as<ASTCreatePreparedStatementQuery>())
     // {
     //     return check(prepare->getQuery(), context, throw_exception);

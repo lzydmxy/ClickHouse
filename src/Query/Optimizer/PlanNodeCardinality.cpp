@@ -27,11 +27,9 @@ public:
     Range visitLimitStepExtNode(LimitStepExtNode & node, Void & context) override
     {
         auto source_range = VisitorUtil::accept(node.getChildren()[0], *this, context);
-        // todo: hongzhigao1, implement getOffsetValue in limitStepExt
-        // const auto * step = dynamic_cast<const LimitStepExt *>(node.getStep().get());
-        // return step->hasPreparedParam() ? source_range
-        //                                 : applyLimit(applyOffset(source_range, step->getOffsetValue()), step->getLimitValue());
-        return source_range;
+        const auto * step = dynamic_cast<const LimitStepExt *>(node.getStep().get());
+        return step->hasPreparedParam() ? source_range
+                                        : applyLimit(applyOffset(source_range, step->getOffset()), step->getLimit());
     }
 
     Range visitProjectionStepExtNode(ProjectionStepExtNode & node, Void & context) override
@@ -78,8 +76,7 @@ public:
         return Range{std::max(static_cast<size_t>(0), source_range.lower_bound), std::max(static_cast<size_t>(1), source_range.upper_bound)};
     }
 
-    // todo: hongzhigao1, implement WindowStep
-    // Range visitWindowNode(WindowNode & node, Void & context) override { return VisitorUtil::accept(node.getChildren()[0], *this, context); }
+    Range visitWindowStepNode(WindowStepNode & node, Void & context) override { return VisitorUtil::accept(node.getChildren()[0], *this, context); }
 
     Range visitDistinctStepExtNode(DistinctStepExtNode & node, Void & context) override
     {

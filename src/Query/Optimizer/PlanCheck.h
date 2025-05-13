@@ -18,8 +18,7 @@ public:
     static void check(PlanNodePtr plan);
 
     Void visitPlanNode(PlanNodeBase &, Void &) override;
-    // todo: hongzhigao1, ReadNothingNode
-    // Void visitReadNothingNode(ReadNothingNode &, Void &) override;
+    Void visitReadNothingStepNode(ReadNothingStepNode &, Void &) override;
 };
 
 class SymbolChecker : public PlanNodeVisitor<Void, ContextMutablePtr>

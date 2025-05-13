@@ -19,11 +19,10 @@ void PlanCheck::checkFinalPlan(QueryPlanExt & plan, ContextMutablePtr context)
 void ReadNothingChecker::check(PlanNodePtr plan)
 {
     // if the whole plan is simplify to ReadNothingNode, return.
-    // todo: hongzhigao1, ReadNothing
-    // if (getQueryPlanStepType(plan->getStep()) == QueryPlanStepType::ReadNothing)
-    // {
-    //     return;
-    // }
+    if (getQueryPlanStepType(plan->getStep()) == QueryPlanStepType::ReadNothingStep)
+    {
+        return;
+    }
     ReadNothingChecker read_nothing_check;
     Void context{};
 
@@ -40,11 +39,10 @@ Void ReadNothingChecker::visitPlanNode(PlanNodeBase & node, Void & context)
     return {};
 }
 
-// todo: hongzhigao1, ReadNothing
-// Void ReadNothingChecker::visitReadNothingNode(ReadNothingNode &, Void &)
-// {
-//     throw Exception(ErrorCodes::LOGICAL_ERROR, "ReadNothingNode must removed in query optimization");
-// }
+Void ReadNothingChecker::visitReadNothingStepNode(ReadNothingStepNode &, Void &)
+{
+    throw Exception(ErrorCodes::LOGICAL_ERROR, "ReadNothingNode must removed in query optimization");
+}
 
 void SymbolChecker::check(QueryPlanExt & plan, ContextMutablePtr & context, bool check_filter)
 {

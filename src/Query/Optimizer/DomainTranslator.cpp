@@ -603,7 +603,7 @@ DomainVisitor<T>::canImplicitCoerceValue(Field & value, DataTypePtr & from_type_
     }
     else if (from_id == TypeIndex::String)
     {
-        // todo: hongzhigao1, add Time in TypeIndex
+        // todo: hongzhigao1, other feat: add Time in TypeIndex
         if (to_id == TypeIndex::Date || to_id == TypeIndex::DateTime || to_id == TypeIndex::Date32 || to_id == TypeIndex::DateTime64
             /*|| to_id == TypeIndex::Time*/)
         {

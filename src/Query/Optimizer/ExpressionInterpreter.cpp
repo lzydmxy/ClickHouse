@@ -768,7 +768,7 @@ InterpretIMResult ExpressionInterpreter::visitOrdinaryFunction(const ASTFunction
     //   In cnch, constant folding requires `function_base->isDeterministic() == true` and `function_base->isSuitableForConstantFolding() == true`
     // This is because some functions do not satisfy `isColumnConst(*res_col)` in cnch, which cause constant folding not work and
     // furthermore block other optimizations(e.g. outer join to inner join)
-    // todo: hongzhigao1, isSuitableForConstantFoldingInOptimizer
+    // todo: hongzhigao1, implement isSuitableForConstantFoldingInOptimizer
     if (/*function_base->isSuitableForConstantFoldingInOptimizer() &&*/ !has_lambda_argument
         && (context->getOptimizerContext()->getSettingsRef().enable_evaluate_constant_for_nondeterministic || function_base->isDeterministic()))
     {
@@ -790,7 +790,7 @@ InterpretIMResult ExpressionInterpreter::visitOrdinaryFunction(const ASTFunction
     }
 
     // === Null simplify ===
-    // todo: hongzhigao1, useDefaultImplementationForNulls
+    // todo: hongzhigao1, implement useDefaultImplementationForNulls
     if (has_null_argument && /*function_builder->useDefaultImplementationForNulls() &&*/ setting.enable_null_simplify)
         return {JoinCommon::tryConvertTypeToNullable(std::make_shared<DataTypeNothing>()), simplified_node, Null()};
 
@@ -866,12 +866,12 @@ InterpretIMResult ExpressionInterpreter::visitInFunction(const ASTFunction & fun
     // constant folding
     if (left_arg_result.isValue())
     {
-        // todo: hongzhigao1, ColumnSet::create
-        // auto column_set = ColumnSet::create(1, set);
-        // ColumnPtr const_column_set = ColumnConst::create(std::move(column_set), 1);
+        auto future_set = std::make_shared<FutureSetFromStorage>(std::move(set));
+        auto column_set = ColumnSet::create(1, std::move(future_set));
+        ColumnPtr const_column_set = ColumnConst::create(std::move(column_set), 1);
         ColumnsWithTypeAndName columns_with_types;
         columns_with_types.emplace_back(left_arg_result.value, left_arg_result.type, "");
-        // columns_with_types.emplace_back(const_column_set, std::make_shared<DataTypeSet>(), "");
+        columns_with_types.emplace_back(const_column_set, std::make_shared<DataTypeSet>(), "");
         auto result = FunctionInvoker::execute(function.name, columns_with_types, context);
         return {result.type, rewritten_in_func, result.value};
     }
@@ -905,12 +905,12 @@ InterpretIMResult ExpressionInterpreter::visitInFunction(const ASTFunction & fun
     auto tuple_func = makeASTFunction("tuple", set_values);
     auto simplified_in_func = makeASTFunction(function.name, rewritten_left_arg, tuple_func);
 
-    // todo: hongzhigao1, ColumnSet::create
-    // auto column_set = ColumnSet::create(1, set);
-    // ColumnPtr const_column_set = ColumnConst::create(std::move(column_set), 1);
+    auto future_set = std::make_shared<FutureSetFromStorage>(std::move(set));
+    auto column_set = ColumnSet::create(1, std::move(future_set));
+    ColumnPtr const_column_set = ColumnConst::create(std::move(column_set), 1);
     ColumnsWithTypeAndName columns_with_types;
     columns_with_types.emplace_back(left_arg_result.type, "");
-    // columns_with_types.emplace_back(const_column_set, std::make_shared<DataTypeSet>(), "");
+    columns_with_types.emplace_back(const_column_set, std::make_shared<DataTypeSet>(), "");
     auto overload_resolver = FunctionFactory::instance().tryGet(function.name, context);
     return {overload_resolver->getReturnType(columns_with_types), simplified_in_func};
 }

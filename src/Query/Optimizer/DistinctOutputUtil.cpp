@@ -25,12 +25,10 @@ bool IsDistinctPlanVisitor::visitValuesStepExtNode(ValuesStepExtNode & node, Voi
     return dynamic_cast<const ValuesStepExt *>(node.getStep().get())->getRows() <= 1;
 }
 
-bool IsDistinctPlanVisitor::visitLimitStepExtNode(LimitStepExtNode & /*node*/, Void &)
+bool IsDistinctPlanVisitor::visitLimitStepExtNode(LimitStepExtNode & node, Void &)
 {
-    // todo: hongzhigao1, getLimitValue
-    // const auto * step = dynamic_cast<const LimitStep *>(node.getStep().get());
-    // return step->getLimitValue() <= 1;
-    return false;
+    const auto * step = dynamic_cast<const LimitStepExt *>(node.getStep().get());
+    return step->getLimit() <= 1;
 }
 
 bool IsDistinctPlanVisitor::visitIntersectStepExtNode(IntersectStepExtNode & node, Void & context)
