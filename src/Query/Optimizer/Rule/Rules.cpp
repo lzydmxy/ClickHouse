@@ -25,7 +25,7 @@
 // #include <Query/Optimizer/Rule/Rewrite/PushPartialStepThroughExchangeRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/PushProjectionRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/PushThroughExchangeRules.h>
-// #include <Query/Optimizer/Rule/Rewrite/PushUnionThroughJoin.h>
+#include <Query/Optimizer/Rule/Rewrite/PushUnionThroughJoin.h>
 #include <Query/Optimizer/Rule/Rewrite/RemoveRedundantRules.h>
 #include <Query/Optimizer/Rule/Rewrite/SimplifyExpressionRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/SingleDistinctAggregationToGroupBy.h>
@@ -233,10 +233,10 @@ std::vector<RulePtr> Rules::pushDownTopNRules()
 //     return {std::make_shared<ExtractBitmapImplicitFilter>()};
 // }
 //
-// std::vector<RulePtr> Rules::pushUnionThroughJoin()
-// {
-//     return {std::make_shared<PushUnionThroughJoin>(), std::make_shared<PushUnionThroughProjection>()};
-// }
+std::vector<RulePtr> Rules::pushUnionThroughJoin()
+{
+    return {std::make_shared<PushUnionThroughJoin>(), std::make_shared<PushUnionThroughProjection>()};
+}
 
 std::vector<RulePtr> Rules::addRepartitionColumn()
 {
