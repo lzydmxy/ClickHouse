@@ -27,7 +27,7 @@
 #include <Query/Optimizer/Rule/Rewrite/SimplifyExpressionRules.h>
 #include <Query/Optimizer/Rule/Rewrite/SingleDistinctAggregationToGroupBy.h>
 #include <Query/Optimizer/Rule/Rewrite/SumIfToCountIf.h>
-// #include <Query/Optimizer/Rule/Rewrite/SwapAdjacentRules.h>
+#include <Query/Optimizer/Rule/Rewrite/SwapAdjacentRules.h>
 #include <Query/Optimizer/Rule/Rewrite/TopNRules.h>
 
 
