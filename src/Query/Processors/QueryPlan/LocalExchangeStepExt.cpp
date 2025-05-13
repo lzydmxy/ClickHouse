@@ -25,9 +25,8 @@ void LocalExchangeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, co
     if (streams <= 1)
     {
         /// Same as round-robin shuffle
-        //todo: zhangwanyun1, other feat: need context from BuildQueryPipelineSettings
-        // pipeline.addTransform(std::make_shared<ResizeProcessor>(
-        //     stream_header, 1, build_context.context->getSettingsRef().max_threads));
+        pipeline.addTransform(std::make_shared<ResizeProcessor>(
+            stream_header, 1, build_context.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_threads));
         return;
     }
 

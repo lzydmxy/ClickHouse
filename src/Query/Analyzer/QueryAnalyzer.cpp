@@ -49,6 +49,7 @@
 #include <Storages/StorageDistributed.h>
 #include <Storages/StorageMaterializedView.h>
 #include <Storages/StorageMemory.h>
+#include <Query/Common/getLeastSupertypeExt.h>
 
 #include <sstream>
 #include <unordered_map>
@@ -105,12 +106,12 @@ public:
         , context(std::move(context_))
         , analysis(analysis_)
         , outer_query_scope(outer_query_scope_)
-        , use_ansi_semantic(false)  // todo: zhangwanyun1, now do not support other dialect: context->getSettingsRef().dialect_type != DialectType::CLICKHOUSE
+        , use_ansi_semantic(context->getOptimizerContext()->getSettingsRef().dialect_type != DialectType::CLICKHOUSE)
         , enable_shared_cte(context->getOptimizerContext()->getSettingsRef().cte_mode != CTEMode::INLINED)
         , enable_implicit_type_conversion(context->getOptimizerContext()->getSettingsRef().enable_implicit_type_conversion)
-        , allow_extended_conversion(false)  // todo: zhangwanyun1, this setting is mysql related, now do not support
+        , allow_extended_conversion(context->getOptimizerContext()->getSettingsRef().allow_extended_type_conversion)
         , enable_subcolumn_optimization_through_union(context->getOptimizerContext()->getSettingsRef().enable_subcolumn_optimization_through_union)
-        , enable_implicit_arg_type_convert(false)  // todo: zhangwanyun1, this setting is mysql related, now do not support
+        , enable_implicit_arg_type_convert(context->getOptimizerContext()->getSettingsRef().enable_implicit_arg_type_convert)
     {
     }
 
@@ -352,9 +353,8 @@ void QueryAnalyzerVisitor::analyzeSetOperation(ASTPtr & node, ASTs & selects)
             }
 
             DataTypePtr output_type;
-            // todo: zhangwanyun1, if support enable_implicit_arg_type_convert and allow_extended_conversion, then add other code
             // promote output type to super type if necessary
-            output_type = getLeastSupertype(elem_types);
+            output_type = getCommonType(elem_types, enable_implicit_arg_type_convert, allow_extended_conversion);
             output_desc.emplace_back(
                 first_input_desc[column_idx].name,
                 output_type,
@@ -870,8 +870,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeJoinUsing(
             {
                 try
                 {
-                    // todo: zhangwanyun1, if support enable_implicit_arg_type_convert and allow_extended_conversion, then add other code
-                    output_type = getLeastSupertype(DataTypes{left_type, right_type});
+                    output_type = getCommonType(DataTypes{left_type, right_type}, enable_implicit_arg_type_convert, allow_extended_conversion);
                 }
                 catch (DB::Exception & ex)
                 {
@@ -968,8 +967,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeJoinUsing(
             {
                 try
                 {
-                    // todo: zhangwanyun1, if support enable_implicit_arg_type_convert and allow_extended_conversion, then add other code
-                    output_type = getLeastSupertype(DataTypes{left_type, right_type});
+                    output_type = getCommonType(DataTypes{left_type, right_type}, enable_implicit_arg_type_convert, allow_extended_conversion);
                 }
                 catch (DB::Exception & ex)
                 {
@@ -1190,8 +1188,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeJoinOn(
                             {
                                 try
                                 {
-                                    // todo: zhangwanyun1, if support enable_implicit_arg_type_convert and allow_extended_conversion, then add other code
-                                    super_type = getLeastSupertype(DataTypes{left_type, right_type});
+                                    super_type = getCommonType(DataTypes{left_type, right_type}, enable_implicit_arg_type_convert, allow_extended_conversion);
                                 }
                                 catch (DB::Exception & ex)
                                 {

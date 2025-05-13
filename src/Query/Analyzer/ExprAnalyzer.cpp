@@ -33,6 +33,7 @@
 #include <Query/Parsers/ASTQuantifiedComparisonExt.h>
 #include <Query/Parsers/ASTVisitor.h>
 #include <Core/Field.h>
+#include <Query/Common/getLeastSupertypeExt.h>
 
 #include <memory>
 
@@ -84,10 +85,10 @@ public:
         : context(std::move(context_))
         , analysis(analysis_)
         , options(std::move(options_))
-        , use_ansi_semantic(false)  // todo: zhangwanyun1, need dialect_type context->getSettingsRef().dialect_type != DialectType::CLICKHOUSE
+        , use_ansi_semantic(context->getOptimizerContext()->getSettingsRef().dialect_type != DialectType::CLICKHOUSE)
         , enable_implicit_type_conversion(context->getOptimizerContext()->getSettingsRef().enable_implicit_type_conversion)
-        , allow_extended_conversion(false)  // todo: zhangwanyun1, this setting is mysql related, now do not support
-        , enable_implicit_arg_type_convert(false)  // todo: zhangwanyun1, this setting is mysql related, now do not support
+        , allow_extended_conversion(context->getOptimizerContext()->getSettingsRef().allow_extended_type_conversion)
+        , enable_implicit_arg_type_convert(context->getOptimizerContext()->getSettingsRef().enable_implicit_arg_type_convert)
         , scopes({scope_})
     {
     }
@@ -663,8 +664,7 @@ void ExprAnalyzerVisitor::processSubqueryArgsWithCoercion(ASTPtr & lhs_ast, ASTP
                 }
             }
             else
-                // todo: zhangwanyun1, if support enable_implicit_arg_type_convert and allow_extended_conversion, then add other code
-                super_type = getLeastSupertype(DataTypes{lhs_type, rhs_type});
+                super_type = getCommonType(DataTypes{lhs_type, rhs_type}, enable_implicit_arg_type_convert, allow_extended_conversion);
         }
         if (!super_type)
             throw Exception(ErrorCodes::TYPE_MISMATCH, "Incompatible types for IN prediacte");

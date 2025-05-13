@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Parsers/IAST.h>
-#include <Query/Parsers/ASTHelper.h>
 
 
 namespace DB

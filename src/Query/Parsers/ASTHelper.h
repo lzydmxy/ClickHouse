@@ -51,6 +51,7 @@
 #include <Query/Parsers/ASTQuantifiedComparisonExt.h>
 #include <Query/Parsers/ASTType.h>
 #include <Query/Parsers/ASTStatsQueryExt.h>
+#include <Query//Parsers/ASTClusterByElementExt.h>
 
 namespace DB
 {

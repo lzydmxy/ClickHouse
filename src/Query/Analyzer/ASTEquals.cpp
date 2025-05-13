@@ -10,6 +10,7 @@
 #include <Parsers/ASTSetQuery.h>
 #include <Query/Parsers/ASTTableColumnReference.h>
 #include <Query/Parsers/ASTSelectQueryExt.h>
+#include <Query/Parsers/ASTClusterByElementExt.h>
 #include <Common/SipHash.h>
 
 
@@ -44,13 +45,12 @@ bool compareNode(const ASTWindowDefinition & left, const ASTWindowDefinition & r
         left.frame_end_preceding == right.frame_end_preceding;
 }
 
-// todo: zhangwanyun1, do not support ASTClusterByElement now, need to confirm whether it is really necessary
-// bool compareNode(const ASTClusterByElement & left, const ASTClusterByElement & right)
-// {
-//     return left.split_number == right.split_number &&
-//         left.is_with_range == right.is_with_range &&
-//         left.is_user_defined_expression == right.is_user_defined_expression;
-// }
+bool compareNode(const ASTClusterByElementExt & left, const ASTClusterByElementExt & right)
+{
+    return left.split_number == right.split_number &&
+        left.is_with_range == right.is_with_range &&
+        left.is_user_defined_expression == right.is_user_defined_expression;
+}
 
 bool compareNode(const ASTSubquery & left, const ASTSubquery & right)
 {
@@ -140,10 +140,9 @@ bool compareTree(const ASTPtr & left, const ASTPtr & right, const SubtreeCompara
         case ASTType::ASTTableIdentifier:
             node_equals = compareNode(left->as<ASTTableIdentifier &>(), right->as<ASTTableIdentifier &>());
             break;
-        // todo: zhangwanyun1, do not support ASTClusterByElement now, need to confirm whether it is really necessary
-        // case ASTType::ASTClusterByElement:
-        //     node_equals = compareNode(left->as<ASTClusterByElement &>(), right->as<ASTClusterByElement &>());
-        //     break;
+        case ASTType::ASTClusterByElementExt:
+            node_equals = compareNode(left->as<ASTClusterByElementExt &>(), right->as<ASTClusterByElementExt &>());
+            break;
         default:
             /// align with ScopeAwareHash
             node_equals = left->getID() == right->getID();

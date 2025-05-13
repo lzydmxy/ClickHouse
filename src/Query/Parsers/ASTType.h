@@ -137,7 +137,8 @@ using ASTFunctionPtr = std::shared_ptr<ASTFunction>;
     M(ASTWindowListElement) \
     M(ASTWithElement) \
     M(ASTTableColumnReference) \
-    M(ASTQuantifiedComparisonExt)
+    M(ASTQuantifiedComparisonExt) \
+    M(ASTClusterByElementExt)
 
 #define ENUM_AST_TYPE(ITEM) ITEM,
 enum class ASTType : UInt8
