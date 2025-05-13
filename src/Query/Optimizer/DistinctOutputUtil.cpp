@@ -1,7 +1,7 @@
 #include <Query/Optimizer/DistinctOutputUtil.h>
 
-// #include <Query/Processors/QueryPlan/ExceptStepExt.h>
-// #include <Query/Processors/QueryPlan/IntersectStepExt.h>
+#include <Query/Processors/QueryPlan/ExceptStepExt.h>
+#include <Query/Processors/QueryPlan/IntersectStepExt.h>
 #include <Query/Processors/QueryPlan/LimitStepExt.h>
 #include <Query/Processors/QueryPlan/MergingSortedStepExt.h>
 #include <Query/Processors/QueryPlan/ValuesStepExt.h>
@@ -33,19 +33,18 @@ bool IsDistinctPlanVisitor::visitLimitStepExtNode(LimitStepExtNode & /*node*/, V
     return false;
 }
 
-// todo: hongzhigao1, IntersectStep
-// bool IsDistinctPlanVisitor::visitIntersectNode(IntersectNode & node, Void & context)
-// {
-//     if (dynamic_cast<const IntersectStep *>(node.getStep().get())->isDistinct())
-//         return true;
+bool IsDistinctPlanVisitor::visitIntersectStepExtNode(IntersectStepExtNode & node, Void & context)
+{
+    if (dynamic_cast<const IntersectStepExt *>(node.getStep().get())->isDistinct())
+        return true;
 
-//     for (auto & child : node.getChildren())
-//     {
-//         if (!VisitorUtil::accept(child, *this, context))
-//             return false;
-//     }
-//     return true;
-// }
+    for (auto & child : node.getChildren())
+    {
+        if (!VisitorUtil::accept(child, *this, context))
+            return false;
+    }
+    return true;
+}
 
 bool IsDistinctPlanVisitor::visitEnforceSingleRowStepExtNode(EnforceSingleRowStepExtNode &, Void &)
 {
@@ -72,11 +71,10 @@ bool IsDistinctPlanVisitor::visitDistinctStepExtNode(DistinctStepExtNode &, Void
     return true;
 }
 
-// todo: hongzhigao1, ExceptStep
-// bool IsDistinctPlanVisitor::visitExceptNode(ExceptNode & node, Void & context)
-// {
-//     return dynamic_cast<const ExceptStep *>(node.getStep().get())->isDistinct() || VisitorUtil::accept(node.getChildren()[0], *this, context);
-// }
+bool IsDistinctPlanVisitor::visitExceptStepExtNode(ExceptStepExtNode & node, Void & context)
+{
+    return dynamic_cast<const ExceptStepExt *>(node.getStep().get())->isDistinct() || VisitorUtil::accept(node.getChildren()[0], *this, context);
+}
 
 bool IsDistinctPlanVisitor::visitMergingSortedStepExtNode(MergingSortedStepExtNode & node, Void &)
 {

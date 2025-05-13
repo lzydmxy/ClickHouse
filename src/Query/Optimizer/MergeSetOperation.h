@@ -65,85 +65,81 @@ private:
             return false;
         }
 
-        // todo: hongzhigao1, IntersectStep, ExceptStep
-        // if (node->getType() == IQueryPlanStep::Type::Intersect)
-        // {
-        //     if (!dynamic_cast<const IntersectStep *>(node->getStep().get())->isDistinct()
-        //         && !dynamic_cast<const IntersectStep *>(child->getStep().get())->isDistinct())
-        //     {
-        //         return false;
-        //     }
-        //     return true;
-        // }
+        if (node->getType() == QueryPlanStepType::IntersectStepExt)
+        {
+            if (!dynamic_cast<const IntersectStepExt *>(node->getStep().get())->isDistinct()
+                && !dynamic_cast<const IntersectStepExt *>(child->getStep().get())->isDistinct())
+            {
+                return false;
+            }
+            return true;
+        }
 
-        // if (dynamic_cast<const ExceptStep *>(node->getStep().get())->isDistinct()
-        //     && !dynamic_cast<const ExceptStep *>(child->getStep().get())->isDistinct())
-        // {
-        //     return {};
-        // }
-        // return dynamic_cast<const ExceptStep *>(child->getStep().get())->isDistinct();
-        return false;
+        if (dynamic_cast<const ExceptStepExt *>(node->getStep().get())->isDistinct()
+            && !dynamic_cast<const ExceptStepExt *>(child->getStep().get())->isDistinct())
+        {
+            return {};
+        }
+        return dynamic_cast<const ExceptStepExt *>(child->getStep().get())->isDistinct();
     }
 
     void
-    addMergedMappings(const PlanNodePtr & child, int /*child_index*/, std::unordered_map<String, std::vector<String>> & /*new_output_to_inputs*/)
+    addMergedMappings(const PlanNodePtr & child, int child_index, std::unordered_map<String, std::vector<String>> & new_output_to_inputs)
     {
         auto & children = child->getChildren();
         new_sources.insert(new_sources.end(), children.begin(), children.end());
 
         auto step_ptr = node->getStep();
-        // todo: hongzhigao1, IntersectStep, ExceptStep
-        // auto & step = dynamic_cast<const SetOperationStep &>(*step_ptr);
-        // const std::unordered_map<String, std::vector<String>> & output_to_input = step.getOutToInputs();
+        const auto & step = dynamic_cast<const SetOperationStepExt &>(*step_ptr);
+        const std::unordered_map<String, std::vector<String>> & output_to_input = step.getOutToInputs();
 
         auto child_step_ptr = child->getStep();
-        // auto & child_step = dynamic_cast<const SetOperationStep &>(*child_step_ptr);
-        // const std::unordered_map<String, std::vector<String>> & child_output_to_input = child_step.getOutToInputs();
+        const auto & child_step = dynamic_cast<const SetOperationStepExt &>(*child_step_ptr);
+        const std::unordered_map<String, std::vector<String>> & child_output_to_input = child_step.getOutToInputs();
 
-        // for (auto & mapping : output_to_input)
-        // {
-        //     String output = mapping.first;
-        //     const std::vector<String> & inputs = mapping.second;
-        //     String input = inputs[child_index];
+        for (const auto & mapping : output_to_input)
+        {
+            String output = mapping.first;
+            const std::vector<String> & inputs = mapping.second;
+            String input = inputs[child_index];
 
-        //     const std::vector<String> & child_inputs = child_output_to_input.at(input);
-        //     if (new_output_to_inputs.contains(output))
-        //     {
-        //         std::vector<String> & tmp = new_output_to_inputs.at(output);
-        //         tmp.insert(tmp.end(), child_inputs.begin(), child_inputs.end());
-        //     }
-        //     else
-        //     {
-        //         new_output_to_inputs[output] = child_inputs;
-        //     }
-        // }
+            const std::vector<String> & child_inputs = child_output_to_input.at(input);
+            if (new_output_to_inputs.contains(output))
+            {
+                std::vector<String> & tmp = new_output_to_inputs.at(output);
+                tmp.insert(tmp.end(), child_inputs.begin(), child_inputs.end());
+            }
+            else
+            {
+                new_output_to_inputs[output] = child_inputs;
+            }
+        }
     }
 
     void
-    addOriginalMappings(const PlanNodePtr & child, int /*child_index*/, std::unordered_map<String, std::vector<String>> & /*new_output_to_inputs*/)
+    addOriginalMappings(const PlanNodePtr & child, int child_index, std::unordered_map<String, std::vector<String>> & new_output_to_inputs)
     {
         new_sources.emplace_back(child);
 
         auto step_ptr = node->getStep();
-        // todo: hongzhigao1, IntersectStep, ExceptStep
-        // auto & step = dynamic_cast<const SetOperationStep &>(*step_ptr);
-        // const std::unordered_map<String, std::vector<String>> & output_to_input = step.getOutToInputs();
+        const auto & step = dynamic_cast<const SetOperationStepExt &>(*step_ptr);
+        const std::unordered_map<String, std::vector<String>> & output_to_input = step.getOutToInputs();
 
-        // for (auto & mapping : output_to_input)
-        // {
-        //     String output = mapping.first;
-        //     const std::vector<String> & inputs = mapping.second;
-        //     String input = inputs[child_index];
-        //     if (new_output_to_inputs.contains(output))
-        //     {
-        //         std::vector<String> & tmp = new_output_to_inputs.at(output);
-        //         tmp.emplace_back(input);
-        //     }
-        //     else
-        //     {
-        //         new_output_to_inputs[output] = std::vector<String>{input};
-        //     }
-        // }
+        for (const auto & mapping : output_to_input)
+        {
+            String output = mapping.first;
+            const std::vector<String> & inputs = mapping.second;
+            String input = inputs[child_index];
+            if (new_output_to_inputs.contains(output))
+            {
+                std::vector<String> & tmp = new_output_to_inputs.at(output);
+                tmp.emplace_back(input);
+            }
+            else
+            {
+                new_output_to_inputs[output] = std::vector<String>{input};
+            }
+        }
     }
 
     PlanNodePtr node;
