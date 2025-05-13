@@ -343,6 +343,26 @@ PropertySets DeterminerVisitor::visitUnionStepExt(const UnionStepExt & step, Det
     return {set};
 }
 
+PropertySets DeterminerVisitor::visitIntersectStepExt(const IntersectStepExt & node, DeterminerContext &)
+{
+    PropertySet set;
+    for (const auto & input : node.getInputStreams())
+    {
+        set.emplace_back(Property{Partitioning{
+            Partitioning::Handle::FIXED_HASH,
+            input.header.getNames(),
+        }});
+    }
+
+    return {set};
+}
+
+PropertySets DeterminerVisitor::visitExceptStepExt(const ExceptStepExt & node, DeterminerContext & context)
+{
+    return visitStep(node, context);
+}
+
+
 PropertySets DeterminerVisitor::visitIntersectOrExceptStep(const IntersectOrExceptStep & node, DeterminerContext &)
 {
     PropertySet set;

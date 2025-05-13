@@ -208,17 +208,17 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitUnionStepExt(const UnionStepExt &
     return stats;
 }
 
-// PlanNodeStatisticsPtr CardinalityVisitor::visitIntersectStep(const IntersectStep &, CardinalityContext & context)
-// {
-//     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
-//     return child_stats;
-// }
+PlanNodeStatisticsPtr CardinalityVisitor::visitIntersectStepExt(const IntersectStepExt &, CardinalityContext & context)
+{
+    PlanNodeStatisticsPtr child_stats = context.children_stats[0];
+    return child_stats;
+}
 
-// PlanNodeStatisticsPtr CardinalityVisitor::visitExceptStep(const ExceptStep &, CardinalityContext & context)
-// {
-//     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
-//     return child_stats;
-// }
+PlanNodeStatisticsPtr CardinalityVisitor::visitExceptStepExt(const ExceptStepExt &, CardinalityContext & context)
+{
+    PlanNodeStatisticsPtr child_stats = context.children_stats[0];
+    return child_stats;
+}
 
 PlanNodeStatisticsPtr CardinalityVisitor::visitExchangeStepExt(const ExchangeStepExt & step, CardinalityContext & context)
 {

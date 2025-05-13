@@ -486,6 +486,16 @@ Property DeriverVisitor::visitUnionStepExt(const UnionStepExt & step, DeriverCon
     return Property{};
 }
 
+Property DeriverVisitor::visitExceptStepExt(const ExceptStepExt &, DeriverContext & context)
+{
+    return context.getInput()[0].clearSorting();
+}
+
+Property DeriverVisitor::visitIntersectStepExt(const IntersectStepExt &, DeriverContext & context)
+{
+    return context.getInput()[0].clearSorting();
+}
+
 Property DeriverVisitor::visitIntersectOrExceptStep(const IntersectOrExceptStep &, DeriverContext & context)
 {
     return context.getInput()[0].clearSorting();
