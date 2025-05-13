@@ -932,6 +932,84 @@ PlanNodePtr ColumnPruningVisitor::visitUnionStepExtNode(UnionStepExtNode & node,
     return union_node;
 }
 
+PlanNodePtr ColumnPruningVisitor::visitExceptStepExtNode(ExceptStepExtNode & node, ColumnPruningContext &)
+{
+    const auto * step = node.getStep().get();
+
+    std::vector<size_t> require_index;
+
+    size_t index = 0;
+    DataStream output_stream;
+    for (const auto & item : step->getOutputStream().header)
+    {
+        require_index.emplace_back(index);
+        output_stream.header.insert(item);
+        index++;
+    }
+
+    /// count(*) requires nothing but we need gave some rows.
+    if (require_index.empty())
+        require_index.emplace_back(0);
+
+    PlanNodes children;
+    DataStreams children_streams;
+    for (const auto & child : node.getChildren())
+    {
+        NameSet child_require;
+        for (const auto & item : require_index)
+            child_require.insert(child->getStep()->getOutputStream().header.getByPosition(item).name);
+
+        ColumnPruningContext child_column_pruning_context{.name_set = child_require};
+        auto new_child = VisitorUtil::accept(child, *this, child_column_pruning_context);
+        children_streams.emplace_back(new_child->getStep()->getOutputStream());
+        children.emplace_back(new_child);
+    }
+
+    auto except_step = std::make_shared<ExceptStepExt>(std::move(children_streams), std::move(output_stream), step->isDistinct());
+    auto except_node = ExceptStepExtNode::createPlanNode(
+        context->getOptimizerContext()->nextNodeId(), std::move(except_step), children, node.getStatistics());
+    return except_node;
+}
+
+PlanNodePtr ColumnPruningVisitor::visitIntersectStepExtNode(IntersectStepExtNode & node, ColumnPruningContext &)
+{
+    const auto * step = node.getStep().get();
+
+    std::vector<size_t> require_index;
+
+    size_t index = 0;
+    DataStream output_stream;
+    for (const auto & item : step->getOutputStream().header)
+    {
+        require_index.emplace_back(index);
+        output_stream.header.insert(item);
+        index++;
+    }
+
+    /// count(*) requires nothing but we need gave some rows.
+    if (require_index.empty())
+        require_index.emplace_back(0);
+
+    PlanNodes children;
+    DataStreams children_streams;
+    for (const auto & child : node.getChildren())
+    {
+        NameSet child_require;
+        for (const auto & item : require_index)
+            child_require.insert(child->getStep()->getOutputStream().header.getByPosition(item).name);
+
+        ColumnPruningContext child_column_pruning_context{.name_set = child_require};
+        auto new_child = VisitorUtil::accept(child, *this, child_column_pruning_context);
+        children_streams.emplace_back(new_child->getStep()->getOutputStream());
+        children.emplace_back(new_child);
+    }
+
+    auto intersect_step = std::make_shared<IntersectStepExt>(std::move(children_streams), std::move(output_stream), step->isDistinct());
+    auto intersect_node = IntersectStepExtNode::createPlanNode(
+        context->getOptimizerContext()->nextNodeId(), std::move(intersect_step), children, node.getStatistics());
+    return intersect_node;
+}
+
 PlanNodePtr ColumnPruningVisitor::visitAssignUniqueIdStepExtNode(AssignUniqueIdStepExtNode & node, ColumnPruningContext & column_pruning_context)
 {
     const auto * step = node.getStep().get();

@@ -446,6 +446,18 @@ std::shared_ptr<ExtremesStep> SymbolMapper::map(const ExtremesStep & extremes)
     return std::make_shared<ExtremesStep>(extremes.getInputStreams()[0]);
 }
 
+std::shared_ptr<ExceptStepExt> SymbolMapper::map(const ExceptStepExt & except)
+{
+    std::unordered_map<String, std::vector<String>> outputs_to_inputs;
+    for (const auto & [output, inputs] : except.getOutToInputs())
+    {
+        auto mapped_inputs = map(inputs);
+        outputs_to_inputs.emplace(map(output), mapped_inputs);
+    }
+    return std::make_shared<ExceptStepExt>(
+        map(except.getInputStreams()), map(except.getOutputStream()), outputs_to_inputs, except.isDistinct());
+}
+
 std::shared_ptr<ExchangeStepExt> SymbolMapper::map(const ExchangeStepExt & exchange)
 {
     return std::make_shared<ExchangeStepExt>(
@@ -601,6 +613,17 @@ std::shared_ptr<FinishSortingStepExt> SymbolMapper::map(const FinishSortingStepE
         finish_sorting.getLimit());
 }
 
+std::shared_ptr<IntersectStepExt> SymbolMapper::map(const IntersectStepExt & intersect)
+{
+    std::unordered_map<String, std::vector<String>> outputs_to_inputs;
+    for (const auto & [output, inputs] : intersect.getOutToInputs())
+    {
+        auto mapped_inputs = map(inputs);
+        outputs_to_inputs.emplace(map(output), mapped_inputs);
+    }
+    return std::make_shared<IntersectStepExt>(
+        map(intersect.getInputStreams()), map(intersect.getOutputStream()), outputs_to_inputs, intersect.isDistinct());
+}
 
 std::shared_ptr<ProjectionStepExt> SymbolMapper::map(const ProjectionStepExt & projection)
 {

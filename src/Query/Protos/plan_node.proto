@@ -313,7 +313,7 @@ message ISourceStep {
     Block output_header = 1;
 }
 
-message SetOperationStep {
+message SetOperationStepExt {
     repeated DataStream input_streams = 1;
     DataStream output_stream = 2;
     map<string, StringVec> output_to_inputs = 3;
@@ -408,13 +408,13 @@ message ValuesStepExt {
     uint64 rows = 3;
 }
 
-message ExceptStep {
-    SetOperationStep query_plan_base = 1;
+message ExceptStepExt {
+    SetOperationStepExt query_plan_base = 1;
     bool distinct = 2;
 }
 
-message IntersectStep {
-    SetOperationStep query_plan_base = 1;
+message IntersectStepExt {
+    SetOperationStepExt query_plan_base = 1;
     bool distinct = 2;
 }
 
@@ -850,14 +850,14 @@ message QueryPlanStep {
         CTERefStepExt c_t_e_ref_step_ext = 4;  // must be perfectly matched
         DistinctStepExt distinct_step_ext = 5;
         EnforceSingleRowStepExt enforce_single_row_step_ext = 6;
-        ExceptStep except_step = 7;
+        ExceptStepExt except_step_ext = 7;
         ExchangeStepExt exchange_step_ext = 8;
         ExtremesStep extremes_step = 9;
         FillingStep filling_step = 10;
         FilterStepExt filter_step_ext = 11;
         FinalSampleStepExt final_sample_step_ext = 12;
         FinishSortingStepExt finish_sorting_step_ext = 13;
-        IntersectStep intersect_step = 14;
+        IntersectStepExt intersect_step_ext = 14;
         JoinStepExt join_step_ext = 15;
         LimitByStep limit_by_step = 16;
         LimitStepExt limit_step_ext = 17;

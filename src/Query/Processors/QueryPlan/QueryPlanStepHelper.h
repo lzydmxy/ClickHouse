@@ -26,12 +26,14 @@
 #include <Query/Processors/QueryPlan/CTERefStepExt.h>
 #include <Query/Processors/QueryPlan/DistinctStepExt.h>
 #include <Query/Processors/QueryPlan/EnforceSingleRowStepExt.h>
+#include <Query/Processors/QueryPlan/ExceptStepExt.h>
 #include <Query/Processors/QueryPlan/ExchangeStepExt.h>
 #include <Query/Processors/QueryPlan/ExpandStepExt.h>
 #include <Query/Processors/QueryPlan/ExplainAnalyzeStepExt.h>
 #include <Query/Processors/QueryPlan/FilterStepExt.h>
 #include <Query/Processors/QueryPlan/FinalSampleStepExt.h>
 #include <Query/Processors/QueryPlan/IntermediateResultCacheStepExt.h>
+#include <Query/Processors/QueryPlan/IntersectStepExt.h>
 #include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <Query/Processors/QueryPlan/LocalExchangeStepExt.h>
 #include <Query/Processors/QueryPlan/MarkDistinctStepExt.h>
@@ -68,12 +70,14 @@ namespace DB
     M(CTERefStepExt, c_t_e_ref_step_ext) \
     M(DistinctStepExt, distinct_step_ext) \
     M(EnforceSingleRowStepExt, enforce_single_row_step_ext) \
+    M(ExceptStepExt, except_step_ext) \
     M(ExchangeStepExt, exchange_step_ext) \
     M(ExpandStepExt, expand_step_ext) \
     M(ExplainAnalyzeStepExt, explain_analyze_step_ext) \
     M(FilterStepExt, filter_step_ext) \
     M(FinalSampleStepExt, final_sample_step_ext) \
     M(IntermediateResultCacheStepExt, intermediate_result_cache_step_ext) \
+    M(IntersectStepExt, intersect_step_ext) \
     M(JoinStepExt, join_step_ext) \
     M(LocalExchangeStepExt, local_exchange_step_ext) \
     M(MarkDistinctStepExt, mark_distinct_step_ext) \
