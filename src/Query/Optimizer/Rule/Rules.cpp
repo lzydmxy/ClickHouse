@@ -30,7 +30,7 @@
 #include <Query/Optimizer/Rule/Rewrite/SimplifyExpressionRules.h>
 #include <Query/Optimizer/Rule/Rewrite/SingleDistinctAggregationToGroupBy.h>
 #include <Query/Optimizer/Rule/Rewrite/SumIfToCountIf.h>
-// #include <Query/Optimizer/Rule/Rewrite/SwapAdjacentRules.h>
+#include <Query/Optimizer/Rule/Rewrite/SwapAdjacentRules.h>
 #include <Query/Optimizer/Rule/Rewrite/TopNRules.h>
 // #include <Query/Optimizer/Rule/Rewrite/JoinUsingToJoinOn.h>
 
@@ -177,12 +177,12 @@ std::vector<RulePtr> Rules::distinctToAggregateRules()
 //     // enable when optimizer_index_projection_support = 1
 //     return {std::make_shared<PushIndexProjectionIntoTableScan>()};
 // }
-//
-// std::vector<RulePtr> Rules::swapAdjacentRules()
-// {
-//     return {std::make_shared<SwapAdjacentWindows>()};
-// }
-//
+
+std::vector<RulePtr> Rules::swapAdjacentRules()
+{
+    return {std::make_shared<SwapAdjacentWindows>()};
+}
+
 // std::vector<RulePtr> Rules::explainAnalyzeRules()
 // {
 //     return {std::make_shared<ExplainAnalyze>()};
