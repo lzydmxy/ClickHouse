@@ -29,6 +29,7 @@
 #include <Query/Optimizer/Rule/Rewrite/SumIfToCountIf.h>
 #include <Query/Optimizer/Rule/Rewrite/SwapAdjacentRules.h>
 #include <Query/Optimizer/Rule/Rewrite/TopNRules.h>
+#include <Query/Optimizer/Rule/Rewrite/JoinUsingToJoinOn.h>
 
 
 namespace DB

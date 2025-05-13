@@ -1,4 +1,4 @@
-#include <Optimizer/Rule/Rewrite/PushThroughExchangeRules.h>
+#include <Query/Optimizer/Rule/Rewrite/PushThroughExchangeRules.h>
 
 namespace DB
 {

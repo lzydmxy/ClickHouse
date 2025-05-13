@@ -200,6 +200,8 @@ public:
     bool isNoShuffle() const { return no_shuffle; }
     void setNoShuffle(bool no_shuffle_) { no_shuffle = no_shuffle_; }
 
+    size_t getMaxBlockSize() const { return max_block_size; }
+
     const GroupingDescriptions & getGroupings() const { return groupings; }
     bool shouldProduceResultsInOrderOfBucketNumber() const { return should_produce_results_in_order_of_bucket_number; }
     void setShouldProduceResultsInOrderOfBucketNumber(bool value) { should_produce_results_in_order_of_bucket_number = value; }
