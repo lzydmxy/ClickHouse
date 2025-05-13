@@ -69,8 +69,7 @@ public:
         auto symbol_mapper = symbol_mapper_provider(mappings);
         auto step = symbol_mapper.map(*node.getStep());
 
-        // todo: lizhuoyu5, need Statistics
-        auto plan_node = PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), step, children/*, symbol_mapper.map(node.getStatistics())*/);
+        auto plan_node = PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), step, children, symbol_mapper.map(node.getStatistics()));
         return {plan_node, mappings};
     }
 
@@ -111,7 +110,7 @@ public:
         auto symbol_mapper = symbol_mapper_provider(mappings);
 
         auto plan_node = PlanNodeBase::createPlanNode(
-            context->getOptimizerContext()->nextNodeId(), symbol_mapper.map(*project.getStep()), {child}/*, symbol_mapper.map(project.getStatistics())*/);
+            context->getOptimizerContext()->nextNodeId(), symbol_mapper.map(*project.getStep()), {child}, symbol_mapper.map(project.getStatistics()));
 
         if (step->isFinalProject())
         {
@@ -149,7 +148,7 @@ public:
         step->setOutputStream(symbol_mapper.map(step->getOutputStream()));
 
         auto plan_node = PlanNodeBase::createPlanNode(
-            context->getOptimizerContext()->nextNodeId(), step, {left.plan_node, right.plan_node}/*, symbol_mapper.map(join.getStatistics())*/);
+            context->getOptimizerContext()->nextNodeId(), step, {left.plan_node, right.plan_node}, symbol_mapper.map(join.getStatistics()));
 
         return {plan_node, computeOutputMappings(join, symbol_mapper)};
     }
@@ -185,7 +184,7 @@ public:
         auto plan_node = PlanNodeBase::createPlanNode(
             context->getOptimizerContext()->nextNodeId(),
             symbol_mapper.map(*intersect.getStep()),
-            {left.plan_node, right.plan_node}/*, symbol_mapper.map(intersect.getStatistics())*/);
+            {left.plan_node, right.plan_node}, symbol_mapper.map(intersect.getStatistics()));
         return {plan_node, computeOutputMappings(intersect, symbol_mapper)};
     }
 

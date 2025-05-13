@@ -26,7 +26,6 @@ TransformResult SetJoinDistribution::transformImpl(PlanNodePtr node, const Captu
 
     const auto & step = *join_node->getStep();
 
-    // todo: lizhuoyu5, need statistic
     auto left_group_id = dynamic_cast<const AnyStepExt *>(node->getChildren()[0]->getStep().get())->getGroupId();
     auto left_stats = context.optimization_context->getMemo().getGroupById(left_group_id)->getStatistics();
     auto right_group_id = dynamic_cast<const AnyStepExt *>(node->getChildren()[1]->getStep().get())->getGroupId();
