@@ -14,8 +14,8 @@
 // #include <Query/Optimizer/Rule/Rewrite/ImplementSetOperationRules.h>
 #include <Query/Optimizer/Rule/Rewrite/InlineProjections.h>
 // #include <Query/Optimizer/Rule/Rewrite/MergeSetOperationRules.h>
-// #include <Query/Optimizer/Rule/Rewrite/MultipleDistinctAggregationToExpandAggregate.h>
-// #include <Query/Optimizer/Rule/Rewrite/MultipleDistinctAggregationToMarkDistinct.h>
+#include <Query/Optimizer/Rule/Rewrite/MultipleDistinctAggregationToExpandAggregate.h>
+#include <Query/Optimizer/Rule/Rewrite/MultipleDistinctAggregationToMarkDistinct.h>
 // #include <Query/Optimizer/Rule/Rewrite/OptimizeAggregateRules.h>
 #include <Query/Optimizer/Rule/Rewrite/PullProjectionOnJoinThroughJoin.h>
 // #include <Query/Optimizer/Rule/Rewrite/PushAggThroughJoinRules.h>
@@ -28,7 +28,7 @@
 #include <Query/Optimizer/Rule/Rewrite/PushUnionThroughJoin.h>
 #include <Query/Optimizer/Rule/Rewrite/RemoveRedundantRules.h>
 #include <Query/Optimizer/Rule/Rewrite/SimplifyExpressionRules.h>
-// #include <Query/Optimizer/Rule/Rewrite/SingleDistinctAggregationToGroupBy.h>
+#include <Query/Optimizer/Rule/Rewrite/SingleDistinctAggregationToGroupBy.h>
 #include <Query/Optimizer/Rule/Rewrite/SumIfToCountIf.h>
 // #include <Query/Optimizer/Rule/Rewrite/SwapAdjacentRules.h>
 #include <Query/Optimizer/Rule/Rewrite/TopNRules.h>
@@ -135,16 +135,16 @@ std::vector<RulePtr> Rules::pushDownLimitRules()
         std::make_shared<PushLimitIntoSorting>()};
 }
 
-// std::vector<RulePtr> Rules::distinctToAggregateRules()
-// {
-//     return {
-//         // std::make_shared<DistinctToAggregate>(),
-//         std::make_shared<SingleDistinctAggregationToGroupBy>(),
-//         std::make_shared<MultipleDistinctAggregationToMarkDistinct>(),
-//         std::make_shared<MultipleDistinctAggregationToExpandAggregate>(),
-//     };
-// }
-//
+std::vector<RulePtr> Rules::distinctToAggregateRules()
+{
+    return {
+        // std::make_shared<DistinctToAggregate>(),
+        std::make_shared<SingleDistinctAggregationToGroupBy>(),
+        std::make_shared<MultipleDistinctAggregationToMarkDistinct>(),
+        std::make_shared<MultipleDistinctAggregationToExpandAggregate>(),
+    };
+}
+
 // std::vector<RulePtr> Rules::pushIntoTableScanRules()
 // {
 //     return {std::make_shared<PushLimitIntoTableScan>(), std::make_shared<PushStorageFilter>()};
