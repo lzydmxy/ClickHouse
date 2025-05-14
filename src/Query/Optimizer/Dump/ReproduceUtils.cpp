@@ -15,6 +15,7 @@
 #include <Poco/JSON/Parser.h>
 #include <IO/Archives/ZipArchiveReader.h>
 #include <Query/Planner/PlannerExt.h>
+#include <Query/Parsers/ASTExplainQueryExt.h>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -57,7 +58,7 @@ void executeDDL(ConstASTPtr query, ContextMutablePtr query_context)
 std::string obtainExplainString(const std::string & select_query, ContextMutablePtr query_context)
 {
     ASTPtr ast = parse(select_query, query_context);
-    auto explain_query = std::make_shared<ASTExplainQuery>(ASTExplainQuery::QueryPlan);
+    auto explain_query = std::make_shared<ASTExplainQueryExt>(ASTExplainQueryExt::QueryPlan, ASTExplainQuery::QueryPlan);
     explain_query->setExplainedQuery(ast);
     InterpreterExplainQueryExt interpreter(explain_query, query_context);
     //todo: liyang453, other feat: need getInputStream() in BlockIO

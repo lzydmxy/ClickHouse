@@ -38,10 +38,8 @@ TransformResult DistinctToAggregate::transformImpl(PlanNodePtr node, const Captu
             aggregate_desc.function = AggregateFunctionFactory::instance().get("any",  NullsAction::EMPTY, {name_and_type.type}, parameters, properties);
             descriptions.emplace_back(aggregate_desc);
         }
-        //todo: liyang453, other feat: need construct AggregatingStepExt
-        //auto group_agg_step = std::make_shared<AggregatingStepExt>(node->getStep()->getOutputStream(), step.getColumns(), NameSet{}, descriptions, GroupingSetsParamsList{}, true);
-        std::shared_ptr<AggregatingStepExt> group_agg_step;
 
+        auto group_agg_step = std::make_shared<AggregatingStepExt>(node->getStep()->getOutputStream(), step.getColumns(), NameSet{}, descriptions, GroupingSetsParamsExtList{}, true);
         auto group_agg_node = PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), std::move(group_agg_step), node->getChildren());
         return group_agg_node;
     }

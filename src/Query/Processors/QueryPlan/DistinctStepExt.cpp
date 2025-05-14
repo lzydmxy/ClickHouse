@@ -4,14 +4,6 @@
 #include <Processors/Transforms/DistinctTransform.h>
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
 
-/*
-#include <QueryPlan/DistinctStep.h>
-#include <Processors/Transforms/DistinctTransform.h>
-#include <Processors/QueryPipeline.h>
-#include <IO/Operators.h>
-#include <Common/JSONBuilder.h>
-*/
-
 namespace DB
 {
 
@@ -62,8 +54,7 @@ std::shared_ptr<IQueryPlanStep> DistinctStepExt::copy(ContextPtr) const
 void DistinctStepExt::toProto(Protos::DistinctStepExt & proto, bool for_hash_equals) const
 {
     ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
-    //todo: liyang453, other feat: SizeLimits need toProto
-    //set_size_limits.toProto(*proto.mutable_set_size_limits());
+    ProtosSerDerHelper::toProto(set_size_limits, *proto.mutable_set_size_limits());
     proto.set_limit_hint(limit_hint);
     for (const auto & element : columns)
         proto.add_columns(element);
@@ -74,8 +65,7 @@ std::shared_ptr<DistinctStepExt> DistinctStepExt::fromProto(const Protos::Distin
 {
     auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
     SizeLimits set_size_limits;
-    //todo: liyang453, other feat: SizeLimits need fillFromProto
-    //set_size_limits.fillFromProto(proto.set_size_limits());
+    ProtosSerDerHelper::fillFromProto(set_size_limits, proto.set_size_limits());
     auto limit_hint = proto.limit_hint();
     std::vector<String> columns;
     for (const auto & element : proto.columns())

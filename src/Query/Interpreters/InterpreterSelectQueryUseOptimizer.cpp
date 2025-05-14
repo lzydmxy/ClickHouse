@@ -258,8 +258,7 @@ void InterpreterSelectQueryUseOptimizer::fillQueryPlan(ContextPtr context, Query
 {
     WriteBufferFromOwnString buffer;
     Protos::QueryPlanExt plan_pb;
-    //todo: liyang453, other feat: need add toProto for query_plan
-    //query_plan.toProto(plan_pb);
+    query_plan.toProto(plan_pb);
     String json_msg;
     google::protobuf::util::JsonPrintOptions pb_options;
     pb_options.preserve_proto_field_names = true;

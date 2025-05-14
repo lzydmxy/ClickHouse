@@ -17,9 +17,7 @@ namespace ErrorCodes
 
 ConstRefPatternPtr ImplementExceptRule::getPattern() const
 {
-    //todo: liyang453, other feat: need ExceptStep
-    //static auto pattern = Patterns::except().result();
-    static auto pattern = Patterns::aggregating().result();
+    static auto pattern = Patterns::except().result();
     return pattern;
 }
 

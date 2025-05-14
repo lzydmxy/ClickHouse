@@ -13,6 +13,7 @@
 #include <Query/Optimizer/PredicateUtils.h>
 #include <Interpreters/misc.h>
 #include <Query/Optimizer/SymbolsExtractor.h>
+#include <Query/Common/NameToTypeExt.h>
 
 namespace DB
 {
@@ -31,13 +32,10 @@ namespace _scan_execute_impl
     struct ProjectionMatchContext;
     using ProjectionMatchContexts = std::vector<ProjectionMatchContext>;
 
-    //todo: liyang453, need optimizer: need to implement Optimizer/SymbolTransformMap
-    /*
     const UInt32 NODE_ID_TABLE_SCAN = 0;
     const UInt32 NODE_ID_FILTER = 1;
     const UInt32 NODE_ID_PROJECTION = 2;
     const UInt32 NODE_ID_AGGREGATION = 3;
-    */
 
     /// implementations
     struct ProjectionMatchContext
@@ -90,9 +88,8 @@ namespace _scan_execute_impl
         for (const auto & column: require_columns)
             names_and_types.emplace_back(column, column_types.at(column));
 
-        //todo: liyang453, other feat: need to convert to ColumnsWithTypeAndName from NamesAndTypes
-        // DataStream input_stream {.header = Block{names_and_types}};
-        DataStream input_stream;
+        DataStream input_stream {.header = Block{ToColumnsWithTypeAndName(names_and_types)}};
+        //DataStream input_stream;
 
         if (rewritten_filter)
             rewritten_filter_step = std::make_shared<FilterStepExt>(input_stream, rewritten_filter);
@@ -233,8 +230,6 @@ TableScanExecutor::TableScanExecutor(TableScanStepExt & step, const MergeTreeDat
 
     has_aggregate = step.getPushdownAggregation() != nullptr;
     query_required_columns = step.getRequiredColumns(TableScanStepExt::OutputAndPrewhere);
-    //todo: liyang453, other feat: need to implement PlanNodeBase
-    /*
     query_lineage = [&]() {
         PlanNodePtr node;
         QueryPlanStepPtr table_scan_without_pushdown_steps = std::make_shared<TableScanStepExt>(
@@ -256,33 +251,28 @@ TableScanExecutor::TableScanExecutor(TableScanStepExt & step, const MergeTreeDat
 
         return SymbolTransformMap::buildFrom(*node);
     }();
-    */
 
     if (!query_lineage)
         return;
 
     if (has_aggregate)
     {
-        //const auto * query_aggregate = step.getPushdownAggregationCast();
-        //tood:need getNamesToTypes func in Block
-        //column_types_before_agg = query_aggregate->getInputStreams()[0].header.getNamesToTypes();
-
-        //todo: liyang453, need optimizer: inlineReferences need impl
-        /*
+        const auto * query_aggregate = step.getPushdownAggregationCast();
+        column_types_before_agg = ToNameToType(query_aggregate->getInputStreams()[0].header.getColumnsWithTypeAndName());
+        
         for (const auto & origin_grouping_key: query_aggregate->getKeys())
             aggregate_keys.emplace_back(NameWithAST{origin_grouping_key, query_lineage->inlineReferences(origin_grouping_key)});
 
         for (const auto & query_aggregate_desc: query_aggregate->getAggregates())
             aggregate_descs.emplace_back(NameWithAST{query_aggregate_desc.column_name,
                                                      query_lineage->inlineReferences(query_aggregate_desc.column_name)});
-        */
     }
 
     if (const auto * query_filter_step = step.getPushdownFilterCast())
     {
         
-        //const auto & query_filter = query_filter_step->getFilter();
-        //flatten_filter = query_lineage->inlineReferences(query_filter);
+        const auto & query_filter = query_filter_step->getFilter();
+        flatten_filter = query_lineage->inlineReferences(query_filter);
     }
 
     if (!select_query_info.query) 
@@ -294,9 +284,8 @@ TableScanExecutor::TableScanExecutor(TableScanStepExt & step, const MergeTreeDat
 
     if (auto prewhere = select_query->prewhere())
     {
-        //todo: liyang453, need optimizer: IdentifierToColumnReference need impl
-        //NameSet columns{step.getColumnNames().begin(), step.getColumnNames().end()};
-        //flatten_prewhere = IdentifierToColumnReference::rewrite(step.getStorage().get(), NODE_ID_TABLE_SCAN, prewhere);
+        NameSet columns{step.getColumnNames().begin(), step.getColumnNames().end()};
+        flatten_prewhere = IdentifierToColumnReference::rewrite(step.getStorage().get(), NODE_ID_TABLE_SCAN, prewhere);
     }
 
     const auto & settings = context->getSettingsRef();
@@ -440,8 +429,6 @@ bool TableScanExecutor::match(ProjectionMatchContext & candidate) const
         }
 
         // match & rewrite aggregates
-        //todo: liyang453, need optimizer: tryGetTranslation need impl
-        /*
         for (const auto & aggregate_desc: aggregate_descs)
         {
             auto projection_agg_column_opt = candidate.column_translation.tryGetTranslation(aggregate_desc.flatten_ast);
@@ -452,7 +439,6 @@ bool TableScanExecutor::match(ProjectionMatchContext & candidate) const
             candidate.rewritten_types.emplace(aggregate_desc.name, candidate.column_types.at(projection_agg_column));
             candidate.required_column_set.emplace(projection_agg_column);
         }
-        */
 
         // match & rewrite where
         if (flatten_filter)
@@ -572,14 +558,11 @@ PartGroups TableScanExecutor::groupPartsBySchema(const MergeTreeData::DataPartsV
 
 ASTPtr TableScanExecutor::rewriteExpr(ASTPtr expr, ProjectionMatchContext & candidate) const
 {
-    //todo: liyang453, need optimizer: tryGetTranslation need impl
-    /*
     if (auto projection_column = candidate.column_translation.tryGetTranslation(expr))
     {
         candidate.required_column_set.emplace(*projection_column);
         return std::make_shared<ASTIdentifier>(*projection_column);
     }
-    */
 
     if (auto * col_ref = expr->as<ASTTableColumnReference>())
     {
@@ -1829,8 +1812,7 @@ void TableScanStepExt::toProto(Protos::TableScanStepExt & proto, bool for_hash_e
         proto_element->set_alias(c_alias);
     }
 
-    //todo: liyang453, other feat: need query_info.toProto
-    //query_info.toProto(*proto.mutable_query_info());
+    ProtosSerDerHelper::toProto(query_info, *proto.mutable_query_info());
     proto.set_max_block_size(max_block_size);
 
     serializeAssignmentsToProto(inline_expressions, *proto.mutable_inline_expressions());
@@ -1866,8 +1848,7 @@ std::shared_ptr<TableScanStepExt> TableScanStepExt::fromProto(const Protos::Tabl
         column_alias.emplace_back(name, alias);
     }
     SelectQueryInfo query_info;
-    //todo: liyang453, other feat: need query_info.toProto
-    //query_info.fillFromProto(proto.query_info());
+    ProtosSerDerHelper::fillFromProto(query_info, proto.query_info());
     auto max_block_size = proto.max_block_size();
     auto inline_expressions = deserializeAssignmentsFromProto(proto.inline_expressions());
 
