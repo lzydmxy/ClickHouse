@@ -212,6 +212,11 @@ void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_ch
     throw Exception(ErrorCodes::LOGICAL_ERROR, "AST subtree not found in children");
 }
 
+void replaceChildren(ASTPtr & ast, ASTs & children_)
+{
+    ast->children = std::move(children_);
+}
+
 void serializeASTImpl(const ConstASTPtr & ast, WriteBuffer & buf)
 {
     serializeASTImpl(*ast, buf);

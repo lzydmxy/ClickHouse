@@ -127,6 +127,7 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf);
 
 
 void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_child);
+void replaceChildren(ASTPtr & ast, ASTs & children_);
 
 ASTFunctionPtr makeASTFunctionWithVectorArgs(ASTFunctionPtr & ast, const String &name, ASTs &&args);
 

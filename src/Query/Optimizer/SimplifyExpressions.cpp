@@ -22,8 +22,7 @@ ConstASTPtr CommonPredicatesRewriter::visitNode(const ConstASTPtr & node, NodeCo
         children.emplace_back(ast);
     }
     auto new_node = node->clone();
-    // todo: hongzhigao1, implement replaceChildren
-    // new_node->replaceChildren(children);
+    replaceChildren(new_node, children);
     return new_node;
 }
 
@@ -81,8 +80,7 @@ ConstASTPtr SwapPredicateRewriter::visitNode(const ConstASTPtr & node, Void & co
         children.emplace_back(ast);
     }
     auto new_node = node->clone();
-    // todo: hongzhigao1, implement replaceChildren
-    // new_node->replaceChildren(children);
+    replaceChildren(new_node, children);
     return new_node;
 }
 
