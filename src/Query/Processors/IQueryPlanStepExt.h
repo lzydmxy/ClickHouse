@@ -13,14 +13,27 @@ struct RuntimeAttributeDescription
 
     void fillFromProto(const Protos::RuntimeAttributeDescription & proto)
     {
-        //todo: hongzhigao, other feat: need impl
-        return;
+        description = proto.description();
+        for (const auto & proto_element : proto.details())
+        {
+            auto name = proto_element.name();
+            auto alias = proto_element.alias();
+            name_and_detail.emplace_back(name, alias);
+        }
+        if (proto.additional().empty())
+            additional = proto.additional();
     }
 
     void toProto(Protos::RuntimeAttributeDescription & proto) const
     {
-        //todo: hongzhigao, other feat: need impl
-        return;
+        proto.set_description(description);
+        for (const auto & [name, detail] : name_and_detail)
+        {
+            auto * proto_element = proto.add_details();
+            proto_element->set_name(name);
+            proto_element->set_alias(detail);
+        }
+        proto.set_additional(additional);
     }
 };
 
