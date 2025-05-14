@@ -1,14 +1,11 @@
 #include <AggregateFunctions/AggregateFunctionFactory.h>
-//#include <Interpreters/predicateExpressionsUtils.h>
 #include <Query/Optimizer/ImplementSetOperation.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Optimizer/Rule/Rewrite/ImplementSetOperationRules.h>
 #include <Query/Optimizer/Utils.h>
 #include <Parsers/ASTFunction.h>
-//todo: liyang453, other feat: need ExceptStep, IntersectStep, IntersectOrExceptStep
-//#include <QueryPlan/ExceptStep.h>
+#include <Query/Processors/QueryPlan/ExceptStepExt.h>
 #include <Query/Processors/QueryPlan/FilterStepExt.h>
-//#include <QueryPlan/IntersectStep.h>
 //#include <QueryPlan/IntersectOrExceptStep.h>
 
 namespace DB
@@ -28,10 +25,7 @@ ConstRefPatternPtr ImplementExceptRule::getPattern() const
 
 TransformResult ImplementExceptRule::transformImpl(PlanNodePtr node, const Captures &, RuleContext & rule_context)
 {
-    //todo: liyang453, other feat: need ExceptStep
-    //const auto * step = dynamic_cast<const ExceptStep *>(node->getStep().get());
-    bool is_distinct = true;
-
+    const auto * step = dynamic_cast<const ExceptStepExt *>(node->getStep().get());
     auto & context = *rule_context.context;
     if (!context.getOptimizerContext()->getSettingsRef().enable_setoperation_to_agg)
     {
@@ -61,9 +55,7 @@ TransformResult ImplementExceptRule::transformImpl(PlanNodePtr node, const Captu
             new_children.emplace_back(projection_node);
         }
 
-        //todo: liyang453, other feat: need ExceptStep
-        //if (step->isDistinct())
-        if(is_distinct)
+        if (step->isDistinct())
         {
             auto step_new = std::make_shared<IntersectOrExceptStep>(input_streams, ASTSelectIntersectExceptQuery::Operator::EXCEPT_DISTINCT);
             auto node_new = PlanNodeBase::createPlanNode(context.getOptimizerContext()->nextNodeId(), std::move(step_new), new_children);
@@ -111,9 +103,7 @@ TransformResult ImplementExceptRule::transformImpl(PlanNodePtr node, const Captu
     *     ) T2
     *     WHERE foo_count >= 1 AND bar_count = 0;
     */
-    //todo: liyang453, other feat: need ExceptStep
-    //if (step->isDistinct())
-    if( is_distinct )
+    if (step->isDistinct())
     {
         auto translator_result = translator.makeSetContainmentPlanForDistinct(*node);
 
@@ -253,9 +243,7 @@ ConstRefPatternPtr ImplementIntersectRule::getPattern() const
 
 TransformResult ImplementIntersectRule::transformImpl(PlanNodePtr node, const Captures &, RuleContext & rule_context)
 {
-    //todo: liyang453, other feat: need IntersectStep
-    //const auto * step = dynamic_cast<const IntersectStep *>(node->getStep().get());
-    bool is_distinct = true;
+    const auto * step = dynamic_cast<const IntersectStepExt *>(node->getStep().get());
     auto & context = *rule_context.context;
     if (!context.getOptimizerContext()->getSettingsRef().enable_setoperation_to_agg)
     {
@@ -284,9 +272,8 @@ TransformResult ImplementIntersectRule::transformImpl(PlanNodePtr node, const Ca
             input_streams.emplace_back(projection_node->getStep()->getOutputStream());
             new_children.emplace_back(projection_node);
         }
-        //todo: liyang453, other feat: need ExceptStep
-        //if (step->isDistinct())
-        if(is_distinct)
+
+        if (step->isDistinct())
         {
             auto step_new = std::make_shared<IntersectOrExceptStep>(input_streams, ASTSelectIntersectExceptQuery::Operator::INTERSECT_DISTINCT);
             auto node_new = PlanNodeBase::createPlanNode(context.getOptimizerContext()->nextNodeId(), std::move(step_new), new_children);
@@ -335,9 +322,8 @@ TransformResult ImplementIntersectRule::transformImpl(PlanNodePtr node, const Ca
      *     WHERE foo_count >= 1 AND bar_count >= 1;
      * </pre>
      */
-    //todo: liyang453, other feat: need ExceptStep
-    //if (step->isDistinct())
-    if(is_distinct)
+
+    if (step->isDistinct())
     {
         auto translator_result = translator.makeSetContainmentPlanForDistinct(*node);
 
@@ -347,7 +333,7 @@ TransformResult ImplementIntersectRule::transformImpl(PlanNodePtr node, const Ca
             greaters.emplace_back(
                 makeASTFunction("greaterOrEquals", ASTs{std::make_shared<ASTIdentifier>(item), std::make_shared<ASTLiteral>(1)}));
 
-        //tood: liyang453, other feat: need composeAnd
+        //todo: liyang453, other feat: need composeAnd
         //auto predicate = composeAnd(greaters);
         ASTPtr predicate;
 
