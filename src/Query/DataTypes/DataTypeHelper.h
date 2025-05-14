@@ -1,5 +1,6 @@
 #pragma once
 
+#include <DataTypes/DataTypesNumber.h>
 #include <DataTypes/IDataType.h>
 
 namespace DB
@@ -156,6 +157,65 @@ inline bool isNotDecimalButComparableToDecimal(const DataTypePtr & data_type)
 inline bool isCompilableType(const DataTypePtr & data_type)
 {
     return data_type->isValueRepresentedByNumber() && !isDecimal(data_type);
+}
+
+struct DataTypeRange
+{
+    double min;
+    double max;
+};
+
+template <typename T>
+inline std::optional<DataTypeRange> getRangeForNumeric()
+{
+    return DataTypeRange{std::numeric_limits<T>::min(), std::numeric_limits<T>::max()};
+}
+
+// Float32 doesn't have a well-defined range, because of Inf, -Inf, NaN.
+template <>
+inline std::optional<DataTypeRange> getRangeForNumeric<Float32>()
+{
+    return std::nullopt;
+}
+
+// Float64 doesn't have a well-defined range, because of Inf, -Inf, NaN.
+template <>
+inline std::optional<DataTypeRange> getRangeForNumeric<Float64>()
+{
+    return std::nullopt;
+}
+
+inline std::optional<DataTypeRange> getRangeFromDataType(const DataTypePtr & data_type)
+{
+    if (dynamic_cast<const DataTypeUInt8 *>(data_type.get()))
+        return getRangeForNumeric<UInt8>();
+    if (dynamic_cast<const DataTypeUInt16 *>(data_type.get()))
+        return getRangeForNumeric<UInt16>();
+    if (dynamic_cast<const DataTypeUInt32 *>(data_type.get()))
+        return getRangeForNumeric<UInt32>();
+    if (dynamic_cast<const DataTypeUInt64 *>(data_type.get()))
+        return getRangeForNumeric<UInt64>();
+    if (dynamic_cast<const DataTypeInt8 *>(data_type.get()))
+        return getRangeForNumeric<Int8>();
+    if (dynamic_cast<const DataTypeInt16 *>(data_type.get()))
+        return getRangeForNumeric<Int16>();
+    if (dynamic_cast<const DataTypeInt32 *>(data_type.get()))
+        return getRangeForNumeric<Int32>();
+    if (dynamic_cast<const DataTypeInt64 *>(data_type.get()))
+        return getRangeForNumeric<Int64>();
+    if (dynamic_cast<const DataTypeFloat32 *>(data_type.get()))
+        return getRangeForNumeric<Float32>();
+    if (dynamic_cast<const DataTypeFloat64 *>(data_type.get()))
+        return getRangeForNumeric<Float64>();
+    if (dynamic_cast<const DataTypeUInt128 *>(data_type.get()))
+        return getRangeForNumeric<UInt128>();
+    if (dynamic_cast<const DataTypeInt128 *>(data_type.get()))
+        return getRangeForNumeric<Int128>();
+    if (dynamic_cast<const DataTypeUInt256 *>(data_type.get()))
+        return getRangeForNumeric<UInt256>();
+    if (dynamic_cast<const DataTypeInt256 *>(data_type.get()))
+        return getRangeForNumeric<Int256>();
+    return std::nullopt;
 }
 
 }

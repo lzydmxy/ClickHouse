@@ -1,6 +1,7 @@
 #include <Query/Optimizer/UnwrapCastInComparison.h>
 
 #include <Query/Analyzer/function_utils.h>
+#include <Query/DataTypes/DataTypeHelper.h>
 #include <DataTypes/DataTypeFunction.h>
 #include <DataTypes/DataTypeNullable.h>
 #include <DataTypes/DataTypeString.h>
@@ -80,14 +81,7 @@ ASTPtr UnwrapCastInComparisonVisitor::visitASTFunction(ASTPtr & node, UnwrapCast
     if (!isCastMonotonicAndInjective(source_type, target_type, literal, literal_type, context.context))
         return rewriteArgs(function, context, true);
 
-    // todo: hongzhigao1, implement getRange
-    // auto source_range = source_type->getRange();
-    struct Range
-    {
-        Field min;
-        Field max;
-    };
-    std::optional<Range> source_range = std::nullopt;
+    auto source_range = getRangeFromDataType(source_type);
 
     if (!source_range)
         return rewriteArgs(function, context, true);
