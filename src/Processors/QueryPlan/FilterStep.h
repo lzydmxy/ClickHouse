@@ -16,6 +16,7 @@ public:
         const ActionsDAGPtr & actions_dag_,
         String filter_column_name_,
         bool remove_filter_column_);
+    FilterStep(const DataStream & input_stream_, const String & filter_column_name_, bool remove_filter_column_ = true);
 
     String getName() const override { return "Filter"; }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings) override;

@@ -80,7 +80,7 @@ TEST_F(ProtobufTest, ExtremesStep)
     auto step2 = QueryPlanStepHelper::fromProto(pb, context);
     // re-serialize to protobuf
     Protos::ExtremesStep pb2;
-    QueryPlanStepHelper::toProto(*step2, pb);
+    QueryPlanStepHelper::toProto(*step2, pb2);
     compareProto(pb, pb2);
     compareStep(step, step2);
 }
@@ -599,6 +599,9 @@ TEST_F(ProtobufTest, FilterStepExt)
     // re-serialize to protobuf
     Protos::FilterStepExt pb2;
     QueryPlanStepHelper::toProto(*step2, pb2);
+    ASSERT_EQ(pb2.filter().blob(), pb.filter().blob());
+    ASSERT_EQ(pb2.filter().text(), pb.filter().text());
+
     compareProto(pb, pb2);
     compareStep(step, step2);
 }
@@ -771,7 +774,7 @@ TEST_F(ProtobufTest, MergingAggregatedStepExt)
         GroupingDescriptions groupings;
         for (int i = 0; i < 2; ++i)
             groupings.emplace_back(generateGroupingDescription(eng));
-        auto params = generateAggregatorParams(eng);
+        auto params = generateAggregatorParams(base_input_stream.header, eng);
         auto final = eng() % 2 == 1;
         auto memory_efficient_aggregation = eng() % 2 == 1;
         auto max_threads = eng() % 1000;

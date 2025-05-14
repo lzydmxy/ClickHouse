@@ -4,6 +4,7 @@
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include "Query/ProtosHelper/ProtosSerDerHelper.h"
 
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
 
 namespace DB
 {
@@ -157,13 +158,7 @@ return step_ptr->copy(context); \
     return nullptr;
 }
 
-template <typename StepType, typename ProtoType>
-void QueryPlanStepHelper::toProto(const StepType & step, ProtoType & proto, bool for_hash_equals)
-{
-    step.toProto(proto, for_hash_equals);
-}
 
-template <>
 void QueryPlanStepHelper::toProto(const FillingStep & step, Protos::FillingStep & proto_step, bool)
 {
     ProtosSerDerHelper::serializeToProtoBase(step, *proto_step.mutable_query_plan_base());
@@ -174,7 +169,6 @@ void QueryPlanStepHelper::toProto(const FillingStep & step, Protos::FillingStep 
     proto_step.set_use_with_fill_by_sorting_prefix(step.use_with_fill_by_sorting_prefix);
 }
 
-template <>
 void QueryPlanStepHelper::toProto(const IntersectOrExceptStep & step, Protos::IntersectOrExceptStep & proto_step, bool)
 {
     for (const auto & element : step.input_streams)
@@ -183,20 +177,17 @@ void QueryPlanStepHelper::toProto(const IntersectOrExceptStep & step, Protos::In
     proto_step.set_max_threads(step.max_threads);
 }
 
-template <>
 void QueryPlanStepHelper::toProto(const ReadNothingStep & step, Protos::ReadNothingStep & proto_step, bool)
 {
     serializeHeaderToProto(step.output_stream->header, *proto_step.mutable_query_plan_base()->mutable_output_header());
 }
 
-template <>
 void QueryPlanStepHelper::toProto(const OffsetStep & step, Protos::OffsetStep & proto_step, bool)
 {
     ProtosSerDerHelper::serializeToProtoBase(step, *proto_step.mutable_query_plan_base());
     proto_step.set_offset(step.offset);
 }
 
-template <>
 void QueryPlanStepHelper::toProto(const LimitByStep & step, Protos::LimitByStep & proto_step, bool)
 {
     ProtosSerDerHelper::serializeToProtoBase(step, *proto_step.mutable_query_plan_base());
@@ -207,20 +198,17 @@ void QueryPlanStepHelper::toProto(const LimitByStep & step, Protos::LimitByStep 
         proto_step.add_columns(element);
 }
 
-template <>
 void QueryPlanStepHelper::toProto(const ExtremesStep & step, Protos::ExtremesStep & proto_step, bool)
 {
     ProtosSerDerHelper::serializeToProtoBase(step, *proto_step.mutable_query_plan_base());
 }
 
-template <>
 void QueryPlanStepHelper::toProto(const ArrayJoinStep & step, Protos::ArrayJoinStep & proto_step, bool)
 {
     ProtosSerDerHelper::serializeToProtoBase(step, *proto_step.mutable_query_plan_base());
     ProtosSerDerHelper::toProto(*step.arrayJoin(), *proto_step.mutable_array_join());
 }
 
-template <>
 void QueryPlanStepHelper::toProto(const WindowStep & step, Protos::WindowStep & proto_step, bool)
 {
     ProtosSerDerHelper::serializeToProtoBase(step, *proto_step.mutable_query_plan_base());
@@ -229,6 +217,15 @@ void QueryPlanStepHelper::toProto(const WindowStep & step, Protos::WindowStep & 
         ProtosSerDerHelper::toProto(element, *proto_step.add_window_functions());
     proto_step.set_streams_fan_out(step.streams_fan_out);
 }
+
+#define TO_PROTO_EXT_IMP(TYPE, VAR_NAME) \
+void QueryPlanStepHelper::toProto(const TYPE & step, Protos::TYPE & proto, bool for_hash_equals) \
+{ \
+step.toProto(proto, for_hash_equals); \
+}
+
+APPLY_PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT(TO_PROTO_EXT_IMP)
+#undef TO_PROTO_EXT_IMP
 
 void QueryPlanStepHelper::toProto(const IQueryPlanStep & query_plan_step, Protos::QueryPlanStep & proto, bool for_hash_equals)
 {
@@ -239,7 +236,7 @@ void QueryPlanStepHelper::toProto(const IQueryPlanStep & query_plan_step, Protos
     case QueryPlanStepType::TYPE: { \
         const auto & step = dynamic_cast<const TYPE &>(query_plan_step); \
         auto *proto_step = proto.mutable_##VAR_NAME(); \
-        toProto<TYPE, Protos::TYPE>(step, *proto_step, for_hash_equals); \
+        toProto(step, *proto_step, for_hash_equals); \
         break; \
     }
 

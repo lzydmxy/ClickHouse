@@ -256,7 +256,7 @@ JoinStepExt::JoinStepExt(
     bool is_ordered_,
     bool simple_reordered_,
     LinkedHashMap<String, RuntimeFilter> runtime_filter_builders_)
-    : JoinStep({}, {}, nullptr, 0, max_streams_, keep_left_read_in_order_)
+    : JoinStep(0, max_streams_, keep_left_read_in_order_)
     , kind(kind_)
     , strictness(strictness_)
     , left_keys(std::move(left_keys_))

@@ -34,6 +34,7 @@ public:
     void updateOutputStream() override;
     bool isScalable() const { return scalable; }
     void setScalable(bool scalable_) { scalable = scalable_; }
+    bool canUpdateInputStream() const override { return true; }
 
 private:
     RExchangeMode::Enum exchange_type = RExchangeMode::UNKNOWN;

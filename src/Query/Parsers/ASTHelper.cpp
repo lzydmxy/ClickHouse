@@ -489,6 +489,15 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
         writeBinary(casted->name, buf);
         serializeAST(casted->subquery, buf);
     }
+    else if (const auto * casted = ast.as<ASTLiteral>())
+    {
+        writeBinary(casted->alias, buf);
+        writeBinary(casted->prefer_alias_to_column_name, buf);
+
+        writeFieldBinary(casted->value, buf);
+        writeBinary(casted->unique_column_name, buf);
+        writeBinary(casted->use_legacy_column_name_of_tuple, buf);
+    }
     // todo wujianchao add more types
     else
         throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement serialize of {}", toString(getAstType(ast)));
@@ -865,6 +874,22 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
             auto ast = std::make_shared<ASTWithElement>();
             readBinary(ast->name, buf);
             ast->subquery = deserializeAST(buf);
+            return ast;
+        }
+        case ASTType::ASTLiteral:
+        {
+            Field value;
+            String alias;
+            bool prefer_alias_to_column_name;
+
+            readBinary(alias, buf);
+            readBinary(prefer_alias_to_column_name, buf);
+            readFieldBinary(value, buf);
+            auto ast = std::make_shared<ASTLiteral>(value);
+            ast->alias = alias;
+            ast->prefer_alias_to_column_name = prefer_alias_to_column_name;
+            readBinary(ast->unique_column_name, buf);
+            readBinary(ast->use_legacy_column_name_of_tuple, buf);
             return ast;
         }
 

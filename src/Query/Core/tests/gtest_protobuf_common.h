@@ -13,6 +13,10 @@
 #include <Interpreters/executeQuery.h>
 #include <Interpreters/ArrayJoinAction.h>
 #include <Interpreters/WindowDescription.h>
+#include <Storages/registerStorages.h>
+#include <Interpreters/DatabaseCatalog.h>
+#include <Interpreters/InterpreterCreateQuery.h>
+#include <Parsers/parseQuery.h>
 
 #include <Parsers/ParserQuery.h>
 #include <Parsers/ASTLiteral.h>
@@ -49,20 +53,88 @@
 namespace DB::UnitTest
 {
 
+inline void tryRegisterStorages()
+{
+    static struct Register { Register() { DB::registerStorages(); } } registered;
+}
+
+
+
 class ProtobufTest : public testing::Test
 {
 public:
     ProtobufTest() { }
 
+    static void init_database()
+    {
+        tryRegisterFunctions();
+        tryRegisterFormats();
+        tryRegisterStorages();
+        tryRegisterAggregateFunctions();
+
+        session_context = Context::createCopy(getContext().context);
+        auto database_name = "db";
+
+        if (DatabaseCatalog::instance().tryGetDatabase(database_name))
+            DatabaseCatalog::instance().detachDatabase(session_context, database_name, true, false);
+
+        auto database = std::make_shared<DatabaseMemory>(database_name, session_context);
+        DatabaseCatalog::instance().attachDatabase(database_name, database);
+        session_context->setCurrentDatabase(database_name);
+
+        auto query_context = Context::createCopy(session_context);
+        query_context->initializeOptimizerContext();
+        query_context->setSessionContext(session_context);
+        query_context->setQueryContext(query_context);
+        query_context->setCurrentQueryId("test_protobuf");
+        query_context->getOptimizerContext()->createPlanNodeIdAllocator();
+        query_context->getOptimizerContext()->createSymbolAllocator();
+        query_context->getOptimizerContext()->createOptimizerMetrics();
+        context = query_context;
+    }
+
+    static ASTPtr parse(const std::string & query, ContextMutablePtr query_context)
+    {
+        const char * begin = query.data();
+        const char * end = begin + query.size();
+
+        ParserQuery parser(end);
+        auto ast = parseQuery(
+            parser, begin, query_context->getSettingsRef().max_query_size, query_context->getSettingsRef().max_parser_depth, query_context->getSettingsRef().max_parser_backtracks);
+        return ast;
+    }
+
+    static void init_tables()
+    {
+        std::vector<String> ddls = {
+            "create table tb9(a UInt8, b Float64) Engine=MergeTree() order by a",
+            "create table tb10(a UInt16, b Float32) Engine=MergeTree() order by a",
+            "create table tb11(a UInt32, b Float32) Engine=MergeTree() order by a",
+        };
+
+        for (auto & ddl : ddls)
+        {
+            ASTPtr ast = parse(ddl, session_context);
+            if (auto * create = ast->as<ASTCreateQuery>())
+            {
+                auto engine = std::make_shared<ASTFunction>();
+                engine->name = "Memory";
+                auto storage = std::make_shared<ASTStorage>();
+                storage->set(storage->engine, engine);
+                create->set(create->storage, storage);
+            }
+
+            InterpreterCreateQuery create_interpreter(ast, session_context);
+            create_interpreter.execute();
+        }
+    }
+
     ~ProtobufTest() = default;
 
     static void SetUpTestCase()
     {
-        tryRegisterFunctions();
-        tryRegisterFormats();
-        tryRegisterAggregateFunctions();
-        session_context = Context::createCopy(getContext().context);
-        context = Context::createCopy(session_context);
+        init_database();
+        init_tables();
 
         auto map_type = std::make_shared<DataTypeMap>(std::make_shared<DataTypeString>(), std::make_shared<DataTypeString>());
 
@@ -310,8 +382,8 @@ public:
         res.arguments.emplace_back(eng() % 3);
         // generate Names
         for (int i = 0; i < 10; ++i)
-        res.argument_names.emplace_back(fmt::format("text{}", eng() % 100));
-        res.column_name = "col_" + std::to_string(i);
+        res.argument_names.emplace_back(fmt::format("col_{}", eng() % 2));
+        res.column_name = fmt::format("col_{}", i);
         res.mask_column = res.column_name;
         return res;
     }
@@ -371,9 +443,8 @@ public:
         return step;
     }
 
-    static Aggregator::Params generateAggregatorParams(std::default_random_engine & eng)
+    static Aggregator::Params generateAggregatorParams(const Block & src_header, std::default_random_engine & eng)
     {
-        auto src_header = generateBlock(eng);
         auto intermediate_header = generateBlock(eng);
         ColumnNumbers column_numbers;
         Names keys;

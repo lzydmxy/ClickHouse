@@ -48,9 +48,8 @@ std::shared_ptr<ValuesStepExt> ValuesStepExt::fromProto(const Protos::ValuesStep
     Fields fields;
     for (const auto & proto_element : proto.fields())
     {
-        Field element;
         auto field = ProtosSerDerHelper::fillFromProto(proto_element);
-        fields.emplace_back(std::move(element));
+        fields.emplace_back(*field);
     }
     auto rows = proto.rows();
     auto step = std::make_shared<ValuesStepExt>(base_output_header, fields, rows);

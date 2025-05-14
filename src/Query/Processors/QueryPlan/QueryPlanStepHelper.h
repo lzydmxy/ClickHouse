@@ -233,10 +233,41 @@ public:
 
     static QueryPlanStepPtr copyQueryPlanStep(const QueryPlanStepPtr & query_plan_step, ContextPtr context);
 
-    template <typename StepType, typename ProtoType>
-    static void toProto(const StepType & query_plan_step, ProtoType & proto, bool for_hash_equals = false);
+    // template <typename StepType, typename ProtoType>
+    // static void toProto(const StepType & step, ProtoType & proto, bool for_hash_equals = false)
+    // {
+    //     step.toProto(proto, for_hash_equals);
+    // }
+
+#define TO_PROTO_DEF(TYPE, VAR_NAME) \
+    static void toProto(const TYPE & step, Protos::TYPE & proto, bool for_hash_equals = false);
+
+    APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(TO_PROTO_DEF)
+#undef TO_PROTO_DEF
+
 
     static void toProto(const IQueryPlanStep & query_plan_step, Protos::QueryPlanStep & proto, bool for_hash_equals = false);
+
+    template <typename ProtoType>
+    static void toProto(const IQueryPlanStep & query_plan_step, ProtoType & proto, bool for_hash_equals = false)
+    {
+        switch (getQueryPlanStepType(query_plan_step))
+        {
+            // 1. StepExt with proto uses macros to execute toProto, see PROTOBUF_STEP_TYPES_AND_NAMES_FOR_EXT
+#define CASE_DEF(TYPE, VAR_NAME) \
+case QueryPlanStepType::TYPE: { \
+const auto & step = dynamic_cast<const TYPE &>(query_plan_step); \
+toProto(step, proto, for_hash_equals); \
+break; \
+}
+
+            APPLY_PROTOBUF_STEP_TYPES_AND_NAMES(CASE_DEF)
+    #undef CASE_DEF
+            default: {
+                throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "not implemented step: {}", static_cast<int>(getQueryPlanStepType(query_plan_step)));
+            }
+        }
+    }
 
 
 #define FROM_PROTO_DEF(TYPE, VAR_NAME) \
