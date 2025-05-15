@@ -75,77 +75,78 @@ TEST(PlanSegmentProcessListTest, InsertTest)
     insertProcessList(plan_segment, context);
 }
 
-TEST(PlanSegmentProcessListTest, InsertReplaceSuccessTest)
-{
-    const auto & context = getInitContext();
-    context->setSetting("replace_running_query", true);
-    //context->getSettings().replace_running_query = true;
-    // context->setTemporaryStoragePath("./tmp/", 1024);
-    auto optimizer_context = context->getOptimizerContext();
-    optimizer_context->setProcessListEntry(nullptr);
-    auto & client_info = context->getClientInfo();
-    PlanSegment plan_segment = PlanSegment();
-    plan_segment.setQueryId("PlanSegmentProcessList_test");
-    plan_segment.setPlanSegmentId(0);
-    plan_segment.setQueryPlan(generateEmptyPlan());
+// Cant replace process use same query id in ck 24.3
+// TEST(PlanSegmentProcessListTest, InsertReplaceSuccessTest)
+// {
+//     const auto & context = getInitContext();
+//     context->setSetting("replace_running_query", true);
+//     //context->getSettings().replace_running_query = true;
+//     // context->setTemporaryStoragePath("./tmp/", 1024);
+//     auto optimizer_context = context->getOptimizerContext();
+//     optimizer_context->setProcessListEntry(nullptr);
+//     auto & client_info = context->getClientInfo();
+//     PlanSegment plan_segment = PlanSegment();
+//     plan_segment.setQueryId("PlanSegmentProcessList_test");
+//     plan_segment.setPlanSegmentId(0);
+//     plan_segment.setQueryPlan(generateEmptyPlan());
 
-    client_info.current_query_id = plan_segment.getQueryId() + std::to_string(plan_segment.getPlanSegmentId());
-    client_info.current_user = "test";
-    client_info.initial_query_id = plan_segment.getQueryId();
-    auto coordinator_address = std::make_shared<AddressInfo>("localhost", 8888, "test", "123456");
-    optimizer_context->setCoordinatorAddress(coordinator_address);
-    plan_segment.setCoordinatorAddress(*(coordinator_address.get()));
-    auto plan_segment_process_entry = insertProcessList(plan_segment, context);
-    auto async_func = [to_release_entry = std::move(plan_segment_process_entry)]() {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        to_release_entry.get();
-    };
-    std::thread thread(std::move(async_func));
-    SCOPE_EXIT({
-        if (thread.joinable())
-            thread.join();
-    });
-    coordinator_address = std::make_shared<AddressInfo>("localhost", 8888, "test", "123456");;
-    optimizer_context->setCoordinatorAddress(coordinator_address);
-    plan_segment.setCoordinatorAddress(*(coordinator_address.get()));
-    insertProcessList(plan_segment, context, true);
-}
+//     client_info.current_query_id = plan_segment.getQueryId() + std::to_string(plan_segment.getPlanSegmentId());
+//     client_info.current_user = "test";
+//     client_info.initial_query_id = plan_segment.getQueryId();
+//     auto coordinator_address = std::make_shared<AddressInfo>("localhost", 8888, "test", "123456");
+//     optimizer_context->setCoordinatorAddress(coordinator_address);
+//     plan_segment.setCoordinatorAddress(*(coordinator_address.get()));
+//     auto plan_segment_process_entry = insertProcessList(plan_segment, context);
+//     auto async_func = [to_release_entry = std::move(plan_segment_process_entry)]() {
+//         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+//         to_release_entry.get();
+//     };
+//     std::thread thread(std::move(async_func));
+//     SCOPE_EXIT({
+//         if (thread.joinable())
+//             thread.join();
+//     });
+//     coordinator_address = std::make_shared<AddressInfo>("localhost", 8888, "test", "123456");;
+//     optimizer_context->setCoordinatorAddress(coordinator_address);
+//     plan_segment.setCoordinatorAddress(*(coordinator_address.get()));
+//     insertProcessList(plan_segment, context, true);
+// }
 
-TEST(PlanSegmentProcessListTest, InsertReplaceTimeoutTest)
-{
-    const auto & context = getContext().context;
-    // context->setTemporaryStoragePath("./tmp/", 1024);
-    auto optimizer_context = context->getOptimizerContext();
-    optimizer_context->setProcessListEntry(nullptr);
-    auto & client_info = context->getClientInfo();
-    PlanSegment plan_segment = PlanSegment();
-    plan_segment.setQueryId("PlanSegmentProcessList_test");
-    plan_segment.setPlanSegmentId(0);
-    plan_segment.setQueryPlan(generateEmptyPlan());
+// TEST(PlanSegmentProcessListTest, InsertReplaceTimeoutTest)
+// {
+//     const auto & context = getContext().context;
+//     // context->setTemporaryStoragePath("./tmp/", 1024);
+//     auto optimizer_context = context->getOptimizerContext();
+//     optimizer_context->setProcessListEntry(nullptr);
+//     auto & client_info = context->getClientInfo();
+//     PlanSegment plan_segment = PlanSegment();
+//     plan_segment.setQueryId("PlanSegmentProcessList_test");
+//     plan_segment.setPlanSegmentId(0);
+//     plan_segment.setQueryPlan(generateEmptyPlan());
 
-    client_info.current_query_id = plan_segment.getQueryId() + std::to_string(plan_segment.getPlanSegmentId());
-    client_info.current_user = "test";
-    client_info.initial_query_id = plan_segment.getQueryId();
-    auto coordinator_address = std::make_shared<AddressInfo>("localhost", 8888, "test", "123456");
-    optimizer_context->setCoordinatorAddress(coordinator_address);
-    plan_segment.setCoordinatorAddress(*(coordinator_address.get()));
-    auto plan_segment_process_entry = insertProcessList(plan_segment, context);
+//     client_info.current_query_id = plan_segment.getQueryId() + std::to_string(plan_segment.getPlanSegmentId());
+//     client_info.current_user = "test";
+//     client_info.initial_query_id = plan_segment.getQueryId();
+//     auto coordinator_address = std::make_shared<AddressInfo>("localhost", 8888, "test", "123456");
+//     optimizer_context->setCoordinatorAddress(coordinator_address);
+//     plan_segment.setCoordinatorAddress(*(coordinator_address.get()));
+//     auto plan_segment_process_entry = insertProcessList(plan_segment, context);
 
-    auto async_func = [&, to_release_entry = std::move(plan_segment_process_entry)]() {
-        std::this_thread::sleep_for(
-            std::chrono::milliseconds(context->getSettingsRef().replace_running_query_max_wait_ms.totalMilliseconds() + 500));
-        to_release_entry.get();
-    };
-    std::thread thread(std::move(async_func));
-    SCOPE_EXIT({
-        if (thread.joinable())
-            thread.join();
-    });
+//     auto async_func = [&, to_release_entry = std::move(plan_segment_process_entry)]() {
+//         std::this_thread::sleep_for(
+//             std::chrono::milliseconds(context->getSettingsRef().replace_running_query_max_wait_ms.totalMilliseconds() + 500));
+//         to_release_entry.get();
+//     };
+//     std::thread thread(std::move(async_func));
+//     SCOPE_EXIT({
+//         if (thread.joinable())
+//             thread.join();
+//     });
 
-    coordinator_address = std::make_shared<AddressInfo>("localhost", 8888, "test", "123456");
-    optimizer_context->setCoordinatorAddress(coordinator_address);
-    plan_segment.setCoordinatorAddress(*(coordinator_address.get()));
-    ASSERT_THROW(insertProcessList(plan_segment, context, true), DB::Exception);
-}
+//     coordinator_address = std::make_shared<AddressInfo>("localhost", 8888, "test", "123456");
+//     optimizer_context->setCoordinatorAddress(coordinator_address);
+//     plan_segment.setCoordinatorAddress(*(coordinator_address.get()));
+//     ASSERT_THROW(insertProcessList(plan_segment, context, true), DB::Exception);
+// }
 
 }
