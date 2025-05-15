@@ -843,4 +843,103 @@ void Pipe::transform(const Transformer & transformer, bool check_ports)
 }
 
 
+void Pipe::transformExt(const Transformer & transformer, size_t sink_num, bool check_ports)
+{
+    if (output_ports.empty())
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot transform empty Pipe");
+
+    auto new_processors = transformer(output_ports);
+
+    /// Create hash table with new processors.
+    std::unordered_set<const IProcessor *> set;
+    for (const auto & processor : new_processors)
+        set.emplace(processor.get());
+
+    for (const auto & port : output_ports)
+    {
+        if (!check_ports)
+            break;
+
+        if (!port->isConnected())
+            throw Exception(
+                ErrorCodes::LOGICAL_ERROR,
+                "Transformation of Pipe is not valid because output port ({})",
+                port->getHeader().dumpStructure());
+
+        set.emplace(&port->getProcessor());
+    }
+
+    output_ports.clear();
+
+    for (const auto & processor : new_processors)
+    {
+        for (const auto & port : processor->getInputs())
+        {
+            if (!check_ports)
+                break;
+
+            if (!port.isConnected())
+                throw Exception(
+                    ErrorCodes::LOGICAL_ERROR,
+                    "Transformation of Pipe is not valid because processor {} has not connected input port",
+                    processor->getName());
+
+            const auto * connected_processor = &port.getOutputPort().getProcessor();
+            if (check_ports && !set.contains(connected_processor))
+                throw Exception(
+                    ErrorCodes::LOGICAL_ERROR,
+                    "Transformation of Pipe is not valid because processor {} has input port which is connected with unknown processor {}",
+                    processor->getName(),
+                    connected_processor->getName());
+        }
+
+        for (auto & port : processor->getOutputs())
+        {
+            if (!port.isConnected())
+            {
+                output_ports.push_back(&port);
+                continue;
+            }
+
+            const auto * connected_processor = &port.getInputPort().getProcessor();
+            if (check_ports && !set.contains(connected_processor))
+                throw Exception(
+                                ErrorCodes::LOGICAL_ERROR,
+                                "Transformation of Pipe is not valid because processor {} has output port which "
+                                "is connected with unknown processor {}",
+                                processor->getName(),
+                                connected_processor->getName());
+        }
+    }
+
+    if (output_ports.empty() && sink_num == 0)
+        throw Exception(ErrorCodes::LOGICAL_ERROR,
+            "Transformation of Pipe is not valid because processors don't have any disconnected output ports");
+    if (sink_num > 0 && !output_ports.empty())
+        throw Exception(ErrorCodes::LOGICAL_ERROR,
+            "Transformation of Pipe is not valid because processors have not-connected output ports and providing sinks");
+    if (!output_ports.empty())
+    {
+        header = output_ports.front()->getHeader();
+        for (size_t i = 1; i < output_ports.size(); ++i)
+            assertBlocksHaveEqualStructure(header, output_ports[i]->getHeader(), "Pipe");
+
+        if (totals_port)
+            assertBlocksHaveEqualStructure(header, totals_port->getHeader(), "Pipes");
+
+        if (extremes_port)
+            assertBlocksHaveEqualStructure(header, extremes_port->getHeader(), "Pipes");
+    }
+
+    if (collected_processors)
+    {
+        for (const auto & processor : new_processors)
+            collected_processors->emplace_back(processor);
+    }
+
+    processors->insert(processors->end(), new_processors.begin(), new_processors.end());
+
+    max_parallel_streams = std::max<size_t>(max_parallel_streams, output_ports.size());
+}
+
 }

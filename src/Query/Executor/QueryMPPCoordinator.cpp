@@ -104,7 +104,7 @@ BlockIO QueryMPPCoordinator::execute()
 
     try
     {
-        return DB::lazyExecutePlanSegmentLocally(std::move(final_segment_instance), query_context);
+        return DB::executePlanSegmentClient(std::move(final_segment_instance), query_context);
     }
     catch (const Exception & e)
     {

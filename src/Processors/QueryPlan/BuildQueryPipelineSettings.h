@@ -15,6 +15,8 @@ using QueryStatusPtr = std::shared_ptr<QueryStatus>;
 
 struct BuildQueryPipelineSettings
 {
+    virtual ~BuildQueryPipelineSettings() {};
+
     ExpressionActionsSettings actions_settings;
     QueryStatusPtr process_list_element;
     ProgressCallback progress_callback = nullptr;

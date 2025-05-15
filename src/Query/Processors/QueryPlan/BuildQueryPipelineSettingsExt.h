@@ -13,6 +13,9 @@ struct PlanSegmentPartitionSource;
 
 struct BuildQueryPipelineSettingsExt : public BuildQueryPipelineSettings
 {
+    // BuildQueryPipelineSettingsExt() = default;
+    // BuildQueryPipelineSettingsExt(const BuildQueryPipelineSettingsExt &) = default;
+    // ~BuildQueryPipelineSettingsExt() = default;
     DistributedPipelineSettings distributed_settings;
     ContextPtr context;
     bool is_expand = false;

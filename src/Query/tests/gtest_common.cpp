@@ -93,6 +93,7 @@ DB::ContextMutablePtr createQueryContext(const String & query_id, const std::uno
 {
     auto context = getInitContext();
     auto query_context = DB::Context::createCopy(context);
+    query_context->initializeOptimizerContext();
     query_context->setSessionContext(context);
     query_context->setQueryContext(query_context);
     query_context->setCurrentQueryId(query_id);

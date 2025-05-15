@@ -99,6 +99,8 @@ public:
     /// Transform Pipe in general way.
     void transform(const Transformer & transformer, bool check_ports = true);
 
+    void transformExt(const Transformer & transformer, size_t sink_num = 0, bool check_ports = true);
+
     /// Unite several pipes together. They should have same header.
     static Pipe unitePipes(Pipes pipes);
 

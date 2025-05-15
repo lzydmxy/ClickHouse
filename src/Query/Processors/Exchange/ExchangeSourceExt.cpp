@@ -61,7 +61,7 @@ ExchangeSourceExt::~ExchangeSourceExt() = default;
 /// ClassName[Property](Incude class)
 String ExchangeSourceExt::getName() const
 {
-    return fmt::format("ExchangeSourceExt({})",receiver->getName());
+    return fmt::format("ExchangeSourceExt({})", receiver->getName());
 }
 
 String ExchangeSourceExt::getClassName() const

@@ -143,6 +143,10 @@ void PlanSegmentProcessList::insertProcessList(
 {
     ProcessList::EntryPtr entry;
     auto context_process_list_entry = query_context->getOptimizerContext()->getProcessListEntry();
+
+    LOG_TRACE(logger, "Insert process list, context entry is null {}, segment_id {}, force {}",
+        context_process_list_entry == nullptr, segment_id, force);
+
     if (context_process_list_entry)
         entry = std::move(context_process_list_entry);
     else
@@ -318,7 +322,7 @@ PlanSegmentProcessListEntry::PlanSegmentProcessListEntry(
 
 PlanSegmentProcessListEntry::~PlanSegmentProcessListEntry()
 {
-    parent.remove(initial_query_id, segment_id);
+    // parent.remove(initial_query_id, segment_id);
 }
 
 void PlanSegmentProcessListEntry::prepareQueryScope(ContextMutablePtr query_context)

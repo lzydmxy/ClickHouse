@@ -4,10 +4,18 @@
 namespace DB
 {
 
+namespace ErrorCodes
+{
+    extern const int CANNOT_CONVERT_TYPE;
+}
+
 const BuildQueryPipelineSettingsExt & BuildQueryPipelineSettingsExt::cast(const BuildQueryPipelineSettings & settings)
 {
     //return *(static_cast<const BuildQueryPipelineSettingsExt1 *>(&settings));
-    return static_cast<const BuildQueryPipelineSettingsExt &>(settings);
+    auto settings_ext = dynamic_cast<const BuildQueryPipelineSettingsExt *>(&settings);
+    if (!settings_ext)
+        throw Exception(ErrorCodes::CANNOT_CONVERT_TYPE, "Cant cast settings to BuildQueryPipelineSettingsExt");
+    return *settings_ext;
 }
 
 BuildQueryPipelineSettingsExt BuildQueryPipelineSettingsExt::fromSettings(const Settings & from)

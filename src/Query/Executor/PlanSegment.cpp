@@ -100,7 +100,7 @@ String IPlanSegment::toString(size_t indent) const
     std::ostringstream ostr;
     String indent_str(indent, ' ');
 
-    ostr << indent_str << "segment_id: " << segment_id << "\n";
+    ostr << indent_str << "[segment_id: " << segment_id << "\n";
     ostr << indent_str << "name: " << name << "\n";
     ostr << indent_str << "header: " << header.dumpStructure() << "\n";
     ostr << indent_str << "type: " << planSegmentTypeToString(type) << "\n";
@@ -111,7 +111,7 @@ String IPlanSegment::toString(size_t indent) const
     ostr << indent_str;
     for (auto & key : shuffle_keys)
         ostr << key << ", ";
-
+    ostr << "]\n";
     return ostr.str();
 }
 

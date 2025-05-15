@@ -55,6 +55,7 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(Bool, exchange_enable_force_remote_mode, false, "Force exchange data transfer through network", 0) \
     M(Bool, exchange_force_use_buffer, false, "Force exchange use buffer as possible", 0) \
     M(Bool, enable_prune_source_plan_segment, false, "Whether prune source plan segment", 0) \
+    M(UInt64, interactive_delay_optimizer_mode, 0, "The interval(in optimizer mode) in microseconds to check if the request is cancelled, and to send progress info.", 0) \
     /** Exchange settings */ \
     M(UInt64, exchange_timeout_ms, 300000, "Exchange request timeout ms",0) \
     M(UInt64, exchange_queue_bytes, 209715200, "Queue size(bytes) for exchange queue, 0 means disable", 0) \
@@ -64,7 +65,7 @@ constexpr UInt64 RUNTIME_FILTER_IN_BUILD_THRESHOLD = 1024; // Default threshold 
     M(Bool, enable_wait_for_post_processing, false, "Whether a query needs to wait for post processing rpcs done before end", 0) \
     M(UInt64, wait_for_post_processing_timeout_ms, 1000, "Timeout for waiting post processing rpc from workers.", 0) \
     M(UInt64, exchange_wait_accept_max_timeout_ms, 20000, "Exchange receiver wait accept max timeout ms",0) \
-    M(UInt64, exchange_unordered_output_parallel_size, 8, \
+    M(UInt64, exchange_unordered_output_parallel_size, 4, \
         "The num of exchange sink for unorder exchange, ingoned if exchange need keep data order ", 0) \
     M(Bool, exchange_enable_force_keep_order, false, "Force exchange keep data order", 0) \
     M(Bool, exchange_enable_keep_order_parallel_shuffle, false, "Whether enable parallel shuffle when exchange need keep order", 0) \

@@ -92,7 +92,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
     if (keep_order)
         source_header = exchange_header;
 
-    LOG_TRACE(logger, "initializePipeline: keeper order {}, is_add_totals {}, is_add_extremes {}, inputs size {}, enable multi receiver {}, source header columns {}, exchange header columns {}",
+    LOG_TRACE(logger, "Initialize pipeline: keeper order {}, is_add_totals {}, is_add_extremes {}, inputs size {}, enable multi receiver {}, source header columns {}, exchange header columns {}",
         keep_order, is_add_totals, is_add_extremes, inputs.size(),
         optimizer_context->getSettingsRef().exchange_enable_multipath_receiver,
         source_header.columns(), exchange_header.columns());
@@ -156,8 +156,10 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
 
                 bool is_local_exchange = ExchangeUtils::isLocalExchange(read_address_info, source_address);
 
-                LOG_TRACE(logger, "initializePipeline: input index {}, exchange data key {}, is local exchange {} for receiver, collector is null {}",
-                    input_index, *data_key, is_local_exchange, collector == nullptr);
+                LOG_TRACE(logger, "Initialize pipeline input index {}, exchange data key {}, is local exchange {} for receiver," \
+                    "read address {}, write address {}, collector is null {}",
+                    input_index, *data_key, is_local_exchange, read_address_info.toShortString(), source_address.toShortString(),
+                    collector == nullptr);
 
                 BroadcastReceiverPtr receiver = createReceiver(disk_exchange_mgr, is_local_exchange, local_options, write_plan_segment_id,
                     exchange_id, partition_id, data_key, exchange_header, keep_order, enable_metrics, write_address, collector,
@@ -231,6 +233,8 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
     if (is_add_extremes)
         pipe.addExtremesSource(std::move(extremes_source));
 
+    LOG_TRACE(logger, "Initialize pipeline pipe processors size {}", pipe.getProcessors().size());
+
     for (const auto & processor : pipe.getProcessors())
         processors.emplace_back(processor);
 
@@ -248,7 +252,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
 
     pipeline.setMaxThreads(source_num);
 
-    LOG_DEBUG(logger, "Total source_num {}, pipeline threads {}, prev {}", source_num, pipeline.getNumThreads(), prev_pipe_threads);
+    LOG_DEBUG(logger, "Initialize pipeline, total source_num {}, pipeline threads {}, prev {}", source_num, pipeline.getNumThreads(), prev_pipe_threads);
 }
 
 BroadcastReceiverPtr RemoteExchangeSourceStepExt::createReceiver(

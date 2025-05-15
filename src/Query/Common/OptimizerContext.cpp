@@ -30,8 +30,7 @@ public:
     PlanSegmentInstanceID plan_segment_instance_id;
 };
 
-OptimizerContext::OptimizerContext(const Settings & settings_, OptimizerSettings & optimizer_settings_)
-    :optimizer_settings(optimizer_settings_)
+OptimizerContext::OptimizerContext(const Settings & settings_)
 {
     if (settings_.max_execution_time.totalSeconds() != 0)
         query_max_execution_time = std::min(settings_.max_execution_time.totalSeconds() * UInt64(1000), UInt64(UINT32_MAX));

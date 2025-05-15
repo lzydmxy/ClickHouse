@@ -306,6 +306,7 @@ AsyncRegisterResult BrpcRemoteBroadcastReceiver::registerToSendersAsync(UInt32 t
     Stopwatch s;
     AsyncRegisterResult res;
 
+    LOG_TRACE(log, "{} rpc channel poll get instance, address {}", getName(), registry_address);
     res.channel = RpcChannelPool::getInstance().getClient(registry_address, BrpcChannelPoolOptions::STREAM_DEFAULT_CONFIG_KEY);
     res.cntl = std::make_unique<brpc::Controller>();
     res.request = std::make_unique<Protos::RegistryRequest>();

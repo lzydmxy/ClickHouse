@@ -16,3 +16,4 @@
 ./build/src/unit_tests_dbms trace --gtest_filter="ProfileLogHubTest*"
 ./build/src/unit_tests_dbms trace --gtest_filter="ExchangeSourceStepTest*"
 ./build/src/unit_tests_dbms trace --gtest_filter="SchedulerTest*"
+./build/src/unit_tests_dbms trace --gtest_filter="PlanSegmentExecutorTest*"

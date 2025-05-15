@@ -50,7 +50,7 @@ enum ServiceType
 class OptimizerContext
 {
 public:
-    OptimizerContext(const Settings & settings_, OptimizerSettings & optimizer_settings_);
+    OptimizerContext(const Settings & settings_);
 
     const OptimizerSettings & getSettingsRef() const { return optimizer_settings; }
     const OptimizerSettings getSettings() const { return optimizer_settings; }

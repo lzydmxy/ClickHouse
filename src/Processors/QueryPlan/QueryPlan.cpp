@@ -153,6 +153,12 @@ void QueryPlan::addStep(QueryPlanStepPtr step)
         isInitialized() ? 1 : 0);
 }
 
+void QueryPlan::addRoot(Node && node_)
+{
+    nodes.emplace_back(std::move(node_));
+    root = &nodes.back();
+}
+
 QueryPipelineBuilderPtr QueryPlan::buildQueryPipeline(
     const QueryPlanOptimizationSettings & optimization_settings,
     const BuildQueryPipelineSettings & build_pipeline_settings)
