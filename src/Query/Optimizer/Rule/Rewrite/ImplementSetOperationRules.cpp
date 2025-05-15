@@ -6,7 +6,7 @@
 #include <Parsers/ASTFunction.h>
 #include <Query/Processors/QueryPlan/ExceptStepExt.h>
 #include <Query/Processors/QueryPlan/FilterStepExt.h>
-//#include <QueryPlan/IntersectOrExceptStep.h>
+#include <Query/Interpreters/predicateExpressionsUtils.h>
 
 namespace DB
 {
@@ -115,10 +115,7 @@ TransformResult ImplementExceptRule::transformImpl(PlanNodePtr node, const Captu
                 "equals", ASTs{std::make_shared<ASTIdentifier>(translator_result.count_symbols[index]), std::make_shared<ASTLiteral>(0)}));
         }
 
-        //todo: liyang453, other feat: need composeAnd
-        //auto predicate = composeAnd(greaters);
-        ASTPtr predicate;
-
+        auto predicate = composeAnd(greaters);
         auto filter_step = std::make_shared<FilterStepExt>(translator_result.plan_node->getStep()->getOutputStream(), predicate);
         PlanNodes children{translator_result.plan_node};
         PlanNodePtr filter_node = std::make_shared<FilterStepExtNode>(context.getOptimizerContext()->nextNodeId(), std::move(filter_step), children);
@@ -331,9 +328,7 @@ TransformResult ImplementIntersectRule::transformImpl(PlanNodePtr node, const Ca
             greaters.emplace_back(
                 makeASTFunction("greaterOrEquals", ASTs{std::make_shared<ASTIdentifier>(item), std::make_shared<ASTLiteral>(1)}));
 
-        //todo: liyang453, other feat: need composeAnd
-        //auto predicate = composeAnd(greaters);
-        ASTPtr predicate;
+        auto predicate = composeAnd(greaters);
 
         auto filter_step = std::make_shared<FilterStepExt>(translator_result.plan_node->getStep()->getOutputStream(), predicate);
         PlanNodes children{translator_result.plan_node};

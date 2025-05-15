@@ -53,7 +53,7 @@ namespace
         {
             if (param.tryGet<String>(exp))
             {
-                //todo: liyang453, other feat: need getBitMapParameterValues in MergeTreeWhereOptimizer.h
+                //todo: liyang453, storage: need getBitMapParameterValues in MergeTreeWhereOptimizer.h
                 //Names values = getBitMapParameterValues(exp);
                 Names values;
                 for (auto & node : values)
@@ -101,7 +101,7 @@ TransformResult ExtractBitmapImplicitFilter::transformImpl(PlanNodePtr node, con
 
     ASTs functions;
     /// create in function for those parametered values
-    //todo: liyang453, other feat: need createInFunctionForBitMapParameter in MergeTreeWhereOptimizer
+    //todo: liyang453, storage: need createInFunctionForBitMapParameter in MergeTreeWhereOptimizer
     /*
     for (const auto & parameter : parameters_map)
     {
