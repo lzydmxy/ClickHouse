@@ -1838,9 +1838,9 @@ PlanNodePtr CorrelatedQuantifiedComparisonSubqueryVisitor::visitApplyStepExtNode
     AggregateDescription count_if_agg_desc
         = { .function = AggregateFunctionFactory::instance().get("count", NullsAction::EMPTY, {std::make_shared<DataTypeUInt8>()}, Array(), properties),
             .parameters = Array(),
-            .arguments = {},
             .argument_names = Names{non_null},
             .column_name = num_of_matching_is_zero_symbol,
+            .arguments = {},
             .mask_column = ""};
     aggregate_descriptions.emplace_back(count_if_agg_desc);
 
@@ -1960,30 +1960,30 @@ void makeAggDescriptionsMinMaxCountCount2(
     AggregateDescription min_agg_desc
         = {.function = AggregateFunctionFactory::instance().get("min", NullsAction::EMPTY, argument_types, Array(), properties),
            .parameters = Array(),
-           .arguments = {},
            .argument_names = qc_right,
            .column_name = min_value,
+           .arguments = {},
            .mask_column = ""};
     AggregateDescription max_agg_desc
         = { .function = AggregateFunctionFactory::instance().get("max", NullsAction::EMPTY, argument_types, Array(), properties),
             .parameters = Array(),
-            .arguments = {},
             .argument_names = qc_right,
             .column_name = max_value,
+            .arguments = {},
             .mask_column = ""};
     AggregateDescription count_all_value_agg_desc
         = { .function = AggregateFunctionFactory::instance().get("count", NullsAction::EMPTY, {}, Array(), properties),
             .parameters = Array(),
-            .arguments = {},
             .argument_names = {},
             .column_name = count_all_value,
+            .arguments = {},
             .mask_column = ""};
     AggregateDescription count_non_null_value_agg_desc
         = { .function = AggregateFunctionFactory::instance().get("count", NullsAction::EMPTY, argument_types, Array(), properties),
             .parameters = Array(),
-            .arguments = {},
             .argument_names = qc_right,
             .column_name = count_non_null_value,
+            .arguments = {},
             .mask_column = ""};
     aggregate_descriptions.emplace_back(min_agg_desc);
     aggregate_descriptions.emplace_back(max_agg_desc);

@@ -262,9 +262,9 @@ AggregateDescription SymbolMapper::map(const AggregateDescription & desc)
     return AggregateDescription{
         desc.function,
         desc.parameters,
-        desc.arguments,
         map(desc.argument_names),
         map(desc.column_name),
+        desc.arguments,
         desc.mask_column.empty() ? desc.mask_column : map(desc.mask_column)};
 }
 
