@@ -48,8 +48,7 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
             auto interpreter = std::make_shared<InterpreterSelectQuery>(query->clone(), context, SelectQueryOptions());
             SelectQueryInfo temp_query_info;
             temp_query_info.query = interpreter->getQuery();
-            //todo: liyang453, other feat: getSyntaxAnalyzerResult need to be implemented by interpreter
-            //temp_query_info.syntax_analyzer_result = interpreter->getSyntaxAnalyzerResult();
+            temp_query_info.syntax_analyzer_result = interpreter->syntax_analyzer_result;
             temp_query_info.prepared_sets = interpreter->getQueryAnalyzer()->getPreparedSets();
             //todo: liyang453, other feat: need to implement get ActionsDAGPtr from SelectQueryInfo
             //rows_cnt = storage->totalRowsByPartitionPredicate(temp_query_info, context);

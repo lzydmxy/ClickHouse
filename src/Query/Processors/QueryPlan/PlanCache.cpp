@@ -9,7 +9,8 @@
 #include <Query/Processors/QueryPlan/TableScanStepExt.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/QueryPlan/CTEInfo.h>
-//#include <Query/Processors/QueryPlan/QueryPlanner.h>
+#include <Query/Statistics/StatsTableIdentifier.h>
+#include <Query/Statistics/VersionHelper.h>
 
 namespace DB
 {
@@ -127,13 +128,10 @@ QueryPlanExtPtr PlanCacheManager::getPlanFromCache(UInt128 query_hash, ContextMu
         }
 
         // check statistic version
-        //todo: liyang453, need optimizer: need Statistics
-
-        /*
         for (auto & item : plan_object->query_info->stats_version)
         {
-            Statistics::StatsTableIdentifier table_identifier{item.first};
-            auto version_value = Statistics::getVersion(context, table_identifier);
+            QueryStatistics::StatsTableIdentifier table_identifier(item.first);
+            auto version_value = QueryStatistics::getVersion(context, table_identifier);
             Int64 version = version_value.has_value() ? version_value.value().convertTo<Int64>() : 0;
             if (version != item.second)
             {
@@ -141,7 +139,6 @@ QueryPlanExtPtr PlanCacheManager::getPlanFromCache(UInt128 query_hash, ContextMu
                 return nullptr;
             }
         }
-        */
 
         PlanNodeId max_id;
         auto root  = PlanCacheManager::getNewPlanNode(plan_object->plan_root, context, false, max_id);
@@ -200,14 +197,12 @@ bool PlanCacheManager::addPlanToCache(UInt128 query_hash, QueryPlanExtPtr & plan
                 plan_object.query_info->query_access_info[backQuoteIfNeed(storage_id.getDatabaseName())][storage_id.getFullTableName()].emplace_back(column);
         }
 
-        //todo: liyang453, need optimizer: need Statistics
-        /*
-        Statistics::StatsTableIdentifier table_identifier{storage_id};
-        auto version_value = Statistics::getVersion(context, table_identifier);
+        QueryStatistics::StatsTableIdentifier table_identifier{storage_id};
+        auto version_value = QueryStatistics::getVersion(context, table_identifier);
         Int64 version = version_value.has_value() ? version_value.value().convertTo<Int64>() : 0;
         plan_object.query_info->stats_version[storage_id] = version;
-        plan_object.query_info->tables_version[storage_id] = storage_analysis.storage->latest_version.toUInt64();
-        */
+        //todo: liyang453, storage: need latest_version in storage
+        //plan_object.query_info->tables_version[storage_id] = storage_analysis.storage->latest_version.toUInt64();
     }
     cache.add(query_hash, plan_object);
     return true;

@@ -143,6 +143,9 @@ public:
     bool adjustParallelReplicasAfterAnalysis();
 
     std::optional<UInt64> getTrivialCount(UInt64 max_parallel_replicas);
+
+    TreeRewriterResultPtr syntax_analyzer_result;
+
 private:
     InterpreterSelectQuery(
         const ASTPtr & query_ptr_,
@@ -217,7 +220,6 @@ private:
       */
     void initSettings();
 
-    TreeRewriterResultPtr syntax_analyzer_result;
     std::unique_ptr<SelectQueryExpressionAnalyzer> query_analyzer;
     SelectQueryInfo query_info;
 
