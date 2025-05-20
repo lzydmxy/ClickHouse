@@ -42,19 +42,19 @@ public:
     /// register the brpc sender of bsp mode,
     /// exchange data is loaded from disk dumped by previous execution
     /// Not supported BSP mode now, See registerBRPCSenderFromDisk method in BC
-    void registerSenderFromDisk(
-        ::google::protobuf::RpcController * controller,
-        const ::DB::Protos::RegistryDiskSenderRequest * request,
-        ::DB::Protos::RegistryResponse * response,
-        ::google::protobuf::Closure * done) override;
+    // void registerSenderFromDisk(
+    //     ::google::protobuf::RpcController * controller,
+    //     const ::DB::Protos::RegistryDiskSenderRequest * request,
+    //     ::DB::Protos::RegistryResponse * response,
+    //     ::google::protobuf::Closure * done) override;
 
     /// cancel exchange data reader(only bsp mode)
     /// Not supported BSP mode now
-    void cancelExchangeDataReader(
-        ::google::protobuf::RpcController * controller,
-        const ::DB::Protos::CancelExchangeDataReaderRequest * request,
-        ::DB::Protos::CancelExchangeDataReaderResponse * response,
-        ::google::protobuf::Closure * done) override;
+    // void cancelExchangeDataReader(
+    //     ::google::protobuf::RpcController * controller,
+    //     const ::DB::Protos::CancelExchangeDataReaderRequest * request,
+    //     ::DB::Protos::CancelExchangeDataReaderResponse * response,
+    //     ::google::protobuf::Closure * done) override;
 
     /// Not supported BSP mode now
     void cleanupExchangeData(

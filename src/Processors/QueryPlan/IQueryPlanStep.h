@@ -2,6 +2,7 @@
 #include <Core/Block.h>
 #include <Core/SortDescription.h>
 #include <Processors/QueryPlan/BuildQueryPipelineSettings.h>
+#include <Query/Protos/plan_node.pb.h>
 
 namespace DB
 {

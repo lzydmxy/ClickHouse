@@ -50,7 +50,8 @@ struct DAGGraph
 {
     DAGGraph() : log(getLogger("DAGGraph")) 
     { 
-        async_context = std::make_shared<AsyncContext>(); 
+        async_context = std::make_shared<AsyncContext>();
+        plan_segment_status_ptr = std::make_shared<PlanSegmentsStatus>();
     }
     void joinAsyncRpcWithThrow();
     void joinAsyncRpcPerStage();

@@ -2,7 +2,7 @@
 
 #include <IO/Progress.h>
 #include <Interpreters/ExpressionActionsSettings.h>
-#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
+
 
 
 namespace DB
@@ -14,6 +14,8 @@ using QueryStatusPtr = std::shared_ptr<QueryStatus>;
 
 struct BuildQueryPipelineSettings
 {
+    virtual ~BuildQueryPipelineSettings() {};
+
     ExpressionActionsSettings actions_settings;
     QueryStatusPtr process_list_element;
     ProgressCallback progress_callback = nullptr;
@@ -22,6 +24,8 @@ struct BuildQueryPipelineSettings
     static BuildQueryPipelineSettings fromContext(ContextPtr from);
 
     /// only for jd optimizer
+    //todo: need to delete
+    /*
     BuildQueryPipelineSettingsExt settings_ext;
 
     void initBuildQueryPipelineSettingsExt(ContextPtr context)
@@ -38,6 +42,7 @@ struct BuildQueryPipelineSettings
     {
         return settings_ext;
     }
+    */
 };
 
 }

@@ -1,5 +1,8 @@
 #pragma once
+
 #include <Processors/QueryPlan/IQueryPlanStep.h>
+#include <Query/Protos/plan_node.pb.h>
+#include <Query/Protos/plan_segment_service.pb.h>
 
 namespace DB
 {

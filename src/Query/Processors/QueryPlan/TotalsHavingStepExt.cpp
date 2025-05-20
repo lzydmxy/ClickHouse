@@ -5,6 +5,7 @@
 #include <Query/Processors/QueryPlan/FilterStepExt.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
 namespace DB
 {
@@ -29,7 +30,8 @@ void TotalsHavingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, con
     if (!actions_dag && having_filter)
     {
         auto rewrite_filter = FilterStepExt::rewriteRuntimeFilter(having_filter, pipeline, settings);
-        actions_dag = QueryPlanStepHelper::createFilterExpressionActions(settings.getBuildQueryPipelineSettingsExt().context,
+        const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(settings);
+        actions_dag = QueryPlanStepHelper::createFilterExpressionActions(settings_ext.context,
                                                                          rewrite_filter->clone(),
                                                                          TotalsHavingTransform::transformHeader(input_streams[0].header, actions_dag.get(), filter_column_name, remove_filter, final, getAggregatesMask(input_streams[0].header, aggregates)));
         filter_column_name = rewrite_filter->getColumnName();

@@ -12,6 +12,7 @@
 #include <Poco/Util/AbstractConfiguration.h>
 #include <Query/Executor/PlanSegmentInstance.h>
 #include <Query/Executor/SegmentScheduler.h>
+#include <Query/Executor/PlanSegmentProcessList.h>
 
 namespace DB
 {
@@ -30,6 +31,19 @@ public:
     PlanSegmentInstanceID plan_segment_instance_id;
 };
 
+OptimizerContext::OptimizerContext(const Settings & settings_)
+{
+    if (settings_.max_execution_time.totalSeconds() != 0)
+        query_max_execution_time = std::min(settings_.max_execution_time.totalSeconds() * UInt64(1000), UInt64(UINT32_MAX));
+    else if (optimizer_settings.exchange_timeout_ms != 0)
+        query_max_execution_time = std::min(UInt64(optimizer_settings.exchange_timeout_ms), UInt64(UINT32_MAX));
+    else
+        query_max_execution_time = 300 * 1000; // default 300 seconds
+    initQueryExpirationTimeStamp();
+    data = std::make_shared<OptimizerContextData>();
+    plan_segment_process_list = std::make_shared<PlanSegmentProcessList>();
+}
+
 OptimizerContext::OptimizerContext(const Settings & settings_, OptimizerSettings & optimizer_settings_)
     :optimizer_settings(optimizer_settings_)
 {
@@ -40,6 +54,12 @@ OptimizerContext::OptimizerContext(const Settings & settings_, OptimizerSettings
     else
         query_max_execution_time = 100 * 60 * 1000; // default as 100min
     data = std::make_shared<OptimizerContextData>();
+}
+
+void OptimizerContext::setQueryMaxExecutionTime(UInt32 milli_second)
+{
+    query_max_execution_time = milli_second;
+    initQueryExpirationTimeStamp();
 }
 
 UInt32 OptimizerContext::getQueryMaxExecutionTime() const
@@ -157,6 +177,11 @@ bool OptimizerContext::isExplainQuery() const
     return is_explain_query;
 }
 
+QueryExchangeLogPtr OptimizerContext::getQueryExchangeLog()
+{
+    return query_exchange_log;
+}
+
 void OptimizerContext::logOptimizerProfile(LoggerPtr log, String prefix, String name, UInt64 time, bool is_rule)
 {
     if (optimizer_settings.log_optimizer_run_time && log)
@@ -183,8 +208,18 @@ PlanCacheManager* OptimizerContext::getPlanCacheManager()
 HostWithPorts OptimizerContext::getHostWithPorts() const
 {
     //todo: zhangdongdong92, other feat: need impl, now just a fake impl
-    HostWithPorts hp;
-    return hp;
+    HostWithPorts host;
+    return host;
+}
+
+void OptimizerContext::setTransactionID(UInt64 txt_id_)
+{
+    txt_id = txt_id_;
+}
+
+UInt64 OptimizerContext::getTransactionID()
+{
+    return txt_id;
 }
 
 std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> OptimizerContext::getProcessorProfileElementConsumer() const

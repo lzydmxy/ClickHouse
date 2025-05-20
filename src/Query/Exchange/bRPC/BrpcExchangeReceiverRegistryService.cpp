@@ -47,29 +47,30 @@ void BrpcExchangeReceiverRegistryService::registry(
     /// this done_guard guarantee to call done->Run() in any situation
     brpc::ClosureGuard done_guard(done);
     auto accept_timeout_ms = request->wait_timeout_ms();
+    LOG_TRACE(getLogger("Service"), "registry key {} query {}", key->toString(), query_id);
     acceptStream(cntl, accept_timeout_ms, sender_proxy, request->query_id(), sender_stream_id);
 }
 
-void BrpcExchangeReceiverRegistryService::registerSenderFromDisk(
-    ::google::protobuf::RpcController * controller,
-    const ::DB::Protos::RegistryDiskSenderRequest * request,
-    ::DB::Protos::RegistryResponse * /*response*/,
-    ::google::protobuf::Closure * done)
-{
-    brpc::Controller * cntl = static_cast<brpc::Controller *>(controller);
-    ExchangeDataKeyPtr key;
-    try
-    {
-        String trace_log = fmt::format("registerSenderFromDisk for key:{} query:{} ", *key, request->registry().query_id());
-        LOG_TRACE(log, "{}", trace_log);
-    }
-    catch (...)
-    {
-        String error_msg = fmt::format("registerSenderFromDisk failed for key:{} query:{} ", *key, request->registry().query_id());
-        LOG_ERROR(log, "{}", error_msg);
-        cntl->SetFailed(error_msg);
-    }
-}
+// void BrpcExchangeReceiverRegistryService::registerSenderFromDisk(
+//     ::google::protobuf::RpcController * controller,
+//     const ::DB::Protos::RegistryDiskSenderRequest * request,
+//     ::DB::Protos::RegistryResponse * /*response*/,
+//     ::google::protobuf::Closure * done)
+// {
+//     brpc::Controller * cntl = static_cast<brpc::Controller *>(controller);
+//     ExchangeDataKeyPtr key;
+//     try
+//     {
+//         String trace_log = fmt::format("registerSenderFromDisk for key:{} query:{} ", *key, request->registry().query_id());
+//         LOG_TRACE(log, "{}", trace_log);
+//     }
+//     catch (...)
+//     {
+//         String error_msg = fmt::format("registerSenderFromDisk failed for key:{} query:{} ", *key, request->registry().query_id());
+//         LOG_ERROR(log, "{}", error_msg);
+//         cntl->SetFailed(error_msg);
+//     }
+// }
 
 
 void BrpcExchangeReceiverRegistryService::registerSenderToProxy(
@@ -105,6 +106,7 @@ void BrpcExchangeReceiverRegistryService::acceptStream(
     brpc::StreamOptions stream_options;
     stream_options.max_buf_size = max_buf_size;
     auto key = sender->getDataKey();
+    LOG_TRACE(log, "acceptStream, key {}, query {}", key->toString(), query_id);
     try
     {
         sender->waitAccept(accept_timeout_ms);

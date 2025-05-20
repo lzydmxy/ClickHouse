@@ -3,9 +3,6 @@
 #include <sstream>
 #include <Core/ColumnNumbers.h>
 #include <Core/ColumnWithTypeAndName.h>
-//#include <DataStreams/NativeBlockInputStream.h>
-//#include <DataStreams/NativeBlockOutputStream.h>
-//#include <Query/QueryPlan/RemoteExchangeSourceStep.h>
 #include <DataTypes/DataTypesNumber.h>
 #include <Functions/FunctionFactory.h>
 #include <IO/ReadHelpers.h>
@@ -18,6 +15,7 @@
 #include <Query/ProtosHelper/QueryProto.h>
 #include <Query/ProtosHelper/ExchangeMode.h>
 #include <Query/ProtosHelper/RPCHelpers.h>
+#include <Query/Processors/QueryPlan/RemoteExchangeSourceStepExt.h>
 
 namespace DB
 {
@@ -29,8 +27,7 @@ namespace ErrorCodes
 
 void IPlanSegment::serialize(WriteBuffer & buf) const
 {
-    //TODO: serialize block stream 
-    //serializeBlock(header, buf);
+    serializeBlock(header, buf);
     writeBinary(UInt8(type), buf);
     writeBinary(UInt8(exchange_mode), buf);
     writeBinary(exchange_id, buf);
@@ -45,8 +42,7 @@ void IPlanSegment::serialize(WriteBuffer & buf) const
 
 void IPlanSegment::deserialize(ReadBuffer & buf, ContextPtr)
 {
-    //TODO: deserialize block stream
-    //header = deserializeBlock(buf);
+    header = deserializeBlock(buf);
 
     UInt8 read_type;
     readBinary(read_type, buf);
@@ -71,7 +67,7 @@ void IPlanSegment::deserialize(ReadBuffer & buf, ContextPtr)
 void IPlanSegment::toProtoBase(RIPlanSegment & proto) const
 {
     //TODO: wait query plan code
-    //serializeHeaderToProto(header, *proto.mutable_header());
+    serializeHeaderToProto(header, *proto.mutable_header());
 
     proto.set_type(type);
     proto.set_exchange_mode(exchange_mode);
@@ -103,7 +99,7 @@ String IPlanSegment::toString(size_t indent) const
     std::ostringstream ostr;
     String indent_str(indent, ' ');
 
-    ostr << indent_str << "segment_id: " << segment_id << "\n";
+    ostr << indent_str << "[segment_id: " << segment_id << "\n";
     ostr << indent_str << "name: " << name << "\n";
     ostr << indent_str << "header: " << header.dumpStructure() << "\n";
     ostr << indent_str << "type: " << planSegmentTypeToString(type) << "\n";
@@ -114,7 +110,7 @@ String IPlanSegment::toString(size_t indent) const
     ostr << indent_str;
     for (auto & key : shuffle_keys)
         ostr << key << ", ";
-
+    ostr << "]\n";
     return ostr.str();
 }
 
@@ -251,20 +247,19 @@ String PlanSegmentOutput::toString(size_t indent) const
 }
 
 
-void PlanSegment::setPlanSegmentToQueryPlan(QueryPlanExt::Node * node, ContextPtr & /*context*/)
+void PlanSegment::setPlanSegmentToQueryPlan(QueryPlanExt::Node * node, ContextPtr & context)
 {
     if (!node)
         return;
-    // TODO: Need RemoteExchangeSourceStep
-    // if (auto * remote_step = dynamic_cast<RemoteExchangeSourceStep *>(node->step.get()))
-    //     remote_step->setPlanSegment(this, context);
-    // else
-    // {
-    //     for (auto & child : node->children)
-    //     {
-    //         setPlanSegmentToQueryPlan(child, context);
-    //     }
-    // }
+    if (auto * remote_step = dynamic_cast<RemoteExchangeSourceStepExt *>(node->step.get()))
+        remote_step->setPlanSegment(this, context);
+    else
+    {
+        for (auto & child : node->children)
+        {
+            setPlanSegmentToQueryPlan(child, context);
+        }
+    }
 }
 
 void PlanSegment::serialize(WriteBuffer & buf) const
@@ -358,7 +353,7 @@ void PlanSegment::toProto(RPlanSegment & plan_segment_proto)
 {
     auto plan_ptr = std::make_unique<RQueryPlan>();
     
-    // TODO:
+    // TODO: Add toProto function for QueryPlan
     // query_plan.toProto(*plan_ptr);
     plan_segment_proto.set_allocated_query_plan(plan_ptr.release());
     plan_segment_proto.set_cluster_name(cluster_name);
@@ -382,7 +377,7 @@ void PlanSegment::toProto(RPlanSegment & plan_segment_proto)
 void PlanSegment::fromProto(const RPlanSegment & proto, ContextMutablePtr context_)
 {
     query_plan.addInterpreterContext(context_);
-    //TODO:
+    //TODO: Add fromProto function for QueryPlan
     //query_plan.fromProto(proto.query_plan());
     cluster_name = proto.cluster_name();
     parallel = proto.parallel();
@@ -459,7 +454,7 @@ String PlanSegment::toString()
 void PlanSegment::getRemoteSegmentId(const QueryPlanExt::Node * node, std::unordered_map<PlanNodeId, size_t> & exchange_to_segment)
 {
     // TODO:Need Step
-    // auto * step = dynamic_cast<RemoteExchangeSourceStep *>(node->step.get());
+    // auto * step = dynamic_cast<RemoteExchangeSourceStepExt *>(node->step.get());
     // if (step)
     //     exchange_to_segment[node->id] = step->getInput()[0]->getPlanSegmentId();
 

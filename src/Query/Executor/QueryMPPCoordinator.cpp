@@ -32,10 +32,10 @@ QueryMPPCoordinator::QueryMPPCoordinator(
     const std::string cluster_name_, PlanSegmentTreeUniqPtr plan_segment_tree_, ContextMutablePtr query_context_, QueryMPPOptions options_)
     : cluster_name(cluster_name_)
     , plan_segment_tree(std::move(plan_segment_tree_))
-    , query_context(std::move(query_context_))
-    , optimizer_context(query_context->getOptimizerContext())
+    , query_context(query_context_)
+    , optimizer_context(query_context_->getOptimizerContext())
     , options(std::move(options_))
-    , query_id(query_context->getClientInfo().current_query_id)
+    , query_id(query_context_->getClientInfo().current_query_id)
     , progress_manager(query_id)
     , log(getLogger("QueryMPPCoordinator"))
 {
@@ -104,7 +104,7 @@ BlockIO QueryMPPCoordinator::execute()
 
     try
     {
-        return DB::lazyExecutePlanSegmentLocally(std::move(final_segment_instance), query_context);
+        return DB::executePlanSegmentClient(std::move(final_segment_instance), query_context);
     }
     catch (const Exception & e)
     {

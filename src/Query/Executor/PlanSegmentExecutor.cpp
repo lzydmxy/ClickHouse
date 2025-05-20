@@ -33,6 +33,9 @@
 #include <Query/Exchange/DataTrans/MultiPathReceiver.h>
 #include <Query/Exchange/DataTrans/LocalBroadcastChannel.h>
 #include <Query/Exchange/bRPC/AsyncRegisterResult.h>
+#include <Query/Exchange/bRPC/BrpcRemoteBroadcastReceiver.h>
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
+#include <Query/Processors/Exchange/ExchangeSourceExt.h>
 #include <Query/Executor/PlanSegmentReport.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
 #include <Query/Processors/IQueryPlanStepExt.h>
@@ -112,6 +115,7 @@ PlanSegmentExecutor::PlanSegmentExecutor(
     ExchangeOptions options_)
     : process_plan_segment_entry(std::move(process_plan_segment_entry_))
     , context(std::move(context_))
+    , optimizer_context(context->getOptimizerContext())
     , plan_segment_instance(std::move(plan_segment_instance_))
     , plan_segment(plan_segment_instance->plan_segment.get())
     , plan_segment_outputs(plan_segment_instance->plan_segment->getPlanSegmentOutputs())
@@ -147,7 +151,8 @@ PlanSegmentExecutor::~PlanSegmentExecutor() noexcept
 
 std::optional<PlanSegmentExecutor::ExecutionResult> PlanSegmentExecutor::execute()
 {
-    LOG_DEBUG(logger, "execute PlanSegment: {}", plan_segment->toString());
+    // LOG_DEBUG(logger, "Execute planSegment:[\n{}\n]", plan_segment->toString());
+
     try
     {
         /// Remove normalized_query_plan_hash code, see normalized_query_hash
@@ -179,35 +184,19 @@ std::optional<PlanSegmentExecutor::ExecutionResult> PlanSegmentExecutor::execute
         if (exception_code == ErrorCodes::MEMORY_LIMIT_EXCEEDED)
         {
             // ErrorCodes::MEMORY_LIMIT_EXCEEDED don't print stack trace.
-            LOG_ERROR(
-                logger,
-                " [{}_{}] Query has excpetion with code: {}, msg: {}",
-                plan_segment->getQueryId(),
-                plan_segment->getPlanSegmentId(),
-                exception_code,
-                exception_message);
+            LOG_ERROR(logger, " [{}_{}] Query has excpetion with code: {}, msg: {}",
+                plan_segment->getQueryId(), plan_segment->getPlanSegmentId(), exception_code, exception_message);
         }
         else
         {
-            tryLogCurrentException(
-                logger,
-                fmt::format(
-                    "[{}_{}]: Query has excpetion with code: {}, detail \n",
-                    plan_segment->getQueryId(),
-                    plan_segment->getPlanSegmentId(),
-                    exception_code));
+            tryLogCurrentException(logger, fmt::format("[{}_{}]: Query has excpetion with code: {}, detail \n",
+                    plan_segment->getQueryId(), plan_segment->getPlanSegmentId(), exception_code));
         }
         /// exception_handler will report failure plan segment status before release
         auto exception_handler = context->getOptimizerContext()->getExceptionHandler();
         if (exception_handler && exception_handler->setException(std::current_exception()))
-            return convertFailurePlanSegmentStatusToResult(
-                context,
-                plan_segment_instance->info,
-                exception_code,
-                exception_message,
-                std::move(final_progress),
-                sender_metrics,
-                plan_segment_outputs);
+            return convertFailurePlanSegmentStatusToResult(context, plan_segment_instance->info, exception_code, exception_message,
+                std::move(final_progress), sender_metrics, plan_segment_outputs);
         return {};
     }
 }
@@ -224,7 +213,7 @@ BlockIO PlanSegmentExecutor::lazyExecute(bool /*add_output_processors*/)
     optimizer_context->getPlanSegmentProcessList()->insertProcessList(plan_segment_process_entry, plan_segment->getPlanSegmentId(), context);
     // set entry before buildPipeline to control memory usage of exchange queue
     optimizer_context->setPlanSegmentProcessListEntry(plan_segment_process_entry);
-    res.pipeline = std::move(*buildPipeline());
+    res.pipeline = buildPipeline();
     return res;
 }
 
@@ -258,7 +247,7 @@ StepProfiles collectStepRuntimeProfiles(const QueryPipelinePtr & pipeline)
 
 void fillPlanSegmentProfile(
     PlanSegmentProfilePtr & segment_profile,
-    const QueryPipelinePtr & pipeline,
+    const QueryPipeline & pipeline,
     RReportProfileType::Enum type,
     const QueryStatus * query_status,
     ContextPtr context,
@@ -277,7 +266,7 @@ void fillPlanSegmentProfile(
     if (type == RReportProfileType::Unspecified)
         return;
     ProcessorProfiles profiles;
-    for (const auto & processor : pipeline->getProcessors())
+    for (const auto & processor : pipeline.getProcessors())
         profiles.push_back(std::make_shared<ProcessorProfile>(processor.get()));
     GroupedProcessorProfilePtr grouped_profiles = GroupedProcessorProfile::getGroupedProfiles(profiles);
     if (type == RReportProfileType::QueryPipeline)
@@ -329,18 +318,18 @@ void PlanSegmentExecutor::doExecute()
             collectSegmentQueryRuntimeMetric(process_plan_segment_entry->getQueryStatus().get());
     });
 
-    context->getOptimizerContext()->getPlanSegmentProcessList()->insertProcessList(process_plan_segment_entry, plan_segment->getPlanSegmentId(), context);
-    context->getOptimizerContext()->setPlanSegmentProcessListEntry(process_plan_segment_entry);
+    auto optimizer_context = context->getOptimizerContext();
 
+    optimizer_context->getPlanSegmentProcessList()->insertProcessList(process_plan_segment_entry, plan_segment->getPlanSegmentId(), context);
+    optimizer_context->setPlanSegmentProcessListEntry(process_plan_segment_entry);
     auto query_status = process_plan_segment_entry->getQueryStatus();
-    context->getOptimizerContext()->setProcessListElement(query_status);
+    optimizer_context->setProcessListElement(query_status);
 
-    QueryPipelinePtr pipeline;
     BroadcastSenderPtrs senders;
-    buildPipeline(pipeline, senders);
+    auto pipeline = buildPipeline(senders);
 
-    pipeline->setProcessListElement(query_status);
-    pipeline->setProgressCallback([&, ctx_progress_callback = context->getProgressCallback()](const Progress & value) {
+    pipeline.setProcessListElement(query_status);
+    pipeline.setProgressCallback([&, ctx_progress_callback = context->getProgressCallback()](const Progress & value) {
         if (ctx_progress_callback)
             ctx_progress_callback(value);
         this->progress.incrementPiecewiseAtomically(value);
@@ -349,46 +338,61 @@ void PlanSegmentExecutor::doExecute()
 
     size_t max_threads = context->getSettingsRef().max_threads;
     if (max_threads)
-        pipeline->setNumThreads(max_threads);
-    size_t num_threads = pipeline->getNumThreads();
-    LOG_DEBUG(
-        logger,
-        "Runing plansegment id {}, segment: {} pipeline with {} threads",
-        plan_segment->getQueryId(),
-        plan_segment->getPlanSegmentId(),
-        num_threads);
+        pipeline.setNumThreads(max_threads);
+    size_t num_threads = pipeline.getNumThreads();
 
-    PullingAsyncPipelineExecutor async_pipeline_executor(*pipeline);
-    Stopwatch after_send_progress;
-    Block block;
-    while (async_pipeline_executor.pull(block, context->getSettingsRef().interactive_delay / 1000))
+    PipelineExecutorPtr pipeline_executor;
+    auto interactive_delay_opt = optimizer_context->getSettingsRef().interactive_delay_optimizer_mode;
+
+    LOG_DEBUG(logger, "Execute query id {} segment id {} pipeline with {} threads, processor size {}, iteractive delay {}",
+        plan_segment->getQueryId(), plan_segment->getPlanSegmentId(), num_threads, pipeline.getProcessors().size(), interactive_delay_opt);
+
+    if (interactive_delay_opt == 0)
     {
-        if (after_send_progress.elapsed() / 1000 >= context->getSettingsRef().interactive_delay)
-        {
-            /// Some time passed and there is a progress.
-            after_send_progress.restart();
-            sendProgress();
-        }
+        pipeline_executor = std::make_shared<PipelineExecutor>(pipeline.processors, pipeline.process_list_element);
+        auto concurrency_control = pipeline.getConcurrencyControl();
+        pipeline_executor->execute(num_threads, concurrency_control);
     }
+    else
+    {
+        /// TODO: Because sink transformer is added to the buildPipeline method of PlanSegmentExecutor,
+        /// There is no outputs, so PullingAsyncPipelineExecutor cannot be used,
+        /// It requires at least one output in CK 24.3 version, but it is not required in 21.6
+        LOG_TRACE(logger, "Execute pipeline aync, interactive_delay_optimizer_mode {}", interactive_delay_opt);
+        PullingAsyncPipelineExecutor async_pipeline_executor(pipeline);
+        Stopwatch after_send_progress;
+        Block block;
+        while (async_pipeline_executor.pull(block, interactive_delay_opt / 1000))
+        {
+            if (after_send_progress.elapsed() / 1000 >= context->getSettingsRef().interactive_delay)
+            {
+                /// Some time passed and there is a progress.
+                after_send_progress.restart();
+                sendProgress();
+            }
+        }
+        // pipeline_executor = async_pipeline_executor.getPipelineExecutor();
+    }
+    // pipeline.setWriteCacheComplete(context);
 
     if (CurrentThread::getGroup())
     {
         metrics.cpu_micros = CurrentThread::getGroup()->performance_counters[ProfileEvents::SystemTimeMicroseconds]
                 + CurrentThread::getGroup()->performance_counters[ProfileEvents::UserTimeMicroseconds];
     }
+
     //TODO: Print pipeline with GraphvizPrinter
     //pipeline_executor = async_pipeline_executor.getPipelineExecutor();
     // GraphvizPrinter::printPipeline(pipeline_executor->getProcessors(), pipeline_executor->getExecutingGraph(), 
     //     context, plan_segment->getPlanSegmentId(), extractExchangeHostPort(plan_segment_instance->info.execution_address));
-    for (const auto & sender : senders)
-    {
-        auto status = sender->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "Upstream pipeline finished");
-        /// bsp mode will fsync data in finish, so we need to check if exception is thrown here.
-        if (status.code != BroadcastStatusCode::ALL_SENDERS_DONE)
-            throw Exception(ErrorCodes::BSP_WRITE_DATA_FAILED,
-                "Write data into disk failed in bsp mode, code {}, error message: {}",
-                status.code, status.message);
-    }
+    // for (const auto & sender : senders)
+    // {
+    //     auto status = sender->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "Upstream pipeline finished");
+    //     /// bsp mode will fsync data in finish, so we need to check if exception is thrown here.
+    //     if (status.code != BroadcastStatusCode::ALL_SENDERS_DONE)
+    //         throw Exception(ErrorCodes::BSP_WRITE_DATA_FAILED, "Write data into disk failed in bsp mode, code {}, error message: {}",
+    //             status.code, status.message);
+    // }
 
     //TODO: Need PlanSegmentDescription in PlanPrinter.h
     // if (optimizer_context->getSettingsRef().log_segment_profiles)
@@ -398,6 +402,7 @@ void PlanSegmentExecutor::doExecute()
     //         PlanSegmentDescription::getPlanSegmentDescription(plan_segment_instance->plan_segment, true)
     //             ->jsonPlanSegmentDescriptionAsString(collectStepRuntimeProfiles(pipeline)));
     // }
+
     if (optimizer_context->getSettingsRef().report_segment_profiles && plan_segment)
     {
         segment_profile = std::make_shared<PlanSegmentProfile>(query_log_element->client_info.initial_query_id, plan_segment->getPlanSegmentId());
@@ -407,16 +412,11 @@ void PlanSegmentExecutor::doExecute()
     if (context->getSettingsRef().log_processors_profiles)
     {
         auto processors_profile_log = context->getProcessorsProfileLog();
-
         if (!processors_profile_log)
             return;
         ProcessorProfileLogElement processor_profile_log;
-
-        SystemLogHelper::addProcessorsProfileLog(processors_profile_log,
-                                    pipeline.get(),
-                                    context->getClientInfo().initial_query_id,
-                                    std::chrono::system_clock::now(),
-                                    plan_segment->getPlanSegmentId());
+        SystemLogHelper::addProcessorsProfileLog(processors_profile_log, &pipeline, context->getClientInfo().initial_query_id,
+            std::chrono::system_clock::now(), plan_segment->getPlanSegmentId());
     }
 }
 
@@ -426,19 +426,20 @@ static QueryPlanOptimizationSettings buildOptimizationSettingsWithCheck(LoggerPt
     return settings;
 }
 
-QueryPipelinePtr PlanSegmentExecutor::buildPipeline()
+QueryPipeline PlanSegmentExecutor::buildPipeline()
 {
-    //TODO: Maybe we need QueryPlanOptimizationSettingsExt and BuildQueryPipelineSettingsExt
     auto builder = plan_segment->getQueryPlan().buildQueryPipeline(
         buildOptimizationSettingsWithCheck(logger, context),
-        BuildQueryPipelineSettingsHelper::fromPlanSegmentExt(plan_segment, plan_segment_instance->info, context, false));
+        BuildQueryPipelineSettingsExt::fromContext(context));
 
+    //todo: need check ,not add by dev_opt
+    BuildQueryPipelineSettingsHelper::fromPlanSegmentExt(plan_segment, plan_segment_instance->info, context, false);
     auto pipeline = QueryPipelineBuilder::getPipeline(std::move(*builder));
     registerAllExchangeReceivers(logger, pipeline, optimizer_context->getSettingsRef().exchange_wait_accept_max_timeout_ms);
-    return std::unique_ptr<QueryPipeline>(&pipeline);
+    return pipeline;
 }
 
-void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSenderPtrs & senders)
+QueryPipeline PlanSegmentExecutor::buildPipeline(BroadcastSenderPtrs & senders)
 {
     std::vector<BroadcastSenderPtrs> senders_list;
     const auto opt_settings = context->getOptimizerContext()->getSettingsRef();
@@ -446,7 +447,9 @@ void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSe
         = SenderProxyOptions{.wait_timeout_ms = opt_settings.exchange_wait_accept_max_timeout_ms + opt_settings.wait_runtime_filter_timeout};
     auto & sender_registry = BroadcastSenderProxyRegistry::instance();
     auto thread_group = CurrentThread::getGroup();
+    UInt64 query_tx_id = optimizer_context->getTransactionID();
 
+    size_t output_index = 0;
     for (const auto &cur_plan_segment_output : plan_segment_outputs)
     {
         size_t exchange_parallel_size = cur_plan_segment_output->getExchangeParallelSize();
@@ -472,34 +475,32 @@ void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSe
         if (total_partition_num == 0)
             throw Exception(ErrorCodes::LOGICAL_ERROR, "Total partition number should not be zero");
 
-        UInt64 qid = 0;
         for (size_t i = 0; i < total_partition_num; i++)
         {
             size_t partition_id = i;
-            //TODO: create query_unique_id 
-            auto data_key = std::make_shared<ExchangeDataKey>(qid, exchange_id, partition_id);
+            auto data_key = std::make_shared<ExchangeDataKey>(query_tx_id, exchange_id, partition_id);
+
+            // LOG_TRACE(logger, "output index {}, query_tx_id {}, exchange id {}, partition_id {}", 
+            //     output_index, query_tx_id, exchange_id, partition_id);
+
             BroadcastSenderPtr sender;
             auto proxy = sender_registry.getOrCreate(data_key, sender_options);
             proxy->accept(context, header);
             sender = proxy;
+            // LOG_TRACE(logger, "buildPipeline query_tx_id {}, exchange_id {}, partition id {}, sender {}"
+            //     , query_tx_id, exchange_id, partition_id, *data_key);
             current_exchange_senders.emplace_back(std::move(sender));
         }
-
         senders_list.emplace_back(std::move(current_exchange_senders));
+
+        LOG_TRACE(logger, "Add sender, query_tx_id {} output index {} total_partition_num {}, exchange_parallel_size {}, parallel_size {}, sender list size {}"
+            , query_tx_id, output_index, total_partition_num, exchange_parallel_size, parallel_size, senders_list.size());
+        output_index ++;
     }
 
-    //TODO: Maybe we need QueryPlanOptimizationSettingsExt and BuildQueryPipelineSettingsExt
     auto builder = plan_segment->getQueryPlan().buildQueryPipeline(
         buildOptimizationSettingsWithCheck(logger, context),
-        BuildQueryPipelineSettings::fromContext(context));
-    auto pipeline_ = QueryPipelineBuilder::getPipeline(std::move(*builder));
-    pipeline = std::unique_ptr<QueryPipeline>(&pipeline_);
-
-    // TODO: Set ChunkInfoTotals to Chunk in TotalsPortToMainPortTransform, It doesn't seem to work.
-    // pipeline->setTotalsPortToMainPortTransform();
-    // pipeline->setExtremesPortToMainPortTransform();
-
-    registerAllExchangeReceivers(logger, *pipeline, optimizer_context->getSettingsRef().exchange_wait_accept_max_timeout_ms);
+        BuildQueryPipelineSettingsExt::fromContext(context));
 
     if (plan_segment->getPlanSegmentOutputs().empty())
         throw Exception(ErrorCodes::LOGICAL_ERROR, "PlanSegment has no output");
@@ -508,13 +509,10 @@ void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSe
     auto max_output_size = std::max(context->getSettingsRef().max_threads.value / plan_segment_outputs.size(), 1UL);
     auto output_size = optimizer_context->getSettingsRef().exchange_unordered_output_parallel_size.value;
     if (output_size > max_output_size)
-    {
-        LOG_DEBUG(logger, "Decrease plan_segment {} exchange output parallel size to {}", plan_segment->getPlanSegmentId(), max_output_size);
         output_size = max_output_size;
-    }
+
     //TODO: Set max/min threads for pipeline or pipeline builder
     // pipeline->limitMinThreads(output_size * plan_segment_outputs.size());
-
     for (size_t i = 0; i < plan_segment_outputs.size(); ++i)
     {
         const auto &cur_plan_segment_output = plan_segment_outputs[i];
@@ -542,146 +540,163 @@ void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSe
                 sink_num += output_size;
                 break;
             default:
-                throw Exception(ErrorCodes::LOGICAL_ERROR,
-                    "Cannot find expected ExchangeMode {}", exchange_mode);
+                throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot find expected ExchangeMode {}", exchange_mode);
         }
     }
+    LOG_TRACE(logger, "Build query_tx_id {} pipeline params : outputs size {}, senders {}, output parallel size {}, sink number {}"
+        , query_tx_id, plan_segment_outputs.size(), senders_list.size(), output_size, sink_num);
 
-    builder->transform(
-        [&](OutputPortRawPtrs ports) -> Processors {
-            Processors new_processors;
-            std::vector<OutputPortRawPtrs> segs_output_ports(plan_segment_outputs.size(), OutputPortRawPtrs());
-
+    auto plan_segment_transform = [&](OutputPortRawPtrs ports)
+    {
+        Processors new_processors;
+        std::vector<OutputPortRawPtrs> segs_output_ports(plan_segment_outputs.size(), OutputPortRawPtrs());
+        /*
+         * 1. initial pipeline state
+         *
+         *  _____     /------ ports[0]
+         * |  T  | ---|------ ports[1]
+         * |_____|    \------ ports[2]
+         */
+        if (plan_segment_outputs.size() > 1)
+        {
             /*
-             * 1. initial pipeline state
+             * 2.1. If plan segment has multi outputs, add copyTransfrom to pipeline.
              *
-             *  _____     /------ ports[0]
-             * |  T  | ---|------ ports[1]
-             * |_____|    \------ ports[2]
+             *                                     _______________
+             *            /------ ports[0] -------| CopyTransform1| ------------- ports[0] for plan_segment_outputs[0]
+             *            |                       |_______________|        \----- ports[1] for plan_segment_outputs[1]
+             *  _____     |                        _______________
+             * |  T  | ---|------ ports[1] -------| CopyTransform2| ------------- ports[0] for plan_segment_outputs[0]
+             * |_____|    |                       |_______________|        \----- ports[1] for plan_segment_outputs[1]
+             *            |                        _______________
+             *            \------ ports[2] -------| CopyTransform3| ------------- ports[0] for plan_segment_outputs[0]
+             *                                    |_______________|        \----- ports[1] for plan_segment_outputs[1]
+             *
+             * Save the ports for plan_segment_outputs[0] in segs_output_ports[0],
+             * Save the ports for plan_segment_outputs[1] in segs_output_ports[1]...
              */
 
-            if (plan_segment_outputs.size() > 1)
+            for (const auto & port : ports)
+            {
+                const auto & header = port->getHeader();
+                auto copy_transform = std::make_shared<CopyTransform>(header, plan_segment_outputs.size());
+                auto &copy_outputs = copy_transform->getOutputs();
+
+                connect(*port, copy_transform->getInputs().front());
+
+                size_t seg_id = 0;
+                for (auto & copy_output : copy_outputs)
+                {
+                    segs_output_ports[seg_id].push_back(&copy_output);
+                    ++seg_id;
+                }
+                new_processors.emplace_back(std::move(copy_transform));
+            }
+        }
+        else
+        {
+            /*
+             * 2.2. If there is only on plan_segment_output, than there is no need to add copyTransform.
+             */
+            segs_output_ports[0] = ports;
+        }
+
+        for (size_t i = 0; i < segs_output_ports.size(); ++i)
+        {
+            auto &cur_plan_segment_output = plan_segment_outputs[i];
+            auto &current_exchange_senders = senders_list[i];
+            auto exchange_mode = cur_plan_segment_output->getExchangeMode();
+            bool keep_order = cur_plan_segment_output->needKeepOrder() || optimizer_context->getSettingsRef().exchange_enable_force_keep_order;
+            const auto & header = segs_output_ports[i][0]->getHeader();
+
+            // LOG_TRACE(logger, "transform seg output port index {}, keeper order {}, output size {}", i, keep_order, output_size);
+
+            if (!keep_order && output_size)
             {
                 /*
-                 * 2.1. If plan segment has multi outputs, add copyTransfrom to pipeline.
+                 * 3.1. Add ResizeProcessor to pipeline.
+                 *  _______________
+                 * | CopyTransform1| ------------- ports[0] for plan_segment_outputs[0] -------------------------\
+                 * |_______________|        \----- ports[1] for plan_segment_outputs[1]->ResizeProcessor 2       |
+                 *  _______________                                                                              |
+                 * | CopyTransform2| ------------- ports[0] for plan_segment_outputs[0] -------------------------|-------- ResizeProcessor 1, for seg 1
+                 * |_______________|        \----- ports[1] for plan_segment_outputs[1]->ResizeProcessor 2       |         output ports num is output_size
+                 *  _______________                                                                              |
+                 * | CopyTransform3| ------------- ports[0] for plan_segment_outputs[0] -------------------------/
+                 * |_______________|        \----- ports[1] for plan_segment_outputs[1]->ResizeProcessor 2
                  *
-                 *                                     _______________
-                 *            /------ ports[0] -------| CopyTransform1| ------------- ports[0] for plan_segment_outputs[0]
-                 *            |                       |_______________|        \----- ports[1] for plan_segment_outputs[1]
-                 *  _____     |                        _______________
-                 * |  T  | ---|------ ports[1] -------| CopyTransform2| ------------- ports[0] for plan_segment_outputs[0]
-                 * |_____|    |                       |_______________|        \----- ports[1] for plan_segment_outputs[1]
-                 *            |                        _______________
-                 *            \------ ports[2] -------| CopyTransform3| ------------- ports[0] for plan_segment_outputs[0]
-                 *                                    |_______________|        \----- ports[1] for plan_segment_outputs[1]
-                 *
-                 * Save the ports for plan_segment_outputs[0] in segs_output_ports[0],
-                 * Save the ports for plan_segment_outputs[1] in segs_output_ports[1]...
+                 * If there is no CopyTransform, than pipeline will be:
+                 *  _____     /------ ports[0] ------\
+                 * |  T  | ---|------ ports[1] ------|-------ResizeProcessor 1, for seg 1
+                 * |_____|    \------ ports[2] ------/       output ports num is output_size
                  */
-                for (const auto & port : ports)
+                auto resize = std::make_shared<ResizeProcessor>(header, segs_output_ports[i].size(), output_size);
+                auto &resize_inputs = resize->getInputs();
+                auto &resize_outputs = resize->getOutputs();
+
+                size_t input_index = 0;
+                for (auto & input : resize_inputs)
                 {
-                    const auto & header = port->getHeader();
-                    auto copy_transform = std::make_shared<CopyTransform>(header, plan_segment_outputs.size());
-                    auto &copy_outputs = copy_transform->getOutputs();
-
-                    connect(*port, copy_transform->getInputs().front());
-
-                    size_t seg_id = 0;
-                    for (auto & copy_output : copy_outputs)
-                    {
-                        segs_output_ports[seg_id].push_back(&copy_output);
-                        ++seg_id;
-                    }
-
-                    new_processors.emplace_back(std::move(copy_transform));
+                    connect(*segs_output_ports[i][input_index], input);
+                    ++input_index;
                 }
+
+                segs_output_ports[i].clear();
+                for (auto & output : resize_outputs)
+                {
+                    segs_output_ports[i].emplace_back(&output);
+                }
+
+                new_processors.emplace_back(std::move(resize));
+
+                // LOG_TRACE(logger, "transform seg output port index {}, resize input size {}, output size {}, new processors size {}",
+                //     i, resize_inputs.size(), resize_outputs.size(), new_processors.size());
             }
-            else
+            // else 3.2. No need to add ResizeProcessor.
+
+            /* 4. Add ExchangeSink to pipeline. */
+            Processors current_new_processors;
+
+            switch (exchange_mode)
             {
-                /*
-                 * 2.2. If there is only on plan_segment_output, than there is no need to add copyTransform.
-                 */
-                segs_output_ports[0] = ports;
+                case RExchangeMode::REPARTITION:
+                case RExchangeMode::LOCAL_MAY_NEED_REPARTITION:
+                case RExchangeMode::GATHER:
+                    current_new_processors = buildRepartitionExchangeSink(
+                        current_exchange_senders, keep_order, i, header, segs_output_ports[i]);
+                    break;
+                case RExchangeMode::LOCAL_NO_NEED_REPARTITION:
+                    current_new_processors = buildLoadBalancedExchangeSink(
+                        current_exchange_senders, i, header, segs_output_ports[i]);
+                    break;
+                case RExchangeMode::BROADCAST:
+                    current_new_processors = buildBroadcastExchangeSink(
+                        current_exchange_senders, i, header, segs_output_ports[i]);
+                    break;
+                default:
+                    throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot find expected ExchangeMode {}", exchange_mode);
             }
 
-            for (size_t i = 0; i < segs_output_ports.size(); ++i)
-            {
-                auto &cur_plan_segment_output = plan_segment_outputs[i];
-                auto &current_exchange_senders = senders_list[i];
-                auto exchange_mode = cur_plan_segment_output->getExchangeMode();
-                bool keep_order = cur_plan_segment_output->needKeepOrder() || optimizer_context->getSettingsRef().exchange_enable_force_keep_order;
-                const auto & header = segs_output_ports[i][0]->getHeader();
+            new_processors.insert(new_processors.end(), current_new_processors.begin(), current_new_processors.end());
 
-                if (!keep_order && output_size)
-                {
-                    /*
-                     * 3.1. Add ResizeProcessor to pipeline.
-                     *  _______________
-                     * | CopyTransform1| ------------- ports[0] for plan_segment_outputs[0] -------------------------\
-                     * |_______________|        \----- ports[1] for plan_segment_outputs[1]->ResizeProcessor 2       |
-                     *  _______________                                                                              |
-                     * | CopyTransform2| ------------- ports[0] for plan_segment_outputs[0] -------------------------|-------- ResizeProcessor 1, for seg 1
-                     * |_______________|        \----- ports[1] for plan_segment_outputs[1]->ResizeProcessor 2       |         output ports num is output_size
-                     *  _______________                                                                              |
-                     * | CopyTransform3| ------------- ports[0] for plan_segment_outputs[0] -------------------------/
-                     * |_______________|        \----- ports[1] for plan_segment_outputs[1]->ResizeProcessor 2
-                     *
-                     * If there is no CopyTransform, than pipeline will be:
-                     *  _____     /------ ports[0] ------\
-                     * |  T  | ---|------ ports[1] ------|-------ResizeProcessor 1, for seg 1
-                     * |_____|    \------ ports[2] ------/       output ports num is output_size
-                     */
-                    auto resize = std::make_shared<ResizeProcessor>(header, segs_output_ports[i].size(), output_size);
-                    auto &resize_inputs = resize->getInputs();
-                    auto &resize_outputs = resize->getOutputs();
+            // LOG_TRACE(logger, "transform seg output port index {}, ports size {}, exchange mode {}, current processor size {}, new processors size {}",
+            //     i, segs_output_ports[i].size(), exchangeModeToString(exchange_mode), current_new_processors.size(), new_processors.size());
+        }
+        LOG_TRACE(logger, "Transform plan segment outputs size {}, ports size {}, new processors size {}"
+            , plan_segment_outputs.size(), ports.size(), new_processors.size());
+        return new_processors;
+    };
 
-                    size_t input_index = 0;
-                    for (auto & input : resize_inputs)
-                    {
-                        connect(*segs_output_ports[i][input_index], input);
-                        ++input_index;
-                    }
+    builder->transformExt(plan_segment_transform, sink_num, true);
+    auto pipeline = QueryPipelineBuilder::getPipeline(std::move(*builder));
 
-                    segs_output_ports[i].clear();
-                    for (auto & output : resize_outputs)
-                    {
-                        segs_output_ports[i].emplace_back(&output);
-                    }
+    // builder->init(*pipeline);
+    // TODO: Set ChunkInfoTotals to Chunk in TotalsPortToMainPortTransform, It doesn't seem to work.
+    // pipeline->setTotalsPortToMainPortTransform();
+    // pipeline->setExtremesPortToMainPortTransform();
 
-                    new_processors.emplace_back(std::move(resize));
-                }
-                // else 3.2. No need to add ResizeProcessor.
-
-                /* 4. Add ExchangeSink to pipeline. */
-                Processors current_new_processors;
-
-                switch (exchange_mode)
-                {
-                    case RExchangeMode::REPARTITION:
-                    case RExchangeMode::LOCAL_MAY_NEED_REPARTITION:
-                    case RExchangeMode::GATHER:
-                        current_new_processors = buildRepartitionExchangeSink(
-                            current_exchange_senders, keep_order, i, header, segs_output_ports[i]);
-                        break;
-                    case RExchangeMode::LOCAL_NO_NEED_REPARTITION:
-                        current_new_processors = buildLoadBalancedExchangeSink(
-                            current_exchange_senders, i, header, segs_output_ports[i]);
-                        break;
-                    case RExchangeMode::BROADCAST:
-                        current_new_processors = buildBroadcastExchangeSink(
-                            current_exchange_senders, i, header, segs_output_ports[i]);
-                        break;
-                    default:
-                        throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot find expected ExchangeMode {}", exchange_mode);
-                }
-
-                new_processors.insert(new_processors.end(), current_new_processors.begin(), current_new_processors.end());
-            }
-
-            return new_processors;
-        },
-        sink_num
-    );
+    auto timeout_ms = optimizer_context->getSettingsRef().exchange_wait_accept_max_timeout_ms;
+    registerAllExchangeReceivers(logger, pipeline, timeout_ms);
 
     for (size_t i = 0; i < plan_segment_outputs.size(); ++i)
     {
@@ -694,11 +709,13 @@ void PlanSegmentExecutor::buildPipeline(QueryPipelinePtr & pipeline, BroadcastSe
 
     if (senders.empty())
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Plan segment has no exchange sender!");
+
+    return pipeline;
 }
 
 void PlanSegmentExecutor::registerAllExchangeReceivers(LoggerPtr log, const QueryPipeline & pipeline, UInt32 register_timeout_ms)
 {
-    //const Processors & procesors = pipeline.getProcessors();
+    const Processors & processors = pipeline.getProcessors();
     std::vector<AsyncRegisterResult> async_results;
     std::vector<LocalBroadcastChannel *> local_receivers;
     std::vector<MultiPathReceiver *> multi_receivers;
@@ -706,33 +723,39 @@ void PlanSegmentExecutor::registerAllExchangeReceivers(LoggerPtr log, const Quer
 
     try
     {
-        // TODO: Wait ExchangeSourceExt class
-        // for (const auto & processor : procesors)
-        // {
-        //     auto exchange_source_ptr = std::dynamic_pointer_cast<ExchangeSource>(processor);
-        //     if (!exchange_source_ptr)
-        //         continue;
-        //     auto * receiver_ptr = exchange_source_ptr->getReceiver().get();
+        LOG_TRACE(log, "Register all exchangeReceivers processors size {}, time out {}", processors.size(), register_timeout_ms);
 
-        //     if (auto * brpc_receiver = dynamic_cast<BrpcRemoteBroadcastReceiver *>(receiver_ptr))
-        //         async_results.emplace_back(brpc_receiver->registerToSendersAsync(register_timeout_ms));
-        //     else if (auto * local_receiver = dynamic_cast<LocalBroadcastChannel *>(receiver_ptr))
-        //         local_receivers.push_back(local_receiver);
-        //     else if (auto * multi_receiver = dynamic_cast<MultiPathReceiver *>(receiver_ptr))
-        //     {
-        //         multi_receiver->registerToSendersAsync(register_timeout_ms);
-        //         multi_receivers.push_back(multi_receiver);
-        //     }
+        for (const auto & processor : processors)
+        {
+            auto exchange_source_ptr = std::dynamic_pointer_cast<ExchangeSourceExt>(processor);
+            if (!exchange_source_ptr)
+                continue;
 
-        //     auto * receiver_ptr = exchange_source_ptr->getReceiver().get();
-        //     if (auto * local_receiver = dynamic_cast<LocalBroadcastChannel *>(receiver_ptr))
-        //         local_receivers.push_back(local_receiver);
-        //     else
-        //         throw Exception(ErrorCodes::LOGICAL_ERROR, "Unexpected SubReceiver Type: {}", typeid(receiver_ptr).name());
-        // }
+            auto * receiver_ptr = exchange_source_ptr->getReceiver().get();
+
+            if (auto * brpc_receiver = dynamic_cast<BrpcRemoteBroadcastReceiver *>(receiver_ptr))
+            {
+                async_results.emplace_back(brpc_receiver->registerToSendersAsync(register_timeout_ms));
+            }
+            else if (auto * local_receiver = dynamic_cast<LocalBroadcastChannel *>(receiver_ptr))
+            {
+                local_receivers.push_back(local_receiver);
+            }
+            else if (auto * multi_receiver = dynamic_cast<MultiPathReceiver *>(receiver_ptr))
+            {
+                LOG_TRACE(log, "Register multi receiver {} to sender timeout {}", receiver_ptr->getName(), register_timeout_ms);
+                multi_receiver->registerToSendersAsync(register_timeout_ms);
+                multi_receivers.push_back(multi_receiver);
+            }
+            else
+                throw Exception(ErrorCodes::LOGICAL_ERROR, "Register receivers, Unexpected SubReceiver Type: {}", typeid(receiver_ptr).name());
+        }
 
         for (auto * receiver_ptr : local_receivers)
+        {
+            LOG_TRACE(log, "Register localhost {} to sender timeout {}", receiver_ptr->getName(), register_timeout_ms);
             receiver_ptr->registerToSenders(register_timeout_ms);
+        }
         for (auto * receiver_ptr : multi_receivers)
             receiver_ptr->registerToLocalSenders(register_timeout_ms);
         for (auto * receiver_ptr : multi_receivers)
@@ -756,19 +779,13 @@ void PlanSegmentExecutor::registerAllExchangeReceivers(LoggerPtr log, const Quer
         // if exchange_enable_force_remote_mode = 1, sender and receiver in same process and sender stream may close before rpc end
         if (res.cntl->ErrorCode() == brpc::EREQUEST && boost::algorithm::ends_with(res.cntl->ErrorText(), "was closed before responded"))
         {
-            LOG_INFO(
-                log,
-                "Receiver register sender successfully but sender already finished, host: {}, request: {}",
-                butil::endpoint2str(res.cntl->remote_side()).c_str(),
-                *res.request);
+            LOG_INFO(log, "Receiver register sender successfully but sender already finished, host: {}, request: {}",
+                butil::endpoint2str(res.cntl->remote_side()).c_str(), *res.request);
             continue;
         }
         res.channel->assertController(*res.cntl, ErrorCodes::EXCHANGE_DATA_TRANS_EXCEPTION);
-        LOG_TRACE(
-            log,
-            "Receiver register sender successfully, host: {}, request: {}",
-            butil::endpoint2str(res.cntl->remote_side()).c_str(),
-            *res.request);
+        LOG_TRACE(log, "Receiver register sender successfully, host: {}, request: {}",
+            butil::endpoint2str(res.cntl->remote_side()).c_str(), *res.request);
     }
 }
 
@@ -833,16 +850,21 @@ Processors PlanSegmentExecutor::buildRepartitionExchangeSink(
     }
     else
     {
+        // size_t port_idx = 0;
         for (const auto & port : ports)
         {
+            // port_idx ++;
             String name = MultiPartitionExchangeSink::generateName(plan_segment_outputs[output_index]->getExchangeId());
             auto exchange_sink =
                 std::make_shared<MultiPartitionExchangeSink>(header, senders, repartition_func, argument_numbers, options, name);
             connect(*port, exchange_sink->getInputs().front());
-
+            // LOG_TRACE(logger, "buildRepartitionExchangeSink, sink name {}, output index {}, port index {}, sink input size {}, output size {}",
+            //     name, output_index, port_idx, exchange_sink->getInputs().size(), exchange_sink->getOutputs().size());
             new_processors.emplace_back(std::move(exchange_sink));
         }
     }
+
+    LOG_TRACE(logger, "Output index {}, new processors size {}", output_index, new_processors.size());
 
     return new_processors;
 }

@@ -58,9 +58,10 @@ ExchangeSourceExt::ExchangeSourceExt(
 
 ExchangeSourceExt::~ExchangeSourceExt() = default;
 
+/// ClassName[Property](Incude class)
 String ExchangeSourceExt::getName() const
 {
-    return "ExchangeSourceExt: " + receiver->getName();
+    return fmt::format("ExchangeSourceExt({})", receiver->getName());
 }
 
 String ExchangeSourceExt::getClassName() const
@@ -70,10 +71,12 @@ String ExchangeSourceExt::getClassName() const
 
 IProcessor::Status ExchangeSourceExt::prepare()
 {
+    LOG_TRACE(logger, "{} begin prepare", getName());
     const auto & status = ISource::prepare();
+    LOG_TRACE(logger, "{} parent's prepare, status is {}", getName(), ISource::statusToName(status));
     if (status == Status::Finished)
     {
-        receiver->finish(BroadcastStatusCode::RECV_REACH_LIMIT, "ExchangeSource finished");
+        receiver->finish(BroadcastStatusCode::RECV_REACH_LIMIT, "ExchangeSourceExt finished");
     }
     return status;
 }
@@ -89,7 +92,7 @@ std::optional<Chunk> ExchangeSourceExt::tryGenerate()
     {
         Chunk chunk = std::move(std::get<Chunk>(packet));
 #ifndef NDEBUG
-        LOG_TRACE(logger, "{} receive chunk with rows: {}", getName(), chunk.getNumRows());
+        LOG_TRACE(logger, "{} receive chunk with rows {}", getName(), chunk.getNumRows());
 #endif
         if (chunk && chunk.getChunkInfo() &&  getChunkType(chunk.getChunkInfo()) == ChunkType::Totals && totals_source)
         {
@@ -103,10 +106,16 @@ std::optional<Chunk> ExchangeSourceExt::tryGenerate()
         }
         return std::make_optional(std::move(chunk));
     }
-    const auto & status = std::get<BroadcastStatus>(packet);
-    checkBroadcastStatus(status);
-    was_receiver_finished = true;
-    return std::nullopt;
+    else
+    {
+        const auto & status = std::get<BroadcastStatus>(packet);
+#ifndef NDEBUG
+        LOG_TRACE(logger, "{} recv status is {}", getName(), status.code);
+#endif
+        checkBroadcastStatus(status);
+        was_receiver_finished = true;
+        return std::nullopt;
+    }
 }
 
 void ExchangeSourceExt::onCancel()
@@ -125,37 +134,25 @@ void ExchangeSourceExt::checkBroadcastStatus(const BroadcastStatus & status) con
         {
             if(status.code == BroadcastStatusCode::RECV_TIMEOUT)
             {
-                throw Exception(
-                    ErrorCodes::TIMEOUT_EXCEEDED,
-                    "Query {} receive data timeout, maybe you can increase settings max_execution_time. Debug info for source {}: {}",
-                    CurrentThread::getQueryId(),
-                    getName(),
-                    status.message);
+                throw Exception(ErrorCodes::TIMEOUT_EXCEEDED, "Query {} receive data timeout, maybe you can increase settings max_execution_time. Debug info for source {}: {}",
+                    CurrentThread::getQueryId(), getName(), status.message);
             }
             else
             {
                 // CANCELLED, NOT_READY, UNKNOWN_ERROR
-                throw Exception(
-                    ErrorCodes::EXCHANGE_DATA_TRANS_EXCEPTION,
+                throw Exception(ErrorCodes::EXCHANGE_DATA_TRANS_EXCEPTION,
                     "Query {} cancels receiving data due to unknown reason with code {} and error message {}. The real error message may "
                     "be in log or query_log. Exchange source name is {}",
-                    CurrentThread::getQueryId(),
-                    status.code,
-                    status.message,
-                    getName());
+                    CurrentThread::getQueryId(), status.code, status.message, getName());
             }
         }
 
         // If receiver is finished and not cancelly by pipeline, we should cancel pipeline here
         if (status.code != BroadcastStatusCode::RECV_CANCELLED)
-            throw Exception(
-                ErrorCodes::QUERY_WAS_CANCELLED_INTERNAL,
+            throw Exception(ErrorCodes::QUERY_WAS_CANCELLED_INTERNAL,
                 "Query {} cancels receiving data due to unknown reason with code {} and error message {}. The real error message may "
                 "be in log or query_log. Exchange source name is {}",
-                CurrentThread::getQueryId(),
-                status.code,
-                status.message,
-                getName());
+                CurrentThread::getQueryId(), status.code, status.message, getName());
     }
 }
 

@@ -9,7 +9,7 @@
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/Transforms/FilterTransformExt.h>
 #include <Query/Pipeline/QueryPipelineBuilderHelper.h>
-
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 #include <Query/ProtosHelper/ASTSerDerHelper.h>
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
 
@@ -308,7 +308,8 @@ QueryPipelineBuilderPtr JoinStepExt::updatePipeline(QueryPipelineBuilders pipeli
 
     ExpressionActionsPtr filter_action;
 
-    const auto & settings_ext = settings.getBuildQueryPipelineSettingsExt();
+    // const auto & settings_ext = settings.getBuildQueryPipelineSettingsExt();
+    const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(settings);
 
     if (!join)
     {

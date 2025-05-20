@@ -1,6 +1,7 @@
 #pragma once
 #include <Processors/QueryPlan/ITransformingStep.h>
 #include <Core/SortDescription.h>
+#include <Interpreters/Context.h>
 
 namespace DB
 {

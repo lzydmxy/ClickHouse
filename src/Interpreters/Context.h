@@ -369,6 +369,8 @@ protected:
     /// Therefore, query_access_info must be a pointer.
     QueryAccessInfoPtr query_access_info;
 
+    OptimizerContextPtr optimizer_context{nullptr};
+
     /// Record names of created objects of factories (for testing, etc)
     struct QueryFactoriesInfo
     {
@@ -984,7 +986,7 @@ public:
 
     void setSystemZooKeeperLogAfterInitializationIfNeeded();
 
-    void initializeOptimizerContext() const;
+    void initializeOptimizerContext();
     OptimizerContextPtr getOptimizerContext() const;
 
     /// --- Caches ------------------------------------------------------------------------------------------

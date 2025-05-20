@@ -34,12 +34,6 @@ SinglePartitionExchangeSink::SinglePartitionExchangeSink(
 
 void SinglePartitionExchangeSink::consume(Chunk chunk)
 {
-    if (!has_input)
-    {
-        buffered_sender.flush(true, current_chunk_info);
-        finish();
-        return;
-    }
     const ChunkInfoPtr & info = chunk.getChunkInfo();
     if (!info)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Chunk info was not set for chunk.");
@@ -51,6 +45,9 @@ void SinglePartitionExchangeSink::consume(Chunk chunk)
     // bool chunk_info_matched
     //     = ((current_chunk_info && chunk_info && *current_chunk_info == *chunk_info) || (!current_chunk_info && !chunk_info));
     //TODO: Need expand ChunkInfoEx
+    LOG_TRACE(logger, "SinglePartitionExchangeSink consume, was_on_start_called {}, was_on_finish_called {}, is_finished {}, has_input {}",
+        was_on_start_called, was_on_finish_called, is_finished.load(std::memory_order_relaxed), has_input);
+
     bool chunk_info_matched = true;
     if (!chunk_info_matched)
     {
@@ -60,30 +57,41 @@ void SinglePartitionExchangeSink::consume(Chunk chunk)
 
     const IColumn::Selector & partition_selector = repartition_info->selector;
 
-    size_t from = repartition_info->start_points[partition_id];
-    size_t length = repartition_info->start_points[partition_id + 1] - from;
-    if (length == 0)
-        return;
+    // size_t from = repartition_info->start_points[partition_id];
+    // size_t length = repartition_info->start_points[partition_id + 1] - from;
+    // if (length == 0)
+    // {
+    //     LOG_TRACE(logger, "SinglePartitionExchangeSink length == 0");
+    //     return;
+    // }
 
     const auto & columns = chunk.getColumns();
+    LOG_TRACE(logger, "SinglePartitionExchangeSink append column {}", column_num);
     for (size_t i = 0; i < column_num; i++)
     {
-        buffered_sender.appendSelective(i, *columns[i]->convertToFullColumnIfConst(), partition_selector, from, length);
+        auto materialized_column = columns[i]->convertToFullColumnIfConst();
+        auto columns = materialized_column->scatter(1, partition_selector);
+        //buffered_sender.appendSelective(i, *columns[i]->convertToFullColumnIfConst(), partition_selector, from, length);
+        //the columns.size() == 1 in single partition
+        for(size_t j = 0; j < columns.size(); j++)
+            buffered_sender.appendSelective(i, *columns[j]);
     }
     auto status = buffered_sender.flush(false, current_chunk_info);
+    LOG_TRACE(logger, "SinglePartitionExchangeSink status.code {}", toString(status.code));
     if (status.code != BroadcastStatusCode::RUNNING)
-        finish();
+        onFinish();
 }
 
 void SinglePartitionExchangeSink::onFinish()
 {
-    LOG_TRACE(logger, "SinglePartitionExchangeSink finish");
-    buffered_sender.flush(true, current_chunk_info);
+    LOG_TRACE(logger, "SinglePartitionExchangeSink on finish");
+    // buffered_sender.flush(true, current_chunk_info);
+    IExchangeSink::onFinish();
 }
 
 void SinglePartitionExchangeSink::onCancel()
 {
-    LOG_TRACE(logger, "SinglePartitionExchangeSink cancel");
+    LOG_TRACE(logger, "SinglePartitionExchangeSink on cancel");
     sender->finish(BroadcastStatusCode::SEND_CANCELLED, "Cancelled by pipeline");
 }
 

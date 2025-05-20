@@ -227,6 +227,8 @@ public:
     };
 
     Names getRequiredColumns(GetFlags flags = All) const;
+    void rewriteInForBucketTable(ContextPtr context) const;
+    void setQuotaAndLimits(QueryPipelineBuilder & pipeline, const SelectQueryOptions & options, const BuildQueryPipelineSettings & build_context);
 
     void toProto(Protos::TableScanStepExt & proto, bool for_hash_equals = false) const;
     static std::shared_ptr<TableScanStepExt> fromProto(const Protos::TableScanStepExt & proto, ContextPtr context);

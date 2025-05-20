@@ -168,6 +168,12 @@ void QueryPipelineBuilder::transform(const Transformer & transformer, bool check
     pipe.transform(transformer, check_ports);
 }
 
+void QueryPipelineBuilder::transformExt(const Transformer & transformer, size_t sink_num, bool check_ports)
+{
+    checkInitializedAndNotCompleted();
+    pipe.transformExt(transformer, sink_num, check_ports);
+}
+
 void QueryPipelineBuilder::setSinks(const Pipe::ProcessorGetterWithStreamKind & getter)
 {
     checkInitializedAndNotCompleted();
@@ -680,7 +686,6 @@ void QueryPipelineBuilder::setCollectedProcessors(Processors * processors)
 {
     pipe.collected_processors = processors;
 }
-
 
 QueryPipelineProcessorsCollector::QueryPipelineProcessorsCollector(QueryPipelineBuilder & pipeline_, IQueryPlanStep * step_)
     : pipeline(pipeline_), step(step_)

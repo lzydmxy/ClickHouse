@@ -6,6 +6,8 @@
 #include <Processors/QueryPlan/ISourceStep.h>
 #include <Interpreters/Aggregator.h>
 #include <Interpreters/ArrayJoinAction.h>
+#include <Common/SettingsChanges.h>
+#include <Interpreters/StorageID.h>
 
 namespace DB
 {

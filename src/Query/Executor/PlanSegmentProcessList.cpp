@@ -2,6 +2,9 @@
 #include <base/time.h>
 #include <Common/Exception.h>
 #include <IO/WriteBufferFromString.h>
+#include <Parsers/ASTSelectQuery.h>
+#include <Parsers/ParserSelectQuery.h>
+#include <Parsers/parseQuery.h>
 #include <Interpreters/CancellationCode.h>
 #include <Interpreters/Context.h>
 #include <Interpreters/ProcessList.h>
@@ -140,10 +143,19 @@ void PlanSegmentProcessList::insertProcessList(
 {
     ProcessList::EntryPtr entry;
     auto context_process_list_entry = query_context->getOptimizerContext()->getProcessListEntry();
+
+    LOG_TRACE(logger, "Insert process list, context entry is null {}, segment_id {}, force {}",
+        context_process_list_entry == nullptr, segment_id, force);
+
     if (context_process_list_entry)
         entry = std::move(context_process_list_entry);
     else
-        entry = query_context->getProcessList().insert("", nullptr, query_context, force);
+    {
+        ParserSelectQuery parser;
+        String default_query = "SELECT 1";
+        auto default_ast = parseQuery(parser, default_query, 0, 0, 0);
+        entry = query_context->getProcessList().insert(default_query, default_ast.get(), query_context, force);
+    }
 
     plan_segment_process_entry->setQueryStatus(entry->getQueryStatus());
     const auto segment_group = plan_segment_process_entry->getPlanSegmentGroup();
@@ -310,7 +322,7 @@ PlanSegmentProcessListEntry::PlanSegmentProcessListEntry(
 
 PlanSegmentProcessListEntry::~PlanSegmentProcessListEntry()
 {
-    parent.remove(initial_query_id, segment_id);
+    // parent.remove(initial_query_id, segment_id);
 }
 
 void PlanSegmentProcessListEntry::prepareQueryScope(ContextMutablePtr query_context)

@@ -30,7 +30,7 @@ LocalBroadcastChannel::LocalBroadcastChannel(
     , options(std::move(options_))
     , receive_queue(std::move(queue_))
     , context(std::move(context_))
-    , logger(getLogger("LocalBroadcastChannel"))
+    , log(getLogger("LocalBroadcastChannel"))
 {
 }
 
@@ -50,20 +50,17 @@ RecvDataPacket LocalBroadcastChannel::recv(TimePoint timeout_tp)
         {
             Chunk & recv_chunk = std::get<DataPacket>(data_packet).chunk;
             addToMetricsMaybe(s.elapsedMilliseconds(), 0, 1, recv_chunk);
+            LOG_TRACE(log, "{} pop DataPacket", name);
             return RecvDataPacket(std::move(recv_chunk));
         }
         else if (std::holds_alternative<SendDoneMark>(data_packet))
         {
+            LOG_TRACE(log, "{} pop SendDoneMark", name);
             return RecvDataPacket(*broadcast_status.load(std::memory_order_acquire));
-        }
-        else
-        {
-            // 
         }
     }
 
-    BroadcastStatus current_status = finish(
-        BroadcastStatusCode::RECV_TIMEOUT,
+    BroadcastStatus current_status = finish(BroadcastStatusCode::RECV_TIMEOUT,
         "Receive from channel " + name + " timeout after ms: " + timeToString(timeout_tp));
     if (enable_receiver_metrics)
         receiver_metrics.recv_time_ms << s.elapsedMilliseconds();
@@ -83,7 +80,12 @@ BroadcastStatus LocalBroadcastChannel::sendImpl(Chunk chunk)
         chunk_info->receiver = shared_from_this();
     }
     if (receive_queue->tryEmplaceUntil(options.max_timeout_ts, MultiPathDataPacket(DataPacket{std::move(chunk)})))
+    {
+        LOG_TRACE(log, "{} emplace success, size {}", name, receive_queue->size());
         return *broadcast_status.load(std::memory_order_acquire);
+    }
+
+    LOG_DEBUG(log, "{} emplace faild", name);
 
     // finished in other thread, receive_queue is closed.
     if(receive_queue->closed())
@@ -109,18 +111,13 @@ BroadcastStatus LocalBroadcastChannel::finish(BroadcastStatusCode status_code, S
 
     if (broadcast_status.compare_exchange_strong(current_status_ptr, new_status_ptr, std::memory_order_release, std::memory_order_acquire))
     {
-        LOG_DEBUG(
-            logger,
-            "{} BroadcastStatus from {} to {} with message: {}",
-            name,
-            current_status_ptr->code,
-            new_status_ptr->code,
-            new_status_ptr->message);
+        LOG_TRACE(log, "{} BroadcastStatus from {} to {} with message: {}",
+            name, toString(current_status_ptr->code), toString(new_status_ptr->code), new_status_ptr->message);
         if (new_status_ptr->code > 0)
             // close queue immediately
             receive_queue->close();
         else
-            receive_queue->tryEmplaceUntil(options.max_timeout_ts, getName());
+            receive_queue->tryEmplaceUntil(options.max_timeout_ts, SendDoneMark(getName()));
         auto res = *new_status_ptr;
         res.is_modified_by_operator = true;
         sender_metrics.finish_code = new_status_ptr->code;
@@ -132,13 +129,8 @@ BroadcastStatus LocalBroadcastChannel::finish(BroadcastStatusCode status_code, S
     }
     else
     {
-        LOG_TRACE(
-            logger,
-            "Fail to change broadcast(name:{}) status to {}, current status is:{} message:{}",
-            name,
-            new_status_ptr->code,
-            current_status_ptr->code,
-            message);
+        LOG_TRACE(log, "Fail to change broadcast(name:{}) status to {}, current status is:{} message:{}",
+            name,toString(new_status_ptr->code), toString(current_status_ptr->code), message);
         sender_metrics.finish_code = current_status_ptr->code;
         sender_metrics.is_modifier = 0;
         delete new_status_ptr;
@@ -146,9 +138,9 @@ BroadcastStatus LocalBroadcastChannel::finish(BroadcastStatusCode status_code, S
     }
 }
 
-
 void LocalBroadcastChannel::registerToSenders(UInt32 timeout_ms)
 {
+    LOG_TRACE(log, "Local broadcast channel register to senders, data_key {} timeout {}", *data_key, timeout_ms);
     Stopwatch s;
     auto sender_proxy = BroadcastSenderProxyRegistry::instance().getOrCreate(data_key);
     sender_proxy->waitAccept(timeout_ms);
@@ -169,7 +161,6 @@ String LocalBroadcastChannel::getName() const
 
 LocalBroadcastChannel::~LocalBroadcastChannel()
 {
-    auto optimizer_context = context->getOptimizerContext();
     try
     {
         auto * status = broadcast_status.load(std::memory_order_acquire);
@@ -203,13 +194,12 @@ LocalBroadcastChannel::~LocalBroadcastChannel()
             element.register_time_ms = receiver_metrics.register_time_ms.get_value();
             element.recv_bytes = receiver_metrics.recv_bytes.get_value();
             element.recv_uncompressed_bytes = receiver_metrics.recv_uncompressed_bytes.get_value();
-
             query_exchange_log->add(element);
         }
     }
     catch (...)
     {
-        tryLogCurrentException(logger);
+        tryLogCurrentException(log);
     }
 }
 }

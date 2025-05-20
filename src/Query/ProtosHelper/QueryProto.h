@@ -3,6 +3,8 @@
 #include <Query/Protos/common.pb.h>
 #include <Query/Protos/plan_node.pb.h>
 #include <Query/Protos/plan_segment_service.pb.h>
+#include <Query/Protos/registry.pb.h>
+
 
 namespace DB
 {
@@ -52,6 +54,7 @@ using RPlanSegmentProfileResponse = Protos::PlanSegmentProfileResponse;
 
 using RAST = Protos::AST;
 using RDataType = Protos::DataType;
+using RNameAndTypePair = Protos::NameAndTypePair;
 using RBlock = Protos::Block;
 using RAssignments = Protos::Assignments;
 using RAggregateFunction = Protos::AggregateFunction;
@@ -75,6 +78,9 @@ using RProcessorProfileResponse = Protos::ProcessorProfileResponse;
 
 using RPartitioningHandle  = Protos::Partitioning_Handle;
 using RPartitioningComponent  = Protos::Partitioning_Component;
+using RRegistryRequest = Protos::RegistryRequest;
+using RRegistryResponse = Protos::RegistryResponse;
+using RRegistryService = Protos::RegistryService;
 
 String planSegmentTypeToString(const RIPlanSegment::Enum & type);
 

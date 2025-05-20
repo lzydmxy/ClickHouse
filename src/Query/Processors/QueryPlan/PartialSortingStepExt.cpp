@@ -1,5 +1,5 @@
 #include <Query/Processors/QueryPlan/PartialSortingStepExt.h>
-
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 #include <Processors/Transforms/PartialSortingTransform.h>
 #include <Processors/Transforms/LimitsCheckingTransform.h>
 #include <IO/Operators.h>
@@ -55,11 +55,13 @@ void PartialSortingStepExt::updateLimit(size_t limit_)
 
 void PartialSortingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
+    const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(settings);
+
     if (size_limits.max_rows == 0)
     {
-        size_limits.max_rows = settings.settings_ext.context->getSettingsRef().max_rows_to_sort;
-        size_limits.max_bytes= settings.settings_ext.context->getSettingsRef().max_bytes_to_sort;
-        size_limits.overflow_mode = settings.settings_ext.context->getSettingsRef().sort_overflow_mode;
+        size_limits.max_rows = settings_ext.context->getSettingsRef().max_rows_to_sort;
+        size_limits.max_bytes= settings_ext.context->getSettingsRef().max_bytes_to_sort;
+        size_limits.overflow_mode = settings_ext.context->getSettingsRef().sort_overflow_mode;
     }
 
     pipeline.addSimpleTransform([&](const Block & header, QueryPipelineBuilder::StreamType stream_type) -> ProcessorPtr

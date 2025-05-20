@@ -28,6 +28,7 @@ void readAggregatedChunkInfo(ReadBuffer & in, std::shared_ptr<AggregatedChunkInf
 {
     readVarUInt(agg_info->is_overflows, in);
     readVarUInt(agg_info->bucket_num, in);
+    // todo: need to check
     readVarUInt(agg_info->chunk_num, in);
 }
 
@@ -35,6 +36,7 @@ void writeAggregatedChunkInfo(WriteBuffer & out, const AggregatedChunkInfo * agg
 {
     writeVarUInt(agg_info->is_overflows, out);
     writeVarUInt(agg_info->bucket_num, out);
+    // todo: need to check
     writeVarUInt(agg_info->chunk_num, out);
 }
 

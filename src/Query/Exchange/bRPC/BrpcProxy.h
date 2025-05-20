@@ -16,7 +16,6 @@ class BrpcProxy
 public:
     static BrpcProxy & getInstance()
     {
-        static BrpcProxy brpc_proxy;
         return brpc_proxy;
     }
 
@@ -68,12 +67,14 @@ public:
     int StreamFinishedCode(StreamId stream_id, int32_t& fin_status_code);
 
 private:
-    BrpcProxy()
-    {
-    }
+    BrpcProxy() = default;
+    ~BrpcProxy() = default;
+    BrpcProxy(const BrpcProxy&) = delete;
+	BrpcProxy& operator=(const BrpcProxy&) = delete;
     bool setStreamStatus(StreamId stream_id, int32_t status_code);
     void clearStreamStatus(StreamId stream_id);
     int32_t getStreamStatus(StreamId stream_id);
+    static BrpcProxy brpc_proxy;
     LoggerPtr log = getLogger("BrpcProxy");
     std::shared_mutex stream_mutex;
     std::map<StreamId, int32_t> stream_status;

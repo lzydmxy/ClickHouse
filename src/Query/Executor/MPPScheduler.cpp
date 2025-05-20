@@ -105,10 +105,12 @@ PlanSegmentExecutionInfo MPPScheduler::schedule()
             }
         }
         if (batch_schedule)
+        {
             batchScheduleTasks();
+        }
     }
-
-    dag_graph_ptr->joinAsyncRpcAtLast();
+    if (!unit_test)
+        dag_graph_ptr->joinAsyncRpcAtLast();
     LOG_DEBUG(log, "Scheduling takes {} ms", sw.elapsedMilliseconds());
     return generateExecutionInfo(0, 0);
 }

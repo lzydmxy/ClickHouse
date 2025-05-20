@@ -23,7 +23,6 @@ MultiPartitionExchangeSink::MultiPartitionExchangeSink(
     , repartition_keys(std::move(repartition_keys_))
     , options(options_)
     , logger(getLogger("MultiPartitionExchangeSink"))
-
 {
     bool has_null_shuffle_key = false;
     for (size_t key_idx : repartition_keys)
@@ -50,23 +49,11 @@ MultiPartitionExchangeSink::MultiPartitionExchangeSink(
 
 void MultiPartitionExchangeSink::consume(Chunk chunk)
 {
-
     if (partition_num == 1)
     {
-        if (!has_input) {
-            finish();
-            return;
-        }
         auto status = buffered_senders[0].sendThrough(std::move(chunk));
         if (status.code != BroadcastStatusCode::RUNNING)
-            finish();
-        return;
-    }
-
-    if (!has_input) {
-        for(size_t i = 0; i < partition_num ; ++i)
-            buffered_senders[i].flush(true, current_chunk_info);
-        finish();
+            onFinish();
         return;
     }
 
@@ -94,13 +81,15 @@ void MultiPartitionExchangeSink::consume(Chunk chunk)
     for (size_t i = 0; i < column_num; i++)
     {
         auto materialized_column = columns[i]->convertToFullColumnIfConst();
-        for (size_t j = 0; j < partition_num; ++j)
-        {
-            size_t from = partition_start_points[j];
-            size_t length = partition_start_points[j + 1] - from;
-            if (length == 0)
-                continue; // no data for this partition continue;
-            buffered_senders[j].appendSelective(i, *materialized_column, partition_selector, from, length);
+        auto columns = materialized_column->scatter(partition_num, partition_selector);
+         for (size_t j = 0; j < partition_num; ++j)
+         {
+            // size_t from = partition_start_points[j];
+            // size_t length = partition_start_points[j + 1] - from;
+            // if (length == 0)
+            //     continue; // no data for this partition continue;
+            // buffered_senders[j].appendSelective(i, *materialized_column, partition_selector, from, length);
+            buffered_senders[j].appendSelective(i, *columns[j]);
         }
     }
 
@@ -112,17 +101,18 @@ void MultiPartitionExchangeSink::consume(Chunk chunk)
             has_active_sender = true;
     }
     if (!has_active_sender)
-        finish();
+        onFinish();
 }
 
 void MultiPartitionExchangeSink::onFinish()
 {
-    LOG_TRACE(logger, "MultiPartitionExchangeSink finish");
+    LOG_TRACE(logger, "MultiPartitionExchangeSink on finish");
+    IExchangeSink::onFinish();
 }
 
 void MultiPartitionExchangeSink::onCancel()
 {
-    LOG_TRACE(logger, "MultiPartitionExchangeSink cancel");
+    LOG_TRACE(logger, "MultiPartitionExchangeSink on cancel");
     for (BroadcastSenderPtr & sender : partition_senders)
         sender->finish(BroadcastStatusCode::SEND_CANCELLED, "Cancelled by pipeline");
 }

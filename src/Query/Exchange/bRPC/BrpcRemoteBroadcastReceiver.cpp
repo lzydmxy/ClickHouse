@@ -32,13 +32,13 @@ BrpcRemoteBroadcastReceiver::BrpcRemoteBroadcastReceiver(
     const String & name_,
     BrpcExchangeReceiverRegistryService::RegisterMode mode_)
     : BrpcRemoteBroadcastReceiver(std::move(trans_key_)
-    , std::move(registry_address_)
-    , context_
-    , std::move(header_)
-    , keep_order_
-    , name_
-    , std::make_shared<MultiPathBoundedQueue>(context_->getOptimizerContext()->getSettingsRef().exchange_remote_receiver_queue_size, nullptr)
-    , mode_)
+        , std::move(registry_address_)
+        , context_
+        , std::move(header_)
+        , keep_order_
+        , name_
+        , std::make_shared<MultiPathBoundedQueue>(context_->getOptimizerContext()->getSettingsRef().exchange_remote_receiver_queue_size, nullptr)
+        , mode_)
 {
 }
 
@@ -55,9 +55,9 @@ BrpcRemoteBroadcastReceiver::BrpcRemoteBroadcastReceiver(
     String coordinator_address_)
     : IBroadcastReceiver(context_->getOptimizerContext()->getSettingsRef().log_query_exchange)
     , name(name_)
-    , trans_key(std::move(trans_key_))
+    , trans_key(trans_key_)
     , registry_address(std::move(registry_address_))
-    , context(std::move(context_))
+    , context(context_)
     , optimizer_context(context_->getOptimizerContext())
     , header(std::move(header_))
     , queue(std::move(queue_))
@@ -75,11 +75,13 @@ BrpcRemoteBroadcastReceiver::~BrpcRemoteBroadcastReceiver()
     {
         if (stream_id != brpc::INVALID_STREAM_ID)
         {
+            LOG_TRACE(log, "Destructor close receive stream {} for name {} address {}", stream_id, name, registry_address);
             BrpcProxy::getInstance().StreamClose(stream_id);
-            LOG_TRACE(log, "Stream {} for {} @ {} Close", stream_id, name, registry_address);
         }
+
         if (!enable_receiver_metrics || !query_exchange_log)
             return;
+
         QueryExchangeLogElement element;
         element.initial_query_id = initial_query_id;
         element.exchange_id = trans_key->exchange_id;
@@ -99,10 +101,27 @@ BrpcRemoteBroadcastReceiver::~BrpcRemoteBroadcastReceiver()
         element.message = receiver_metrics.message;
         element.type = "brpc_receiver@reg_addr_" + registry_address;
         query_exchange_log->add(element);
+        releaseOptions();   //release options's handler
     }
     catch (...)
     {
         tryLogCurrentException(log);
+    }
+}
+
+brpc::StreamOptions & BrpcRemoteBroadcastReceiver::getOptions()
+{
+    if (stream_options.handler == NULL)
+        stream_options.handler = new StreamHandler(context, shared_from_this(), header, keep_order);
+    return stream_options;
+}
+
+void BrpcRemoteBroadcastReceiver::releaseOptions()
+{
+    if (stream_options.handler != NULL)
+    {
+        delete stream_options.handler;
+        stream_options.handler = NULL;
     }
 }
 
@@ -112,15 +131,13 @@ void BrpcRemoteBroadcastReceiver::registerToSenders(UInt32 timeout_ms)
     std::shared_ptr<RpcClient> rpc_client = RpcChannelPool::getInstance().getClient(registry_address, BrpcChannelPoolOptions::STREAM_DEFAULT_CONFIG_KEY);
     Protos::RegistryService_Stub stub = Protos::RegistryService_Stub(&rpc_client->getChannel());
     brpc::Controller cntl;
-    StreamHandler handler(context, shared_from_this(), header, keep_order);
-    brpc::StreamOptions stream_options;
-    stream_options.handler = &handler;
     if (timeout_ms == 0)
         cntl.set_timeout_ms(rpc_client->getChannel().options().timeout_ms);
     else
         cntl.set_timeout_ms(timeout_ms);
     cntl.set_max_retry(3);
-    if (BrpcProxy::getInstance().StreamCreate(&stream_id, cntl, &stream_options) != 0)
+    auto & options = getOptions();
+    if (BrpcProxy::getInstance().StreamCreate(&stream_id, cntl, &options) != 0)
         throw Exception(ErrorCodes::BRPC_EXCEPTION, "Fail to create stream for {}", getName());
 
     if (stream_id == brpc::INVALID_STREAM_ID)
@@ -136,58 +153,64 @@ void BrpcRemoteBroadcastReceiver::registerToSenders(UInt32 timeout_ms)
     request.set_parallel_id(trans_key->partition_id);
     request.set_parallel_index(trans_key->parallel_index);
     request.set_wait_timeout_ms(optimizer_context->getSettingsRef().exchange_wait_accept_max_timeout_ms);
+
+    LOG_DEBUG(log, "Receiver begin register sender: host {}, name {}, stream {}, timeout_ms {}",
+        registry_address, name, stream_id, timeout_ms);
+
     sendRegisterRPC(stub, cntl, &request, &response, nullptr);
 
     // if exchange_enable_force_remote_mode = 1, sender and receiver in same process and sender stream may close before rpc end
     if (cntl.ErrorCode() == brpc::EREQUEST && cntl.ErrorText().ends_with("was closed before responded"))
     {
-        LOG_DEBUG(
-            log,
-            "Receiver register sender successfully but sender already finished, host-{} , data_key-{}, stream_id-{}",
-            registry_address,
-            name,
-            stream_id);
+        LOG_DEBUG(log, "Receiver register sender successfully but sender already finished, host {}, name {}, stream {}",
+            registry_address, name, stream_id);
         return;
     }
     rpc_client->assertController(cntl);
     if (enable_receiver_metrics)
         receiver_metrics.register_time_ms << s.elapsedMilliseconds();
-    LOG_DEBUG(log, "Receiver register sender successfully, host-{} , data_key-{}, stream_id-{}", registry_address, name, stream_id);
+    LOG_DEBUG(log, "Receiver register sender successfully, host {}, name {}, stream {}, timeout_ms {}",
+        registry_address, name, stream_id, timeout_ms);
 }
 
 void BrpcRemoteBroadcastReceiver::pushReceiveQueue(MultiPathDataPacket packet)
 {
     if (queue->closed())
+    {
+        LOG_TRACE(log, "{} queue is closed, cant push packet", getName());
         return;
+    }
     if (!queue->tryEmplaceUntil(optimizer_context->getQueryExpirationTimeStamp(), std::move(packet)))
     {
         if(queue->closed())
         {
+            LOG_TRACE(log, "{} push timeout, queue is closed", getName());
             return;
         }
         throw Exception(ErrorCodes::DISTRIBUTE_STAGE_QUERY_EXCEPTION, "Push exchange data to receiver for {} timeout from {} to {}",
-                getName(),
-                timeToString(context->getClientInfo().initial_query_start_time),
-                timeToString(optimizer_context->getQueryExpirationTimeStamp())
-            );
+                getName(), timeToString(context->getClientInfo().initial_query_start_time),
+                timeToString(optimizer_context->getQueryExpirationTimeStamp()));
     }
 }
 
 RecvDataPacket BrpcRemoteBroadcastReceiver::recv(TimePoint timeout_ts)
 {
+    LOG_TRACE(log, "{} recv data", getName());
+
     Stopwatch s;
     MultiPathDataPacket data_packet;
     if (!queue->tryPopUntil(data_packet, timeout_ts))
     {
-        const auto error_msg = "Try pop receive queue for " + getName() + " timeout, from "
-            + timeToString(context->getClientInfo().initial_query_start_time) + " to "
-            + timeToString(timeout_ts);
+        const auto error_msg = fmt::format("Try pop receive queue for {} timeout, from {} to {}",
+            getName(), timeToString(context->getClientInfo().initial_query_start_time), timeToString(timeout_ts));
+        LOG_TRACE(log, "{}", error_msg);
         BroadcastStatus current_status = finish(BroadcastStatusCode::RECV_TIMEOUT, error_msg);
         return std::move(current_status);
     }
 
     if (std::holds_alternative<DataPacket>(data_packet))
     {
+        LOG_TRACE(log, "{} receive data packet", getName());
         auto & received_chunk = std::get<DataPacket>(data_packet).chunk;
         if (!received_chunk && !received_chunk.getChunkInfo())
         {
@@ -207,7 +230,7 @@ RecvDataPacket BrpcRemoteBroadcastReceiver::recv(TimePoint timeout_ts)
     }
     else
     {
-        LOG_TRACE(log, "{} finished ", getName());
+        LOG_TRACE(log, "{} recv finished ", getName());
         return RecvDataPacket(BroadcastStatus(BroadcastStatusCode::ALL_SENDERS_DONE, false, "receiver done"));
     }
 }
@@ -218,12 +241,8 @@ BroadcastStatus BrpcRemoteBroadcastReceiver::finish(BroadcastStatusCode status_c
     const auto *const msg = "BrpcRemoteBroadcastReceiver: already has been finished";
     if (current_fin_code != BroadcastStatusCode::RUNNING)
     {
-        LOG_TRACE(
-            log,
-            "Broadcast {} finished and status can't be changed to {} any more. Current status: {}",
-            name,
-            status_code,
-            current_fin_code);
+        LOG_TRACE(log, "Broadcast {} finished and status can't be changed from {} to {}",
+            name, current_fin_code, status_code);
         receiver_metrics.finish_code = current_fin_code;
         receiver_metrics.is_modifier = 0;
         return BroadcastStatus(current_fin_code, false, msg);
@@ -250,27 +269,19 @@ BroadcastStatus BrpcRemoteBroadcastReceiver::finish(BroadcastStatusCode status_c
         if (new_fin_code > BroadcastStatusCode::RUNNING && new_fin_code != BroadcastStatusCode::RECV_CANCELLED
             && new_fin_code != BroadcastStatusCode::RECV_REACH_LIMIT)
         {
-            LOG_ERROR(
-                log,
-                "Broadcast {} finished and changed to {} with err:'{}'",
-                getName(),
-                static_cast<BroadcastStatusCode>(new_fin_code),
-                receiver_metrics.message);
+            LOG_ERROR(log, "Broadcast {} finished and changed to {} with err: {}",
+                getName(), static_cast<BroadcastStatusCode>(new_fin_code), receiver_metrics.message);
         }
         else
         {
-            LOG_TRACE(
-                log,
-                "Broadcast {} finished and changed to {} successfully. message:'{}'",
-                getName(),
-                static_cast<BroadcastStatusCode>(new_fin_code),
-                receiver_metrics.message);
+            LOG_TRACE(log, "Broadcast {} finished and changed to {} successfully. msg: {}",
+                getName(), static_cast<BroadcastStatusCode>(new_fin_code), receiver_metrics.message);
         }
         return BroadcastStatus(static_cast<BroadcastStatusCode>(new_fin_code), true, receiver_metrics.message);
     }
     else
     {
-        LOG_TRACE(log, "Fail to change broadcast(name:{}) status to {}, current status is: {}", name, new_fin_code, current_fin_code);
+        LOG_TRACE(log, "Fail to change broadcast(name {}) status from {} to {}", name,  current_fin_code, new_fin_code);
         receiver_metrics.finish_code = current_fin_code;
         receiver_metrics.is_modifier = 0;
         return BroadcastStatus(current_fin_code, false, msg);
@@ -279,7 +290,7 @@ BroadcastStatus BrpcRemoteBroadcastReceiver::finish(BroadcastStatusCode status_c
 
 String BrpcRemoteBroadcastReceiver::getName() const
 {
-    return name + ":" + trans_key->toString();
+    return fmt::format("{}({})", name, *trans_key);
 }
 
 static void OnRegisterDone(Protos::RegistryResponse * /*response*/, brpc::Controller * cntl, std::function<void(void)> func)
@@ -295,6 +306,7 @@ AsyncRegisterResult BrpcRemoteBroadcastReceiver::registerToSendersAsync(UInt32 t
     Stopwatch s;
     AsyncRegisterResult res;
 
+    LOG_TRACE(log, "{} rpc channel poll get instance, address {}", getName(), registry_address);
     res.channel = RpcChannelPool::getInstance().getClient(registry_address, BrpcChannelPoolOptions::STREAM_DEFAULT_CONFIG_KEY);
     res.cntl = std::make_unique<brpc::Controller>();
     res.request = std::make_unique<Protos::RegistryRequest>();
@@ -304,16 +316,14 @@ AsyncRegisterResult BrpcRemoteBroadcastReceiver::registerToSendersAsync(UInt32 t
     Protos::RegistryService_Stub stub = Protos::RegistryService_Stub(&rpc_client->getChannel());
 
     brpc::Controller & cntl = *res.cntl;
-    brpc::StreamOptions stream_options;
-    StreamHandler handler(context, shared_from_this(), header, keep_order);
-    stream_options.handler = &handler;
 
     if (timeout_ms == 0)
         cntl.set_timeout_ms(rpc_client->getChannel().options().timeout_ms);
     else
         cntl.set_timeout_ms(timeout_ms);
     cntl.set_max_retry(3);
-    if (BrpcProxy::getInstance().StreamCreate(&stream_id, cntl, &stream_options) != 0)
+    auto & options = getOptions();
+    if (BrpcProxy::getInstance().StreamCreate(&stream_id, cntl, &options) != 0)
         throw Exception(ErrorCodes::BRPC_EXCEPTION, "Fail to create stream for {}", getName());
 
     if (stream_id == brpc::INVALID_STREAM_ID)
@@ -334,13 +344,8 @@ AsyncRegisterResult BrpcRemoteBroadcastReceiver::registerToSendersAsync(UInt32 t
     };
     sendRegisterRPC(
         stub, cntl, res.request.get(), res.response.get(), brpc::NewCallback(OnRegisterDone, res.response.get(), res.cntl.get(), func));
-    LOG_TRACE(
-        log,
-        "name:{} addr:{} registerToSendersAsync costs {} ms, send rpc costs {} us",
-        getName(),
-        registry_address,
-        s.elapsedMilliseconds(),
-        cntl.latency_us());
+    LOG_TRACE(log, "name {} addr {} registerToSendersAsync costs {} ms, send rpc costs {} us",
+        getName(), registry_address, s.elapsedMilliseconds(), cntl.latency_us());
     return res;
 }
 
@@ -353,17 +358,6 @@ void BrpcRemoteBroadcastReceiver::sendRegisterRPC(
 {
     if (mode == BrpcExchangeReceiverRegistryService::BRPC)
         stub.registry(&cntl, request, response, done);
-    // Not support BSP Mode now
-    // else if (mode == BrpcExchangeReceiverRegistryService::DISK_READER)
-    // {
-    //     Protos::RegistryDiskSenderRequest disk_request;
-    //     disk_request.mutable_registry()->Swap(request);
-    //     serializeHeaderToProto(header, *disk_request.mutable_header());
-    //     auto settings = optimizer_context->getSettingsRef().dumpToMap();
-    //     disk_request.mutable_settings()->insert(settings.begin(), settings.end());
-    //     disk_request.set_initial_query_start_time(context->getClientInfo().initial_query_start_time_microseconds.value);
-    //     stub.registerSenderFromDisk(&cntl, &disk_request, response, done);
-    // }
     else
         throw Exception(ErrorCodes::LOGICAL_ERROR, "unrecognized mode {}", mode);
 }

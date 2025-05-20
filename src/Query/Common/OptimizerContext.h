@@ -70,6 +70,7 @@ enum ServiceType
 class OptimizerContext
 {
 public:
+    OptimizerContext(const Settings & settings_);
     OptimizerContext(const Settings & settings_, OptimizerSettings & optimizer_settings_);
 
     const OptimizerSettings & getSettingsRef() const { return optimizer_settings; }
@@ -78,6 +79,7 @@ public:
 
     /// milliseconds
     UInt32 getQueryMaxExecutionTime() const;
+    void setQueryMaxExecutionTime(UInt32 milli_second);
     TimePoint getQueryExpirationTimeStamp() const;
     void initQueryExpirationTimeStamp();
 
@@ -119,7 +121,7 @@ public:
     void setIsExplainQuery(const bool & is_explain_query_);
     bool isExplainQuery() const;
 
-    QueryExchangeLogPtr getQueryExchangeLog() { return query_exchange_log; }
+    QueryExchangeLogPtr getQueryExchangeLog();
 
     void addNonDeterministicFunction(const std::string & fun_name, bool within_query_scope) const
     {
@@ -167,6 +169,8 @@ public:
     int getRuleId() const { return rule_id; }
     void setRuleId(int rule_id_) { rule_id = rule_id_; }
     void incRuleId() { ++rule_id; }
+	void setTransactionID(UInt64 txt_id_);
+	UInt64 getTransactionID();
 protected:
     std::shared_ptr<QueryStatistics::StatisticsMemoryStore> stats_memory_store = nullptr;
 
@@ -185,6 +189,7 @@ private:
     std::function<void()> send_tcp_progress{nullptr};
     bool is_explain_query{false};
     QueryExchangeLogPtr query_exchange_log;
+	UInt64 txt_id{0};
     // make sure a context not be passed to ExprAnalyzer::analyze concurrently
     mutable std::unordered_set<std::string> nondeterministic_functions_within_query_scope;
     mutable std::unordered_set<std::string> nondeterministic_functions_out_of_query_scope;

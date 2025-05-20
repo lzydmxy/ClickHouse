@@ -70,7 +70,7 @@ private:
     String user;
     String password;
     // Same as rpc port
-    UInt16 exchange_port;
+    UInt16 exchange_port{0};
 };
 
 /// Get local RPC address with host and port

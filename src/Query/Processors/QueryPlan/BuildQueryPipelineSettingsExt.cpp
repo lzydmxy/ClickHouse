@@ -4,18 +4,45 @@
 namespace DB
 {
 
-void BuildQueryPipelineSettingsExt::fromContext(ContextPtr from)
+namespace ErrorCodes
 {
-    this->context = from;
+    extern const int CANNOT_CONVERT_TYPE;
 }
 
-void BuildQueryPipelineSettingsExt::fromPlanSegment(
-    PlanSegment * plan_segment, const PlanSegmentExecutionInfo & info, ContextPtr context, bool is_explain)
+const BuildQueryPipelineSettingsExt & BuildQueryPipelineSettingsExt::cast(const BuildQueryPipelineSettings & settings)
 {
-    this->distributed_settings = DistributedPipelineSettings::fromPlanSegment(plan_segment, info);
-    this->distributed_settings.is_explain = is_explain;
-    this->context = context;
-    this->sources = info.sources;
+    //return *(static_cast<const BuildQueryPipelineSettingsExt1 *>(&settings));
+    auto settings_ext = dynamic_cast<const BuildQueryPipelineSettingsExt *>(&settings);
+    if (!settings_ext)
+        throw Exception(ErrorCodes::CANNOT_CONVERT_TYPE, "Cant cast settings to BuildQueryPipelineSettingsExt");
+    return *settings_ext;
+}
+
+BuildQueryPipelineSettingsExt BuildQueryPipelineSettingsExt::fromSettings(const Settings & from)
+{
+    BuildQueryPipelineSettingsExt settings;
+    settings.actions_settings = ExpressionActionsSettings::fromSettings(from, CompileExpressions::yes);
+    //In all of its usage, there is no use of an uninitialized variable
+    //settings.distributed_settings.coordinator_address.port will be initialized when it's used
+    //coverity[uninit_use]
+    return settings;
+}
+
+BuildQueryPipelineSettingsExt BuildQueryPipelineSettingsExt::fromContext(ContextPtr from)
+{
+    auto settings = fromSettings(from->getSettingsRef());
+    settings.context = from;
+    return settings;
+}
+
+BuildQueryPipelineSettingsExt BuildQueryPipelineSettingsExt::fromPlanSegment(PlanSegment * plan_segment, const PlanSegmentExecutionInfo & info, ContextPtr context, bool is_explain)
+{
+    auto settings = fromContext(context);
+    settings.distributed_settings = DistributedPipelineSettings::fromPlanSegment(plan_segment, info);
+    settings.distributed_settings.is_explain = is_explain;
+    settings.context = context;
+    settings.sources = info.sources;
+    return settings;
 }
 
 }

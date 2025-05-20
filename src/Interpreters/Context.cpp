@@ -429,9 +429,6 @@ struct ContextSharedPart : boost::noncopyable
     mutable std::shared_ptr<RaftDispatcher> raft_dispatcher TSA_GUARDED_BY(raft_dispatcher_mutex);
 #endif
 
-    mutable std::mutex optimizer_context_mutex;
-    mutable OptimizerContextPtr optimizer_context TSA_GUARDED_BY(optimizer_context_mutex);
-
     ContextSharedPart()
         : access_control(std::make_unique<AccessControl>())
         , global_overcommit_tracker(&process_list)
@@ -3550,21 +3547,16 @@ std::shared_ptr<RaftDispatcher> Context::tryGetRaftDispatcher() const
 }
 #endif
 
-void Context::initializeOptimizerContext() const
+void Context::initializeOptimizerContext()
 {
-    std::lock_guard lock(shared->optimizer_context_mutex);
-    if (shared->optimizer_context)
-        return;
-    OptimizerSettings optimizer_settings;
-    shared->optimizer_context = std::make_shared<OptimizerContext>(getSettingsRef(), optimizer_settings);
+    optimizer_context = std::make_shared<OptimizerContext>(getSettingsRef());
 }
 
 OptimizerContextPtr Context::getOptimizerContext() const
 {
-    std::lock_guard lock(shared->optimizer_context_mutex);
-    if (!shared->optimizer_context)
-        throw Exception(ErrorCodes::LOGICAL_ERROR, "optimizer context must be initialized before requests");
-    return shared->optimizer_context;
+    if (!optimizer_context)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Optimizer context must be initialized before requests");
+    return optimizer_context;
 }
 
 zkutil::ZooKeeperPtr Context::getAuxiliaryZooKeeper(const String & name) const

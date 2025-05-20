@@ -4,6 +4,7 @@
 #include <Processors/Transforms/ScatterByPartitionTransform.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
 namespace DB
 {
@@ -17,7 +18,7 @@ void LocalExchangeStepExt::updateOutputStream()
     output_stream->header = input_streams[0].header;
 }
 
-void LocalExchangeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & build_context)
+void LocalExchangeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & build_settings)
 {
     auto streams = pipeline.getNumStreams();
     auto stream_header = pipeline.getHeader();
@@ -25,8 +26,8 @@ void LocalExchangeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, co
     if (streams <= 1)
     {
         /// Same as round-robin shuffle
-        pipeline.addTransform(std::make_shared<ResizeProcessor>(
-            stream_header, 1, build_context.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_threads));
+        const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(build_settings);
+        pipeline.addTransform(std::make_shared<ResizeProcessor>( stream_header, 1, settings_ext.context->getSettingsRef().max_threads));
         return;
     }
 

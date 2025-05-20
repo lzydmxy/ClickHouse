@@ -87,8 +87,8 @@ std::vector<T> deserializeItemVector(ReadBuffer & buf)
     return itemVec;
 }
 
+// This serialize and deserialize function can be removed, use toProto and fromProto function.
 void serializeBlock(const Block & block, WriteBuffer & buf);
-void serializeBlockWithData(const Block & block, WriteBuffer & buf);
 Block deserializeBlock(ReadBuffer & buf);
 
 void serializeColumn(const ColumnPtr & column, const DataTypePtr & data_type, WriteBuffer & buf);
@@ -97,6 +97,10 @@ ColumnPtr deserializeColumn(ReadBuffer & buf);
 void serializePlanStep(const QueryPlanStepPtr & step, WriteBuffer & buf);
 
 QueryPlanStepPtr deserializePlanStep(ReadBuffer & buf, ContextPtr context);
+
+// The semantics of serialize and toProto are repeated, and the prefix of serialize can be removed later
+void nameAndTypePairToProto(const NameAndTypePair & pair, RNameAndTypePair & proto);
+NameAndTypePair nameAndTypePairFromProto(const RNameAndTypePair & proto);
 
 void serializeHeaderToProto(const Block & block, RBlock & proto);
 Block deserializeHeaderFromProto(const RBlock & proto);

@@ -105,6 +105,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, exchange_enable_force_remote_mode, false, "Force exchange data transfer through network", 0) \
     M(Bool, exchange_force_use_buffer, false, "Force exchange use buffer as possible", 0) \
     M(Bool, enable_prune_source_plan_segment, false, "Whether prune source plan segment", 0) \
+    M(UInt64, interactive_delay_optimizer_mode, 0, "The interval(in optimizer mode) in microseconds to check if the request is cancelled, and to send progress info.", 0) \
     M(Bool, adaptive_type_cast, true, "Performs type cast operations adaptively, according to the value", 0) \
     M(Bool, parse_literal_as_decimal, false, "Parse numeric literal as decimal instead of float", 0) \
     M(Int64, final_order_by_all_direction, 0, "Sorting the most 'end' result for select query, default 0 means no sorting, > 1 for ASC, < -1 for DESC", 0) \
@@ -118,7 +119,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, plan_optimizer_timeout, 600000, "Max running time of a plan rewriter optimizer in ms", 0) \
     M(Bool, enable_active_prewhere, false, "Whether to actively generate prewhere by statistics", 0) \
     /** Exchange settings */ \
-    M(UInt64, exchange_timeout_ms, 1000000, "Exchange request timeout ms",0) \
+    M(UInt64, exchange_timeout_ms, 300000, "Exchange request timeout ms",0) \
     M(UInt64, exchange_queue_bytes, 209715200, "Queue size(bytes) for exchange queue, 0 means disable", 0) \
     M(Bool, exchange_use_query_memory_tracker, true, "Use query-level memory tracker", 0) \
     M(UInt64, exchange_parallel_size, 1, "Exchange parallel size", 0) \
@@ -126,7 +127,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_wait_for_post_processing, false, "Whether a query needs to wait for post processing rpcs done before end", 0) \
     M(UInt64, wait_for_post_processing_timeout_ms, 1000, "Timeout for waiting post processing rpc from workers.", 0) \
     M(UInt64, exchange_wait_accept_max_timeout_ms, 20000, "Exchange receiver wait accept max timeout ms",0) \
-    M(UInt64, exchange_unordered_output_parallel_size, 8, \
+    M(UInt64, exchange_unordered_output_parallel_size, 4, \
         "The num of exchange sink for unorder exchange, ingoned if exchange need keep data order ", 0) \
     M(Bool, exchange_enable_force_keep_order, false, "Force exchange keep data order", 0) \
     M(Bool, exchange_enable_keep_order_parallel_shuffle, false, "Whether enable parallel shuffle when exchange need keep order", 0) \
@@ -139,7 +140,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, exchange_local_receiver_queue_size, 30, "Queue size for local exchange receiver",0) \
     M(UInt64, exchange_multi_path_receiver_queue_size, 20, "Queue size for multi path exchange receiver", 0) \
     M(UInt64, exchange_stream_back_pressure_max_wait_ms, 0, "Default 0, 0 means no control", 0) \
-    M(Bool, exchange_enable_multipath_reciever, true, "Whether enable exchange new mode ", 0) \
+    M(Bool, exchange_enable_multipath_receiver, true, "Whether enable exchange new mode ", 0) \
     M(UInt64, exchange_source_pipeline_threads, 16, "Recommend number of threads for pipeline which reading data from exchange, ingoned if exchange need keep data order", 0) \
     /** Runtime Filter settings */ \
     M(String, runtime_filter_black_list, "", "Runtime filter ids need be blocked", 0) \

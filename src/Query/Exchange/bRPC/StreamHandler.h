@@ -33,4 +33,6 @@ private:
     bool keep_order;
 };
 
+using StreamHandlerPtr = std::shared_ptr<StreamHandler>;
+
 }

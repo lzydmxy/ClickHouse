@@ -63,7 +63,7 @@ struct SourceTaskPayloadOnWorker
     size_t part_num = 0;
     /// Bucket group is the minimum granularity to schedule source task, below is an example constructing bucket groups
     /// suppose we have two tables t1 and t2. t1's max bucket number is 4, t2's max bucket number is 8.
-    /// t1 has buckets 0, 1, 2, 3 and t2 has buckets 0,1,2,3,4,5,6,7,8
+    /// t1 has buckets 0, 1, 2, 3 and t2 has buckets 0,1,2,3,4,5,6,7
     /// then we have bucket groups {0, 4}, {1, 5}, {2, 6}, {3, 7}
     std::map<Int64, std::set<Int64>> bucket_groups{};
 };

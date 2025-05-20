@@ -10,6 +10,7 @@
 #include <Query/ProtosHelper/PlanSerDerHelper.h>
 #include <Interpreters/evaluateConstantExpression.h>
 #include <Planner/Utils.h>
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 #include <Query/Optimizer/PredicateUtils.h>
 #include <Interpreters/misc.h>
 #include <Query/Optimizer/SymbolsExtractor.h>
@@ -270,7 +271,6 @@ TableScanExecutor::TableScanExecutor(TableScanStepExt & step, const MergeTreeDat
 
     if (const auto * query_filter_step = step.getPushdownFilterCast())
     {
-        
         const auto & query_filter = query_filter_step->getFilter();
         flatten_filter = query_lineage->inlineReferences(query_filter);
     }
@@ -812,8 +812,58 @@ std::vector<ASTPtr> cloneChildrenReplacement(std::vector<ASTPtr> ast_children_re
     return cloned_replacement;
 }
 
+void TableScanStepExt::rewriteInForBucketTable(ContextPtr context) const
+{
+    // todo: remove dynamic cast
+    // todo: need to implement StorageCloudMergeTree
+    //const auto * cloud_merge_tree = dynamic_cast<StorageCloudMergeTree *>(storage.get());
+    //if (!cloud_merge_tree)
+    //    return;
+    //if (!storage->isBucketTable() || !context->getSettingsRef().optimize_skip_unused_shards)
+    if (!context->getSettingsRef().optimize_skip_unused_shards)
+        return;
+
+    // todo: need to implement StorageCloudMergeTree
+    //const bool need_optimise = metadata_snapshot->getColumnsForClusterByKey().size() == 1 && !cloud_merge_tree->getRequiredBucketNumbers().empty();
+    const bool need_optimise = false;
+    if (!need_optimise)
+        return;
+
+    auto * query = query_info.query->as<ASTSelectQuery>();
+
+    // NOTE: Have try-catch for every rewrite_in in order to find the WHERE clause that caused the error
+    RewriteInQueryVisitor::Data data;
+    LOG_TRACE(log, "Before rewriteInForBucketTable:\n: {}", query->dumpTree());
+    if (query->where())
+    {
+        // todo: need to implement StorageCloudMergeTree
+        // auto ast_children_replacement = cloud_merge_tree->convertBucketNumbersToAstLiterals(query->where(), context);
+        std::vector<ASTPtr> ast_children_replacement;
+        if (!ast_children_replacement.empty())
+        {
+            data.ast_children_replacement = cloneChildrenReplacement(ast_children_replacement);
+            ASTPtr & where = query->refWhere();
+            RewriteInQueryVisitor(data).visit(where);
+        }
+    }
+    if (query->prewhere())
+    {
+        // todo: need to implement StorageCloudMergeTree
+        //auto ast_children_replacement = cloud_merge_tree->convertBucketNumbersToAstLiterals(query->prewhere(), context);
+        std::vector<ASTPtr> ast_children_replacement;
+        if (!ast_children_replacement.empty())
+        {
+            data.ast_children_replacement = cloneChildrenReplacement(ast_children_replacement);
+            ASTPtr & pre_where = query->refPrewhere();
+            RewriteInQueryVisitor(data).visit(pre_where);
+        }
+    }
+    LOG_TRACE(log, "After rewriteInForBucketTable:\n: {}", query->dumpTree());
+}
+
 void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, const BuildQueryPipelineSettings & build_settings, bool use_expand_pipe)
 {
+    const auto & build_settings_ext = BuildQueryPipelineSettingsExt::cast(build_settings);
 
     //todo: liyang453, need storage: need to add  partition_filter to SelectQueryInfo
     ASTPtr partition_filter;
@@ -827,8 +877,8 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
         for (const auto & predicate : rf_filters)
             descriptions.emplace_back(RuntimeFilterUtils::extractDescription(predicate).value());
 
-        const auto & query_id = build_settings.getBuildQueryPipelineSettingsExt().distributed_settings.query_id;
-        const auto & setting = build_settings.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef();
+        const auto & query_id = build_settings_ext.distributed_settings.query_id;
+        const auto & setting = build_settings_ext.context->getOptimizerContext()->getSettingsRef();
         size_t wait_ms = use_expand_pipe ? 0 : setting.wait_runtime_filter_timeout;
         bool enable_bf_in_prewhere = setting.enable_rewrite_bf_into_prewhere;
         bool enable_range_cover = setting.enable_range_cover;
@@ -875,13 +925,14 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
             return lhs.filter_factor > rhs.filter_factor;
         });
 
-        const auto & query_id = build_settings.getBuildQueryPipelineSettingsExt().distributed_settings.query_id;
-        const auto & setting = build_settings.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef();
+        const auto & query_id = build_settings_ext.distributed_settings.query_id;
+        const auto & setting = build_settings_ext.context->getOptimizerContext()->getSettingsRef();
         bool enable_2stags_prewhere = setting.enable_two_stages_prewhere;
         size_t wait_ms = use_expand_pipe ? 0 : setting.wait_runtime_filter_timeout;
         bool enable_bf_in_prewhere = setting.enable_rewrite_bf_into_prewhere;
         bool enable_range_cover =  setting.enable_range_cover;
-        double adjust_gap = build_settings.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().adjust_range_set_filter_rate;
+        const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(build_settings);
+        double adjust_gap = settings_ext.context->getOptimizerContext()->getSettingsRef().adjust_range_set_filter_rate;
         std::vector<ASTPtr> rf_predicates(descriptions.size());
         std::vector<ASTPtr> rf_only_predicates(descriptions.size());
         std::vector<ASTPtr> rf_range_or_in_predicates(descriptions.size());
@@ -1006,8 +1057,10 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
         pipeline.init(Pipe(std::make_shared<NullSource>(output_stream->header)));
         return;
     }
+
+    const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(build_context);
     auto * query = query_info.query->as<ASTSelectQueryExt>();
-    bool use_expand_pipe = build_context.getBuildQueryPipelineSettingsExt().is_expand;
+    bool use_expand_pipe = settings_ext.is_expand;
     if (!use_expand_pipe && (query->where() || query->prewhere()))
     {
         std::vector<RuntimeFilterId> ids;
@@ -1036,17 +1089,18 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     Stopwatch stage_watch, total_watch;
     total_watch.start();
     stage_watch.start();
-    storage = DatabaseCatalog::instance().getTable(storage_id, build_context.getBuildQueryPipelineSettingsExt().context);
-    initMetadataAndStorageSnapshot(build_context.getBuildQueryPipelineSettingsExt().context);
+    storage = DatabaseCatalog::instance().getTable(storage_id, settings_ext.context);
+    initMetadataAndStorageSnapshot(settings_ext.context);
     auto * merge_tree_storage = dynamic_cast<MergeTreeData *>(storage.get());
 
     bool is_merge_tree = merge_tree_storage != nullptr;
-    auto optimizerSettings = build_context.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef();
+    auto optimizerSettings = settings_ext.context->getOptimizerContext()->getSettingsRef();
     bool use_projection_index = optimizerSettings.optimizer_index_projection_support && is_merge_tree && optimizerSettings.enable_ab_index_optimization;
     bool use_optimizer_projection_selection =  optimizerSettings.optimizer_projection_support && is_merge_tree && !use_projection_index;
     
     LOG_INFO(getLogger("test"), "initTableScan, limit={}, !empty={}", query->limitLength() ? serializeAST(*query->limitLength()) : "nothing", use_projection_index || use_optimizer_projection_selection);
 
+    rewriteInForBucketTable(settings_ext.context);
     stage_watch.start();
     /// Rewrite runtime filter
     rewriteDynamicFilter(query_info, build_context, use_expand_pipe);
@@ -1057,11 +1111,11 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     SelectQueryOptions options;
 
     stage_watch.restart();
-    auto interpreter = std::make_shared<InterpreterSelectQuery>(query_info.query, build_context.getBuildQueryPipelineSettingsExt().context, options);
+    auto interpreter = std::make_shared<InterpreterSelectQuery>(query_info.query, settings_ext.context, options);
     interpreter->execute();
     auto backup_input_order_info = query_info.input_order_info;
     query_info = interpreter->getQueryInfo();
-    query_info = fillQueryInfo(build_context.getBuildQueryPipelineSettingsExt().context);
+    query_info = fillQueryInfo(settings_ext.context);
 
     LOG_DEBUG(log, "init pipeline stage run time: make up query info, {} ms", stage_watch.elapsedMilliseconds());
 
@@ -1091,7 +1145,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             }
 
             msg += fmt::format(
-                "actions: {}\n", ProjectionStepExt::createActions(inline_expressions, input_columns, build_context.getBuildQueryPipelineSettingsExt().context)->dumpDAG());
+                "actions: {}\n", ProjectionStepExt::createActions(inline_expressions, input_columns, settings_ext.context)->dumpDAG());
 
             // msg += fmt::format("output_columns: {}\n required_columns: {}", column_alias, required_columns.toString());
 
@@ -1112,8 +1166,8 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     stage_watch.restart();
     LOG_DEBUG(log, "init pipeline stage run time: projection match, {} ms", stage_watch.elapsedMilliseconds());
 
-    size_t max_streams = build_context.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_threads;
-    if (max_block_size < build_context.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_block_size)
+    size_t max_streams = settings_ext.context->getSettingsRef().max_threads;
+    if (max_block_size < settings_ext.context->getSettingsRef().max_block_size)
         max_streams = 1; // single block single stream.
 
     auto max_streams_to_max_threads_ratio = optimizerSettings.max_streams_to_max_threads_ratio;
@@ -1131,7 +1185,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             getRequiredColumns(),
             storage_snapshot,
             query_info,
-            build_context.getBuildQueryPipelineSettingsExt().context,
+            settings_ext.context,
             QueryProcessingStage::Enum::FetchColumns,
             max_block_size,
             max_streams);
@@ -1162,13 +1216,14 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             step = read_from_pipe;
         }
         else
-            step = std::make_shared<ReadFromStorageStep>(std::move(pipe), "ReadFromStorageStep", build_context.getBuildQueryPipelineSettingsExt().context, query_info);
+            step = std::make_shared<ReadFromStorageStep>(std::move(pipe), "ReadFromStorageStep", settings_ext.context, query_info);
 
 
         if (auto * source = dynamic_cast<ISourceStep *>(step.get()))
             source->initializePipeline(pipeline, build_context);
 
         aliasColumns(pipeline, build_context, "normal read");
+        setQuotaAndLimits(pipeline, options, build_context);
 
         if (auto * filter_step = getPushdownFilterCast())
             filter_step->transformPipeline(pipeline, build_context);
@@ -1182,7 +1237,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     }
 
     MergeTreeDataSelectExecutor merge_tree_reader{*merge_tree_storage};
-    auto context = build_context.getBuildQueryPipelineSettingsExt().context;
+    auto context = settings_ext.context;
     Pipes pipes;
 
     // num of pipes may be smaller than num of plan elements since MergeTreeDataSelectExecutor
@@ -1408,6 +1463,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     auto step = std::make_unique<ReadFromStorageStep>(std::move(pipe), "ExecutePlanStep", context, query_info);
     step->initializePipeline(pipeline, build_context);
 
+    setQuotaAndLimits(pipeline, options, build_context);
     std::ostringstream step_desc;
     bool first = true;
     for (auto & plan_element: execute_plan)
@@ -1576,6 +1632,8 @@ void TableScanStepExt::aliasColumns(QueryPipelineBuilder & pipeline, const Build
     const auto & output_header = table_output_stream.header;
     LOG_TRACE(log, "aliasColumns({}), current header: {}, desired header: {}", pipeline_name, cur_header.dumpStructure(), output_header.dumpStructure());
 
+    const auto & build_context_ext = BuildQueryPipelineSettingsExt::cast(build_context);
+
     if (!blocksHaveEqualStructure(cur_header, output_header))
     {
         NamesWithAliases aliases;
@@ -1597,7 +1655,7 @@ void TableScanStepExt::aliasColumns(QueryPipelineBuilder & pipeline, const Build
             aliases.emplace_back(expr_col_name, inline_expr.first);
         }
 
-        auto actions = QueryPlanStepHelper::createExpressionActions(build_context.getBuildQueryPipelineSettingsExt().context, cur_header.getNamesAndTypesList(), aliases, select, true);
+        auto actions = QueryPlanStepHelper::createExpressionActions(build_context_ext.context, cur_header.getNamesAndTypesList(), aliases, select, true);
         // handle type mismatch
         auto header_after_alias = actions->updateHeader(cur_header);
         LOG_TRACE(log, "aliasColumns({}), alias actions: {}, header after alias: {}", pipeline_name, actions->dumpDAG(),header_after_alias.dumpStructure());
@@ -1618,6 +1676,62 @@ void TableScanStepExt::aliasColumns(QueryPipelineBuilder & pipeline, const Build
             return std::static_pointer_cast<IProcessor>(exprTransform);
         });
     }
+}
+
+void TableScanStepExt::setQuotaAndLimits(QueryPipelineBuilder & pipeline, const SelectQueryOptions & options, const BuildQueryPipelineSettings & build_context)
+{
+    const auto & build_context_ext = BuildQueryPipelineSettingsExt::cast(build_context);
+    auto context = build_context_ext.context;
+    const auto & settings = context->getSettingsRef();
+
+    StreamLocalLimits limits;
+    SizeLimits leaf_limits;
+    std::shared_ptr<const EnabledQuota> quota;
+
+    /// Set the limits and quota for reading data, the speed and time of the query.
+    if (!options.ignore_limits)
+    {
+        limits = getLimitsForStorage(settings, options);
+        leaf_limits = SizeLimits(settings.max_rows_to_read_leaf, settings.max_bytes_to_read_leaf, settings.read_overflow_mode_leaf);
+    }
+
+    if (!options.ignore_quota && (options.to_stage == QueryProcessingStage::Complete))
+        quota = context->getQuota();
+
+    auto table_lock = storage->lockForShare(context->getInitialQueryId(), context->getSettingsRef().lock_acquire_timeout);
+
+
+    /// Table lock is stored inside pipeline here.
+    //todo: need add setLimits in pipeline
+    //pipeline.setLimits(limits);
+
+    /**
+      * Leaf size limits should be applied only for local processing of distributed queries.
+      * Such limits allow to control the read stage on leaf nodes and exclude the merging stage.
+      * Consider the case when distributed query needs to read from multiple shards. Then leaf
+      * limits will be applied on the shards only (including the root node) but will be ignored
+      * on the results merging stage.
+      */
+
+    // todo: need add setLeafLimits、setQuota in pipeline
+    //if (!storage->isRemote())
+    //    pipeline.setLeafLimits(leaf_limits);
+
+    //if (quota)
+    //    pipeline.getPipeline(pipeline).setQuota(quota);
+
+    /// Order of resources below is important.
+    //if (context)
+    //    pipeline.addInterpreterContext(std::move(context));
+
+    //if (storage)
+    //    pipeline.addStorageHolder(storage);
+
+    //if (table_lock)
+    //    pipeline.addTableLock(std::move(table_lock));
+
+    //for (const auto & processor : pipeline.getProcessors())
+    //    processors.emplace_back(processor);
 }
 
 void TableScanStepExt::setReadOrder(SortDescription read_order)

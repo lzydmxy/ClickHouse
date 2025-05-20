@@ -10,6 +10,7 @@
 #include <Query/Processors/Transforms/AggregatingInOrderTransformExt.h>
 #include <Query/Processors/Transforms/AggregatingTransformExt.h>
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
 namespace DB
 {
@@ -62,9 +63,9 @@ void computeGroupingFunctions(
     if (groupings.empty())
         return;
 
-    const bool ansi_mode = build_settings.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef().dialect_type != DialectType::CLICKHOUSE;
-    bool force_grouping_standard_compatibility
-        = build_settings.getBuildQueryPipelineSettingsExt().context->getSettingsRef().force_grouping_standard_compatibility;
+    const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(build_settings);
+    const bool ansi_mode = settings_ext.context->getOptimizerContext()->getSettingsRef().dialect_type != DialectType::CLICKHOUSE;
+    bool force_grouping_standard_compatibility = settings_ext.context->getSettingsRef().force_grouping_standard_compatibility;
     if (ansi_mode)
         force_grouping_standard_compatibility = true;
 
@@ -330,9 +331,10 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
     // if (!cache_holder || cache_holder->all_part_in_storage)
     //     streaming_for_cache = false;
 
+    const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(build_settings);
     QueryPipelineProcessorsCollector collector(pipeline, this);
-    const auto & settings = build_settings.getBuildQueryPipelineSettingsExt().context->getSettingsRef();
-    const auto & optimizer_settings = build_settings.getBuildQueryPipelineSettingsExt().context->getOptimizerContext()->getSettingsRef();
+    const auto & settings = settings_ext.context->getSettingsRef();
+    const auto & optimizer_settings = settings_ext.context->getOptimizerContext()->getSettingsRef();
     this->max_block_size = settings.max_block_size;
     this->temporary_data_merge_threads = settings.aggregation_memory_efficient_merge_threads
         ? static_cast<size_t>(settings.aggregation_memory_efficient_merge_threads)
@@ -376,7 +378,7 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
             }
         }
         auto action = QueryPlanStepHelper::createExpressionActions(
-            build_settings.getBuildQueryPipelineSettingsExt().context,
+            settings_ext.context,
             NamesAndTypesList{input_streams[0].header.getNamesAndTypesList()},
             output,
             expr_list);

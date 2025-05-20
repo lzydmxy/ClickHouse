@@ -9,16 +9,19 @@
 #include <Query/Common/MultiPathBoundedQueue.h>
 #include <Query/Common/OptimizerContext.h>
 #include <Query/Exchange/QueryExchangeLog.h>
+#include <Query/Exchange/ExchangeDataKey.h>
+#include <Query/Exchange/DataTrans/DataTrans_fwd.h>
+#include <Query/Exchange/DataTrans/IBroadcastReceiver.h>
 #include <Query/Exchange/bRPC/AsyncRegisterResult.h>
 #include <Query/Exchange/bRPC/BrpcExchangeReceiverRegistryService.h>
 #include <Query/Exchange/bRPC/BrpcRemoteBroadcastSender.h>
-#include <Query/Exchange/DataTrans/DataTrans_fwd.h>
-#include <Query/Exchange/DataTrans/IBroadcastReceiver.h>
-#include <Query/Exchange/ExchangeDataKey.h>
-
 
 namespace DB
 {
+
+class StreamHandler;
+using StreamHandlerPtr = std::shared_ptr<StreamHandler>;
+
 class BrpcRemoteBroadcastReceiver : public std::enable_shared_from_this<BrpcRemoteBroadcastReceiver>, public IBroadcastReceiver
 {
 public:
@@ -52,25 +55,16 @@ public:
     void pushReceiveQueue(MultiPathDataPacket packet);
     void setSendDoneFlag() { send_done_flag.test_and_set(std::memory_order_release); }
 
-    static String
-    generateName(size_t exchange_id, size_t write_segment_id, size_t read_segment_id, size_t parallel_index, const String & co_host_port)
+    static String generateName(size_t exchange_id, size_t write_segment_id, size_t read_segment_id, size_t parallel_index,
+        const String & co_host_port)
     {
-        return fmt::format(
-            "BrpcReciver[{}_{}_{}_{}_{}]",
-            write_segment_id,
-            read_segment_id,
-            parallel_index,
-            exchange_id,
-            co_host_port
-        );
+        return fmt::format("BrpcReciver[{}_{}_{}_{}_{}]",
+            write_segment_id, read_segment_id, parallel_index, exchange_id, co_host_port);
     }
 
     static String generateNameForTest()
     {
-        return fmt::format(
-            "BrpcReciver[{}_{}_{}_{}_{}]",
-            "test-BrpcReciver", -1, -1, -1, -1
-        );
+        return generateName(0, 0, 0, 0, "");
     }
 
     AsyncRegisterResult registerToSendersAsync(UInt32 timeout_ms);
@@ -82,6 +76,7 @@ private:
     ContextPtr context;
     OptimizerContextPtr optimizer_context;
     Block header;
+    brpc::StreamOptions stream_options;
     std::atomic<BroadcastStatusCode> finish_status_code{BroadcastStatusCode::RUNNING};
     std::atomic_flag send_done_flag = ATOMIC_FLAG_INIT;
     MultiPathQueuePtr queue;
@@ -91,6 +86,9 @@ private:
     BrpcExchangeReceiverRegistryService::RegisterMode mode;
     std::shared_ptr<QueryExchangeLog> query_exchange_log;
     String coordinator_address;
+
+    brpc::StreamOptions & getOptions();
+    void releaseOptions();
 
     void sendRegisterRPC(
         Protos::RegistryService_Stub & stub,

@@ -11,7 +11,8 @@ struct BuildQueryPipelineSettingsHelper
     static BuildQueryPipelineSettings fromContextExt(ContextPtr from)
     {
         auto settings = BuildQueryPipelineSettings::fromContext(from);
-        settings.initBuildQueryPipelineSettingsExt(from);
+        //todo: need cast to BuildQueryPipelineSettingsExt
+        //settings.initBuildQueryPipelineSettingsExt(from);
         return settings;
     }
 
@@ -19,7 +20,8 @@ struct BuildQueryPipelineSettingsHelper
         PlanSegment * plan_segment, const PlanSegmentExecutionInfo & info, ContextPtr context, bool is_explain)
     {
         auto settings = BuildQueryPipelineSettings::fromContext(context);
-        settings.initBuildQueryPipelineSettingsExt(plan_segment, info, context, is_explain);
+        //todo: need cast to BuildQueryPipelineSettingsExt
+        //settings.initBuildQueryPipelineSettingsExt(plan_segment, info, context, is_explain);
         return settings;
     }
 };

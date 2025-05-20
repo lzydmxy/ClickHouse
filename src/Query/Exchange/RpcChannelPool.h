@@ -104,7 +104,7 @@ private:
     {
         channel_pool_config_holder = BrpcApplication::getInstance().getConfigHolderByType<BrpcChannelPoolConfigHolder>();
 
-        auto pool_options_map = getChannelPoolOptions();
+        auto pool_options_map = channel_pool_config_holder->queryConfig();
         for (const auto & pair : pool_options_map)
         {
             const auto & key = pair.first;

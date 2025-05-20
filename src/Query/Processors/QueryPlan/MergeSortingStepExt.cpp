@@ -6,6 +6,7 @@
 #include <Common/JSONBuilder.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
 
 namespace CurrentMetrics
@@ -75,12 +76,13 @@ void MergeSortingStepExt::updateLimit(size_t limit_)
 
 void MergeSortingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
-    max_merged_block_size = settings.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_block_size;
-    max_bytes_before_remerge = settings.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_bytes_before_remerge_sort;
-    remerge_lowered_memory_bytes_ratio = settings.getBuildQueryPipelineSettingsExt().context->getSettingsRef().remerge_sort_lowered_memory_bytes_ratio;
-    max_bytes_before_external_sort = settings.getBuildQueryPipelineSettingsExt().context->getSettingsRef().max_bytes_before_external_sort;
-    tmp_data = settings.getBuildQueryPipelineSettingsExt().context->getTempDataOnDisk();
-    min_free_disk_space = settings.getBuildQueryPipelineSettingsExt().context->getSettingsRef().min_free_disk_space_for_temporary_data;
+    const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(settings);
+    max_merged_block_size = settings_ext.context->getSettingsRef().max_block_size;
+    max_bytes_before_remerge = settings_ext.context->getSettingsRef().max_bytes_before_remerge_sort;
+    remerge_lowered_memory_bytes_ratio = settings_ext.context->getSettingsRef().remerge_sort_lowered_memory_bytes_ratio;
+    max_bytes_before_external_sort = settings_ext.context->getSettingsRef().max_bytes_before_external_sort;
+    tmp_data = settings_ext.context->getTempDataOnDisk();
+    min_free_disk_space = settings_ext.context->getSettingsRef().min_free_disk_space_for_temporary_data;
 
     bool increase_sort_description_compile_attempts = true;
     pipeline.addSimpleTransform([&](const Block & header, QueryPipelineBuilder::StreamType stream_type) -> ProcessorPtr

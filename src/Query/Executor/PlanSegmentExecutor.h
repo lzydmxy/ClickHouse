@@ -53,6 +53,7 @@ public:
         RSenderMetrics sender_metrics;
         PlanSegmentProfilePtr segment_profile;
     };
+
     std::optional<ExecutionResult> execute();
     BlockIO lazyExecute(bool add_output_processors = false);
 
@@ -60,8 +61,8 @@ public:
 
 protected:
     void doExecute();
-    QueryPipelinePtr buildPipeline();
-    void buildPipeline(QueryPipelinePtr & pipeline, BroadcastSenderPtrs & senders);
+    QueryPipeline buildPipeline();
+    QueryPipeline buildPipeline(BroadcastSenderPtrs & senders);
 
 private:
     PlanSegmentProcessList::EntryPtr process_plan_segment_entry;

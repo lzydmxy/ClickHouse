@@ -12,6 +12,7 @@
 #include <Common/JSONBuilder.h>
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <Query/Common/OptimizerContext.h>
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
 namespace CurrentMetrics
 {
@@ -72,7 +73,8 @@ void SortingStepExt::updateLimit(size_t limit_)
 
 void SortingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
-    auto local_settings = settings.settings_ext.context->getSettingsRef();
+    const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(settings);
+    auto local_settings = settings_ext.context->getSettingsRef();
     SizeLimits size_limits(local_settings.max_rows_to_sort, local_settings.max_bytes_to_sort, local_settings.sort_overflow_mode);
 
     auto desc_copy = result_description;
@@ -173,7 +175,7 @@ void SortingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const Bu
             if (increase_sort_description_compile_attempts)
                 increase_sort_description_compile_attempts = false;
 
-            auto tmp_data = settings.settings_ext.context->getTempDataOnDisk();
+            auto tmp_data = settings_ext.context->getTempDataOnDisk();
 
             auto tmp_data_on_disk = tmp_data
                 ? std::make_unique<TemporaryDataOnDisk>(tmp_data, CurrentMetrics::TemporaryFilesForSort)

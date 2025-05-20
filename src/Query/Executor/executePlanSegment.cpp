@@ -73,7 +73,7 @@ AsyncContext::AsyncResult AsyncContext::wait()
     return result;
 }
 
-BlockIO lazyExecutePlanSegmentLocally(PlanSegmentInstancePtr plan_segment_instance, ContextMutablePtr context)
+BlockIO executePlanSegmentClient(PlanSegmentInstancePtr plan_segment_instance, ContextMutablePtr context)
 {
     if (!plan_segment_instance)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot execute empty plan segment");
@@ -97,6 +97,8 @@ void executePlanSegmentInternal(
     bool inform_success_status = opt_settings.enable_wait_for_post_processing || opt_settings.report_segment_profiles;
     auto executor = std::make_shared<PlanSegmentExecutor>(
         std::move(plan_segment_instance), std::move(context), std::move(process_plan_segment_entry));
+
+    /// Because of CurrentThread::attachQueryForLog(query_) in ProcessList::insert() method, asynchronous execution is not supported
     if (async)
     {
         ThreadFromGlobalPool async_thread([executor = std::move(executor), inform_success_status = inform_success_status]() mutable {
@@ -174,7 +176,7 @@ void prepareQueryCommonBuf(
 
     query_common.set_is_internal_query(context->isInternalQuery());
 
-    butil::IOBuf query_common_buf;
+    // butil::IOBuf query_common_buf;
     butil::IOBufAsZeroCopyOutputStream wrapper(&common_buf);
     query_common.SerializeToZeroCopyStream(&wrapper);
 }

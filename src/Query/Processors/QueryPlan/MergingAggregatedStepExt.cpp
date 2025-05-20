@@ -5,6 +5,7 @@
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <DataTypes/DataTypesNumber.h>
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
 namespace DB
 {
@@ -60,7 +61,8 @@ void MergingAggregatedStepExt::transformPipeline(QueryPipelineBuilder & pipeline
         pipeline.resize(1);
     }
 
-    const auto & settings = build_settings.getBuildQueryPipelineSettingsExt().context->getSettingsRef();
+    const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(build_settings);
+    const auto & settings = settings_ext.context->getSettingsRef();
 
     std::shared_ptr<AggregatingTransformParams> transform_params = nullptr;
 

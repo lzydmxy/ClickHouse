@@ -42,6 +42,9 @@ public:
         return profile_log_hub;
     }
 
+    ProfileLogHub(const ProfileLogHub&) = delete;
+    ProfileLogHub& operator=(const ProfileLogHub&) = delete;
+
     explicit ProfileLogHub() : logger(getLogger("ProfileLogHub"))
     {
         consume_thread_pool = std::make_unique<ThreadPool>(CurrentMetrics::ProfileThreads,
@@ -51,8 +54,38 @@ public:
     }
     ~ProfileLogHub() = default;
 
-    void initLogChannel(const std::string & query_id, Consumer consumer);
-    void finalizeLogChannel(const std::string & query_id);
+    void initLogChannel(const std::string & query_id, Consumer consumer)
+    {
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            if (!profile_element_queue_map.contains(query_id))
+            {
+                auto queue = std::make_shared<ProfileElementQueue>(256);
+                profile_element_queue_map.emplace(query_id, queue);
+            }
+        }
+        try
+        {
+            registerConsumer(consumer);
+        }
+        catch (...)
+        {
+            auto err = DB::getCurrentExceptionMessage(true);
+            LOG_ERROR(logger, "Profile element log channel init occur error: {}", err);
+        }
+    }
+
+
+    void finalizeLogChannel(const std::string & query_id)
+    {
+        auto consumer = profile_element_consumers.find(query_id)->second;
+        consumer->finish();
+        profile_element_consumers.erase(query_id);
+        profile_element_queue_map.erase(query_id);
+        LOG_DEBUG(logger, "Query:{} finish log element consume.", query_id);
+    }
+
+
     bool hasConsumer() const { return !profile_element_consumers.empty(); }
 
     inline void tryPushElement(const std::string & query_id, const ProfileElement & element, const UInt64 & timeout_millseconds = 0)
@@ -81,7 +114,12 @@ public:
         }
     }
 
-    void stopConsume(const std::string & query_id);
+    void stopConsume(const std::string & query_id)
+    {
+        auto consumer_iterator = profile_element_consumers.find(query_id);
+        if (consumer_iterator != profile_element_consumers.end())
+            consumer_iterator->second->stop();
+    }
 
 private:
     void registerConsumer(Consumer consumer);
@@ -94,40 +132,6 @@ private:
     std::mutex mutex;
     LoggerPtr logger;
 };
-
-template <typename ProfileElement>
-void ProfileLogHub<ProfileElement>::initLogChannel(const std::string & query_id, Consumer consumer [[maybe_unused]])
-{
-    {
-        std::unique_lock<std::mutex> lock(mutex);
-        if (!profile_element_queue_map.contains(query_id))
-        {
-            auto queue = std::make_shared<ProfileElementQueue>(256);
-            profile_element_queue_map.emplace(query_id, queue);
-        }
-    }
-
-    try
-    {
-        registerConsumer(consumer);
-    }
-    catch (...)
-    {
-        auto err = DB::getCurrentExceptionMessage(true);
-        LOG_ERROR(logger, "Profile element log channel init occur error: {}", err);
-    }
-}
-
-
-template <typename ProfileElement>
-void ProfileLogHub<ProfileElement>::finalizeLogChannel(const std::string & query_id)
-{
-    auto consumer = profile_element_consumers.find(query_id)->second;
-    consumer->finish();
-    profile_element_consumers.erase(query_id);
-    profile_element_queue_map.erase(query_id);
-    LOG_DEBUG(logger, "Query:{} finish log element consume.", query_id);
-}
 
 template <typename ProfileElement>
 void ProfileLogHub<ProfileElement>::registerConsumer(const Consumer consumer)
@@ -190,14 +194,6 @@ void ProfileLogHub<ProfileElement>::tryPushElementImpl(const std::string & query
             throw Exception(ErrorCodes::EXPLAIN_COLLECT_PROFILE_METRIC_TIMEOUT, "Push profile element to coordinator fail.");
         }
     }
-}
-
-template <typename ProfileElement>
-void ProfileLogHub<ProfileElement>::stopConsume(const std::string & query_id)
-{
-    auto consumer_iterator = profile_element_consumers.find(query_id);
-    if (consumer_iterator != profile_element_consumers.end())
-        consumer_iterator->second->stop();
 }
 
 }

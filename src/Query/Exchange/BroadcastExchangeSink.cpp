@@ -22,21 +22,15 @@ BroadcastExchangeSink::~BroadcastExchangeSink() = default;
 
 void BroadcastExchangeSink::consume(Chunk chunk)
 {
-    if (!has_input)
+    LOG_TRACE(logger, "BroadcastExchangeSink consume");
+    if (options.force_use_buffer)
     {
-        if (options.force_use_buffer)
+        auto chunk_to_send = buffer_chunk.flush(true);
+        if (chunk_to_send)
         {
-            auto chunk_to_send = buffer_chunk.flush(true);
-            if (chunk_to_send)
-            {
-                for (auto & sender : senders)
-                {
-                    ExchangeUtils::sendAndCheckReturnStatus(*sender, chunk_to_send.clone());
-                }
-            }
+            for (auto & sender : senders)
+                ExchangeUtils::sendAndCheckReturnStatus(*sender, chunk_to_send.clone());
         }
-        finish();
-        return;
     }
 
     Chunk chunk_to_send;
@@ -64,19 +58,18 @@ void BroadcastExchangeSink::consume(Chunk chunk)
         has_active_sender = true;
 
     if (!has_active_sender)
-        finish();
+        onFinish();
 }
-
 
 void BroadcastExchangeSink::onFinish()
 {
-    LOG_TRACE(logger, "BroadcastExchangeSink finish");
+    LOG_TRACE(logger, "BroadcastExchangeSink onFinish");
+    IExchangeSink::onFinish();
 }
 
 void BroadcastExchangeSink::onCancel()
 {
-    LOG_TRACE(logger, "BroadcastExchangeSink cancel");
-
+    LOG_TRACE(logger, "BroadcastExchangeSink onCancel");
     for (auto & sender : senders)
     {
         sender->finish(BroadcastStatusCode::SEND_CANCELLED, "Cancelled by pipeline");

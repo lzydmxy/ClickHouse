@@ -50,10 +50,16 @@ BrpcRemoteBroadcastSender::~BrpcRemoteBroadcastSender()
         for (brpc::StreamId sender_stream_id : sender_stream_ids)
         {
             if(sender_stream_id != brpc::INVALID_STREAM_ID)
+            {
+                LOG_TRACE(log, "Brpc proxy close sender stream {}", sender_stream_id);
                 BrpcProxy::getInstance().StreamClose(sender_stream_id);
+            }
         }
         if (trans_keys.empty())
+        {
+            LOG_TRACE(log, "trans keys is empty");
             return;
+        }
         if (enable_sender_metrics)
         {
             QueryExchangeLogElement element;
@@ -102,17 +108,17 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendImpl(Chunk chunk)
     for (size_t i = 0; i < sender_stream_ids.size(); ++i)
     {
         BroadcastStatus ret_status = sendIOBuffer(buf, sender_stream_ids[i], *trans_keys[i]);
+        // LOG_TRACE(log, "{} send id {} code {} msg {}", getName(), sender_stream_ids[i], ret_status.code, ret_status.message);
         if (ret_status.is_modified_by_operator && ret_status.code != BroadcastStatusCode::RUNNING)
         {
-            finish(
-                BroadcastStatusCode::SEND_CANCELLED,
-                "Cancelled by other, code: " + std::to_string(ret_status.code) + " msg: " + ret_status.message);
+            finish(BroadcastStatusCode::SEND_CANCELLED,
+                fmt::format("Cancelled by other, code {} msg: {}", ret_status.code, ret_status.message));
             return ret_status;
         }
-
         if (ret_status.code != BroadcastStatusCode::RUNNING)
             res = ret_status;
     }
+    out.finalize();
     return res;
 }
 
@@ -141,10 +147,8 @@ void BrpcRemoteBroadcastSender::serializeChunkToIoBuffer(Chunk chunk, WriteBuffe
 BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_buffer, brpc::StreamId stream_id, const ExchangeDataKey & data_key)
 {
     if (io_buffer.size() > brpc::FLAGS_max_body_size)
-        throw Exception(ErrorCodes::BRPC_EXCEPTION,
-            "{} write stream-{} buffer fail, io buffer size is bigger than {} current is {}",
-            CurrentThread::getQueryId(),
-            stream_id, brpc::FLAGS_max_body_size, io_buffer.size());
+        throw Exception(ErrorCodes::BRPC_EXCEPTION, "{} write stream {} buffer fail, io buffer size is bigger than {} current is {}",
+            CurrentThread::getQueryId(), stream_id, brpc::FLAGS_max_body_size, io_buffer.size());
 
     size_t retry_count = 0;
     size_t overcrowded_retry = 0;
@@ -154,6 +158,10 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_
     while (std::chrono::system_clock::now() < query_expiration_tp)
     {
         int rect_code = BrpcProxy::getInstance().StreamWrite(stream_id, io_buffer);
+#ifndef NDEBUG
+        // LOG_TRACE(log, "Stream write buffer stream_id {} ,data_key {} res code {} size {} ",
+        //     stream_id, data_key, rect_code, io_buffer.size());
+#endif
         if (rect_code == 0)
         {
             success = true;
@@ -166,23 +174,17 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_
             {
                 // TODO: retain stream object before finish code is read.
                 // Ingore error when writing to the closed stream, because this stream is closed by remote peer before read any finish code.
-                LOG_INFO(log, "Stream-{} with key {} is closed", stream_id, data_key);
+                LOG_INFO(log, "Stream {} with key {} is closed", stream_id, data_key);
                 return BroadcastStatus(BroadcastStatusCode::RECV_UNKNOWN_ERROR, false, "Stream is closed by peer");
             }
 
-            LOG_TRACE(
-                log,
-                "Stream write buffer full wait, retry count-{}, stream_id-{} ,with data_key-{} wait res code:{} size:{} ",
-                retry_count,
-                stream_id,
-                data_key,
-                wait_res_code,
-                io_buffer.size());
+            LOG_TRACE(log, "Stream write buffer full retry {}, stream {}, with key {} wait res code {} size {}",
+                retry_count, stream_id, data_key, wait_res_code, io_buffer.size());
         }
         else if (rect_code == EINVAL)
         {
             // Ingore error when writing to the closed stream, because this stream is closed by remote peer before read any finish code.
-            LOG_INFO(log, "Stream-{} with key {} is closed", stream_id, data_key);
+            LOG_INFO(log, "Stream {} with key {} is closed", stream_id, data_key);
             return BroadcastStatus(BroadcastStatusCode::RECV_UNKNOWN_ERROR, false, "Stream is closed by peer");
         }
         else if (rect_code == 1011) //EOVERCROWDED   | 1011 | The server is overcrowded
@@ -198,14 +200,8 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_
 
                 bthread_usleep(1000 * sleep_time);
             }
-            LOG_WARNING(
-                log,
-                "Stream-{} write buffer error rect_code:{}, server is overcrowded, data_key:{}, retry_count:{}, overcrowded_retry:{}",
-                stream_id,
-                rect_code,
-                data_key,
-                retry_count,
-                overcrowded_retry);
+            LOG_WARNING(log, "Stream-{} write buffer error rect_code:{}, server is overcrowded, data_key:{}, retry_count:{}, overcrowded_retry:{}",
+                stream_id, rect_code, data_key, retry_count, overcrowded_retry);
         }
         // stream finished
         else if (rect_code == -1)
@@ -220,8 +216,7 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_
         }
         else
         {
-            throw Exception(ErrorCodes::BRPC_EXCEPTION,
-                "Stream-{} write buffer occurred error, the rect_code that we can not handle:{}, data_key-{}",
+            throw Exception(ErrorCodes::BRPC_EXCEPTION, "Stream-{} write buffer occurred error, the rect_code that we can not handle:{}, data_key-{}",
                 stream_id, rect_code, data_key.toString());
         }
         retry_count++;
@@ -233,7 +228,7 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_
     }
     if (!success)
     {
-        const auto msg = fmt::format("Write stream-{} timeout, with data_key-{}, size:{}, retry_count:{}, overcrowded_retry:{}, query_expiration_ms_ts:{}, maximum:{}"
+        const auto msg = fmt::format("Write stream {} timeout, with key {}, size {}, retry {}, overcrowded_retry {}, query_expiration_ms_ts {}, maximum {}"
             , stream_id, data_key, io_buffer.size(), retry_count, overcrowded_retry, timeInMilliseconds(query_expiration_tp)
             , optimizer_context->getQueryMaxExecutionTime() / 1000);
         LOG_ERROR(log, "{}", msg);
@@ -246,14 +241,8 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_
         return current_status;
     }
 #ifndef NDEBUG
-    LOG_TRACE(
-        log,
-        "Send exchange data size-{} KB with data_key-{}, stream-{} retry times:{} cost:{} ms",
-        io_buffer.size() / 1024.0,
-        data_key,
-        stream_id,
-        retry_count,
-        s.elapsedMilliseconds());
+    LOG_TRACE(log, "Send exchange data size {} with key {}, stream {} retry times {} cost {} ms",
+        io_buffer.size(), data_key, stream_id, retry_count, s.elapsedMilliseconds());
 #endif
     return BroadcastStatus(RUNNING);
 }
@@ -266,6 +255,7 @@ BroadcastStatus BrpcRemoteBroadcastSender::finish(BroadcastStatusCode status_cod
     {
         int actual_status_code = status_code;
         int ret_code = BrpcProxy::getInstance().StreamFinish(stream_id, actual_status_code, status_code, true);
+        LOG_TRACE(log, "{} finished id {} code {} msg {}", getName(), stream_id, status_code, message);
         if (ret_code == 0)
         {
             is_modifer = true;
@@ -282,7 +272,7 @@ BroadcastStatus BrpcRemoteBroadcastSender::finish(BroadcastStatusCode status_cod
         sender_metrics.finish_code = status_code;
         sender_metrics.is_modifier = 1;
         sender_metrics.message = message;
-        LOG_TRACE(log, "{} finished finish_code:{} message:'{}'", getName(), status_code, message);
+        LOG_TRACE(log, "{} finished finish_code {} msg {}", getName(), status_code, message);
         return BroadcastStatus(status_code, true, message);
     }
     else
@@ -310,10 +300,8 @@ void BrpcRemoteBroadcastSender::merge(IBroadcastSender && sender)
 
 String BrpcRemoteBroadcastSender::getName() const
 {
-    return fmt::format(
-        "BrpcSender with keys:",
-        boost::algorithm::join(
-            trans_keys | boost::adaptors::transformed([](const ExchangeDataKeyPtr & key) { return key->toString(); }), "\n"));
+    return fmt::format("BrpcSender:",
+        boost::algorithm::join(trans_keys | boost::adaptors::transformed([](const ExchangeDataKeyPtr & key) { return key->toString(); }), "\n"));
 }
 
 }
