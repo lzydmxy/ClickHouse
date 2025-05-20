@@ -1,0 +1,185 @@
+#include <Query/Optimizer/Iterative/IterativeRewriter.h>
+#include <Query/Optimizer/Rule/Patterns.h>
+#include <Query/Planner/GraphvizPrinter.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+
+namespace DB
+{
+namespace ErrorCodes
+{
+extern const int OPTIMIZER_TIMEOUT;
+}
+
+// #define TEST_RECORD_RULE_CALL_TIMES
+
+#ifdef TEST_RECORD_RULE_CALL_TIMES
+static std::map<std::underlying_type_t<RuleType>, size_t> rule_call_times{};
+#endif
+
+std::map<std::underlying_type_t<RuleType>, size_t> IterativeRewriter::getRuleCallTimes()
+{
+#ifdef TEST_RECORD_RULE_CALL_TIMES
+    return rule_call_times;
+#else
+    std::map<std::underlying_type_t<RuleType>, size_t> empty;
+    return empty;
+#endif
+}
+
+IterativeRewriter::IterativeRewriter(const std::vector<RulePtr> & rules_, std::string names_) : names(std::move(names_))
+{
+    for (const auto & rule : rules_)
+    {
+        for (auto target_type : rule->getTargetTypes())
+        {
+            if (target_type != QueryPlanStepType::AnyStepExt)
+                rules[target_type].emplace_back(rule);
+            else
+            {
+                // for rules targeted to arbitrary type, copy them into each specific type's index
+#define ADD_RULE_TO_INDEX(ITEM) rules[QueryPlanStepType::ITEM].emplace_back(rule);
+
+                APPLY_ALL_STEP_TYPES(ADD_RULE_TO_INDEX)
+
+#undef ADD_RULE_TO_INDEX
+            }
+        }
+    }
+}
+
+bool IterativeRewriter::rewrite(QueryPlanExt & plan, ContextMutablePtr ctx) const
+{
+    IterativeRewriterContext context{
+        .globalContext = ctx,
+        .cte_info = plan.getCTEInfo(),
+        .optimizer_timeout = ctx->getOptimizerContext()->getSettingsRef().iterative_optimizer_timeout,
+        .excluded_rules_map = &ctx->getOptimizerContext()->getExcludedRulesMap(),
+        .plan = plan};
+
+    bool rewriten = false;
+    for (auto & item : plan.getCTEInfo().getCTEs())
+        rewriten |= explorePlan(item.second, context);
+    rewriten |= explorePlan(plan.getPlanNode(), context);
+    return rewriten;
+}
+
+bool IterativeRewriter::explorePlan(PlanNodePtr & plan, IterativeRewriterContext & ctx) const // NOLINT(misc-no-recursion)
+{
+    bool progress = exploreNode(plan, ctx);
+
+    while (plan && exploreChildren(plan, ctx))
+    {
+        progress = true;
+
+        if (!exploreNode(plan, ctx))
+            break;
+    }
+
+    return progress;
+}
+
+bool IterativeRewriter::exploreNode(PlanNodePtr & node, IterativeRewriterContext & ctx) const
+{
+    bool progress = false;
+    bool done = false;
+
+    while (node && !done)
+    {
+        done = true;
+
+        auto node_type = getQueryPlanStepType(node->getStep());
+        if (auto res = rules.find(node_type); res != rules.end())
+        {
+            const auto & rules_of_this_type = res->second;
+            for (auto iter = rules_of_this_type.begin();
+                 // we can break the loop if the sub-plan has been entirely removed or the node type has been changed
+                 node && getQueryPlanStepType(node->getStep()) == node_type && iter != rules_of_this_type.end();
+                 ++iter)
+            {
+                const auto & rule = *iter;
+                auto node_id = node->getId();
+                auto rule_id = static_cast<std::underlying_type_t<RuleType>>(rule->getType());
+                if (!rule->isEnabled(ctx.globalContext))
+                    continue;
+
+                if (ctx.excluded_rules_map->operator[](node_id).count(rule_id))
+                    continue;
+
+                checkTimeoutNotExhausted(rule->getName(), ctx);
+
+                RuleContext rule_context{.context = ctx.globalContext, .cte_info = ctx.cte_info};
+#ifdef TEST_RECORD_RULE_CALL_TIMES
+                rule_call_times[rule_id]++;
+#endif
+                auto rewrite_result = rule->transform(node, rule_context);
+
+                if (!rewrite_result.empty())
+                {
+                    if (rule->excludeIfTransformSuccess())
+                        ctx.excluded_rules_map->operator[](node_id).emplace(rule_id);
+                    node = rewrite_result.getPlans()[0];
+                    done = false;
+                    progress = true;
+                    if (ctx.globalContext->getOptimizerContext()->getSettingsRef().debug_iterative_optimizer)
+                    {
+                        // avoid too many file generated in case of infinite loop
+                        if (ctx.rule_apply_count < 100)
+                        {
+                            // graphviz file path: Iterative_{rewriterName}_{ruleApplyCount}_{ruleName}_{beforeNodeId}_{afterNodeId}...
+                            GraphvizPrinter::printLogicalPlan(
+                                ctx.plan,
+                                ctx.globalContext,
+                                toString(ctx.globalContext->getOptimizerContext()->getRuleId()) + "_Iterative_" + name() + "_"
+                                    + toString(ctx.rule_apply_count++) + "_" + rule->getName() + "_" + toString(node_id) + "_"
+                                    + toString(node->getId()));
+                        }
+                    }
+                }
+                else
+                {
+                    if (rule->excludeIfTransformFailure())
+                        ctx.excluded_rules_map->operator[](node_id).emplace(rule_id);
+                }
+            }
+        }
+    }
+
+    return progress;
+}
+
+bool IterativeRewriter::exploreChildren(PlanNodePtr & plan, IterativeRewriterContext & ctx) const // NOLINT(misc-no-recursion)
+{
+    bool progress = false;
+
+    PlanNodes children;
+
+    for (PlanNodePtr & child : plan->getChildren())
+    {
+        progress |= explorePlan(child, ctx);
+
+        if (child)
+        {
+            children.emplace_back(child);
+        }
+    }
+
+    if (progress)
+    {
+        plan->replaceChildren(children);
+    }
+
+    return progress;
+}
+
+void IterativeRewriter::checkTimeoutNotExhausted(const String & rule_name, const IterativeRewriterContext & context)
+{
+    double duration = context.watch.elapsedMilliseconds();
+
+    if (duration >= context.optimizer_timeout)
+    {
+        throw Exception(ErrorCodes::OPTIMIZER_TIMEOUT,
+        "The optimizer with rule [ {} ] exhausted the time limit of {} ms", std::to_string(context.optimizer_timeout), rule_name);
+    }
+}
+
+}

@@ -1,8 +1,9 @@
 
+#include <Core/ColumnNumbers.h>
 #include <Query/Processors/QueryPlan/PartitionTopNStepExt.h>
 #include <Query/Processors/Transforms/PartitionTopNTransformExt.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
-#include "Core/ColumnNumbers.h"
 #include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
 namespace DB
@@ -42,6 +43,33 @@ void PartitionTopNStepExt::updateOutputStream()
 std::shared_ptr<IQueryPlanStep> PartitionTopNStepExt::copy(ContextPtr) const
 {
     return std::make_shared<PartitionTopNStepExt>(input_streams[0], partition, order_by, limit, model);
+}
+
+void PartitionTopNStepExt::toProto(Protos::PartitionTopNStepExt & proto, bool) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
+    for (const auto & element : partition)
+        proto.add_partition(element);
+    for (const auto & element : order_by)
+        proto.add_order_by(element);
+    proto.set_limit(limit);
+    proto.set_model(TopNModelConverter::toProto(model));
+}
+
+std::shared_ptr<PartitionTopNStepExt> PartitionTopNStepExt::fromProto(const Protos::PartitionTopNStepExt & proto, ContextPtr)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    std::vector<String> partition;
+    for (const auto & element : proto.partition())
+        partition.emplace_back(element);
+    std::vector<String> order_by;
+    for (const auto & element : proto.order_by())
+        order_by.emplace_back(element);
+    auto limit = proto.limit();
+    auto model = TopNModelConverter::fromProto(proto.model());
+    auto step = std::make_shared<PartitionTopNStepExt>(base_input_stream, partition, order_by, limit, model);
+    step->setStepDescription(step_description);
+    return step;
 }
 
 }

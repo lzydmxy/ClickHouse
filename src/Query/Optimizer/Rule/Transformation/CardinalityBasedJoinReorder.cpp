@@ -3,15 +3,9 @@
 #include <Query/Optimizer/CardinalityEstimate/JoinEstimator.h>
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>
 #include <Query/Optimizer/JoinGraph.h>
-#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/Rule/Patterns.h>
-#include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
-#include <Query/Optimizer/SymbolsExtractor.h>
-#include <Parsers/ASTIdentifier.h>
-#include <Parsers/IAST_fwd.h>
-#include <QueryPlan/AnyStep.h>
-#include <QueryPlan/MultiJoinStep.h>
-#include <boost/range/adaptor/map.hpp>
+#include <Query/Processors/QueryPlan/AnyStepExt.h>
+#include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
 #include <boost/range/algorithm/copy.hpp>
 
 namespace DB
@@ -28,14 +22,14 @@ ConstRefPatternPtr CardinalityBasedJoinReorder::getPattern() const
     return pattern;
 }
 
-struct InterJoinNodeInfo
+struct InterJoinStepExtNodeInfo
 {
     UInt64 row_count;
     PlanNodePtr join_node;
     GroupId left_child_group_id;
     GroupId right_child_group_id;
 
-    bool operator<(const InterJoinNodeInfo & rhs) const
+    bool operator<(const InterJoinStepExtNodeInfo & rhs) const
     {
         return std::make_tuple(row_count, join_node->getId(), left_child_group_id, right_child_group_id) < std::make_tuple(rhs.row_count, rhs.join_node->getId(), rhs.left_child_group_id, rhs.right_child_group_id);
     }
@@ -43,7 +37,7 @@ struct InterJoinNodeInfo
 
 TransformResult CardinalityBasedJoinReorder::transformImpl(PlanNodePtr node, const Captures &, RuleContext & rule_context)
 {
-    auto * multi_join_node = dynamic_cast<MultiJoinNode *>(node.get());
+    auto * multi_join_node = dynamic_cast<MultiJoinStepExtNode *>(node.get());
     if (!multi_join_node|| !rule_context.optimization_context->getMemo().getGroupById(rule_context.group_id)->isJoinRoot())
         return {};
 
@@ -75,7 +69,7 @@ TransformResult CardinalityBasedJoinReorder::transformImpl(PlanNodePtr node, con
 
     PlanNodes results;
 
-    int k = std::min(rule_context.context->getSettingsRef().heuristic_join_reorder_enumeration_times.value, ordered_base_nodes.size());
+    int k = std::min(rule_context.context->getOptimizerContext()->getSettingsRef().heuristic_join_reorder_enumeration_times.value, ordered_base_nodes.size());
 
     // heuristic enumerate k times.
     for (int i = 0; i < k; i++)
@@ -93,7 +87,7 @@ TransformResult CardinalityBasedJoinReorder::transformImpl(PlanNodePtr node, con
 
         while (true)
         {
-            std::vector<InterJoinNodeInfo> inter_join_nodes;
+            std::vector<InterJoinStepExtNodeInfo> inter_join_nodes;
 
             bool is_final_join = remaining_base_nodes.size() == 1;
 
@@ -103,7 +97,7 @@ TransformResult CardinalityBasedJoinReorder::transformImpl(PlanNodePtr node, con
                 if (new_join_node == nullptr)
                     continue;
 
-                const auto & join_step = static_cast<const JoinStep &>(*new_join_node->getStep());
+                const auto & join_step = static_cast<const JoinStepExt &>(*new_join_node->getStep());
 
                 UInt64 row_count = 0;
                 if (!is_final_join)
@@ -133,7 +127,7 @@ TransformResult CardinalityBasedJoinReorder::transformImpl(PlanNodePtr node, con
                     row_count = stat->getRowCount();
                 }
 
-                inter_join_nodes.emplace_back(InterJoinNodeInfo{row_count, new_join_node, current_group_id, group_id});
+                inter_join_nodes.emplace_back(InterJoinStepExtNodeInfo{row_count, new_join_node, current_group_id, group_id});
             }
             
             std::sort(inter_join_nodes.begin(), inter_join_nodes.end());

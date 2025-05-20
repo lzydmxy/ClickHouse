@@ -9,6 +9,12 @@ namespace DB
 class FilterStepExt : public FilterStep
 {
 public:
+    FilterStepExt(
+        const DataStream & input_stream_,
+        ActionsDAGPtr actions_dag_,
+        String filter_column_name_,
+        bool remove_filter_column_);
+
     FilterStepExt(const DataStream & input_stream_, const ConstASTPtr & filter_, bool remove_filter_column_ = true);
 
     const ConstASTPtr & getFilter() const { return filter; }
@@ -23,6 +29,9 @@ public:
 
     static std::pair<ConstASTPtr, ConstASTPtr> splitLargeInValueList(const ConstASTPtr & filter, UInt64 limit);
     static std::vector<ConstASTPtr> removeLargeInValueList(const std::vector<ConstASTPtr> & filters, UInt64 limit);
+
+    void toProto(Protos::FilterStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<FilterStepExt> fromProto(const Protos::FilterStepExt & proto, ContextPtr context);
 
 private:
     ConstASTPtr filter;

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Query/Optimizer/Property/Constants.h>
-#include <QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
 
 #include <utility>
 
@@ -48,17 +48,17 @@ class ConstantsDeriverVisitor : public StepVisitor<Constants, ConstantsDeriverCo
 public:
     Constants visitStep(const IQueryPlanStep &, ConstantsDeriverContext &) override;
 
-    Constants visitFilterStep(const FilterStep &, ConstantsDeriverContext & context) override;
-    Constants visitJoinStep(const JoinStep & step, ConstantsDeriverContext & context) override;
-    Constants visitProjectionStep(const ProjectionStep & step, ConstantsDeriverContext & context) override;
-    Constants visitMarkDistinctStep(const MarkDistinctStep & step, ConstantsDeriverContext & context) override;
-    Constants visitAggregatingStep(const AggregatingStep & step, ConstantsDeriverContext & context) override;
-    Constants visitUnionStep(const UnionStep & step, ConstantsDeriverContext & context) override;
-    Constants visitTableScanStep(const TableScanStep &, ConstantsDeriverContext &) override;
+    Constants visitFilterStepExt(const FilterStepExt &, ConstantsDeriverContext & context) override;
+    Constants visitJoinStepExt(const JoinStepExt & step, ConstantsDeriverContext & context) override;
+    Constants visitProjectionStepExt(const ProjectionStepExt & step, ConstantsDeriverContext & context) override;
+    Constants visitMarkDistinctStepExt(const MarkDistinctStepExt & step, ConstantsDeriverContext & context) override;
+    Constants visitAggregatingStepExt(const AggregatingStepExt & step, ConstantsDeriverContext & context) override;
+    Constants visitUnionStepExt(const UnionStepExt & step, ConstantsDeriverContext & context) override;
+    Constants visitTableScanStepExt(const TableScanStepExt &, ConstantsDeriverContext &) override;
     Constants visitReadNothingStep(const ReadNothingStep &, ConstantsDeriverContext &) override;
-    Constants visitReadStorageRowCountStep(const ReadStorageRowCountStep &, ConstantsDeriverContext &) override;
-    Constants visitValuesStep(const ValuesStep &, ConstantsDeriverContext &) override;
-    Constants visitCTERefStep(const CTERefStep &, ConstantsDeriverContext & context) override;
+    Constants visitReadStorageRowCountStepExt(const ReadStorageRowCountStepExt &, ConstantsDeriverContext &) override;
+    Constants visitValuesStepExt(const ValuesStepExt &, ConstantsDeriverContext &) override;
+    Constants visitCTERefStepExt(const CTERefStepExt &, ConstantsDeriverContext & context) override;
 };
 
 struct ConstantsDeriverTreeVisitorContext
@@ -71,7 +71,7 @@ class ConstantsDeriverTreeVisitor : public PlanNodeVisitor<Constants, ConstantsD
 {
 public:
     Constants visitPlanNode(PlanNodeBase & node, ConstantsDeriverTreeVisitorContext &) override;
-    Constants visitCTERefNode(CTERefNode &, ConstantsDeriverTreeVisitorContext &) override
+    Constants visitCTERefStepExtNode(CTERefStepExtNode &, ConstantsDeriverTreeVisitorContext &) override
     {
         return {};
     }

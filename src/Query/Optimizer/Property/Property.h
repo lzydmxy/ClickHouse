@@ -1,24 +1,36 @@
 #pragma once
 
-#include <unordered_map>
-#include <Analyzers/ASTEquals.h>
-#include <Analyzers/QualifiedColumnName.h>
 #include <Core/Names.h>
-#include <Core/SortDescription.h>
 #include <Core/Types.h>
-#include <Functions/FunctionsHashing.h>
-#include <Query/Optimizer/FunctionInvoker.h>
-#include <Query/Optimizer/Property/Equivalences.h>
 #include <Parsers/IAST_fwd.h>
-#include <Protos/EnumMacros.h>
-#include <Protos/plan_node_utils.pb.h>
+#include <DataTypes/IDataType.h>
+#include <Core/Field.h>
+#include <Query/Analyzer/ASTEquals.h>
+#include <Query/Protos/EnumMacros.h>
+#include <Query/ProtosHelper/QueryProto.h>
+#include <Query/Optimizer/Property/Equivalences.h>
+#include <Query/Processors/QueryPlan/CTEInfo.h>
+#include <Query/Analyzer/QualifiedColumnName.h>
+#include <Query/Parsers/ASTClusterByElementExt.h>
+
+/**
+ * A partition operation divides a relation into disjoint subsets, called partitions.
+ * A partition function defines which rows belong to which partitions. Partitioning
+ * applies to the whole relation.
+ */
 
 namespace DB
 {
+
+using SymbolEquivalences = Equivalences<String>;
+using SymbolEquivalencesPtr = std::shared_ptr<SymbolEquivalences>;
+using ConstASTPtr = std::shared_ptr<const IAST>;
+
 namespace Protos
 {
-    class Partitioning;
+class Partitioning;
 }
+
 class Property;
 using PropertySet = std::vector<Property>;
 using PropertySets = std::vector<PropertySet>;
@@ -27,14 +39,6 @@ using SymbolEquivalencesPtr = std::shared_ptr<SymbolEquivalences>;
 
 class Constants;
 
-using CTEId = UInt32;
-class Context;
-
-/**
- * A partition operation divides a relation into disjoint subsets, called partitions.
- * A partition function defines which rows belong to which partitions. Partitioning
- * applies to the whole relation.
- */
 class Partitioning
 {
 public:
@@ -53,7 +57,7 @@ public:
         (ARBITRARY, 7),
         (FIXED_PASSTHROUGH, 8),
         (UNKNOWN, 9));
-
+    
     ENUM_WITH_PROTO_CONVERTER(
         Component, // enum name
         Protos::Partitioning::Component, // proto enum message
@@ -61,11 +65,10 @@ public:
         (COORDINATOR, 1),
         (WORKER, 2));
 
-
     Partitioning(const Names & columns_) : Partitioning(Handle::FIXED_HASH, columns_) { }
 
     Partitioning(
-        enum Handle handle_ = Handle::UNKNOWN,
+        Handle handle_ = Handle::UNKNOWN,
         Names columns_ = {},
         bool require_handle_ = false,
         UInt64 buckets_ = 0,
@@ -86,7 +89,7 @@ public:
     {
     }
     void setHandle(Handle handle_) { handle = handle_; }
-    enum Handle getHandle() const { return handle; }
+    Handle getHandle() const { return handle; }
     const Names & getColumns() const { return columns; }
     void setColumns(Names columns_)
     {
@@ -110,6 +113,7 @@ public:
     ASTPtr getShuffleExpr() const;
 
     String getHashFunc(String default_func) const;
+
     Array getParams() const;
 
     void resetIfPartitionHandle()
@@ -158,7 +162,7 @@ public:
     static Partitioning fromProto(const Protos::Partitioning & proto);
 
 private:
-    enum Handle handle;
+    Handle handle;
     Names columns;
     bool require_handle;
     UInt64 buckets;
@@ -169,6 +173,7 @@ private:
     bool satisfy_worker;
     bool preferred = false;
 };
+
 
 ENUM_WITH_PROTO_CONVERTER(
     SortOrder, // enum name
@@ -308,16 +313,6 @@ public:
     String toString() const;
 };
 
-class Grouping
-{
-public:
-    explicit Grouping(Names columns_) : columns(std::move(columns_)) { }
-    Names getColumns() { return columns; }
-
-private:
-    Names columns;
-};
-
 class CTEDescription
 {
 public:
@@ -367,7 +362,7 @@ public:
     String toString() const;
 
     void filter(const std::unordered_set<CTEId> & allowed);
-    };
+};
 
 struct WorkloadTablePartitioning
 {
@@ -459,7 +454,7 @@ public:
     String toString() const;
 
 private:
-    
+
     // Description of the partitioning of the data across nodes
     Partitioning node_partitioning;
     // Description of the partitioning of the data across streams
@@ -519,3 +514,4 @@ struct PlanPropEquivalences
 };
 
 }
+

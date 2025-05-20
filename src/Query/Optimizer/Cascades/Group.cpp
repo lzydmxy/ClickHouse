@@ -9,9 +9,9 @@
 #include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
 #include <Query/Optimizer/Rule/Transformation/JoinReorderUtils.h>
 #include <Query/Optimizer/Rule/Transformation/JoinToMultiJoin.h>
-#include <QueryPlan/AnyStep.h>
-#include <QueryPlan/CTERefStep.h>
-#include <QueryPlan/MultiJoinStep.h>
+#include <Query/Processors/QueryPlan/AnyStepExt.h>
+#include <Query/Processors/QueryPlan/CTERefStepExt.h>
+#include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
 
 namespace DB
 {
@@ -27,10 +27,10 @@ void Group::addExpression(const GroupExprPtr & expression, CascadesContext & con
     if (expression->isLogical())
     {
         logical_expressions.emplace_back(expression);
-        if ((expression->getStep()->getType() != IQueryPlanStep::Type::Join
-               || !dynamic_cast<const JoinStep &>(*expression->getStep()).supportReorder(context.isSupportFilter())
-               || dynamic_cast<const JoinStep &>(*expression->getStep()).isOrdered())
-              && expression->getStep()->getType() != IQueryPlanStep::Type::MultiJoin)
+        if ((getQueryPlanStepType(expression->getStep()) != QueryPlanStepType::JoinStepExt
+               || !dynamic_cast<const JoinStepExt &>(*expression->getStep()).supportReorder(context.isSupportFilter())
+               || dynamic_cast<const JoinStepExt &>(*expression->getStep()).isOrdered())
+              && getQueryPlanStepType(expression->getStep()) != QueryPlanStepType::MultiJoinStepExt)
         {
             join_sets.insert(JoinSet(id));
             // if this is the top node of one join root.
@@ -41,19 +41,19 @@ void Group::addExpression(const GroupExprPtr & expression, CascadesContext & con
             }
         }
 
-        if (expression->getStep()->getType() == IQueryPlanStep::Type::Join
-            || expression->getStep()->getType() == IQueryPlanStep::Type::MultiJoin)
+        if (getQueryPlanStepType(expression->getStep()) == QueryPlanStepType::JoinStepExt
+            || getQueryPlanStepType(expression->getStep()) == QueryPlanStepType::MultiJoinStepExt)
         {
             simple_children = false;
         }
 
 
-        if (expression->getStep()->getType() == IQueryPlanStep::Type::MultiJoin)
+        if (getQueryPlanStepType(expression->getStep()) == QueryPlanStepType::MultiJoinStepExt)
         {
             makeRootJoinInfo(*expression, context);
         }
 
-        if (expression->getStep()->getType() == IQueryPlanStep::Type::TableScan)
+        if (getQueryPlanStepType(expression->getStep()) == QueryPlanStepType::TableScanStepExt)
         {
             is_table_scan = true;
             max_table_scans = std::max(max_table_scans, 1ul);
@@ -62,14 +62,14 @@ void Group::addExpression(const GroupExprPtr & expression, CascadesContext & con
                 max_table_scan_rows = std::max(max_table_scan_rows, (*statistics)->getRowCount());
             }
         }
-        if (expression->getStep()->getType() == IQueryPlanStep::Type::Projection && expression->getChildrenGroups().size() == 1)
+        if (getQueryPlanStepType(expression->getStep()) == QueryPlanStepType::ProjectionStepExt && expression->getChildrenGroups().size() == 1)
         {
             is_table_scan = context.getMemo().getGroupById(expression->getChildrenGroups()[0])->isTableScan();
         }
 
-        if (expression->getStep()->getType() == IQueryPlanStep::Type::CTERef)
+        if (getQueryPlanStepType(expression->getStep()) == QueryPlanStepType::CTERefStepExt)
         {
-            const auto & cte_ref_step = dynamic_cast<const CTERefStep &>(*expression->getStep());
+            const auto & cte_ref_step = dynamic_cast<const CTERefStepExt &>(*expression->getStep());
             auto cte_def_group = context.getMemo().getCTEDefGroupByCTEId(cte_ref_step.getId());
             const auto & cte_def_contains_cte_ids = cte_def_group->getCTESet();
             cte_set.emplace(cte_ref_step.getId());
@@ -119,19 +119,19 @@ void Group::addExpression(const GroupExprPtr & expression, CascadesContext & con
             children_filter_selectivity,
             inclusion_dependency);
 
-        if (expression->getStep()->getType() == IQueryPlanStep::Type::TableScan)
+        if (getQueryPlanStepType(expression->getStep()) == QueryPlanStepType::TableScanStepExt)
         {
             if (statistics.has_value())
             {
                 max_table_scan_rows = std::max(max_table_scan_rows, (*statistics)->getRowCount());
             }
         }
-        else if (expression->getStep()->getType() == IQueryPlanStep::Type::CTERef)
+        else if (getQueryPlanStepType(expression->getStep()) == QueryPlanStepType::CTERefStepExt)
         {
             if (!statistics.has_value())
             {
                 statistics = context.getMemo()
-                                 .getCTEDefGroupByCTEId(dynamic_cast<const CTERefStep *>(expression->getStep().get())->getId())
+                                 .getCTEDefGroupByCTEId(dynamic_cast<const CTERefStepExt *>(expression->getStep().get())->getId())
                                  ->statistics;
             }
         }
@@ -141,7 +141,7 @@ void Group::addExpression(const GroupExprPtr & expression, CascadesContext & con
 
     if (!equivalences)
     {
-        if (context.getContext()->getSettingsRef().enable_equivalences)
+        if (context.getContext()->getOptimizerContext()->getSettingsRef().enable_equivalences)
         {
             std::vector<SymbolEquivalencesPtr> children;
             for (const auto & child : expression->getChildrenGroups())
@@ -177,9 +177,9 @@ void Group::addExpression(const GroupExprPtr & expression, CascadesContext & con
 
     if (context.getMaxJoinSize() > 10 && expression->isLogical())
     {
-        if (expression->getStep()->getType() == IQueryPlanStep::Type::Join)
+        if (getQueryPlanStepType(expression->getStep()) == QueryPlanStepType::JoinStepExt)
         {
-            auto * step = dynamic_cast<JoinStep *>(expression->getStep().get());
+            auto * step = dynamic_cast<JoinStepExt *>(expression->getStep().get());
             if (JoinToMultiJoin::isSupport(*step) && !expression->hasRuleExplored(RuleType::JOIN_TO_MULTI_JOIN))
             {
                 for (const auto & multi_join : JoinToMultiJoin::createMultiJoin(
@@ -204,8 +204,8 @@ void Group::makeRootJoinInfo(CascadesContext & context)
 
 void Group::makeRootJoinInfo(GroupExpression & expression, CascadesContext & context)
 {
-    if (is_join_root && expression.getStep()->getType() == IQueryPlanStep::Type::MultiJoin
-        && expression.getChildrenGroups().size() > context.getContext()->getSettingsRef().max_graph_reorder_size)
+    if (is_join_root && getQueryPlanStepType(expression.getStep()) == QueryPlanStepType::MultiJoinStepExt
+        && expression.getChildrenGroups().size() > context.getContext()->getOptimizerContext()->getSettingsRef().max_graph_reorder_size)
     {
         if (join_root_id == 0)
         {
@@ -215,7 +215,7 @@ void Group::makeRootJoinInfo(GroupExpression & expression, CascadesContext & con
                 return;
             }
         }
-        auto * s = dynamic_cast<MultiJoinStep *>(expression.getStep().get());
+        auto * s = dynamic_cast<MultiJoinStepExt *>(expression.getStep().get());
         for (auto child_id : s->getGraph().getNodes())
         {
             context.getMemo().setJoinRootId(child_id, join_root_id);
@@ -270,7 +270,7 @@ void Group::deleteExpression(const GroupExprPtr & expression)
             break;
         }
     }
-    // TODO: join_sets
+    // todo byconity join_sets
 }
 
 void Group::deleteAllExpression()
@@ -290,8 +290,8 @@ void Group::deleteAllExpression()
 
 PlanNodePtr Group::createLeafNode(ContextMutablePtr context) const
 {
-    auto leaf_step = std::make_shared<AnyStep>(getStep()->getOutputStream(), id);
-    return AnyNode::createPlanNode(context->nextNodeId(), std::move(leaf_step));
+    auto leaf_step = std::make_shared<AnyStepExt>(getStep()->getOutputStream(), id);
+    return PlanNode<AnyStepExt>::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(leaf_step));
 }
 
 

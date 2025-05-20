@@ -1,16 +1,10 @@
 #pragma once
 
 #include <Interpreters/Context.h>
-#include <Query/Optimizer/Rewriter/Rewriter.h>
-#include <Parsers/ASTVisitor.h>
-#include <QueryPlan/PlanVisitor.h>
-#include <QueryPlan/MultiJoinStep.h>
-
+#include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
 #include <Query/Optimizer/Rule/Rule.h>
 #include <Query/Optimizer/Rule/Transformation/JoinReorderUtils.h>
-
 #include <Query/Optimizer/Rule/Patterns.h>
-#include <utility>
 
 namespace DB
 {
@@ -19,12 +13,12 @@ class SelectivityBasedJoinReorder : public Rule
 public:
     explicit SelectivityBasedJoinReorder(size_t max_join_size_): max_join_size(max_join_size_) {
         pattern = Patterns::multiJoin()
-            .matchingStep<MultiJoinStep>([&](const MultiJoinStep & s) { return s.getGraph().getNodes().size() > max_join_size; })
+            .matchingStep<MultiJoinStepExt>([&](const MultiJoinStepExt & s) { return s.getGraph().getNodes().size() > max_join_size; })
             .result();
     }
     RuleType getType() const override { return RuleType::SELECTIVITY_BASED_JOIN_REORDER; }
     String getName() const override { return "SELECTIVITY_BASED_JOIN_REORDER"; }
-    bool isEnabled(ContextPtr context) const override {return context->getSettingsRef().enable_selectivity_based_join_reorder; }
+    bool isEnabled(ContextPtr context) const override {return context->getOptimizerContext()->getSettingsRef().enable_selectivity_based_join_reorder; }
 
     const std::vector<RuleType> & blockRules() const override;
     ConstRefPatternPtr getPattern() const override;

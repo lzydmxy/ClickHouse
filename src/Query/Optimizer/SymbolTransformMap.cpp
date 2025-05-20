@@ -1,24 +1,97 @@
-
 #include <Query/Optimizer/SymbolTransformMap.h>
+
+#include <Interpreters/InDepthNodeVisitor.h>
 #include <Query/Parsers/ASTTableColumnReference.h>
-#include <Query/Common/SymbolsExtractor.h>
+#include <Parsers/formatAST.h>
+#include <Query/Optimizer/Utils.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
+#include <Query/Optimizer/SymbolsExtractor.h>
 
 namespace DB
 {
-
-
-//tood: need impl, now just a mock
-//class SymbolTransformMap::Visitor : public PlanNodeVisitor<bool, Void>
-class SymbolTransformMap::Visitor
+class SymbolTransformMap::Visitor : public PlanNodeVisitor<bool, Void>
 {
 public:
-    explicit Visitor(std::optional<PlanNodeId> stop_node_) : stop_node(std::move(stop_node_))
+    explicit Visitor(std::optional<PlanNodeId> stop_node_) : stop_node(std::move(stop_node_)) { }
+
+    bool visitAggregatingStepExtNode(AggregatingStepExtNode & node, Void & context) override
     {
+        const auto * agg_step = dynamic_cast<const AggregatingStepExt *>(node.getStep().get());
+        for (const auto & aggregate_description : agg_step->getAggregates())
+        {
+            auto function = Utils::extractAggregateToFunction(aggregate_description);
+            if (!symbol_transform_map.addSymbolMapping(aggregate_description.column_name, function))
+                return false;
+        }
+        return visitChildren(node, context);
     }
 
-    std::optional<PlanNodeId> stop_node;
-    SymbolTransformMap symbol_transform_map;
+    bool visitFilterStepExtNode(FilterStepExtNode & node, Void & context) override { return visitChildren(node, context); }
 
+    bool visitProjectionStepExtNode(ProjectionStepExtNode & node, Void & context) override
+    {
+        const auto * project_step = dynamic_cast<const ProjectionStepExt *>(node.getStep().get());
+
+        if (project_step->isFinalProject())
+            return false;
+
+        for (const auto & assignment : project_step->getAssignments())
+        {
+            if (Utils::isIdentity(assignment))
+                continue;
+            if (!symbol_transform_map.addSymbolMapping(assignment.first, assignment.second))
+                return false;
+            // if (const auto * function = dynamic_cast<const ASTFunction *>(assignment.second.get()))
+            // {
+            //     if (function->name == "cast" && TypeCoercion::compatible)
+            //     {
+            //         symbol_to_cast_lossless_expressions.emplace(assignment.first, function->children[0]);
+            //     }
+            // }
+        }
+        return visitChildren(node, context);
+    }
+
+    bool visitSortingStepExtNode(SortingStepExtNode & node, Void & context) override { return visitChildren(node, context); }
+
+    bool visitJoinStepExtNode(JoinStepExtNode & node, Void & context) override { return visitChildren(node, context); }
+    bool visitExchangeStepExtNode(ExchangeStepExtNode & node, Void & context) override { return visitChildren(node, context); }
+
+    bool visitTableScanStepExtNode(TableScanStepExtNode & node, Void &) override
+    {
+        const auto * table_step = dynamic_cast<const TableScanStepExt *>(node.getStep().get());
+        for (const auto & item : table_step->getColumnAlias())
+        {
+            auto column_reference = std::make_shared<ASTTableColumnReference>(table_step->getStorage().get(), node.getId(), item.first);
+            if (!symbol_transform_map.addSymbolMapping(item.second, column_reference))
+                return false;
+        }
+
+        for (const auto & item : table_step->getInlineExpressions())
+        {
+            auto inline_expr
+                = IdentifierToColumnReference::rewrite(table_step->getStorage().get(), node.getId(), item.second->clone(), false);
+            if (!symbol_transform_map.addSymbolMapping(item.first, inline_expr))
+                return false;
+        }
+        return true;
+    }
+
+    bool visitPlanNode(PlanNodeBase &, Void &) override { return false; }
+
+    bool visitChildren(PlanNodeBase & node, Void & context)
+    {
+        if (stop_node.has_value() && node.getId() == *stop_node)
+            return true;
+
+        for (auto & child : node.getChildren())
+            if (!VisitorUtil::accept(*child, *this, context))
+                return false;
+        return true;
+    }
+
+    std::optional<PlanNodeId> stop_node; // visit this node, but not visit its descendant
+    SymbolTransformMap symbol_transform_map;
 };
 
 class SymbolTransformMap::Rewriter : public SimpleExpressionRewriter<Void>
@@ -27,8 +100,7 @@ public:
     Rewriter(
         const std::unordered_map<String, ConstASTPtr> & symbol_to_expressions_,
         std::unordered_map<String, ConstASTPtr> & expression_lineage_)
-        : symbol_to_expressions(symbol_to_expressions_)
-        , expression_lineage(expression_lineage_)
+        : symbol_to_expressions(symbol_to_expressions_), expression_lineage(expression_lineage_)
     {
     }
 
@@ -57,10 +129,9 @@ private:
 std::optional<SymbolTransformMap> SymbolTransformMap::buildFrom(PlanNodeBase & plan, std::optional<PlanNodeId> stop_node)
 {
     Visitor visitor(stop_node);
-    //todo: need to use VisitorUtil
-    //Void context;
-    //if (!VisitorUtil::accept(plan, visitor, context))
-    //    return {};
+    Void context;
+    if (!VisitorUtil::accept(plan, visitor, context))
+        return {};
     return std::move(visitor.symbol_transform_map);
 }
 
@@ -75,13 +146,11 @@ String SymbolTransformMap::toString() const
 {
     String str;
     str += "expression_lineage: ";
-    for (const auto & x: expression_lineage)
-        //str += x.first + " = " + serializeAST(*x.second) + ", ";
-        str += x.first + " = " + ", ";
+    for (const auto & x : expression_lineage)
+        str += x.first + " = " + serializeAST(*x.second) + ", ";
     str += "symbol_to_expressions: ";
-    for (const auto & x: symbol_to_expressions)
-        //str += x.first + " = " + serializeAST(*x.second) + ", ";
-        str += x.first + " = " + ", ";
+    for (const auto & x : symbol_to_expressions)
+        str += x.first + " = " + serializeAST(*x.second) + ", ";
     return str;
 }
 

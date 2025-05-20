@@ -1,9 +1,13 @@
-#include <algorithm>
-#include <Query/Optimizer/DomainTranslator.h>
-#include <Query/Optimizer/FunctionInvoker.h>
 #include <Query/Optimizer/Property/ConstantsDeriver.h>
+
+#include <Query/Optimizer/Utils.h>
 #include <Query/Optimizer/SymbolsExtractor.h>
-#include <QueryPlan/PlanVisitor.h>
+#include <Query/Optimizer/PredicateUtils.h>
+#include <Query/Optimizer/FunctionInvoker.h>
+#include <Query/Optimizer/DomainTranslator.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
+
+#include <algorithm>
 
 namespace DB
 {
@@ -41,7 +45,7 @@ Constants ConstantsDeriverVisitor::visitStep(const IQueryPlanStep &, ConstantsDe
     return context.getInput()[0];
 }
 
-Constants ConstantsDeriverVisitor::visitFilterStep(const FilterStep & step, ConstantsDeriverContext & context)
+Constants ConstantsDeriverVisitor::visitFilterStepExt(const FilterStepExt & step, ConstantsDeriverContext & context)
 {
     Predicate::DomainTranslator<String> translator{context.getContext()};
     // TODO, remove clone. step.getFilter()->clone()
@@ -61,7 +65,7 @@ Constants ConstantsDeriverVisitor::visitFilterStep(const FilterStep & step, Cons
             filter_values[value.first] = value.second;
         }
     }
-    // tmpfix for prepared params
+
     for (const auto & conjunct : PredicateUtils::extractConjuncts(step.getFilter()->clone()))
     {
         const auto * func = conjunct->as<ASTFunction>();
@@ -70,15 +74,11 @@ Constants ConstantsDeriverVisitor::visitFilterStep(const FilterStep & step, Cons
         const auto * column = func->arguments->children[0]->as<ASTIdentifier>();
         if (!column)
             continue;
-        const auto * prepared_param = func->arguments->children[1]->as<ASTPreparedParameter>();
-        if (!prepared_param)
-            continue;
-        filter_values[column->name()] = FieldWithType{DataTypeFactory::instance().get(prepared_param->type), String{prepared_param->name}};
     }
     return Constants{filter_values};
 }
 
-Constants ConstantsDeriverVisitor::visitJoinStep(const JoinStep & step, ConstantsDeriverContext & context)
+Constants ConstantsDeriverVisitor::visitJoinStepExt(const JoinStepExt & step, ConstantsDeriverContext & context)
 {
     std::unordered_map<String, String> identities;
     for (const auto & item : step.getOutputStream().header)
@@ -88,7 +88,7 @@ Constants ConstantsDeriverVisitor::visitJoinStep(const JoinStep & step, Constant
 
     Constants translated;
 
-    if (step.getKind() == ASTTableJoin::Kind::Inner || step.getKind() == ASTTableJoin::Kind::Cross)
+    if (step.getKind() == JoinKind::Inner || step.getKind() == JoinKind::Cross)
     {
         Constants left_constants = context.getInput()[0].translate(identities);
         Constants right_constants = context.getInput()[1].translate(identities);
@@ -108,7 +108,7 @@ Constants ConstantsDeriverVisitor::visitJoinStep(const JoinStep & step, Constant
     return translated;
 }
 
-Constants ConstantsDeriverVisitor::visitProjectionStep(const ProjectionStep & step, ConstantsDeriverContext & context)
+Constants ConstantsDeriverVisitor::visitProjectionStepExt(const ProjectionStepExt & step, ConstantsDeriverContext & context)
 {
     // TODO@lijinzhi.zx: Extract constants from ASTIdentifer to ASTLiteral assigments.
     const auto & assignments = step.getAssignments();
@@ -127,21 +127,21 @@ Constants ConstantsDeriverVisitor::visitProjectionStep(const ProjectionStep & st
     return translated;
 }
 
-Constants ConstantsDeriverVisitor::visitAggregatingStep(const AggregatingStep & step, ConstantsDeriverContext & context)
+Constants ConstantsDeriverVisitor::visitAggregatingStepExt(const AggregatingStepExt & step, ConstantsDeriverContext & context)
 {
     if (step.getKeys().empty())
         return {};
     return context.getInput()[0];
 }
 
-Constants ConstantsDeriverVisitor::visitMarkDistinctStep(const MarkDistinctStep & step, ConstantsDeriverContext & context)
+Constants ConstantsDeriverVisitor::visitMarkDistinctStepExt(const MarkDistinctStepExt & step, ConstantsDeriverContext & context)
 {
     if (step.getDistinctSymbols().empty())
         return {};
     return context.getInput()[0];
 }
 
-Constants ConstantsDeriverVisitor::visitUnionStep(const UnionStep & step, ConstantsDeriverContext & context)
+Constants ConstantsDeriverVisitor::visitUnionStepExt(const UnionStepExt & step, ConstantsDeriverContext & context)
 {
     std::vector<Constants> transformed_children_constants;
     const auto & output_to_inputs = step.getOutToInputs();
@@ -181,7 +181,7 @@ Constants ConstantsDeriverVisitor::visitUnionStep(const UnionStep & step, Consta
     return Constants{filter_values};
 }
 
-Constants ConstantsDeriverVisitor::visitTableScanStep(const TableScanStep & step, ConstantsDeriverContext & /*context*/)
+Constants ConstantsDeriverVisitor::visitTableScanStepExt(const TableScanStepExt & step, ConstantsDeriverContext & /*context*/)
 {
     std::map<String, FieldWithType> constants;
     auto storage_snapshot = step.getStorageSnapshot();
@@ -217,18 +217,18 @@ Constants ConstantsDeriverVisitor::visitReadNothingStep(const ReadNothingStep &,
     return {};
 }
 
-Constants ConstantsDeriverVisitor::visitReadStorageRowCountStep(const ReadStorageRowCountStep &, ConstantsDeriverContext &)
+Constants ConstantsDeriverVisitor::visitReadStorageRowCountStepExt(const ReadStorageRowCountStepExt &, ConstantsDeriverContext &)
 {
     return {};
 }
 
-Constants ConstantsDeriverVisitor::visitValuesStep(const ValuesStep &, ConstantsDeriverContext &)
+Constants ConstantsDeriverVisitor::visitValuesStepExt(const ValuesStepExt &, ConstantsDeriverContext &)
 {
     // TODO@lijinzhi.zx: Each column_name to field in ValuesStep is an identifer to literal constant.
     return {};
 }
 
-Constants ConstantsDeriverVisitor::visitCTERefStep(const CTERefStep & step, ConstantsDeriverContext & context)
+Constants ConstantsDeriverVisitor::visitCTERefStepExt(const CTERefStepExt & step, ConstantsDeriverContext & context)
 {
     if (context.getInput().empty())
         return Constants{};

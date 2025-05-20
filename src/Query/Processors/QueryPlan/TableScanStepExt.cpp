@@ -1,12 +1,20 @@
 
 #include <Interpreters/convertFieldToType.h>
 #include <Query/Processors/QueryPlan/TableScanStepExt.h>
+#include <Query/Processors/IQueryPlanStepExt.h>
 #include <Query/Processors/QueryPlan/ExecutePlanElement.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
+#include <Query/ProtosHelper/RPCHelpers.h>
 #include <Query/Optimizer/SymbolTransformMap.h>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
 #include <Interpreters/evaluateConstantExpression.h>
 #include <Planner/Utils.h>
 #include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
-
+#include <Query/Optimizer/PredicateUtils.h>
+#include <Interpreters/misc.h>
+#include <Query/Optimizer/SymbolsExtractor.h>
+#include <Query/Common/NameToTypeExt.h>
 
 namespace DB
 {
@@ -26,13 +34,9 @@ namespace _scan_execute_impl
     using ProjectionMatchContexts = std::vector<ProjectionMatchContext>;
 
     const UInt32 NODE_ID_TABLE_SCAN = 0;
-    //todo: need to implement Optimizer/SymbolTransformMap
-    /*
-    
     const UInt32 NODE_ID_FILTER = 1;
     const UInt32 NODE_ID_PROJECTION = 2;
     const UInt32 NODE_ID_AGGREGATION = 3;
-    */
 
     /// implementations
     struct ProjectionMatchContext
@@ -85,9 +89,8 @@ namespace _scan_execute_impl
         for (const auto & column: require_columns)
             names_and_types.emplace_back(column, column_types.at(column));
 
-        // TODO: need to convert to ColumnsWithTypeAndName from NamesAndTypes
-        // DataStream input_stream {.header = Block{names_and_types}};
-        DataStream input_stream;
+        DataStream input_stream {.header = Block{ToColumnsWithTypeAndName(names_and_types)}};
+        //DataStream input_stream;
 
         if (rewritten_filter)
             rewritten_filter_step = std::make_shared<FilterStepExt>(input_stream, rewritten_filter);
@@ -228,8 +231,6 @@ TableScanExecutor::TableScanExecutor(TableScanStepExt & step, const MergeTreeDat
 
     has_aggregate = step.getPushdownAggregation() != nullptr;
     query_required_columns = step.getRequiredColumns(TableScanStepExt::OutputAndPrewhere);
-    //todo: need to implement PlanNodeBase
-    /*
     query_lineage = [&]() {
         PlanNodePtr node;
         QueryPlanStepPtr table_scan_without_pushdown_steps = std::make_shared<TableScanStepExt>(
@@ -251,7 +252,6 @@ TableScanExecutor::TableScanExecutor(TableScanStepExt & step, const MergeTreeDat
 
         return SymbolTransformMap::buildFrom(*node);
     }();
-    */
 
     if (!query_lineage)
         return;
@@ -259,13 +259,12 @@ TableScanExecutor::TableScanExecutor(TableScanStepExt & step, const MergeTreeDat
     if (has_aggregate)
     {
         const auto * query_aggregate = step.getPushdownAggregationCast();
-        //tood:need getNamesToTypes func in Block
-        //column_types_before_agg = query_aggregate->getInputStreams()[0].header.getNamesToTypes();
+        column_types_before_agg = ToNameToType(query_aggregate->getInputStreams()[0].header.getColumnsWithTypeAndName());
 
-        for (const auto & origin_grouping_key: query_aggregate->getParams().keys)
+        for (const auto & origin_grouping_key: query_aggregate->getKeys())
             aggregate_keys.emplace_back(NameWithAST{origin_grouping_key, query_lineage->inlineReferences(origin_grouping_key)});
 
-        for (const auto & query_aggregate_desc: query_aggregate->getParams().aggregates)
+        for (const auto & query_aggregate_desc: query_aggregate->getAggregates())
             aggregate_descs.emplace_back(NameWithAST{query_aggregate_desc.column_name,
                                                      query_lineage->inlineReferences(query_aggregate_desc.column_name)});
     }
@@ -279,7 +278,7 @@ TableScanExecutor::TableScanExecutor(TableScanStepExt & step, const MergeTreeDat
     if (!select_query_info.query) 
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not set");
 
-    auto * select_query = select_query_info.query->as<ASTSelectQuery>();
+    auto * select_query = select_query_info.query->as<ASTSelectQueryExt>();
     if (!select_query)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not a ASTSelectQuery");
 
@@ -311,8 +310,6 @@ ExecutePlan TableScanExecutor::buildExecutePlan(const DistributedPipelineSetting
         if (distributed_settings.source_task_filter.isValid())
         {
             auto size_before_filtering = parts.size();
-            //todo:need to implement filterParts
-            //filterParts(parts, distributed_settings.source_task_filter);
             LOG_TRACE(
                 log,
                 "After filtering({}) the number of parts of table {} becomes {} from {}",
@@ -517,7 +514,7 @@ void TableScanExecutor::prunePartsByIndex(MergeTreeData::DataPartsVector & parts
     if (parts.empty())
         return;
 
-    //todo: need to convet select_query_info to ActionsDAGPtr
+    //todo: liyang453, other feat: need to convet select_query_info to ActionsDAGPtr
     //auto part_values = MergeTreeDataSelectExecutor::filterPartsByVirtualColumns(storage, parts, select_query_info, context);
     auto part_values = MergeTreeDataSelectExecutor::filterPartsByVirtualColumns(storage, parts, nullptr, context);
 
@@ -527,8 +524,8 @@ void TableScanExecutor::prunePartsByIndex(MergeTreeData::DataPartsVector & parts
         return;
     }
 
+    //todo: liyang453, other feat: need to add partition_pruner,minmax_idx_condition,alter_conversions
     /*
-    // todo: need to add partition_pruner,minmax_idx_condition,alter_conversions
     ReadFromMergeTree::AnalysisResult result;
     MergeTreeDataSelectExecutor::filterPartsByPartition(parts,
                                                         part_values,
@@ -597,7 +594,7 @@ void TableScanStepExt::makeSetsForIndex(
     auto settings = context->getSettingsRef();
     SizeLimits size_limits_for_set(settings.max_rows_in_set, settings.max_bytes_in_set, settings.set_overflow_mode);
 
-    //todo: need to check supportsIndexForIn
+    //todo: liyang453, need storage:  need to check supportsIndexForIn
     //if (!node || !storage || !storage->supportsIndexForIn())
     if (!node || !storage)
         return;
@@ -614,14 +611,12 @@ void TableScanStepExt::makeSetsForIndex(
 
     const auto * func = node->as<ASTFunction>();
     
-    //todo: need to implement functionIsInOrGlobalInOperator
-    //if (func && functionIsInOrGlobalInOperator(func->name))
-    if (func)
+    if (func && functionIsInOrGlobalInOperator(func->name))
     {
         const IAST & args = *func->arguments;
         const ASTPtr & left_in_operand = args.children.at(0);
 
-        //todo: need to check mayBenefitFromIndexForIn
+        //todo: liyang453, need storage: need to check mayBenefitFromIndexForIn
         //if (storage && storage->mayBenefitFromIndexForIn(left_in_operand, context, metadata_snapshot))
         if (storage)
         {
@@ -654,7 +649,7 @@ TableScanStepExt::TableScanStepExt(
     String alias_,
     bool bucket_scan_,
     Assignments inline_expressions_,
-    std::shared_ptr<AggregatingStep> aggregation_,
+    std::shared_ptr<AggregatingStepExt> aggregation_,
     std::shared_ptr<ProjectionStepExt> projection_,
     std::shared_ptr<FilterStepExt> filter_)
     : ISourceStep(DataStream{})
@@ -673,7 +668,7 @@ TableScanStepExt::TableScanStepExt(
     if (!query_info.query) 
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not set");
 
-    auto * select_query = query_info.query->as<ASTSelectQuery>();
+    auto * select_query = query_info.query->as<ASTSelectQueryExt>();
     if (!select_query)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not a ASTSelectQuery");
     
@@ -706,7 +701,7 @@ void TableScanStepExt::formatOutputStream(ContextPtr context)
     }
 
     table_output_stream.header.clear();
-    const auto select_expression_list = query_info.query->as<ASTSelectQuery>()->select();
+    const auto select_expression_list = query_info.query->as<ASTSelectQueryExt>()->select();
     select_expression_list->children.clear();
 
     for (const auto & name : getRequiredColumns(GetFlags::Output))
@@ -754,7 +749,7 @@ TableScanStepExt::TableScanStepExt(
     size_t max_block_size_,
     String alias_,
     Assignments inline_expressions_,
-    std::shared_ptr<AggregatingStep> aggregation_,
+    std::shared_ptr<AggregatingStepExt> aggregation_,
     std::shared_ptr<ProjectionStepExt> projection_,
     std::shared_ptr<FilterStepExt> filter_,
     DataStream table_output_stream_)
@@ -795,7 +790,7 @@ SelectQueryInfo TableScanStepExt::fillQueryInfo(ContextPtr context)
     if (!query_info.query) 
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not set");
 
-    auto * select_query = query_info.query->as<ASTSelectQuery>();
+    auto * select_query = query_info.query->as<ASTSelectQueryExt>();
     if (!select_query)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not a ASTSelectQuery");
 
@@ -870,7 +865,7 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
 {
     const auto & build_settings_ext = BuildQueryPipelineSettingsExt::cast(build_settings);
 
-    //todo: need to add  partition_filter to SelectQueryInfo
+    //todo: liyang453, need storage: need to add  partition_filter to SelectQueryInfo
     ASTPtr partition_filter;
     //if (select_query.partition_filter)
     if (partition_filter)
@@ -895,7 +890,7 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
             where_predicates.insert(where_predicates.end(), runtime_filters.begin(), runtime_filters.end());
         }
         auto where_dicates = PredicateUtils::combineConjuncts(where_predicates);
-        // todo: need to add  partition_filter to SelectQueryInfo
+        //todo: liyang453, need storage: need to add  partition_filter to SelectQueryInfo
         // select_query.partition_filter = !PredicateUtils::isTruePredicate(where_dicates) ? std::move(where_dicates) : nullptr;
         partition_filter = !PredicateUtils::isTruePredicate(where_dicates) ? std::move(where_dicates) : nullptr;
 
@@ -906,7 +901,7 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
             partition_filter ? queryToString(*partition_filter) : "null");
     }
 
-    auto * query = select_query.query->as<ASTSelectQuery>();
+    auto * query = select_query.query->as<ASTSelectQueryExt>();
     auto where = query->where();
     auto prehwere = query->prewhere();
     if (where || prehwere)
@@ -936,9 +931,8 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
         size_t wait_ms = use_expand_pipe ? 0 : setting.wait_runtime_filter_timeout;
         bool enable_bf_in_prewhere = setting.enable_rewrite_bf_into_prewhere;
         bool enable_range_cover =  setting.enable_range_cover;
-        //todo: need adjust_gap in settings
-        //double adjust_gap = setting.adjust_range_set_filter_rate;
-        double adjust_gap = 1.0;
+        const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(build_settings);
+        double adjust_gap = settings_ext.context->getOptimizerContext()->getSettingsRef().adjust_range_set_filter_rate;
         std::vector<ASTPtr> rf_predicates(descriptions.size());
         std::vector<ASTPtr> rf_only_predicates(descriptions.size());
         std::vector<ASTPtr> rf_range_or_in_predicates(descriptions.size());
@@ -1064,10 +1058,9 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
         return;
     }
 
-    const auto & build_context_ext = BuildQueryPipelineSettingsExt::cast(build_context);
-
-    auto * query = query_info.query->as<ASTSelectQuery>();
-    bool use_expand_pipe = build_context_ext.is_expand;
+    const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(build_context);
+    auto * query = query_info.query->as<ASTSelectQueryExt>();
+    bool use_expand_pipe = settings_ext.is_expand;
     if (!use_expand_pipe && (query->where() || query->prewhere()))
     {
         std::vector<RuntimeFilterId> ids;
@@ -1082,7 +1075,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             ids.insert(ids.end(), prewhere_ids.begin(), prewhere_ids.end());
         }
 
-        // todo: need partition_filter
+        //todo: liyang453, need storage: need partition_filter
         //auto partition_filter = query_info.partition_filter;
         //if (query_info.partition_filter)
         ASTPtr partition_filter;
@@ -1096,20 +1089,18 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     Stopwatch stage_watch, total_watch;
     total_watch.start();
     stage_watch.start();
-    storage = DatabaseCatalog::instance().getTable(storage_id, build_context_ext.context);
-    initMetadataAndStorageSnapshot(build_context_ext.context);
+    storage = DatabaseCatalog::instance().getTable(storage_id, settings_ext.context);
+    initMetadataAndStorageSnapshot(settings_ext.context);
     auto * merge_tree_storage = dynamic_cast<MergeTreeData *>(storage.get());
 
-    //todo: need optimizer_index_projection_support settiings
-    //bool is_merge_tree = merge_tree_storage != nullptr;
-    //bool use_projection_index = build_context_ext.context->getSettingsRef().optimizer_index_projection_support && is_merge_tree && build_context.context->getSettingsRef().enable_ab_index_optimization;
-    // && is_merge_tree && !use_projection_index;
-    bool use_projection_index = false;
-    bool use_optimizer_projection_selection = false;
+    bool is_merge_tree = merge_tree_storage != nullptr;
+    auto optimizerSettings = settings_ext.context->getOptimizerContext()->getSettingsRef();
+    bool use_projection_index = optimizerSettings.optimizer_index_projection_support && is_merge_tree && optimizerSettings.enable_ab_index_optimization;
+    bool use_optimizer_projection_selection =  optimizerSettings.optimizer_projection_support && is_merge_tree && !use_projection_index;
     
     LOG_INFO(getLogger("test"), "initTableScan, limit={}, !empty={}", query->limitLength() ? serializeAST(*query->limitLength()) : "nothing", use_projection_index || use_optimizer_projection_selection);
 
-    rewriteInForBucketTable(build_context_ext.context);
+    rewriteInForBucketTable(settings_ext.context);
     stage_watch.start();
     /// Rewrite runtime filter
     rewriteDynamicFilter(query_info, build_context, use_expand_pipe);
@@ -1120,11 +1111,11 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     SelectQueryOptions options;
 
     stage_watch.restart();
-    auto interpreter = std::make_shared<InterpreterSelectQuery>(query_info.query, build_context_ext.context, options);
+    auto interpreter = std::make_shared<InterpreterSelectQuery>(query_info.query, settings_ext.context, options);
     interpreter->execute();
     auto backup_input_order_info = query_info.input_order_info;
     query_info = interpreter->getQueryInfo();
-    query_info = fillQueryInfo(build_context_ext.context);
+    query_info = fillQueryInfo(settings_ext.context);
 
     LOG_DEBUG(log, "init pipeline stage run time: make up query info, {} ms", stage_watch.elapsedMilliseconds());
 
@@ -1154,7 +1145,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             }
 
             msg += fmt::format(
-                "actions: {}\n", ProjectionStepExt::createActions(inline_expressions, input_columns, build_context_ext.context)->dumpDAG());
+                "actions: {}\n", ProjectionStepExt::createActions(inline_expressions, input_columns, settings_ext.context)->dumpDAG());
 
             // msg += fmt::format("output_columns: {}\n required_columns: {}", column_alias, required_columns.toString());
 
@@ -1175,33 +1166,26 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     stage_watch.restart();
     LOG_DEBUG(log, "init pipeline stage run time: projection match, {} ms", stage_watch.elapsedMilliseconds());
 
-    size_t max_streams = build_context_ext.context->getSettingsRef().max_threads;
-    if (max_block_size < build_context_ext.context->getSettingsRef().max_block_size)
+    size_t max_streams = settings_ext.context->getSettingsRef().max_threads;
+    if (max_block_size < settings_ext.context->getSettingsRef().max_block_size)
         max_streams = 1; // single block single stream.
 
-    //todo: need to convet max_streams_to_max_threads_ratio
-    // auto max_streams_to_max_threads_ratio = build_context_ext.context->getSettingsRef().max_streams_to_max_threads_ratio;
-    auto max_streams_to_max_threads_ratio = 1;
+    auto max_streams_to_max_threads_ratio = optimizerSettings.max_streams_to_max_threads_ratio;
     if (max_streams > 1 && !storage->isRemote())
-        max_streams *= max_streams_to_max_threads_ratio;
+        max_streams = size_t(max_streams * max_streams_to_max_threads_ratio);
 
     if (execute_plan.empty())
     {
-        if (auto * cloud_merge_tree = dynamic_cast<MergeTreeData *>(storage.get()))
-        {
-            //todo: need cloud_merge_tree
-            //cloud_merge_tree->source_task_filter = build_context.distributed_settings.source_task_filter;
-        }
         // Here columns of PREWHERE being included in required columns is by design
         QueryPlan storage_plan;
-        using Nodes = std::list<QueryPlan::Node>;
+        using Nodes = std::list<QueryPlanExt::Node>;
         Nodes nodes;
         storage->read(
             storage_plan,
             getRequiredColumns(),
             storage_snapshot,
             query_info,
-            build_context_ext.context,
+            settings_ext.context,
             QueryProcessingStage::Enum::FetchColumns,
             max_block_size,
             max_streams);
@@ -1209,36 +1193,30 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             for (auto & node : nodes)
             {
                 node.step->setStepDescription("Read from MergeTree");
-                //todo:need AttributeDescriptions
+                //todo: liyang453, other feat: need AttributeDescriptions
                 //auto & att_descs = node.step->getAttributeDescriptions();
                 //if (att_descs.empty())
                 //    continue;
                 //for (auto & desc : att_descs)
                 //{
                 //    if (!attribute_descriptions.contains(desc.first))
-                //    attribute_descriptions.emplace(desc.first, desc.second);
+                //         attribute_descriptions.emplace(desc.first, desc.second);
                 //}
             }
         }
 
         Pipe pipe;
-        //todo: need add getCacheHolder
-        //if (pipe.getCacheHolder())
-        //    pipeline.addCacheHolder(pipe.getCacheHolder());
-
         std::shared_ptr<IQueryPlanStep> step;
         if (pipe.empty())
         {
             auto header = storage_snapshot->getSampleBlockForColumns(getRequiredColumns());
-            //todo:need InterpreterSelectQuery::generateNullSourcePipe
-            //auto null_pipe = InterpreterSelectQuery::generateNullSourcePipe(header, query_info);
-            Pipe null_pipe;
+            Pipe null_pipe(std::make_shared<NullSource>(header));
             auto read_from_pipe = std::make_shared<ReadFromPreparedSource>(std::move(null_pipe));
             read_from_pipe->setStepDescription("Read from NullSource");
             step = read_from_pipe;
         }
         else
-            step = std::make_shared<ReadFromStorageStep>(std::move(pipe), "ReadFromStorageStep", build_context_ext.context, query_info);
+            step = std::make_shared<ReadFromStorageStep>(std::move(pipe), "ReadFromStorageStep", settings_ext.context, query_info);
 
 
         if (auto * source = dynamic_cast<ISourceStep *>(step.get()))
@@ -1259,7 +1237,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     }
 
     MergeTreeDataSelectExecutor merge_tree_reader{*merge_tree_storage};
-    auto context = build_context_ext.context;
+    auto context = settings_ext.context;
     Pipes pipes;
 
     // num of pipes may be smaller than num of plan elements since MergeTreeDataSelectExecutor
@@ -1287,7 +1265,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
                 projection_query_info.prewhere_info = std::make_shared<PrewhereInfo>(*projection_query_info.prewhere_info);
                 projection_query_info.prewhere_info->prewhere_actions = plan_element.prewhere_actions;
             }
-            //todo:need MergeTreeData::DeleteBitmapGetter
+            //todo: liyang453, need storage: need MergeTreeData::DeleteBitmapGetter
             //MergeTreeData::DeleteBitmapGetter null_getter = [](auto & /*part*/) { return nullptr; };
             plan_element_storage_snapshot->addProjection(plan_element.projection_desc);
             std::vector<AlterConversionsPtr> alter_conversions;
@@ -1314,7 +1292,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
         }
         else
         {
-            //todo: need DeleteBitmapGetter
+            //todo: liyang453, need storage: need MergeTreeData::DeleteBitmapGetter
             //MergeTreeData::DeleteBitmapGetter delete_bitmap_getter = [](const auto & part) { return part->getDeleteBitmap(); };
             //query_info_for_index.read_bitmap_index = plan_element.read_bitmap_index;
             auto query_info_for_index = query_info;
@@ -1372,10 +1350,9 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
 
             const auto & header_before_aggregation = pipe.getHeader();
 
-            auto params = aggregate_step.getParams();
-            ColumnNumbers keys_positions(params.keys_size);
-            for (size_t i = 0; i < params.keys_size; ++i)
-                keys_positions[i] = header_before_aggregation.getPositionByName(params.keys[i]);
+            ColumnNumbers keys;
+            for (const auto & key : aggregate_step.getKeys())
+                keys.push_back(header_before_aggregation.getPositionByName(key));
 
             AggregateDescriptions aggregates = aggregate_step.getParams().aggregates;
             AggregatingTransformParamsPtr transform_params;
@@ -1487,7 +1464,6 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     step->initializePipeline(pipeline, build_context);
 
     setQuotaAndLimits(pipeline, options, build_context);
-
     std::ostringstream step_desc;
     bool first = true;
     for (auto & plan_element: execute_plan)
@@ -1505,9 +1481,9 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             step_desc << plan_element.part_group.partsNum() << " parts from raw data";
     }
     setStepDescription(step_desc.str());
-    //todo: need RuntimeAttributeDescription
-    //RuntimeAttributeDescription tablescan_desc;
-    //tablescan_desc.description = step_desc.str();
+    RuntimeAttributeDescription tablescan_desc;
+    tablescan_desc.description = step_desc.str();
+    //todo: liyang453, other feat: need attribute_descriptions in base class
     //attribute_descriptions.emplace("TableScanDescription", tablescan_desc);
 
     LOG_DEBUG(log, "init pipeline total run time: {} ms, table scan descriptiion: {}", total_watch.elapsedMilliseconds(), step_desc.str());
@@ -1517,7 +1493,7 @@ std::shared_ptr<IQueryPlanStep> TableScanStepExt::copy(ContextPtr) const
 {
     SelectQueryInfo copy_query_info = query_info; // fixme@kaixi: deep copy here
     copy_query_info.query = query_info.query->clone();
-    // todo: need partition_filter
+    //todo: liyang453, need storage: need partition_filter
     //if (query_info.partition_filter)
     //    copy_query_info.partition_filter = query_info.partition_filter->clone();
 
@@ -1568,16 +1544,16 @@ void TableScanStepExt::allocate(ContextPtr context)
     query_info.syntax_analyzer_result = tree_rewriter_result;
     // make set for IN statements for subsequent partition pruning
     query_info = fillQueryInfo(context);
-    //tood: need partition_filter;
+    //tood: liyang453, need storage: need partition_filter;
     //makeSetsForIndex(query_info.partition_filter, context, query_info.sets, source);
     original_table = storage_id.table_name;
-    //todo: need IStorage add prepareTableRead
+    //todo: liyang453, need storage: need IStorage add prepareTableRead
     //storage_id = storage->prepareTableRead(getRequiredColumns(), query_info, context);
     //size_t shards = context->tryGetCurrentWorkerGroup() ? context->getCurrentWorkerGroup()->getShardsInfo().size() : 1;
     size_t shards=1;
     if (shards > 1)
     {
-        ASTSelectQuery * select = query_info.query->as<ASTSelectQuery>();
+        ASTSelectQuery * select = query_info.query->as<ASTSelectQueryExt>();
         ASTPtr rewrite_ast = query_info.query->clone();
         if (select && select->sampleSize())
             query_info.query = rewrite_ast;
@@ -1607,7 +1583,7 @@ void TableScanStepExt::allocate(ContextPtr context)
 
 bool TableScanStepExt::hasLimit() const
 {
-    auto * query = query_info.query->as<ASTSelectQuery>();
+    auto * query = query_info.query->as<ASTSelectQueryExt>();
     return query->limitLength().get();
 }
 
@@ -1793,7 +1769,7 @@ Names TableScanStepExt::getRequiredColumns(GetFlags flags) const
     {
         for (const auto & item : inline_expressions)
         {
-            // todo: need functionCanUseBitmapIndex
+            //todo: liyang453, need storage: need functionCanUseBitmapIndex
             //const auto * func = item.second->as<ASTFunction>();
             //if (func && functionCanUseBitmapIndex(*func))
                 add_columns_in_expr(item.second);
@@ -1813,7 +1789,7 @@ ASTPtr TableScanStepExt::getPrewhere() const
     if (!query_info.query) 
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not set");
 
-    auto * select_query = query_info.query->as<ASTSelectQuery>();
+    auto * select_query = query_info.query->as<ASTSelectQueryExt>();
     if (!select_query)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not a ASTSelectQuery");
 
@@ -1842,18 +1818,9 @@ NameToNameMap TableScanStepExt::getAliasToColumnMap() const
     return ret;
 }
 
-//todo: need prepared_statement
-/*
-void TableScanStepExt::prepare(const PreparedStatementContext & prepared_context)
-{
-    prepared_context.prepare(query_info.partition_filter);
-    prepared_context.prepare(query_info.query);
-}
-*/
-
 bool TableScanStepExt::hasFunctionCanUseBitmapIndex() const
 {
-    //todo: need MergeTree/Index/BitmapIndexHelper
+    //todo: liyang453, need storage: need MergeTree/Index/BitmapIndexHelper
     //for (const auto & item : inline_expressions)
     //{
         //const auto * func = item.second->as<ASTFunction>();
@@ -1879,7 +1846,7 @@ void TableScanStepExt::fillQueryInfoV2(ContextPtr context)
     if (!query_info.query) 
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not set");
 
-    auto * select_query = query_info.query->as<ASTSelectQuery>();
+    auto * select_query = query_info.query->as<ASTSelectQueryExt>();
     if (!select_query)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not a ASTSelectQuery");
 
@@ -1896,7 +1863,7 @@ void TableScanStepExt::fillQueryInfoV2(ContextPtr context)
         query_info.prewhere_info = std::make_shared<PrewhereInfo>(prewhere_action, prewhere->getColumnName());
     }
 
-    //todo: need impl MergeTreeIndexContext
+    //todo: liyang453, need storage: need impl MergeTreeIndexContext
     /// 4. build index context
     //query_info.index_context = std::make_shared<MergeTreeIndexContext>();
 }
@@ -1912,11 +1879,130 @@ Names TableScanStepExt::getRequiredColumnsAndPartitionColumns() const
 {
     auto columns = getRequiredColumns();
     ASTPtr partition_filter;
-    //todo: need to add partition_filter in query_info;
+    //todo: liyang453, need storage: need to add partition_filter in query_info;
     // auto columns_of_partition_filter = SymbolsExtractor::extract(query_info.partition_filter);
     auto columns_of_partition_filter = SymbolsExtractor::extract(partition_filter);
     columns.insert(columns.end(), columns_of_partition_filter.begin(), columns_of_partition_filter.end());
     return columns;
+}
+
+StreamLocalLimits getLimitsForStorage(const Settings & settings, const SelectQueryOptions & options)
+{
+    StreamLocalLimits limits;
+    limits.mode = LimitsMode::LIMITS_TOTAL;
+    limits.size_limits = SizeLimits(settings.max_rows_to_read, settings.max_bytes_to_read, settings.read_overflow_mode);
+    limits.speed_limits.max_execution_time = settings.max_execution_time;
+    limits.timeout_overflow_mode = settings.timeout_overflow_mode;
+
+    /** Quota and minimal speed restrictions are checked on the initiating server of the request, and not on remote servers,
+      *  because the initiating server has a summary of the execution of the request on all servers.
+      *
+      * But limits on data size to read and maximum execution time are reasonable to check both on initiator and
+      *  additionally on each remote server, because these limits are checked per block of data processed,
+      *  and remote servers may process way more blocks of data than are received by initiator.
+      *
+      * The limits to throttle maximum execution speed is also checked on all servers.
+      */
+    if (options.to_stage == QueryProcessingStage::Complete)
+    {
+        limits.speed_limits.min_execution_rps = settings.min_execution_speed;
+        limits.speed_limits.min_execution_bps = settings.min_execution_speed_bytes;
+    }
+
+    limits.speed_limits.max_execution_rps = settings.max_execution_speed;
+    limits.speed_limits.max_execution_bps = settings.max_execution_speed_bytes;
+    limits.speed_limits.timeout_before_checking_execution_speed = settings.timeout_before_checking_execution_speed;
+
+    return limits;
+}
+
+void TableScanStepExt::toProto(Protos::TableScanStepExt & proto, bool for_hash_equals) const
+{
+    ProtosSerDerHelper::toProto(storage_id, *proto.mutable_storage_id());
+    for (auto & [name, c_alias] : column_alias)
+    {
+        auto proto_element = proto.add_column_alias();
+        proto_element->set_name(name);
+        proto_element->set_alias(c_alias);
+    }
+
+    ProtosSerDerHelper::toProto(query_info, *proto.mutable_query_info());
+    proto.set_max_block_size(max_block_size);
+
+    serializeAssignmentsToProto(inline_expressions, *proto.mutable_inline_expressions());
+
+    if (pushdown_aggregation)
+    {
+        pushdown_aggregation->toProto(*proto.mutable_pushdown_aggregation());
+    }
+    if (pushdown_projection)
+    {
+        pushdown_projection->toProto(*proto.mutable_pushdown_projection());
+    }
+    if (pushdown_filter)
+    {
+        pushdown_filter->toProto(*proto.mutable_pushdown_filter());
+    }
+    if (output_stream)
+    {
+        ProtosSerDerHelper::toProto(output_stream.value(), *proto.mutable_output_stream());
+    }
+    ProtosSerDerHelper::toProto(table_output_stream, *proto.mutable_table_output_stream());
+}
+
+std::shared_ptr<TableScanStepExt> TableScanStepExt::fromProto(const Protos::TableScanStepExt & proto, ContextPtr context)
+{
+    auto storage_id = context->getOptimizerContext()->getSettingsRef().enable_prune_source_plan_segment ? ProtosSerDerHelper::tryFromProto(proto.storage_id(), context)
+                                                                            : ProtosSerDerHelper::fromProto(proto.storage_id(), context);
+    NamesWithAliases column_alias;
+    for (const auto & proto_element : proto.column_alias())
+    {
+        auto name = proto_element.name();
+        auto alias = proto_element.alias();
+        column_alias.emplace_back(name, alias);
+    }
+    SelectQueryInfo query_info;
+    ProtosSerDerHelper::fillFromProto(query_info, proto.query_info());
+    auto max_block_size = proto.max_block_size();
+    auto inline_expressions = deserializeAssignmentsFromProto(proto.inline_expressions());
+
+    std::shared_ptr<AggregatingStepExt> pushdown_aggregation;
+    std::shared_ptr<ProjectionStepExt> pushdown_projection;
+    std::shared_ptr<FilterStepExt> pushdown_filter;
+    std::optional<DataStream> output_stream;
+    DataStream table_output_stream;
+    if (proto.has_pushdown_aggregation())
+        pushdown_aggregation = AggregatingStepExt::fromProto(proto.pushdown_aggregation(), context);
+
+    if (proto.has_pushdown_projection())
+        pushdown_projection = ProjectionStepExt::fromProto(proto.pushdown_projection(), context);
+    if (proto.has_pushdown_filter())
+        pushdown_filter = FilterStepExt::fromProto(proto.pushdown_filter(), context);
+    if (proto.has_output_stream())
+    {
+        output_stream = std::make_optional<DataStream>();
+        ProtosSerDerHelper::fillFromProto(output_stream.value(), proto.output_stream());
+    }
+    if (proto.has_table_output_stream())
+    {
+        ProtosSerDerHelper::fillFromProto(table_output_stream, proto.table_output_stream());
+    }
+
+    auto step = std::make_shared<TableScanStepExt>(
+        context,
+        *output_stream,
+        *storage_id,
+        column_alias,
+        query_info,
+        max_block_size,
+        String{} /*alias*/,
+        inline_expressions,
+        pushdown_aggregation,
+        pushdown_projection,
+        pushdown_filter,
+        std::move(table_output_stream));
+
+    return step;
 }
 
 }

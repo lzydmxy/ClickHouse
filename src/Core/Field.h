@@ -795,6 +795,9 @@ private:
     }
 };
 
+class ReadBuffer;
+Field getBinaryValue(UInt8 type, ReadBuffer & buf);
+
 #undef DBMS_MIN_FIELD_SIZE
 
 

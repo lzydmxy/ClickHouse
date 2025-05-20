@@ -136,6 +136,7 @@ private:
     void setSinks(const Pipe::ProcessorGetterWithStreamKind & getter);
 
     friend class QueryPipelineBuilder;
+    friend class QueryPipelineBuilderHelper;
     friend class QueryPipeline;
 };
 

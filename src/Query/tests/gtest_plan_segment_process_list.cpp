@@ -35,9 +35,9 @@ Block createBlock()
     return Block(columns);
 }
 
-QueryPlan generateEmptyPlan()
+QueryPlanExt generateEmptyPlan()
 {
-    QueryPlan plan;
+    QueryPlanExt plan;
 
     Block block = createBlock();
     auto step = std::make_unique<ReadNothingStep>(block);

@@ -4,6 +4,10 @@
 #include <Columns/ColumnSparse.h>
 #include <Query/Interpreters/JoinUtilsExt.h>
 
+#include <DataTypes/DataTypeLowCardinality.h>
+#include <DataTypes/DataTypeNullable.h>
+
+
 namespace DB
 {
 
@@ -14,6 +18,20 @@ DataTypePtr tryConvertTypeToNullable(const DataTypePtr & type)
 {
     if (canBecomeNullable(type))
         return convertTypeToNullable(type);
+    return type;
+}
+
+DataTypePtr removeTypeNullability(const DataTypePtr & type)
+{
+    if (const auto * local_type = typeid_cast<const DataTypeLowCardinality *>(type.get()))
+    {
+        const auto & dict_type = local_type->getDictionaryType();
+        return std::make_shared<DataTypeLowCardinality>(removeNullable(dict_type));
+    }
+    else if (type->isNullable())
+    {
+        return removeNullable(type);
+    }
     return type;
 }
 
@@ -50,6 +68,13 @@ ColumnPtr tryConvertColumnToNullable(ColumnPtr col)
         }
     }
     return nullptr;
+}
+
+bool isJoinCompatibleTypes(const DataTypePtr & left, const DataTypePtr & right)
+{
+    auto left_base = removeNullable(recursiveRemoveLowCardinality(left));
+    auto right_base = removeNullable(recursiveRemoveLowCardinality(right));
+    return left_base->equals(*right_base);
 }
 
 }

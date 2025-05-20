@@ -2,20 +2,27 @@
 #include <IO/Operators.h>
 #include <Interpreters/ExpressionActions.h>
 #include <Processors/Transforms/ExpressionTransform.h>
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterUtils.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/Transforms/FilterTransformExt.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Common/JSONBuilder.h>
 #include <Common/logger_useful.h>
 #include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
+
 namespace DB
 {
 
+FilterStepExt::FilterStepExt(const DataStream & input_stream_, ActionsDAGPtr actions_dag_, String filter_column_name_, bool remove_filter_column_)
+:  FilterStep(input_stream_, actions_dag_, filter_column_name_, remove_filter_column_)
+{
+}
+
 FilterStepExt::FilterStepExt(const DataStream & input_stream_, const ConstASTPtr & filter_, bool remove_filter_column_)
-    : FilterStep(input_stream_, nullptr, filter_->getColumnName(), remove_filter_column_)
+    : FilterStep(input_stream_, filter_->getColumnName(), remove_filter_column_)
     , filter(filter_)
 {
 }
@@ -71,7 +78,7 @@ ConstASTPtr FilterStepExt::rewriteRuntimeFilter(const ConstASTPtr & filter, Quer
 
     bool only_bf = context_ext.context->getOptimizerContext()->getSettingsRef().enable_rewrite_bf_into_prewhere;
 
-    ASTs predicates = std::move(filters.second);
+    ConstASTs predicates = std::move(filters.second);
 
     if (context_ext.context->getOptimizerContext()->getSettingsRef().enable_two_stages_prewhere)
     {
@@ -150,6 +157,27 @@ std::vector<ConstASTPtr> FilterStepExt::removeLargeInValueList(const std::vector
         removed_large_in_value_list.emplace_back(predicate);
     }
     return removed_large_in_value_list;
+}
+
+std::shared_ptr<FilterStepExt> FilterStepExt::fromProto(const Protos::FilterStepExt & proto, ContextPtr)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    auto filter = deserializeASTFromProto(proto.filter());
+    auto remove_filter_column = proto.remove_filter_column();
+    auto step = std::make_shared<FilterStepExt>(base_input_stream, filter, remove_filter_column);
+    step->setStepDescription(step_description);
+    return step;
+}
+
+void FilterStepExt::toProto(Protos::FilterStepExt & proto, bool) const
+{
+    if (actions_dag)
+    {
+        throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "actions dag is not supported in protobuf");
+    }
+    ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
+    serializeASTToProto(filter, *proto.mutable_filter());
+    proto.set_remove_filter_column(remove_filter_column);
 }
 
 }

@@ -1,17 +1,16 @@
 #include <Query/Optimizer/Cascades/Memo.h>
 
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>
-#include <QueryPlan/AnyStep.h>
-#include <QueryPlan/MultiJoinStep.h>
+#include <Query/Processors/QueryPlan/AnyStepExt.h>
 
 namespace DB
 {
 GroupExprPtr Memo::insertGroupExpr(GroupExprPtr group_expr, CascadesContext & context, GroupId target)
 {
     // If leaf, then just return
-    if (group_expr->getStep()->getType() == IQueryPlanStep::Type::Any)
+    if (getQueryPlanStepType(group_expr->getStep()) == QueryPlanStepType::AnyStepExt)
     {
-        const auto * leaf = dynamic_cast<const AnyStep *>(group_expr->getStep().get());
+        const auto * leaf = dynamic_cast<const AnyStepExt *>(group_expr->getStep().get());
         group_expr->setGroupId(leaf->getGroupId());
         return nullptr;
     }

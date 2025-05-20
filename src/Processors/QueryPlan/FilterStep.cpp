@@ -52,6 +52,13 @@ FilterStep::FilterStep(
 {
 }
 
+FilterStep::FilterStep(const DataStream & input_stream_, const String & filter_column_name_, bool remove_filter_column_)
+    : ITransformingStep(input_stream_, input_stream_.header, {})
+    , filter_column_name(filter_column_name_)
+    , remove_filter_column(remove_filter_column_)
+{
+}
+
 void FilterStep::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
     auto expression = std::make_shared<ExpressionActions>(actions_dag, settings.getActionsSettings());

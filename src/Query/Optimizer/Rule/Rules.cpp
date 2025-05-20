@@ -1,4 +1,3 @@
-#include <memory>
 #include <Query/Optimizer/Rule/Rules.h>
 
 #include <Query/Optimizer/Rewriter/RemoveApply.h>
@@ -31,6 +30,7 @@
 #include <Query/Optimizer/Rule/Rewrite/SwapAdjacentRules.h>
 #include <Query/Optimizer/Rule/Rewrite/TopNRules.h>
 #include <Query/Optimizer/Rule/Rewrite/JoinUsingToJoinOn.h>
+
 
 namespace DB
 {

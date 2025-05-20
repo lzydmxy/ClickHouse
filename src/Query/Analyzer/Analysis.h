@@ -13,7 +13,7 @@
 #include <Interpreters/CollectJoinOnKeysVisitor.h>
 #include <Parsers/ASTFunction.h>
 #include <Parsers/ASTOrderByElement.h>
-#include <Parsers/ASTSelectQuery.h>
+#include <Query/Parsers/ASTSelectQueryExt.h>
 #include <Parsers/ASTSubquery.h>
 #include <Parsers/ASTTablesInSelectQuery.h>
 #include <Parsers/ASTWindowDefinition.h>
@@ -26,21 +26,6 @@
 #include <vector>
 #include <unordered_map>
 
-namespace std
-{
-
-template <>
-struct hash<DB::StorageID>
-{
-    using argument_type = DB::StorageID;
-    using result_type = size_t;
-
-    result_type operator()(const argument_type & storage_id) const
-    {
-        return storage_id.getQualifiedName().hash();
-    }
-};
-}
 
 namespace DB
 {
@@ -61,7 +46,7 @@ struct JoinUsingAnalysis
     DataTypes left_coercions;
     std::vector<size_t> right_join_fields;
     DataTypes right_coercions;
-    /// field index of scope -> join key index of using list
+    // field index of scope -> join key index of using list
     std::unordered_map<size_t, size_t> left_join_field_reverse_map;
     std::unordered_map<size_t, size_t> right_join_field_reverse_map;
     std::vector<bool> require_right_keys;
@@ -94,14 +79,14 @@ struct JoinInequalityCondition
 {
     ASTPtr left_ast;
     ASTPtr right_ast;
-    ASOF::Inequality inequality;
+    ASOFJoinInequality inequality;
     DataTypePtr left_coercion;
     DataTypePtr right_coercion;
 
     JoinInequalityCondition(
         ASTPtr left_ast_,
         ASTPtr right_ast_,
-        ASOF::Inequality inequality_,
+        ASOFJoinInequality inequality_,
         DataTypePtr left_coercion_,
         DataTypePtr right_coercion_)
         : left_ast(std::move(left_ast_)),
@@ -126,7 +111,7 @@ struct JoinOnAnalysis
     std::vector<JoinInequalityCondition> inequality_conditions;
     std::vector<ASTPtr> complex_expressions;
 
-    ASOF::Inequality getAsofInequality()
+    ASOFJoinInequality getAsofInequality()
     {
         return inequality_conditions.front().inequality;
     }
@@ -146,7 +131,7 @@ struct JoinOnAnalysis
 struct GroupByAnalysis
 {
     std::vector<ASTPtr> grouping_expressions;
-    std::vector<std::vector<ASTPtr>> grouping_sets;
+    std::vector<ASTs> grouping_sets;
 };
 
 struct AggregateAnalysis
@@ -273,11 +258,11 @@ struct Analysis
     void setScope(IAST &, ScopePtr);
     ScopePtr getScope(IAST &);
 
-    std::unordered_map<ASTSelectQuery *, ScopePtr> query_without_from_scopes;
-    void setQueryWithoutFromScope(ASTSelectQuery &, ScopePtr);
-    ScopePtr getQueryWithoutFromScope(ASTSelectQuery &);
+    std::unordered_map<ASTSelectQueryExt *, ScopePtr> query_without_from_scopes;
+    void setQueryWithoutFromScope(ASTSelectQueryExt &, ScopePtr);
+    ScopePtr getQueryWithoutFromScope(ASTSelectQueryExt &);
 
-    /// table storage scopes doesn't contain alias columns
+    // table storage scopes doesn't contain alias columns
     std::unordered_map<ASTIdentifier *, ScopePtr> table_storage_scopes;
     void setTableStorageScope(ASTIdentifier &, ScopePtr);
     ScopePtr getTableStorageScope(ASTIdentifier &);
@@ -299,7 +284,7 @@ struct Analysis
     }
     DataTypePtr getExpressionType(const ASTPtr & expression);
 
-    /// ASTIdentifier, ASTFieldReference
+    // ASTIdentifier, ASTFieldReference
     std::unordered_map<ASTPtr, ResolvedField> column_references;
     void setColumnReference(const ASTPtr & ast, const ResolvedField & resolved);
     std::optional<ResolvedField> tryGetColumnReference(const ASTPtr & ast);
@@ -309,7 +294,7 @@ struct Analysis
      * alias columns are used.
      */
 
-    /// ASTTableIdentifier -> index of table storage scope
+    // ASTTableIdentifier -> index of table storage scope
     std::unordered_map<const IAST *, std::set<size_t>> read_columns;
     void addReadColumn(const IAST * table_ast, size_t field_index);
     void addReadColumn(const ResolvedField & resolved_field, bool add_used);
@@ -321,36 +306,36 @@ struct Analysis
     std::optional<ResolvedField> tryGetLambdaArgumentReference(const ASTPtr & ast);
 
     /// Aggregates
-    ListMultimap<ASTSelectQuery *, AggregateAnalysis> aggregate_results;
-    std::vector<AggregateAnalysis> & getAggregateAnalysis(ASTSelectQuery & select_query);
-    bool needAggregate(ASTSelectQuery & select_query);
+    ListMultimap<ASTSelectQueryExt *, AggregateAnalysis> aggregate_results;
+    std::vector<AggregateAnalysis> & getAggregateAnalysis(ASTSelectQueryExt & select_query);
+    bool needAggregate(ASTSelectQueryExt & select_query);
 
-    ListMultimap<ASTSelectQuery *, std::pair<String, UInt16>> interest_events;
-    std::vector<std::pair<String, UInt16>> & getInterestEvents(ASTSelectQuery & select_query);
+    ListMultimap<ASTSelectQueryExt *, std::pair<String, UInt16>> interest_events;
+    std::vector<std::pair<String, UInt16>> & getInterestEvents(ASTSelectQueryExt & select_query);
 
-    ListMultimap<ASTSelectQuery *, ASTFunctionPtr> grouping_operations;
-    std::vector<ASTFunctionPtr> & getGroupingOperations(ASTSelectQuery & select_query);
+    ListMultimap<ASTSelectQueryExt *, ASTFunctionPtr> grouping_operations;
+    std::vector<ASTFunctionPtr> & getGroupingOperations(ASTSelectQueryExt & select_query);
 
     /// Windows
-    ListMultimap<ASTSelectQuery *, WindowAnalysisPtr> window_results_by_select_query;
+    ListMultimap<ASTSelectQueryExt *, WindowAnalysisPtr> window_results_by_select_query;
     std::unordered_map<ASTPtr, WindowAnalysisPtr> window_results_by_ast;
-    void addWindowAnalysis(ASTSelectQuery & select_query, WindowAnalysisPtr analysis);
+    void addWindowAnalysis(ASTSelectQueryExt & select_query, WindowAnalysisPtr analysis);
     WindowAnalysisPtr getWindowAnalysis(const ASTPtr & ast);
-    std::vector<WindowAnalysisPtr> & getWindowAnalysisOfSelectQuery(ASTSelectQuery & select_query);
+    std::vector<WindowAnalysisPtr> & getWindowAnalysisOfSelectQuery(ASTSelectQueryExt & select_query);
 
     /// Subqueries
     std::unordered_map<ASTPtr, bool> subquery_support_semi_anti;
-    ListMultimap<ASTSelectQuery * , ASTPtr> scalar_subqueries;
-    std::vector<ASTPtr> & getScalarSubqueries(ASTSelectQuery & select_query);
+    ListMultimap<ASTSelectQueryExt * , ASTPtr> scalar_subqueries;
+    std::vector<ASTPtr> & getScalarSubqueries(ASTSelectQueryExt & select_query);
 
-    ListMultimap<ASTSelectQuery *, ASTPtr> in_subqueries;
-    std::vector<ASTPtr> & getInSubqueries(ASTSelectQuery & select_query);
+    ListMultimap<ASTSelectQueryExt *, ASTPtr> in_subqueries;
+    std::vector<ASTPtr> & getInSubqueries(ASTSelectQueryExt & select_query);
 
-    ListMultimap<ASTSelectQuery *, ASTPtr> exists_subqueries;
-    std::vector<ASTPtr> & getExistsSubqueries(ASTSelectQuery & select_query);
+    ListMultimap<ASTSelectQueryExt *, ASTPtr> exists_subqueries;
+    std::vector<ASTPtr> & getExistsSubqueries(ASTSelectQueryExt & select_query);
 
-    ListMultimap<ASTSelectQuery *, ASTPtr> quantified_comparison_subqueries;
-    std::vector<ASTPtr> & getQuantifiedComparisonSubqueries(ASTSelectQuery & select_query);
+    ListMultimap<ASTSelectQueryExt *, ASTPtr> quantified_comparison_subqueries;
+    std::vector<ASTPtr> & getQuantifiedComparisonSubqueries(ASTSelectQueryExt & select_query);
 
     /// CTE(common table expressions)
     ASTMap<CTEAnalysis> common_table_expressions;
@@ -358,9 +343,9 @@ struct Analysis
     std::optional<CTEAnalysis> tryGetCTEAnalysis(ASTSubquery & subquery);
 
     /// PreWhere
-    std::unordered_map<ASTSelectQuery *, ASTPtr> pre_wheres;
-    void setPreWhere(ASTSelectQuery & select_query, const ASTPtr & pre_wheres);
-    ASTPtr tryGetPreWhere(ASTSelectQuery & select_query);
+    std::unordered_map<ASTSelectQueryExt *, ASTPtr> pre_wheres;
+    void setPreWhere(ASTSelectQueryExt & select_query, const ASTPtr & pre_wheres);
+    ASTPtr tryGetPreWhere(ASTSelectQueryExt & select_query);
 
     /// Join
     std::unordered_map<ASTTableJoin *, JoinUsingAnalysis> join_using_results;
@@ -375,42 +360,42 @@ struct Analysis
     const LinkedHashMap<const IAST *, StorageAnalysis> & getStorages() const;
 
     /// Select
-    std::unordered_map<ASTSelectQuery *, ASTs> select_expressions;
-    ASTs & getSelectExpressions(ASTSelectQuery & select_query);
+    std::unordered_map<ASTSelectQueryExt *, ASTs> select_expressions;
+    ASTs & getSelectExpressions(ASTSelectQueryExt & select_query);
 
     /// Group by
-    std::unordered_map<ASTSelectQuery *, GroupByAnalysis> group_by_results;
-    GroupByAnalysis & getGroupByAnalysis(ASTSelectQuery & select_query);
+    std::unordered_map<ASTSelectQueryExt *, GroupByAnalysis> group_by_results;
+    GroupByAnalysis & getGroupByAnalysis(ASTSelectQueryExt & select_query);
 
     /// Order by
-    std::unordered_map<ASTSelectQuery *, std::vector<std::shared_ptr<ASTOrderByElement>>> order_by_results;
-    std::vector<std::shared_ptr<ASTOrderByElement>> & getOrderByAnalysis(ASTSelectQuery & select_query);
+    std::unordered_map<ASTSelectQueryExt *, std::vector<std::shared_ptr<ASTOrderByElement>>> order_by_results;
+    std::vector<std::shared_ptr<ASTOrderByElement>> & getOrderByAnalysis(ASTSelectQueryExt & select_query);
 
     /// Limit By
-    std::unordered_map<ASTSelectQuery *, UInt64> limit_by_values;
-    UInt64 getLimitByValue(ASTSelectQuery & select_query);
+    std::unordered_map<ASTSelectQueryExt *, UInt64> limit_by_values;
+    UInt64 getLimitByValue(ASTSelectQueryExt & select_query);
 
-    ListMultimap<ASTSelectQuery *, ASTPtr> limit_by_items;
-    std::vector<ASTPtr> & getLimitByItem(ASTSelectQuery & select_query);
+    ListMultimap<ASTSelectQueryExt *, ASTPtr> limit_by_items;
+    std::vector<ASTPtr> & getLimitByItem(ASTSelectQueryExt & select_query);
 
     /// Limit By Offset
-    std::unordered_map<ASTSelectQuery *, UInt64> limit_by_offset_values;
-    UInt64 getLimitByOffsetValue(ASTSelectQuery & select_query);
+    std::unordered_map<ASTSelectQueryExt *, UInt64> limit_by_offset_values;
+    UInt64 getLimitByOffsetValue(ASTSelectQueryExt & select_query);
 
     /// Limit
-    std::unordered_map<ASTSelectQuery *, UInt64> limit_lengths;
-    UInt64 getLimitLength(ASTSelectQuery & select_query);
+    std::unordered_map<ASTSelectQueryExt *, UInt64> limit_lengths;
+    UInt64 getLimitLength(ASTSelectQueryExt & select_query);
 
     /// Offset
-    std::unordered_map<ASTSelectQuery *, UInt64> limit_offsets;
-    UInt64 getLimitOffset(ASTSelectQuery & select_query);
+    std::unordered_map<ASTSelectQueryExt *, UInt64> limit_offsets;
+    UInt64 getLimitOffset(ASTSelectQueryExt & select_query);
 
     /// Windows
     /// ASTSelectQuery -> (window name -> ASTWindow)
-    std::unordered_map<ASTSelectQuery *, std::unordered_map<String, ResolvedWindowPtr>> registered_windows;
-    void setRegisteredWindow(ASTSelectQuery &, const String &, ResolvedWindowPtr &);
-    ResolvedWindowPtr getRegisteredWindow(ASTSelectQuery &, const String &);
-    const std::unordered_map<String, ResolvedWindowPtr> & getRegisteredWindows(ASTSelectQuery &);
+    std::unordered_map<ASTSelectQueryExt *, std::unordered_map<String, ResolvedWindowPtr>> registered_windows;
+    void setRegisteredWindow(ASTSelectQueryExt &, const String &, ResolvedWindowPtr &);
+    ResolvedWindowPtr getRegisteredWindow(ASTSelectQueryExt &, const String &);
+    const std::unordered_map<String, ResolvedWindowPtr> & getRegisteredWindows(ASTSelectQueryExt &);
 
     /// Output format for ASTSelectQuery/ASTSelectWithUnionQuery
     std::unordered_map<IAST *, FieldDescriptions> output_descriptions;
@@ -451,8 +436,8 @@ struct Analysis
     std::optional<OutfileAnalysis> outfile_analysis;
     std::optional<OutfileAnalysis> & getOutfileInfo() { return outfile_analysis; }
 
-    std::unordered_map<ASTSelectQuery *, ArrayJoinAnalysis> array_join_analysis;
-    ArrayJoinAnalysis & getArrayJoinAnalysis(ASTSelectQuery & select_query);
+    std::unordered_map<ASTSelectQueryExt *, ArrayJoinAnalysis> array_join_analysis;
+    ArrayJoinAnalysis & getArrayJoinAnalysis(ASTSelectQueryExt & select_query);
 
     /// Insert
     std::optional<InsertAnalysis> insert_analysis;
@@ -462,14 +447,9 @@ struct Analysis
      * A difference with read_columns is, columns used in alias columns are not included.
      */
     std::unordered_map<StorageID, LinkedHashSet<String>> used_columns;
-    void addUsedColumn(const StorageID & storage_id, const String & column)
-    {
-        used_columns[storage_id].emplace(column);
-    }
-    const std::unordered_map<StorageID, LinkedHashSet<String>> & getUsedColumns() const
-    {
-        return used_columns;
-    }
+    void addUsedColumn(const StorageID & storage_id, const String & column);
+
+    const std::unordered_map<StorageID, LinkedHashSet<String>> & getUsedColumns() const;
 
     /// Which functions are used in query.
     std::set<String> used_functions;

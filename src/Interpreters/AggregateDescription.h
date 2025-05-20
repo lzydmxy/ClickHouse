@@ -16,6 +16,8 @@ struct AggregateDescription
     Array parameters;        /// Parameters of the (parametric) aggregate function.
     Names argument_names;
     String column_name;      /// What name to use for a column with aggregate function values
+    ColumnNumbers arguments;
+    String mask_column;
 
     void explain(WriteBuffer & out, size_t indent) const; /// Get description for EXPLAIN query.
     void explain(JSONBuilder::JSONMap & map) const;

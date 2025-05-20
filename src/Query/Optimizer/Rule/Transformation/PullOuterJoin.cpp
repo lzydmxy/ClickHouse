@@ -1,9 +1,10 @@
 #include <Query/Optimizer/Rule/Transformation/PullOuterJoin.h>
 
 #include <Query/Optimizer/PredicateUtils.h>
+#include <Query/Common/NameToTypeExt.h>
 #include <Query/Optimizer/Rule/Patterns.h>
-#include <QueryPlan/JoinStep.h>
-#include <QueryPlan/ProjectionStep.h>
+#include <Query/Processors/QueryPlan/JoinStepExt.h>
+#include <Query/Processors/QueryPlan/ProjectionStepExt.h>
 
 namespace DB
 {
@@ -13,26 +14,26 @@ namespace DB
 ConstRefPatternPtr PullLeftJoinThroughInnerJoin::getPattern() const
 {
     static auto pattern = Patterns::join()
-        .matchingStep<JoinStep>([](const JoinStep & join_step) {
-            if (join_step.getStrictness() != ASTTableJoin::Strictness::Unspecified
-                && join_step.getStrictness() != ASTTableJoin::Strictness::All && join_step.getStrictness() != ASTTableJoin::Strictness::Any)
+        .matchingStep<JoinStepExt>([](const JoinStepExt & join_step) {
+            if (join_step.getStrictness() != JoinStrictness::Unspecified
+                && join_step.getStrictness() != JoinStrictness::All && join_step.getStrictness() != JoinStrictness::Any)
             {
                 return false;
             }
 
-            return join_step.getKind() == ASTTableJoin::Kind::Inner && PredicateUtils::isTruePredicate(join_step.getFilter())
+            return join_step.getKind() == JoinKind::Inner && PredicateUtils::isTruePredicate(join_step.getFilter())
                 && !join_step.isMagic() && !join_step.isOrdered();
         })
         .with(
             Patterns::join()
-                 .matchingStep<JoinStep>([](const JoinStep & join_step) {
-                     if (join_step.getStrictness() != ASTTableJoin::Strictness::Unspecified
-                         && join_step.getStrictness() != ASTTableJoin::Strictness::All
-                         && join_step.getStrictness() != ASTTableJoin::Strictness::Any)
+                 .matchingStep<JoinStepExt>([](const JoinStepExt & join_step) {
+                     if (join_step.getStrictness() != JoinStrictness::Unspecified
+                         && join_step.getStrictness() != JoinStrictness::All
+                         && join_step.getStrictness() != JoinStrictness::Any)
                      {
                          return false;
                      }
-                     return join_step.getKind() == ASTTableJoin::Kind::Left && PredicateUtils::isTruePredicate(join_step.getFilter())
+                     return join_step.getKind() == JoinKind::Left && PredicateUtils::isTruePredicate(join_step.getFilter())
                          && !join_step.isMagic() && !join_step.isOrdered();
                  })
                  .with(Patterns::any(), Patterns::any()),
@@ -41,8 +42,8 @@ ConstRefPatternPtr PullLeftJoinThroughInnerJoin::getPattern() const
 }
 
 static std::optional<PlanNodePtr> createNewJoin(
-    const JoinStep * inner_join,
-    const JoinStep * left_join,
+    const JoinStepExt * inner_join,
+    const JoinStepExt * left_join,
     PlanNodePtr first,
     PlanNodePtr second,
     PlanNodePtr C,
@@ -76,11 +77,11 @@ static std::optional<PlanNodePtr> createNewJoin(
     {
         output.emplace_back(item.name, item.type);
     }
-    auto new_left = std::make_shared<JoinStep>(
+    auto new_left = std::make_shared<JoinStepExt>(
         DataStreams{first->getStep()->getOutputStream(), C->getStep()->getOutputStream()},
-        DataStream{output},
-        ASTTableJoin::Kind::Inner,
-        ASTTableJoin::Strictness::All,
+        DataStream{ToColumnsWithTypeAndName(output)},
+        JoinKind::Inner,
+        JoinStrictness::All,
         context.getSettingsRef().max_threads,
         context.getSettingsRef().optimize_read_in_order,
         inner_join->getLeftKeys(),
@@ -88,10 +89,9 @@ static std::optional<PlanNodePtr> createNewJoin(
         inner_join->getKeyIdsNullSafe());
     new_left->setOrdered(inner_join->isOrdered());
     new_left->setSimpleReordered(inner_join->isSimpleReordered());
-    new_left->setHints(inner_join->getHints());
-    auto new_left_node = JoinNode::createPlanNode(context.nextNodeId(), std::move(new_left), {first, C});
+    auto new_left_node = JoinStepExtNode::createPlanNode(context.getOptimizerContext()->nextNodeId(), std::move(new_left), {first, C});
 
-    DataStream data_stream{output_stream};
+    DataStream data_stream{ToColumnsWithTypeAndName(output_stream)};
     if (output_stream.empty())
     {
         for (const auto & item : new_left_node->getStep()->getOutputStream().header)
@@ -104,10 +104,10 @@ static std::optional<PlanNodePtr> createNewJoin(
         }
     }
 
-    auto new_left_join = std::make_shared<JoinStep>(
+    auto new_left_join = std::make_shared<JoinStepExt>(
         DataStreams{new_left_node->getStep()->getOutputStream(), second->getStep()->getOutputStream()},
         data_stream,
-        ASTTableJoin::Kind::Left,
+        JoinKind::Left,
         left_join->getStrictness(),
         left_join->getMaxStreams(),
         left_join->getKeepLeftReadInOrder(),
@@ -123,16 +123,15 @@ static std::optional<PlanNodePtr> createNewJoin(
         false,
         left_join->isOrdered(),
         left_join->isSimpleReordered(),
-        left_join->getRuntimeFilterBuilders(),
-        left_join->getHints());
+        left_join->getRuntimeFilterBuilders());
 
-    return PlanNodeBase::createPlanNode(context.nextNodeId(), std::move(new_left_join), {new_left_node, second});
+    return PlanNodeBase::createPlanNode(context.getOptimizerContext()->nextNodeId(), std::move(new_left_join), {new_left_node, second});
 }
 
 TransformResult PullLeftJoinThroughInnerJoin::transformImpl(PlanNodePtr node, const Captures &, RuleContext & rule_context)
 {
-    const auto * inner_join = dynamic_cast<const JoinStep *>(node->getStep().get());
-    const auto * left_join = dynamic_cast<const JoinStep *>(node->getChildren()[0]->getStep().get());
+    const auto * inner_join = dynamic_cast<const JoinStepExt *>(node->getStep().get());
+    const auto * left_join = dynamic_cast<const JoinStepExt *>(node->getChildren()[0]->getStep().get());
 
     // A
     auto first = node->getChildren()[0]->getChildren()[0];
@@ -154,14 +153,14 @@ TransformResult PullLeftJoinThroughInnerJoin::transformImpl(PlanNodePtr node, co
 ConstRefPatternPtr PullLeftJoinProjectionThroughInnerJoin::getPattern() const
 {
     static auto pattern = Patterns::join()
-        .matchingStep<JoinStep>([](const JoinStep & join_step) {
-            return join_step.getKind() == ASTTableJoin::Kind::Inner && PredicateUtils::isTruePredicate(join_step.getFilter())
+        .matchingStep<JoinStepExt>([](const JoinStepExt & join_step) {
+            return join_step.getKind() == JoinKind::Inner && PredicateUtils::isTruePredicate(join_step.getFilter())
                 && !join_step.isMagic();
         })
         .with(
             Patterns::project().withSingle(Patterns::join()
-                                                 .matchingStep<JoinStep>([](const JoinStep & join_step) {
-                                                     return join_step.getKind() == ASTTableJoin::Kind::Left
+                                                 .matchingStep<JoinStepExt>([](const JoinStepExt & join_step) {
+                                                     return join_step.getKind() == JoinKind::Left
                                                          && PredicateUtils::isTruePredicate(join_step.getFilter()) && !join_step.isMagic();
                                                  })
                                                  .with(Patterns::any(), Patterns::any())),
@@ -170,9 +169,9 @@ ConstRefPatternPtr PullLeftJoinProjectionThroughInnerJoin::getPattern() const
 }
 TransformResult PullLeftJoinProjectionThroughInnerJoin::transformImpl(PlanNodePtr node, const Captures &, RuleContext & rule_context)
 {
-    const auto * inner_join = dynamic_cast<const JoinStep *>(node->getStep().get());
+    const auto * inner_join = dynamic_cast<const JoinStepExt *>(node->getStep().get());
     auto project_node = node->getChildren()[0];
-    const auto * left_join = dynamic_cast<const JoinStep *>(project_node->getChildren()[0]->getStep().get());
+    const auto * left_join = dynamic_cast<const JoinStepExt *>(project_node->getChildren()[0]->getStep().get());
 
     // A
     auto first = project_node->getChildren()[0]->getChildren()[0];
@@ -189,7 +188,7 @@ TransformResult PullLeftJoinProjectionThroughInnerJoin::transformImpl(PlanNodePt
 
     auto result = new_join.value();
 
-    const auto * projection_step = dynamic_cast<const ProjectionStep *>(project_node->getStep().get());
+    const auto * projection_step = dynamic_cast<const ProjectionStepExt *>(project_node->getStep().get());
     std::unordered_map<String, ConstASTPtr> symbol_to_ast;
     for (const auto & assignment : projection_step->getAssignments())
     {
@@ -211,9 +210,9 @@ TransformResult PullLeftJoinProjectionThroughInnerJoin::transformImpl(PlanNodePt
         name_to_type[item.name] = item.type;
     }
 
-    auto new_project_step = std::make_shared<ProjectionStep>(result->getStep()->getOutputStream(), std::move(assignments), std::move(name_to_type));
+    auto new_project_step = std::make_shared<ProjectionStepExt>(result->getStep()->getOutputStream(), std::move(assignments), std::move(name_to_type));
 
-    return PlanNodeBase::createPlanNode(rule_context.context->nextNodeId(), std::move(new_project_step), {result});
+    return PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), std::move(new_project_step), {result});
 }
 
 /**
@@ -222,14 +221,14 @@ TransformResult PullLeftJoinProjectionThroughInnerJoin::transformImpl(PlanNodePt
 ConstRefPatternPtr PullLeftJoinFilterThroughInnerJoin::getPattern() const
 {
     static auto pattern = Patterns::join()
-        .matchingStep<JoinStep>([](const JoinStep & join_step) {
-            return join_step.getKind() == ASTTableJoin::Kind::Inner && PredicateUtils::isTruePredicate(join_step.getFilter())
+        .matchingStep<JoinStepExt>([](const JoinStepExt & join_step) {
+            return join_step.getKind() == JoinKind::Inner && PredicateUtils::isTruePredicate(join_step.getFilter())
                 && !join_step.isMagic();
         })
         .with(
             Patterns::filter().withSingle(Patterns::join()
-                                                .matchingStep<JoinStep>([](const JoinStep & join_step) {
-                                                    return join_step.getKind() == ASTTableJoin::Kind::Left
+                                                .matchingStep<JoinStepExt>([](const JoinStepExt & join_step) {
+                                                    return join_step.getKind() == JoinKind::Left
                                                         && PredicateUtils::isTruePredicate(join_step.getFilter()) && !join_step.isMagic();
                                                 })
                                                 .with(Patterns::any(), Patterns::any())),
@@ -239,9 +238,9 @@ ConstRefPatternPtr PullLeftJoinFilterThroughInnerJoin::getPattern() const
 
 TransformResult PullLeftJoinFilterThroughInnerJoin::transformImpl(PlanNodePtr node, const Captures &, RuleContext & rule_context)
 {
-    const auto * inner_join = dynamic_cast<const JoinStep *>(node->getStep().get());
+    const auto * inner_join = dynamic_cast<const JoinStepExt *>(node->getStep().get());
     auto filter_node = node->getChildren()[0];
-    const auto * left_join = dynamic_cast<const JoinStep *>(filter_node->getChildren()[0]->getStep().get());
+    const auto * left_join = dynamic_cast<const JoinStepExt *>(filter_node->getChildren()[0]->getStep().get());
 
     // A
     auto first = filter_node->getChildren()[0]->getChildren()[0];
@@ -257,8 +256,8 @@ TransformResult PullLeftJoinFilterThroughInnerJoin::transformImpl(PlanNodePtr no
     }
 
     auto result = new_join.value();
-    auto new_filter_step = filter_node->getStep()->copy(rule_context.context);
-    auto new_filter_node = PlanNodeBase::createPlanNode(rule_context.context->nextNodeId(), std::move(new_filter_step), {result});
+    auto new_filter_step = QueryPlanStepHelper::copyQueryPlanStep(filter_node->getStep(), rule_context.context);
+    auto new_filter_node = PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), std::move(new_filter_step), {result});
     if (inner_join->getOutputStream().header.columns() < new_filter_node->getStep()->getOutputStream().header.columns())
     {
         Assignments assignments;
@@ -268,8 +267,8 @@ TransformResult PullLeftJoinFilterThroughInnerJoin::transformImpl(PlanNodePtr no
             assignments.emplace_back(item.name, std::make_shared<ASTIdentifier>(item.name));
             name_to_type[item.name] = item.type;
         }
-        auto new_project_step = std::make_shared<ProjectionStep>(new_filter_node->getStep()->getOutputStream(), std::move(assignments), std::move(name_to_type));
-        return PlanNodeBase::createPlanNode(rule_context.context->nextNodeId(), std::move(new_project_step), {new_filter_node});
+        auto new_project_step = std::make_shared<ProjectionStepExt>(new_filter_node->getStep()->getOutputStream(), std::move(assignments), std::move(name_to_type));
+        return PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), std::move(new_project_step), {new_filter_node});
     }
     return new_filter_node;
 }

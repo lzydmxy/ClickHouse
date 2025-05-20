@@ -40,6 +40,8 @@ using TreeRewriterResultPtr = std::shared_ptr<const TreeRewriterResult>;
 struct RowPolicy;
 using RowPolicyPtr = std::shared_ptr<const RowPolicy>;
 
+class ASTOrderByElement;
+FillColumnDescription getWithFillDescription(const ASTOrderByElement & order_by_elem, const ContextPtr & context);
 
 /** Interprets the SELECT query. Returns the stream of blocks with the results of the query before `to_stage` stage.
   */
@@ -140,6 +142,9 @@ public:
     /// Adjust the parallel replicas settings (enabled, disabled) based on the query analysis
     bool adjustParallelReplicasAfterAnalysis();
 
+    std::optional<UInt64> getTrivialCount(UInt64 max_parallel_replicas);
+
+    TreeRewriterResultPtr syntax_analyzer_result;
 
 private:
     InterpreterSelectQuery(
@@ -196,7 +201,6 @@ private:
     void executeExtremes(QueryPlan & query_plan);
     void executeSubqueriesInSetsAndJoins(QueryPlan & query_plan);
     bool autoFinalOnQuery(ASTSelectQuery & select_query);
-    std::optional<UInt64> getTrivialCount(UInt64 max_parallel_replicas);
     /// Check if we can limit block size to read based on LIMIT clause
     UInt64 maxBlockSizeByLimit() const;
 
@@ -216,7 +220,6 @@ private:
       */
     void initSettings();
 
-    TreeRewriterResultPtr syntax_analyzer_result;
     std::unique_ptr<SelectQueryExpressionAnalyzer> query_analyzer;
     SelectQueryInfo query_info;
 

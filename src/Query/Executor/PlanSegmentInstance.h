@@ -84,7 +84,7 @@ using PlanSegmentsStatusPtr = std::shared_ptr<PlanSegmentsStatus>;
 struct PlanSegmentInstance
 {
     PlanSegmentExecutionInfo info;
-    std::unique_ptr<PlanSegment> plan_segment;
+    std::shared_ptr<PlanSegment> plan_segment;
 };
 
 using PlanSegmentInstancePtr = std::unique_ptr<PlanSegmentInstance>;

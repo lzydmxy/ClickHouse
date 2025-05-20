@@ -9,8 +9,9 @@
 #include <Disks/DiskSelector.h>
 #include <IO/S3/Credentials.h>
 #include <Interpreters/Context.h>
-#include <Poco/Util/AbstractConfiguration.h>
+#include <Query/Common/OptimizerSettings.h>
 #include <Query/Executor/PlanSegmentInstance.h>
+#include <Query/Executor/SegmentScheduler.h>
 #include <Query/Executor/PlanSegmentProcessList.h>
 
 namespace DB
@@ -41,6 +42,18 @@ OptimizerContext::OptimizerContext(const Settings & settings_)
     initQueryExpirationTimeStamp();
     data = std::make_shared<OptimizerContextData>();
     plan_segment_process_list = std::make_shared<PlanSegmentProcessList>();
+}
+
+OptimizerContext::OptimizerContext(const Settings & settings_, OptimizerSettings & optimizer_settings_)
+    :optimizer_settings(optimizer_settings_)
+{
+    if (settings_.max_execution_time.totalSeconds() != 0)
+        query_max_execution_time = std::min(settings_.max_execution_time.totalSeconds() * UInt64(1000), UInt64(UINT32_MAX));
+    else if (optimizer_settings.exchange_timeout_ms != 0)
+        query_max_execution_time = std::min(UInt64(optimizer_settings.exchange_timeout_ms), UInt64(UINT32_MAX));
+    else
+        query_max_execution_time = 100 * 60 * 1000; // default as 100min
+    data = std::make_shared<OptimizerContextData>();
 }
 
 void OptimizerContext::setQueryMaxExecutionTime(UInt32 milli_second)
@@ -104,6 +117,11 @@ PlanSegmentProcessListEntryPtr OptimizerContext::getPlanSegmentProcessListEntry(
     return segment_process_list_entry;
 }
 
+void OptimizerContext::setPlanSegmentProcessList(PlanSegmentProcessListPtr segment_process_list_)
+{
+    plan_segment_process_list = segment_process_list_;
+}
+
 PlanSegmentProcessListPtr OptimizerContext::getPlanSegmentProcessList() const
 {
     return plan_segment_process_list;
@@ -159,15 +177,37 @@ bool OptimizerContext::isExplainQuery() const
     return is_explain_query;
 }
 
-/// SystemLogs
 QueryExchangeLogPtr OptimizerContext::getQueryExchangeLog()
 {
     return query_exchange_log;
 }
 
+void OptimizerContext::logOptimizerProfile(LoggerPtr log, String prefix, String name, UInt64 time, bool is_rule)
+{
+    if (optimizer_settings.log_optimizer_run_time && log)
+        LOG_DEBUG(log, "{} {} {}", prefix, name, time);
+
+    if (optimizer_profile)
+        optimizer_profile->setTime(name,  std::to_string(time), is_rule);
+}
+
+void OptimizerContext::setPlanCacheManager(std::unique_ptr<PlanCacheManager> && manager)
+{
+    //todo: zhangdongdong92, other feat: need a part shared lock
+    //auto lock = getLock(); // checked
+    plan_cache_manager = std::move(manager);
+}
+
+PlanCacheManager* OptimizerContext::getPlanCacheManager()
+{
+    //todo: zhangdongdong92, other feat: need a part shared lock
+    //auto lock = getLock(); // checked
+    return plan_cache_manager ? plan_cache_manager.get() : nullptr;
+}
+
 HostWithPorts OptimizerContext::getHostWithPorts() const
 {
-    //TODO: Get host with port of current node
+    //todo: zhangdongdong92, other feat: need impl, now just a fake impl
     HostWithPorts host;
     return host;
 }
@@ -180,6 +220,32 @@ void OptimizerContext::setTransactionID(UInt64 txt_id_)
 UInt64 OptimizerContext::getTransactionID()
 {
     return txt_id;
+}
+
+std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> OptimizerContext::getProcessorProfileElementConsumer() const
+{
+    //todo: zhangdongdong92, other feat: need impl, now just a fake impl
+    std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> processor_log_element_consumer;
+    return processor_log_element_consumer;
+}
+
+
+SegmentSchedulerPtr OptimizerContext::getSegmentScheduler() const
+{
+    //todo: zhangdongdong92, other feat: need a part shared lock
+    return segment_scheduler;
+}
+
+StatisticsMemoryStorePtr OptimizerContext::getStatisticsMemoryStore()
+{
+    //todo: zhangdongdong92, other feat: need a part shared lock
+    // auto lock = getLocalLock();
+
+    if (!this->stats_memory_store)
+    {
+        this->stats_memory_store = std::make_shared<QueryStatistics::StatisticsMemoryStore>();
+    }
+    return stats_memory_store;
 }
 
 }

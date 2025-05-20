@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Parsers/IAST.h>
+#include <Interpreters/StorageID.h>
+#include <Query/Parsers/ASTHelper.h>
 
 #include <functional>
 #include <optional>
@@ -16,6 +18,7 @@ namespace ASTEquality
     using SubtreeComparator = std::function<std::optional<bool>(const ASTPtr &, const ASTPtr &)>;
     using SubtreeHasher = std::function<std::optional<size_t>(const ASTPtr &)>;
 
+    using ConstASTPtr = std::shared_ptr<const IAST>;
     /// compare ASTs by extra comparison strategy first, if not applicable, compare AST by syntax
     bool compareTree(const ASTPtr & left, const ASTPtr & right, const SubtreeComparator & comparator);
 

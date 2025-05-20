@@ -5,7 +5,7 @@ namespace DB
 
 QualifiedName QualifiedName::extractQualifiedName(const ASTIdentifier & identifier)
 {
-    return QualifiedName(identifier.nameParts());
+    return QualifiedName(identifier.name_parts);
 }
 
 QualifiedName QualifiedName::extractQualifiedName(const DatabaseAndTableWithAlias & db_and_table)
@@ -23,7 +23,7 @@ QualifiedName QualifiedName::extractQualifiedName(const DatabaseAndTableWithAlia
 QualifiedName QualifiedName::getPrefix() const
 {
     if (this->empty())
-        throw Exception("Can not get prefix for an empty qualified name.", ErrorCodes::LOGICAL_ERROR);
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Can not get prefix for an empty qualified name.");
 
     std::vector<String> prefix_parts {parts.begin(), parts.end() - 1};
     return QualifiedName(prefix_parts);

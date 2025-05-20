@@ -4,6 +4,7 @@
 #include <Query/Processors/QueryPlan/Assignment.h>
 #include <Processors/QueryPlan/ITransformingStep.h>
 #include <base/types.h>
+#include <Core/InterpolateDescription.h>
 
 namespace DB
 {
@@ -62,6 +63,8 @@ public:
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings) override;
+    void toProto(Protos::ExpandStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<ExpandStepExt> fromProto(const Protos::ExpandStepExt & proto, ContextPtr context);
     
     const Assignments & getAssignments() const { return assignments; }
     const NameToType & getNameToType() const { return name_to_type; }
@@ -86,7 +89,7 @@ private:
 
     std::map<Int32, Names> group_id_non_null_symbol;
 
-    // static ActionsDAGPtr createActions(const Assignments & assignments, const NamesAndTypesList & source, ContextPtr context);
+    static ActionsDAGPtr createActions(const Assignments & assignments, const NamesAndTypesList & source, ContextPtr context);
 };
 
 }

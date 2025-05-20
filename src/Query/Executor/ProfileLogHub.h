@@ -8,6 +8,7 @@
 #include <Common/ThreadPool.h>
 #include <Query/Common/BoundedDataQueue.h>
 #include <Query/Executor/ProfileElementConsumer.h>
+#include <Common/CurrentMetrics.h>
 
 namespace CurrentMetrics
 {
@@ -27,6 +28,7 @@ template <typename ProfileElement>
 class ProfileLogHub
 {
 public:
+    static constexpr size_t PROFILE_CONSUME_SIZE = 8;
     using ProfileElementQueue = BoundedDataQueue<ProfileElement>;
     using ProfileElementQueuePtr = std::shared_ptr<ProfileElementQueue>;
     using Consumer = std::shared_ptr<ProfileElementConsumer<ProfileElement>>;
@@ -42,6 +44,15 @@ public:
 
     ProfileLogHub(const ProfileLogHub&) = delete;
     ProfileLogHub& operator=(const ProfileLogHub&) = delete;
+
+    explicit ProfileLogHub() : logger(getLogger("ProfileLogHub"))
+    {
+        consume_thread_pool = std::make_unique<ThreadPool>(CurrentMetrics::ProfileThreads,
+            CurrentMetrics::ProfileThreadsActive, CurrentMetrics::ProfileThreadsScheduled,
+            PROFILE_CONSUME_SIZE
+        );
+    }
+    ~ProfileLogHub() = default;
 
     void initLogChannel(const std::string & query_id, Consumer consumer)
     {
@@ -64,6 +75,7 @@ public:
         }
     }
 
+
     void finalizeLogChannel(const std::string & query_id)
     {
         auto consumer = profile_element_consumers.find(query_id)->second;
@@ -73,10 +85,8 @@ public:
         LOG_DEBUG(logger, "Query:{} finish log element consume.", query_id);
     }
 
-    bool hasConsumer() const
-    {
-        return !profile_element_consumers.empty();
-    }
+
+    bool hasConsumer() const { return !profile_element_consumers.empty(); }
 
     inline void tryPushElement(const std::string & query_id, const ProfileElement & element, const UInt64 & timeout_millseconds = 0)
     {
@@ -112,72 +122,78 @@ public:
     }
 
 private:
-    static constexpr size_t PROFILE_CONSUME_SIZE = 8;
-    ProfileLogHub() : logger(getLogger("ProfileLogHub"))
-    {
-        consume_thread_pool = std::make_shared<ThreadPool>(CurrentMetrics::ProfileThreads, CurrentMetrics::ProfileThreadsActive,
-            CurrentMetrics::ProfileThreadsScheduled, PROFILE_CONSUME_SIZE);
-    }
-
-    ~ProfileLogHub() = default;
-    void registerConsumer(Consumer consumer)
-    {
-        const auto & query_id = consumer->getQueryId();
-        if (profile_element_consumers.contains(query_id))
-            return;
-        profile_element_consumers.emplace(query_id, consumer);
-        consume_thread_pool->scheduleOrThrow(
-            [consumer, this]() {
-                try
-                {
-                    LOG_DEBUG(logger, "Consumer of query:{} start consuming.", consumer->getQueryId());
-                    auto & queue = profile_element_queue_map.find(consumer->getQueryId())->second;
-                    while (consumer->stillRunning())
-                    {
-                        ProfileElement element;
-                        if (queue->tryPop(element, consumer->getFetchTimeout()))
-                            consumer->consume(element);
-                    }
-                    while (!queue->empty())
-                    {
-                        ProfileElement element;
-                        if (queue->tryPop(element, consumer->getFetchTimeout()))
-                            consumer->consume(element);
-                    }
-                    finalizeLogChannel(consumer->getQueryId());
-                }
-                catch (...)
-                {
-                    LOG_ERROR(logger, "Profile element consume occur error.");
-                    throw;
-                }
-            });
-    }
-
+    void registerConsumer(Consumer consumer);
     template <typename E>
-    void tryPushElementImpl(const std::string & query_id, E && element, const UInt64 & timeout_millseconds = 0)
-    {
-        auto & element_queue = profile_element_queue_map.find(query_id)->second;
-        auto time_start = std::chrono::system_clock::now();
-        while (!element_queue->tryPush(std::forward<E>(element), timeout_millseconds / 10))
-        {
-            LOG_WARNING(logger, "Query id:{} push profile element to coordinator log queue fail.Retrying!!!", query_id);
-            auto now = std::chrono::system_clock::now();
-            UInt64 elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - time_start).count();
-            if (elapsed > timeout_millseconds)
-            {
-                break;
-                LOG_ERROR(logger, "Query id:{} push profile element to coordinator log queue fail after retry.", query_id);
-                throw Exception(ErrorCodes::EXPLAIN_COLLECT_PROFILE_METRIC_TIMEOUT, "Push profile element to coordinator fail.");
-            }
-        }
-    }
+    void tryPushElementImpl(const std::string & query_id, E && element, const UInt64 & timeout_millseconds = 0);
 
     ProfileElementQueues profile_element_queue_map;
     Consumers profile_element_consumers;
-    std::shared_ptr<ThreadPool> consume_thread_pool;
+    std::unique_ptr<ThreadPool> consume_thread_pool;
     std::mutex mutex;
     LoggerPtr logger;
 };
+
+template <typename ProfileElement>
+void ProfileLogHub<ProfileElement>::registerConsumer(const Consumer consumer)
+{
+    const auto & query_id = consumer->getQueryId();
+
+    if (profile_element_consumers.contains(query_id))
+        return;
+
+    profile_element_consumers.emplace(query_id, consumer);
+
+    consume_thread_pool->scheduleOrThrow(
+        [consumer, this]() {
+            try
+            {
+                LOG_DEBUG(logger, "Consumer of query:{} start consuming.", consumer->getQueryId());
+                auto & queue = profile_element_queue_map.find(consumer->getQueryId())->second;
+
+                while (consumer->stillRunning())
+                {
+                    ProfileElement element;
+                    if (queue->tryPop(element, consumer->getFetchTimeout()))
+                        consumer->consume(element);
+                }
+
+                while (!queue->empty())
+                {
+                    ProfileElement element;
+                    if (queue->tryPop(element, consumer->getFetchTimeout()))
+                        consumer->consume(element);
+                }
+                finalizeLogChannel(consumer->getQueryId());
+            }
+            catch (...)
+            {
+                LOG_ERROR(logger, "Profile element consume occur error.");
+                throw;
+            }
+        },
+        Priority{.value = 0},
+        30 * 1000 * 1000);
+}
+
+/// the E is used here to ensure perfect forwarding in template class method
+template <typename ProfileElement>
+template <typename E>
+void ProfileLogHub<ProfileElement>::tryPushElementImpl(const std::string & query_id, E && element, const UInt64 & timeout_millseconds)
+{
+    auto & element_queue = profile_element_queue_map.find(query_id)->second;
+    auto time_start = std::chrono::system_clock::now();
+    while (!element_queue->tryPush(std::forward<E>(element), timeout_millseconds / 10))
+    {
+        LOG_WARNING(logger, "Query id:{} push profile element to coordinator log queue fail.Retrying!!!", query_id);
+        auto now = std::chrono::system_clock::now();
+        UInt64 elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - time_start).count();
+        if (elapsed > timeout_millseconds)
+        {
+            break;
+            LOG_ERROR(logger, "Query id:{} push profile element to coordinator log queue fail after retry.", query_id);
+            throw Exception(ErrorCodes::EXPLAIN_COLLECT_PROFILE_METRIC_TIMEOUT, "Push profile element to coordinator fail.");
+        }
+    }
+}
 
 }

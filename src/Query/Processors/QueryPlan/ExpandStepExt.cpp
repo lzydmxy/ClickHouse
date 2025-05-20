@@ -1,7 +1,6 @@
 #include <vector>
-#include <Query/Processors/QueryPlan/ExpandStepExt.h>
-
 #include <Core/NamesAndTypes.h>
+#include <Query/Processors/QueryPlan/ExpandStepExt.h>
 // #include <DataTypes/DataTypeHelper.h>
 #include <DataTypes/DataTypeNullable.h>
 #include <DataTypes/DataTypesNumber.h>
@@ -12,14 +11,15 @@
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTLiteral.h>
 // #include <Parsers/ASTSerDerHelper.h>
-#include <QueryPipeline/QueryPipeline.h>
-// #include <Query/Processors/Transforms/ExpandTransformExt.h>
 #include <Query/Processors/QueryPlan/Assignment.h>
-// #include <Query/Processors/QueryPlan/PlanSerDerHelper.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <Query/Processors/Transforms/ExpandTransformExt.h>
+#include <QueryPipeline/QueryPipeline.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 // #include "Interpreters/join_common.h"
-
 #include <Core/ColumnWithTypeAndName.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
 
 namespace DB
 {
@@ -67,17 +67,16 @@ void ExpandStepExt::updateInputStreams(const DataStreams & input_streams_)
 
 void ExpandStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
 {
-    //TODO FIXME createActions
-    // std::vector<ExpressionActionsPtr> expressions;
-    // for (auto & assignments_pre_group : generateAssignmentsGroups())
-    // {
-    //     auto actions = createActions(assignments_pre_group, generateNameTypePreGroup(), settings.context);
-    //     auto expression = std::make_shared<ExpressionActions>(actions, settings.getActionsSettings());
-    //     expressions.emplace_back(expression);
-    // }
+    std::vector<ExpressionActionsPtr> expressions;
+    for (auto & assignments_pre_group : generateAssignmentsGroups())
+    {
+        auto actions = createActions(assignments_pre_group, generateNameTypePreGroup(), Context::getGlobalContextInstance());
+        auto expression = std::make_shared<ExpressionActions>(actions, settings.getActionsSettings());
+        expressions.emplace_back(expression);
+    }
 
-    // pipeline.addSimpleTransform(
-    //     [&](const Block & header) { return std::make_shared<ExpandTransformExt>(header, output_stream->header, expressions); });
+    pipeline.addSimpleTransform([&](const Block & header)
+                                { return std::make_shared<ExpandTransformExt>(header, output_stream->header, expressions); });
 }
 
 // void ExpandStepExt::prepare(const PreparedStatementContext & prepared_context)
@@ -123,29 +122,54 @@ NamesAndTypesList ExpandStepExt::generateNameTypePreGroup() const
 {
     NamesAndTypesList name_type_list_pre_group;
     for (const auto & name_type : getNameToType())
-    {
         name_type_list_pre_group.push_back(NameAndTypePair{name_type.first, name_type.second});
-    }
     name_type_list_pre_group.push_back(NameAndTypePair{group_id_symbol, std::make_shared<DataTypeInt32>()});
     return name_type_list_pre_group;
 }
 
-// ActionsDAGPtr ExpandStepExt::createActions(const Assignments & assignments, const NamesAndTypesList & source, ContextPtr context)
-// {
-//     ASTPtr expr_list = std::make_shared<ASTExpressionList>();
+ActionsDAGPtr ExpandStepExt::createActions(const Assignments & assignments, const NamesAndTypesList & source, ContextPtr context)
+{
+    ASTPtr expr_list = std::make_shared<ASTExpressionList>();
 
-//     NamesWithAliases output;
-//     for (const auto & item : assignments)
-//     {
-//         expr_list->children.emplace_back(item.second->clone());
-//         output.emplace_back(NameWithAlias{item.second->getColumnName(), item.first});
-//     }
-//     return createExpressionActions(context, source, output, expr_list);
-// }
+    NamesWithAliases output;
+    for (const auto & item : assignments)
+    {
+        expr_list->children.emplace_back(item.second->clone());
+        output.emplace_back(NameWithAlias{item.second->getColumnName(), item.first});
+    }
+    return QueryPlanStepHelper::createExpressionActions(context, source, output, expr_list);
+}
 
 std::shared_ptr<IQueryPlanStep> ExpandStepExt::copy(ContextPtr) const
 {
     return std::make_shared<ExpandStepExt>(
         input_streams[0], assignments.copy(), name_to_type, group_id_symbol, group_id_value, group_id_non_null_symbol);
+}
+
+void ExpandStepExt::toProto(Protos::ExpandStepExt & proto, bool) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this ,*proto.mutable_query_plan_base());
+    serializeAssignmentsToProto(assignments, *proto.mutable_assignments());
+    serializeOrderedMapToProto(name_to_type, *proto.mutable_name_to_type());
+    proto.set_group_id_symbol(group_id_symbol);
+    for (const auto & group : group_id_value)
+        proto.add_group_id_value(group);
+    serializeOrderedMapToProto(group_id_non_null_symbol, *proto.mutable_group_id_non_null_symbol());
+}
+
+std::shared_ptr<ExpandStepExt> ExpandStepExt::fromProto(const Protos::ExpandStepExt & proto, ContextPtr)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    auto assignments = deserializeAssignmentsFromProto(proto.assignments());
+    auto name_to_type = deserializeOrderedMapFromProto<String, DataTypePtr>(proto.name_to_type());
+    String group_id_symbol = proto.group_id_symbol();
+    std::set<Int32> group_id_value;
+    for (const auto & group : proto.group_id_value())
+        group_id_value.insert(group);
+    auto group_id_non_null_symbol = deserializeOrderedMapFromProto<Int32, Names>(proto.group_id_non_null_symbol());
+    auto step
+        = std::make_shared<ExpandStepExt>(base_input_stream, assignments, name_to_type, group_id_symbol, group_id_value, group_id_non_null_symbol);
+    step->setStepDescription(step_description);
+    return step;
 }
 }

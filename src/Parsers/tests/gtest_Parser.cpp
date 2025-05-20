@@ -647,9 +647,7 @@ static constexpr size_t kDummyMaxQuerySize = 256 * 1024;
 static constexpr size_t kDummyMaxParserDepth = 256;
 static constexpr size_t kDummyMaxParserBacktracks = 1000000;
 
-INSTANTIATE_TEST_SUITE_P(
-    ParserPRQL,
-    ParserTest,
+INSTANTIATE_TEST_SUITE_P(ParserPRQL, ParserTest,
     ::testing::Combine(
         ::testing::Values(std::make_shared<ParserPRQLQuery>(kDummyMaxQuerySize, kDummyMaxParserDepth, kDummyMaxParserBacktracks)),
         ::testing::ValuesIn(std::initializer_list<ParserTestCase>{

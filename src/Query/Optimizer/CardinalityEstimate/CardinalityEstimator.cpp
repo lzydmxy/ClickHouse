@@ -1,5 +1,3 @@
-
-
 #include <Query/Optimizer/CardinalityEstimate/CardinalityEstimator.h>
 
 #include <Query/Optimizer/CardinalityEstimate/AggregateEstimator.h>
@@ -16,11 +14,12 @@
 #include <Query/Optimizer/CardinalityEstimate/UnionEstimator.h>
 #include <Query/Optimizer/CardinalityEstimate/WindowEstimator.h>
 #include <Query/Optimizer/PredicateUtils.h>
-#include <Processors/QueryPlan/MergeSortingStep.h>
-#include <Processors/QueryPlan/MergingSortedStep.h>
-#include <Processors/QueryPlan/PartialSortingStep.h>
-#include <Processors/QueryPlan/QueryPlan.h>
-#include <Functions/InternalFunctionRuntimeFilter.h>
+#include <Query/Processors/QueryPlan/MergeSortingStepExt.h>
+#include <Query/Processors/QueryPlan/MergingSortedStepExt.h>
+#include <Query/Processors/QueryPlan/PartialSortingStepExt.h>
+#include <Query/Processors/QueryPlan/QueryPlanExt.h>
+#include <Query/Functions/InternalFunctionRuntimeFilter.h>
+#include <Query/Core/BlockHelper.h>
 
 
 namespace DB
@@ -51,7 +50,7 @@ std::optional<PlanNodeStatisticsPtr> CardinalityEstimator::estimate(
         .inclusion_dependency = inclusion_dependency};
     auto stats = VisitorUtil::accept(step, visitor, cardinality_context);
     if (stats)
-        stats->pruneSymbols(step->getOutputStream().header.getNameSet());
+        stats->pruneSymbols(BlockHelper::getNameSet(step->getOutputStream().header));
     return stats ? std::make_optional(stats) : std::nullopt;
 }
 
@@ -66,11 +65,11 @@ CardinalityEstimator::estimate(PlanNodeBase & node, CTEInfo & cte_info, ContextM
     CardinalityContext cardinality_context{.context = context, .cte_info = cte_info, .children_stats = {}, .re_estimate = re_estimate};
     auto stats = VisitorUtil::accept(node, visitor, cardinality_context);
     if (stats)
-        stats->pruneSymbols(node.getCurrentDataStream().header.getNameSet());
+        stats->pruneSymbols(BlockHelper::getNameSet(node.getCurrentDataStream().header));
     return stats ? std::make_optional(stats) : std::nullopt;
 }
 
-void CardinalityEstimator::estimate(QueryPlan & node, ContextMutablePtr context, bool re_estimate)
+void CardinalityEstimator::estimate(QueryPlanExt & node, ContextMutablePtr context, bool re_estimate)
 {
     estimate(*node.getPlanNode(), node.getCTEInfo(), context, true, re_estimate);
 }
@@ -88,19 +87,19 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitOffsetStep(const OffsetStep & ste
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitTableFinishStep(const TableFinishStep &, CardinalityContext & context)
+// PlanNodeStatisticsPtr CardinalityVisitor::visitTableFinishStep(const TableFinishStep &, CardinalityContext & context)
+// {
+//     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
+//     return child_stats;
+//
+// }
+PlanNodeStatisticsPtr CardinalityVisitor::visitBufferStepExt(const BufferStepExt &, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     return child_stats;
 
 }
-PlanNodeStatisticsPtr CardinalityVisitor::visitBufferStep(const BufferStep &, CardinalityContext & context)
-{
-    PlanNodeStatisticsPtr child_stats = context.children_stats[0];
-    return child_stats;
-
-}
-PlanNodeStatisticsPtr CardinalityVisitor::visitMarkDistinctStep(const MarkDistinctStep &, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitMarkDistinctStepExt(const MarkDistinctStepExt &, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     return child_stats;
@@ -111,36 +110,36 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitIntersectOrExceptStep(const Inter
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     return child_stats;
 }
-PlanNodeStatisticsPtr CardinalityVisitor::visitTableWriteStep(const TableWriteStep &, CardinalityContext & context)
-{
-    PlanNodeStatisticsPtr child_stats = context.children_stats[0];
-    return child_stats;
-}
+// PlanNodeStatisticsPtr CardinalityVisitor::visitTableWriteStep(const TableWriteStep &, CardinalityContext & context)
+// {
+//     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
+//     return child_stats;
+// }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitOutfileWriteStep(const OutfileWriteStep &, CardinalityContext & context)
-{
-    PlanNodeStatisticsPtr child_stats = context.children_stats[0];
-    return child_stats;
-}
+// PlanNodeStatisticsPtr CardinalityVisitor::visitOutfileWriteStep(const OutfileWriteStep &, CardinalityContext & context)
+// {
+//     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
+//     return child_stats;
+// }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitOutfileFinishStep(const OutfileFinishStep &, CardinalityContext & context)
-{
-    PlanNodeStatisticsPtr child_stats = context.children_stats[0];
-    return child_stats;
-}
+// PlanNodeStatisticsPtr CardinalityVisitor::visitOutfileFinishStep(const OutfileFinishStep &, CardinalityContext & context)
+// {
+//     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
+//     return child_stats;
+// }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitFinalSampleStep(const FinalSampleStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitFinalSampleStepExt(const FinalSampleStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     return SampleEstimator::estimate(child_stats, step);
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitLocalExchangeStep(const LocalExchangeStep &, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitLocalExchangeStepExt(const LocalExchangeStepExt &, CardinalityContext & context)
 {
     return context.children_stats[0];
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitProjectionStep(const ProjectionStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitProjectionStepExt(const ProjectionStepExt & step, CardinalityContext & context)
 {
     if (context.children_stats.empty())
     {
@@ -152,15 +151,15 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitProjectionStep(const ProjectionSt
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitFilterStep(const FilterStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitFilterStepExt(const FilterStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     PlanNodeStatisticsPtr stats = FilterEstimator::estimate(
-        child_stats, step.getFilter(), step.getInputStreams()[0].header.getNamesToTypes(), context.context, context.simple_children);
+        child_stats, step.getFilter(), BlockHelper::getNamesToTypes(step.getInputStreams()[0].header), context.context, context.simple_children);
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitJoinStep(const JoinStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitJoinStepExt(const JoinStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr left_child_stats = context.children_stats[0];
     PlanNodeStatisticsPtr right_child_stats = context.children_stats[1];
@@ -182,7 +181,7 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitArrayJoinStep(const ArrayJoinStep
     return child_stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitAggregatingStep(const AggregatingStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitAggregatingStepExt(const AggregatingStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     PlanNodeStatisticsPtr stats = AggregateEstimator::estimate(child_stats, step, context.context);
@@ -196,43 +195,43 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitWindowStep(const WindowStep & ste
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitMergingAggregatedStep(const MergingAggregatedStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitMergingAggregatedStepExt(const MergingAggregatedStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     PlanNodeStatisticsPtr stats = AggregateEstimator::estimate(child_stats, step, context.context);
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitUnionStep(const UnionStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitUnionStepExt(const UnionStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr stats = UnionEstimator::estimate(context.children_stats, step);
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitIntersectStep(const IntersectStep &, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitIntersectStepExt(const IntersectStepExt &, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     return child_stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitExceptStep(const ExceptStep &, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitExceptStepExt(const ExceptStepExt &, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     return child_stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitExchangeStep(const ExchangeStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitExchangeStepExt(const ExchangeStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr stats = ExchangeEstimator::estimate(context.children_stats, step);
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitRemoteExchangeSourceStep(const RemoteExchangeSourceStep &, CardinalityContext &)
+PlanNodeStatisticsPtr CardinalityVisitor::visitRemoteExchangeSourceStepExt(const RemoteExchangeSourceStepExt &, CardinalityContext &)
 {
-    throw Exception("RemoteExchangeSourceNode should not run here", ErrorCodes::NOT_IMPLEMENTED);
+    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "RemoteExchangeSourceNode should not run here");
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitTableScanStep(const TableScanStep & step, CardinalityContext & card_context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitTableScanStepExt(const TableScanStepExt & step, CardinalityContext & card_context)
 {
     PlanNodeStatisticsPtr stats = TableScanEstimator::estimate(card_context.context, step);
     return stats;
@@ -243,17 +242,17 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitReadNothingStep(const ReadNothing
     return std::make_shared<PlanNodeStatistics>();
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitReadStorageRowCountStep(const ReadStorageRowCountStep &, CardinalityContext &)
+PlanNodeStatisticsPtr CardinalityVisitor::visitReadStorageRowCountStepExt(const ReadStorageRowCountStepExt &, CardinalityContext &)
 {
     return std::make_shared<PlanNodeStatistics>(1);
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitValuesStep(const ValuesStep & step, CardinalityContext &)
+PlanNodeStatisticsPtr CardinalityVisitor::visitValuesStepExt(const ValuesStepExt & step, CardinalityContext &)
 {
     return std::make_shared<PlanNodeStatistics>(step.getRows());
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitLimitStep(const LimitStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitLimitStepExt(const LimitStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     PlanNodeStatisticsPtr stats = LimitEstimator::estimate(child_stats, step);
@@ -267,42 +266,42 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitLimitByStep(const LimitByStep & s
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitFinishSortingStep(const FinishSortingStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitFinishSortingStepExt(const FinishSortingStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     PlanNodeStatisticsPtr stats = SortingEstimator::estimate(child_stats, step);
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitSortingStep(const SortingStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitSortingStepExt(const SortingStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     PlanNodeStatisticsPtr stats = SortingEstimator::estimate(child_stats, step);
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitMergeSortingStep(const MergeSortingStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitMergeSortingStepExt(const MergeSortingStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     PlanNodeStatisticsPtr stats = SortingEstimator::estimate(child_stats, step);
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitPartialSortingStep(const PartialSortingStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitPartialSortingStepExt(const PartialSortingStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     PlanNodeStatisticsPtr stats = SortingEstimator::estimate(child_stats, step);
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitMergingSortedStep(const MergingSortedStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitMergingSortedStepExt(const MergingSortedStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     PlanNodeStatisticsPtr stats = SortingEstimator::estimate(child_stats, step);
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitPartitionTopNStep(const PartitionTopNStep &, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitPartitionTopNStepExt(const PartitionTopNStepExt &, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     return child_stats;
@@ -318,7 +317,7 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitPartitionTopNStep(const Partition
 //    throw Exception("DecompressionNode current not support", ErrorCodes::NOT_IMPLEMENTED);
 //}
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitDistinctStep(const DistinctStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitDistinctStepExt(const DistinctStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     PlanNodeStatisticsPtr stats = AggregateEstimator::estimate(child_stats, step, context.context);
@@ -336,13 +335,13 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitExtremesStep(const ExtremesStep &
 //    throw Exception("FinalSamplingNode current not support", ErrorCodes::NOT_IMPLEMENTED);
 //}
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitApplyStep(const ApplyStep &, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitApplyStepExt(const ApplyStepExt &, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     return child_stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitCTERefStep(const CTERefStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitCTERefStepExt(const CTERefStepExt & step, CardinalityContext & context)
 {
     auto cte_def = context.cte_info.getCTEDef(step.getId());
     auto result = CardinalityEstimator::estimate(*cte_def, context.cte_info, context.context);
@@ -357,14 +356,14 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitCTERefStep(const CTERefStep & ste
     return std::make_shared<PlanNodeStatistics>(stats->getRowCount(), std::move(calculated_symbol_statistics));
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitEnforceSingleRowStep(const EnforceSingleRowStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitEnforceSingleRowStepExt(const EnforceSingleRowStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     PlanNodeStatisticsPtr stats = EnforceSingleRowEstimator::estimate(child_stats, step);
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitAssignUniqueIdStep(const AssignUniqueIdStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitAssignUniqueIdStepExt(const AssignUniqueIdStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     PlanNodeStatisticsPtr stats = AssignUniqueIdEstimator::estimate(child_stats, step);
@@ -372,19 +371,19 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitAssignUniqueIdStep(const AssignUn
 }
 
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitExplainAnalyzeStep(const ExplainAnalyzeStep &, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitExplainAnalyzeStepExt(const ExplainAnalyzeStepExt &, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     return child_stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitTopNFilteringStep(const TopNFilteringStep &, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitTopNFilteringStepExt(const TopNFilteringStepExt &, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     return child_stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitMultiJoinStep(const MultiJoinStep & , CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitMultiJoinStepExt(const MultiJoinStepExt & , CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     return child_stats;
@@ -396,7 +395,7 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitFillingStep(const FillingStep & ,
     return child_stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitIntermediateResultCacheStep(const IntermediateResultCacheStep &, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitIntermediateResultCacheStepExt(const IntermediateResultCacheStepExt &, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     return child_stats;
@@ -408,7 +407,7 @@ PlanNodeStatisticsPtr PlanCardinalityVisitor::visitPlanNode(PlanNodeBase & node,
 
     std::vector<PlanNodeStatisticsPtr> children_stats;
     bool simple_children = true;
-    bool is_table_scan = node.getStep()->getType() == IQueryPlanStep::Type::TableScan;
+    bool is_table_scan = getQueryPlanStepType(node.getStep()) == QueryPlanStepType::TableScanStepExt;
     std::vector<bool> children_are_table_scan;
 
     for (auto & child : node.getChildren())
@@ -418,15 +417,15 @@ PlanNodeStatisticsPtr PlanCardinalityVisitor::visitPlanNode(PlanNodeBase & node,
 
         simple_children &= children_context.simple_children;
         children_are_table_scan.emplace_back(children_context.is_table_scan);
-        if (node.getStep()->getType() == IQueryPlanStep::Type::Projection)
+        if (getQueryPlanStepType(node.getStep()) == QueryPlanStepType::ProjectionStepExt)
         {
             is_table_scan = children_context.is_table_scan;
         }
         
         // ignore runtime filter 
-        if (node.getStep()->getType() == IQueryPlanStep::Type::Filter)
+        if (getQueryPlanStepType(node.getStep()) == QueryPlanStepType::FilterStepExt)
         {
-            const FilterStep & step = dynamic_cast<FilterStep &>(*node.getStep());
+            const FilterStepExt & step = dynamic_cast<FilterStepExt &>(*node.getStep());
             bool all_runtime_filters = true;
             for (auto & conjunct : PredicateUtils::extractConjuncts(step.getFilter()))
             {
@@ -443,7 +442,7 @@ PlanNodeStatisticsPtr PlanCardinalityVisitor::visitPlanNode(PlanNodeBase & node,
         }
     }
 
-    simple_children &= node.getStep()->getType() != IQueryPlanStep::Type::Join;
+    simple_children &= getQueryPlanStepType(node.getStep()) != QueryPlanStepType::JoinStepExt;
 
     context.is_table_scan = is_table_scan;
     context.simple_children = simple_children;
@@ -464,9 +463,9 @@ PlanNodeStatisticsPtr PlanCardinalityVisitor::visitPlanNode(PlanNodeBase & node,
     return stats;
 }
 
-PlanNodeStatisticsPtr PlanCardinalityVisitor::visitCTERefNode(CTERefNode & node, CardinalityContext & context)
+PlanNodeStatisticsPtr PlanCardinalityVisitor::visitCTERefStepExtNode(CTERefStepExtNode & node, CardinalityContext & context)
 {
-    const auto * step = dynamic_cast<const CTERefStep *>(node.getStep().get());
+    const auto * step = dynamic_cast<const CTERefStepExt *>(node.getStep().get());
     cte_helper.accept(step->getId(), *this, context);
 
     if (node.getStatistics().isDerived())
@@ -484,16 +483,16 @@ PlanNodeStatisticsPtr PlanCardinalityVisitor::visitCTERefNode(CTERefNode & node,
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitTotalsHavingStep(const TotalsHavingStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitTotalsHavingStepExt(const TotalsHavingStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr stats = context.children_stats[0];
     if (const auto & having = step.getHavingFilter())
         stats = FilterEstimator::estimate(
-            stats, having, step.getInputStreams()[0].header.getNamesToTypes(), context.context, context.simple_children);
+            stats, having, BlockHelper::getNamesToTypes(step.getInputStreams()[0].header), context.context, context.simple_children);
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitExpandStep(const ExpandStep & , CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitExpandStepExt(const ExpandStepExt & , CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     return child_stats;

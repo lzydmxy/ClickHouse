@@ -39,6 +39,8 @@ public:
     void initializePipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & build_context) override;
     void setUniqueId(Int32 unique_id_) { unique_id = unique_id_; }
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
+    void toProto(Protos::ValuesStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<ValuesStepExt> fromProto(const Protos::ValuesStepExt & proto, ContextPtr context);
 
 public:
     Fields fields;

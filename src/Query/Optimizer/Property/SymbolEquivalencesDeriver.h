@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Query/Optimizer/Property/Equivalences.h>
-#include <QueryPlan/PlanVisitor.h>
+#include <Query/Processors/QueryPlan/PlanVisitor.h>
 
 #include <utility>
 
@@ -20,11 +20,11 @@ class SymbolEquivalencesDeriverVisitor : public StepVisitor<SymbolEquivalencesPt
 {
 public:
     SymbolEquivalencesPtr visitStep(const IQueryPlanStep & step, std::vector<SymbolEquivalencesPtr> & c) override;
-    SymbolEquivalencesPtr visitJoinStep(const JoinStep & step, std::vector<SymbolEquivalencesPtr> & context) override;
-    SymbolEquivalencesPtr visitFilterStep(const FilterStep & step, std::vector<SymbolEquivalencesPtr> & context) override;
-    SymbolEquivalencesPtr visitProjectionStep(const ProjectionStep & step, std::vector<SymbolEquivalencesPtr> & context) override;
-    SymbolEquivalencesPtr visitAggregatingStep(const AggregatingStep & step, std::vector<SymbolEquivalencesPtr> & context) override;
-    SymbolEquivalencesPtr visitExchangeStep(const ExchangeStep & step, std::vector<SymbolEquivalencesPtr> & context) override;
-SymbolEquivalencesPtr visitCTERefStep(const CTERefStep & step, std::vector<SymbolEquivalencesPtr> & context) override;
+    SymbolEquivalencesPtr visitJoinStepExt(const JoinStepExt & step, std::vector<SymbolEquivalencesPtr> & context) override;
+    SymbolEquivalencesPtr visitFilterStepExt(const FilterStepExt & step, std::vector<SymbolEquivalencesPtr> & context) override;
+    SymbolEquivalencesPtr visitProjectionStepExt(const ProjectionStepExt & step, std::vector<SymbolEquivalencesPtr> & context) override;
+    SymbolEquivalencesPtr visitAggregatingStepExt(const AggregatingStepExt & step, std::vector<SymbolEquivalencesPtr> & context) override;
+    SymbolEquivalencesPtr visitExchangeStepExt(const ExchangeStepExt & step, std::vector<SymbolEquivalencesPtr> & context) override;
+    SymbolEquivalencesPtr visitCTERefStepExt(const CTERefStepExt & step, std::vector<SymbolEquivalencesPtr> & context) override;
 };
 }

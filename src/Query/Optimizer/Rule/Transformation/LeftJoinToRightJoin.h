@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Query/Optimizer/Rule/Rule.h>
-#include <QueryPlan/JoinStep.h>
+#include <Query/Processors/QueryPlan/JoinStepExt.h>
 
 namespace DB
 {
@@ -10,13 +10,13 @@ class LeftJoinToRightJoin : public Rule
 public:
     RuleType getType() const override { return RuleType::LEFT_JOIN_TO_RIGHT_JOIN; }
     String getName() const override { return "LEFT_JOIN_TO_RIGHT_JOIN"; }
-    bool isEnabled(ContextPtr context) const override {return context->getSettingsRef().enable_left_join_to_right_join; }
+    bool isEnabled(ContextPtr context) const override {return context->getOptimizerContext()->getSettingsRef().enable_left_join_to_right_join; }
     ConstRefPatternPtr getPattern() const override;
 
     // Left join with filter is not allowed convert to Right join with filter. (nest loop join only support left join).
-    static bool supportSwap(const JoinStep & s)
+    static bool supportSwap(const JoinStepExt & s)
     {
-        return (s.getKind() == ASTTableJoin::Kind::Left || s.getKind() == ASTTableJoin::Kind::Full) && s.supportSwap();
+        return (s.getKind() == JoinKind::Left || s.getKind() == JoinKind::Full) && s.supportSwap();
     }
 
     const std::vector<RuleType> & blockRules() const override

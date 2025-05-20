@@ -22,6 +22,7 @@
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/ASTNameTypePair.h>
 #include <Parsers/ASTOrderByElement.h>
+#include <Parsers/ASTPartition.h>
 #include <Parsers/ASTProjectionDeclaration.h>
 #include <Parsers/ASTProjectionSelectQuery.h>
 #include <Parsers/ASTQualifiedAsterisk.h>
@@ -45,9 +46,12 @@
 #include <Query/Parsers/ASTExplainQueryExt.h>
 #include <Query/Parsers/ASTExpressionListExt.h>
 #include <Query/Parsers/ASTFieldReferenceExt.h>
-#include <Query/Parsers/ASTPartitionExt.h>
 #include <Query/Parsers/ASTSelectQueryExt.h>
-
+#include <Query/Parsers/ASTTableColumnReference.h>
+#include <Query/Parsers/ASTQuantifiedComparisonExt.h>
+#include <Query/Parsers/ASTType.h>
+#include <Query/Parsers/ASTStatsQueryExt.h>
+#include <Query//Parsers/ASTClusterByElementExt.h>
 
 namespace DB
 {
@@ -56,76 +60,18 @@ using DB::IAST;
 using DB::ASTPtr;
 using DB::ASTs;
 using ConstASTPtr = std::shared_ptr<const IAST>;
-using ConstASTs = std::vector<ConstASTPtr>;
+using ConstASTs = absl::InlinedVector<ConstASTPtr, 7>;
 using ASTFunctionPtr = std::shared_ptr<ASTFunction>;
 
-#define APPLY_AST_TYPES(M) \
-    M(ASTArrayJoin) \
-    M(ASTAsterisk) \
-    M(ASTAutoStatsQueryExt) \
-    M(ASTColumnsApplyTransformer) \
-    M(ASTColumnsExceptTransformer) \
-    M(ASTColumnsListMatcher) \
-    M(ASTColumnsRegexpMatcher) \
-    M(ASTColumnsReplaceTransformer) \
-    M(ASTConstraintDeclaration) \
-    M(ASTDataTypeExt) \
-    M(ASTDictionaryAttributeDeclaration) \
-    M(ASTDictionaryExt) \
-    M(ASTDictionaryLayout) \
-    M(ASTDictionaryLifetime) \
-    M(ASTDictionaryRange) \
-    M(ASTDictionarySettings) \
-    M(ASTExplainQueryExt) \
-    M(ASTExpressionListExt) \
-    M(ASTFieldReferenceExt) \
-    M(ASTFunction) \
-    M(ASTFunctionWithKeyValueArguments) \
-    M(ASTIdentifier) \
-    M(ASTIndexDeclaration) \
-    M(ASTJSONPath) \
-    M(ASTJSONPathMemberAccess) \
-    M(ASTJSONPathQuery) \
-    M(ASTJSONPathRange) \
-    M(ASTJSONPathRoot) \
-    M(ASTJSONPathStar) \
-    M(ASTLiteral) \
-    M(ASTNameTypePair) \
-    M(ASTOrderByElement) \
-    M(ASTPair) \
-    M(ASTPartitionExt) \
-    M(ASTProjectionDeclaration) \
-    M(ASTProjectionSelectQuery) \
-    M(ASTQualifiedAsterisk) \
-    M(ASTQueryParameter) \
-    M(ASTQueryWithOutput) \
-    M(ASTRowPolicyName) \
-    M(ASTRowPolicyNames) \
-    M(ASTSampleRatio) \
-    M(ASTSelectIntersectExceptQuery) \
-    M(ASTSelectQueryExt) \
-    M(ASTSelectWithUnionQuery) \
-    M(ASTSetQuery) \
-    M(ASTSettingsProfileElement) \
-    M(ASTSettingsProfileElements) \
-    M(ASTSubquery) \
-    M(ASTTTLElement) \
-    M(ASTTableExpression) \
-    M(ASTTableIdentifier) \
-    M(ASTTableJoin) \
-    M(ASTTablesInSelectQuery) \
-    M(ASTTablesInSelectQueryElement) \
-    M(ASTUseQuery) \
-    M(ASTWindowDefinition) \
-    M(ASTWindowListElement) \
-    M(ASTWithElement)
+struct ShowStatsQueryInfoExt;
+using ASTShowStatsQueryExt = ASTStatsQueryBaseExt<ShowStatsQueryInfoExt>;
+class ASTCreateStatsQueryExt;
+struct DropStatsQueryInfoExt;
+using ASTDropStatsQueryExt = ASTStatsQueryBaseExt<DropStatsQueryInfoExt>;
 
-#define ENUM_AST_TYPE(ITEM) ITEM,
-enum class ASTType : UInt8
-{
-    APPLY_AST_TYPES(ENUM_AST_TYPE) UNDEFINED,
-};
-#undef ENUM_AST_TYPE
+
+//class ASTAutoStatsQueryExt;
+//class ASTShowStatsQueryExt;
 
 inline String toString(ASTType type)
 {
@@ -142,20 +88,32 @@ inline String toString(ASTType type)
 }
 
 #define CHECK_AND_RETURN_AST_TYPE(type) \
+if (auto * casted_ast = ast.as<type>()) \
+{ \
+    return ASTType::type; \
+}
+
+#define CHECK_AND_RETURN_AST_TYPE_PTR(type) \
 if (auto * casted_ast = ast->as<type>()) \
 { \
     return ASTType::type; \
 }
 
-inline ASTType getAstType(const ASTPtr & ast)
+inline ASTType getAstType(const IAST & ast)
 {
     APPLY_AST_TYPES(CHECK_AND_RETURN_AST_TYPE)
     return ASTType::UNDEFINED;
 }
 
+inline ASTType getAstType(const ASTPtr & ast)
+{
+    APPLY_AST_TYPES(CHECK_AND_RETURN_AST_TYPE_PTR)
+    return ASTType::UNDEFINED;
+}
+
 inline ASTType getAstType(const ConstASTPtr & ast)
 {
-    APPLY_AST_TYPES(CHECK_AND_RETURN_AST_TYPE)
+    APPLY_AST_TYPES(CHECK_AND_RETURN_AST_TYPE_PTR)
     return ASTType::UNDEFINED;
 }
 #undef CHECK_AND_RETURN_AST_TYPE
@@ -163,9 +121,23 @@ inline ASTType getAstType(const ConstASTPtr & ast)
 void astToLowerCase(const ASTPtr & ast);
 void astToUpperCase(const ASTPtr & ast);
 
+void serializeASTImpl(const ConstASTPtr & ast, WriteBuffer & buf);
+void serializeASTImpl(const IAST & ast, WriteBuffer & buf);
+ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf);
+
+
 void setOrReplaceAST(ASTPtr & cur_ast, ASTPtr & old_child, const ASTPtr & new_child);
+void replaceChildren(ASTPtr & ast, ASTs & children_);
 
 ASTFunctionPtr makeASTFunctionWithVectorArgs(ASTFunctionPtr & ast, const String &name, ASTs &&args);
+
+template <class Predicate>
+inline typename DB::ASTs::size_type erase_if(DB::ConstASTs & asts, Predicate pred) /// NOLINT(cert-dcl58-cpp)
+{
+    auto old_size = asts.size();
+    asts.erase(std::remove_if(asts.begin(), asts.end(), pred), asts.end());
+    return old_size - asts.size();
+}
 
 }
 

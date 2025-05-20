@@ -1,10 +1,8 @@
-
-
 #include <Query/Optimizer/CardinalityEstimate/ExchangeEstimator.h>
 
 namespace DB
 {
-PlanNodeStatisticsPtr ExchangeEstimator::estimate(std::vector<PlanNodeStatisticsPtr> & children_stats, const ExchangeStep & step)
+PlanNodeStatisticsPtr ExchangeEstimator::estimate(std::vector<PlanNodeStatisticsPtr> & children_stats, const ExchangeStepExt & step)
 {
     PlanNodeStatisticsPtr output;
     const auto & out_to_input = step.getOutToInputs();

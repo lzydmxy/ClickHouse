@@ -52,11 +52,14 @@ public:
 
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
 
+    void toProto(Protos::RemoteExchangeSourceStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<RemoteExchangeSourceStepExt> fromProto(const Protos::RemoteExchangeSourceStepExt & proto, ContextPtr context);
+
     bool isAddTotals() const { return is_add_totals; }
     bool isAddExtremes() const  { return is_add_extremes; }
 
 private:
-    // TODO: if bsp_mode is required, then add other codes
+    //todo: zhangwanyun, other feat: if bsp_mode is required, then add other codes
     BroadcastReceiverPtr createReceiver(
         DiskExchangeDataManagerPtr disk_mgr,
         bool is_local_exchange,

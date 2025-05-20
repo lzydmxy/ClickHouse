@@ -7,6 +7,9 @@
 #include <AggregateFunctions/AggregateFunctionCount.h>
 #include <Columns/ColumnAggregateFunction.h>
 #include <Processors/Sources/SourceFromSingleChunk.h>
+#include <Query/Interpreters/InterpreterSelectQueryUseOptimizer.h>
+#include <Query/Interpreters/executeSubQuery.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 
 namespace DB
 {
@@ -45,10 +48,9 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
             auto interpreter = std::make_shared<InterpreterSelectQuery>(query->clone(), context, SelectQueryOptions());
             SelectQueryInfo temp_query_info;
             temp_query_info.query = interpreter->getQuery();
-            // todo: getSyntaxAnalyzerResult need to be implemented by interpreter
-            //temp_query_info.syntax_analyzer_result = interpreter->getSyntaxAnalyzerResult();
+            temp_query_info.syntax_analyzer_result = interpreter->syntax_analyzer_result;
             temp_query_info.prepared_sets = interpreter->getQueryAnalyzer()->getPreparedSets();
-            // todo: need to implement get ActionsDAGPtr from SelectQueryInfo
+            //todo: liyang453, other feat: need to implement get ActionsDAGPtr from SelectQueryInfo
             //rows_cnt = storage->totalRowsByPartitionPredicate(temp_query_info, context);
         }
 
@@ -61,19 +63,15 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
                 select_query.refSelect() = std::make_shared<ASTExpressionList>();
                 select_query.refSelect()->children.emplace_back(count_func);
                 DataTypes types;
-                // todo: need to implement InterpreterSelectQueryUseOptimizer
-                // auto pre_execute = [&types](InterpreterSelectQueryUseOptimizer & interpreter) { types = interpreter.getSampleBlock().getDataTypes(); };
-
-                // todo: need to implement createContextForSubQuery
-                //auto query_context = createContextForSubQuery(context);
+                auto pre_execute = [&types](InterpreterSelectQueryUseOptimizer & interpreter) { types = interpreter.getSampleBlock().getDataTypes(); };
+                auto query_context = createContextForSubQuery(context);
                 SettingsChanges changes;
                 changes.emplace_back("max_result_rows", 1);
                 changes.emplace_back("result_overflow_mode", "throw");
                 changes.emplace_back("extremes", false);
                 changes.emplace_back("optimize_trivial_count_query", false);
-                //query_context->applySettingsChanges(changes);
-                //auto block = executeSubPipelineWithOneRow(query, query_context, pre_execute);
-                Block  block;
+                query_context->applySettingsChanges(changes);
+                auto block = executeSubPipelineWithOneRow(query, query_context, pre_execute);
 
                 if (block.rows() != 1 || block.columns() != 1)
                     throw Exception(ErrorCodes::INCORRECT_RESULT_OF_SCALAR_SUBQUERY, "Trivial count query returned error data");
@@ -98,8 +96,7 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
     {
         auto count_column = ColumnVector<UInt64>::create();
         count_column->insertValue(num_rows);
-        // todo: need to implement getReturnType in AggregateFunction
-        // output_header.insert({count_column->getPtr(), agg_count.getReturnType(), agg_desc.column_name});
+        output_header.insert({count_column->getPtr(), std::make_shared<DataTypeUInt64>(), agg_desc.column_name});
     }
     else
     {
@@ -113,8 +110,6 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
         auto column = ColumnAggregateFunction::create(func);
         column->insertFrom(place);
 
-        // AggregateFunction's argument type must keep same. 
-        // todo: need to implement getArgumentTypes in AggregateFunction
         output_header.insert({std::move(column), std::make_shared<DataTypeAggregateFunction>(func, func->getArgumentTypes(), agg_desc.parameters), agg_desc.column_name});
     }
 
@@ -125,9 +120,46 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
 
     pipeline.init(std::move(pipe));
 
-    // TODO: need addInterpreterContext
-    // if (context)
-    //     pipeline.addInterpreterContext(context);
+    if (context)
+        pipeline.addContext(context);
+}
+
+std::shared_ptr<IQueryPlanStep> ReadStorageRowCountStepExt::copy(ContextPtr context) const
+{
+    auto step = std::make_shared<ReadStorageRowCountStepExt>(output_stream->header, query, agg_desc, is_final_agg, storage_id, context);
+    step->setNumRows(num_rows);
+    return step;
+}
+
+void ReadStorageRowCountStepExt::toProto(Protos::ReadStorageRowCountStepExt & proto, bool for_hash_equals) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
+    serializeASTToProto(query, *proto.mutable_query());
+    ProtosSerDerHelper::toProto(agg_desc, *proto.mutable_agg_desc());
+    proto.set_num_rows(num_rows);
+    proto.set_is_final_agg(is_final_agg);
+    if (storage_id)
+        ProtosSerDerHelper::toProto(storage_id, *proto.mutable_storage_id());
+}
+
+std::shared_ptr<ReadStorageRowCountStepExt> ReadStorageRowCountStepExt::fromProto(const Protos::ReadStorageRowCountStepExt & proto, ContextPtr context)
+{
+    auto base_output_header = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    auto query = deserializeASTFromProto(proto.query());
+    AggregateDescription agg_desc;
+    ProtosSerDerHelper::fillFromProto(agg_desc, proto.agg_desc());
+    auto num_rows = proto.num_rows();
+    bool is_final = proto.is_final_agg();
+    StorageID storage_id = StorageID::createEmpty();
+    if (proto.has_storage_id())
+    {
+        auto storage_id_tmp = ProtosSerDerHelper::fromProto(proto.storage_id(), context);
+        storage_id = *storage_id_tmp;
+    }
+
+    auto step = std::make_shared<ReadStorageRowCountStepExt>(base_output_header, query, agg_desc, is_final, storage_id, context);
+    step->setNumRows(num_rows);
+    return step;
 }
 
 }

@@ -35,8 +35,20 @@ struct MergeTreeDataSelectAnalysisResult
 {
     std::variant<std::exception_ptr, ReadFromMergeTree::AnalysisResult> result;
 
-    bool error() const;
-    size_t marks() const;
+    bool error() const
+    {
+        return std::holds_alternative<std::exception_ptr>(result);
+    }
+    size_t marks() const
+    {
+        if (std::holds_alternative<std::exception_ptr>(result))
+            std::rethrow_exception(std::get<std::exception_ptr>(result));
+
+        const auto & index_stats = std::get<ReadFromMergeTree::AnalysisResult>(result).index_stats;
+        if (index_stats.empty())
+            return 0;
+        return index_stats.back().num_granules_after;
+    }
 };
 
 using MergeTreeDataSelectAnalysisResultPtr = std::shared_ptr<MergeTreeDataSelectAnalysisResult>;

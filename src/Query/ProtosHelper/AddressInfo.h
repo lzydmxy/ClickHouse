@@ -62,6 +62,7 @@ public:
             return std::hash<std::string_view>{}(key.host_name) + static_cast<size_t>(key.port);
         }
     };
+    friend class ProtosSerDerHelper;
 
 private:
     String host_name;

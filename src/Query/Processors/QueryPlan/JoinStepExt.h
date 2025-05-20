@@ -6,11 +6,12 @@
 #include <Interpreters/ActionsVisitor.h>
 
 #include <Query/Common/LinkedHashMap.h>
-#include <Query/Common/PredicateConst.h>
-#include <Query/Interpreters/asof.h>
+// #include <Query/Optimizer/PredicateConst.h>
+#include <Query/Core/JoinsExt.h>
 #include <Query/Parsers/ASTHelper.h>
 
 #include <Query/Executor/RuntimeFilter/RuntimeFilterBuilder.h>
+#include "Query/Optimizer/PredicateConst.h"
 
 namespace DB
 {
@@ -139,7 +140,6 @@ public:
             && getStrictness() != JoinStrictness::Any && getStrictness() != JoinStrictness::Semi && getStrictness() != JoinStrictness::Anti)
             return false;
 
-        // todo can support swap
         if (require_right_keys || has_using)
             return false;
 
@@ -177,6 +177,9 @@ public:
 
     const LinkedHashMap<String, RuntimeFilter> & getRuntimeFilterBuilders() const { return runtime_filter_builders; }
     RuntimeFilterBuilderPtr createRuntimeFilterBuilder(ContextPtr context) const;
+
+    void toProto(Protos::JoinStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<JoinStepExt> fromProto(const Protos::JoinStepExt & proto, ContextPtr context);
 
 protected:
     JoinKind kind;

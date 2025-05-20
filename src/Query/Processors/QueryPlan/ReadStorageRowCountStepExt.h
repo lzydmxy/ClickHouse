@@ -30,6 +30,11 @@ public:
 
     void initializePipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 
+    std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
+
+    void toProto(Protos::ReadStorageRowCountStepExt & proto, bool for_hash_equals = false) const;
+    static std::shared_ptr<ReadStorageRowCountStepExt> fromProto(const Protos::ReadStorageRowCountStepExt & proto, ContextPtr context);
+
 private:
     ASTPtr query;
     AggregateDescription agg_desc;

@@ -21,6 +21,15 @@ public:
         size_t max_streams_,
         bool keep_left_read_in_order_);
 
+    JoinStep(
+    size_t max_block_size_,
+    size_t max_streams_,
+    bool keep_left_read_in_order_)
+    : max_block_size(max_block_size_), max_streams(max_streams_), keep_left_read_in_order(keep_left_read_in_order_)
+    {
+
+    }
+
     String getName() const override { return "Join"; }
 
     QueryPipelineBuilderPtr updatePipeline(QueryPipelineBuilders pipelines, const BuildQueryPipelineSettings &) override;

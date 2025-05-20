@@ -1,6 +1,6 @@
 #pragma once
 #include <Query/Optimizer/CostModel/PlanNodeCost.h>
-#include <QueryPlan/ValuesStep.h>
+#include <Query/Processors/QueryPlan/ValuesStepExt.h>
 
 namespace DB
 {
@@ -9,7 +9,7 @@ struct CostContext;
 class ValuesCost
 {
 public:
-    static PlanNodeCost calculate(const ValuesStep & step, CostContext & context);
+    static PlanNodeCost calculate(const ValuesStepExt & step, CostContext & context);
 };
 
 }

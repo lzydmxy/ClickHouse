@@ -574,6 +574,7 @@ void HTTPHandler::processQuery(
     }
 
     auto context = session->makeQueryContext();
+    context->initializeOptimizerContext();
 
     /// This parameter is used to tune the behavior of output formats (such as Native) for compatibility.
     if (params.has("client_protocol_version"))

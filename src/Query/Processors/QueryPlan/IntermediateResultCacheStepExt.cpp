@@ -35,7 +35,8 @@ std::shared_ptr<IQueryPlanStep> IntermediateResultCacheStepExt::copy(ContextPtr)
 QueryPipelineBuilderPtr IntermediateResultCacheStepExt::processCacheTransform(
     QueryPipelineBuilders & pipelines, const BuildQueryPipelineSettings & build_settings, CacheHolderPtr cache_holder)
 {
-    // TODO impl inter cache
+    // todo: lizhuoyu5, other feat: IntermediateResultCache is not necessary for the optimizer at this stage.
+    // todo: However, we might implement it in the future. For now, we have added the class definition without implementing its functionality.
     throw Exception(ErrorCodes::NOT_IMPLEMENTED, "IntermediateResultCacheStep is not implemented");
     // const auto context = build_settings.context;
     // auto cache = context->getIntermediateResultCache();
@@ -144,7 +145,8 @@ QueryPipelineBuilderPtr IntermediateResultCacheStepExt::processCacheTransform(
 
 QueryPipelineBuilderPtr IntermediateResultCacheStepExt::updatePipeline(QueryPipelineBuilders pipelines, const BuildQueryPipelineSettings & build_settings)
 {
-    // TODO impl inter cache
+    // todo: lizhuoyu5, other feat: IntermediateResultCache is not necessary for the optimizer at this stage.
+    // todo: However, we might implement it in the future. For now, we have added the class definition without implementing its functionality.
     throw Exception(ErrorCodes::NOT_IMPLEMENTED, "IntermediateResultCacheStep is not implemented");
     // auto cache_holder = pipelines[0]->getCacheHolder();
     // if (!cache_holder || cache_holder->all_part_in_storage)

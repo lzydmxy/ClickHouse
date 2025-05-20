@@ -3,9 +3,9 @@
 #include <IO/Operators.h>
 #include <QueryPipeline/QueryPipeline.h>
 #include <Processors/Transforms/PartialSortingTransform.h>
-// #include <Query/Processors/Transforms/TopNFilteringTransformExt.h>
+#include <Query/Processors/Transforms/TopNFilteringTransformExt.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
-
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 namespace DB
 {
 
@@ -30,52 +30,79 @@ void TopNFilteringStepExt::updateInputStreams(const DataStreams & input_streams_
     output_stream->header = input_streams_[0].header;
 }
 
-void TopNFilteringStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
+void TopNFilteringStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &  /*settings*/)
 {
-    //TODO FIXME
-    // if (algorithm == TopNFilteringAlgorithm::Unspecified)
-    // {
-    //     // String default_algorithm = settings.context->getSettingsRef().topn_filtering_algorithm_for_unsorted_stream;
-    //     //TODO read from settings
-    //     String default_algorithm = "SortAndLimit";
+    if (algorithm == TopNFilteringAlgorithm::Unspecified)
+    {
+        // String default_algorithm = settings.context->getSettingsRef().topn_filtering_algorithm_for_unsorted_stream;
+        //Warning read from settings
+        String default_algorithm = "SortAndLimit";
 
-    //     if (default_algorithm == "SortAndLimit")
-    //         algorithm = TopNFilteringAlgorithm::SortAndLimit;
-    //     else if (default_algorithm == "Heap")
-    //         algorithm = TopNFilteringAlgorithm::Heap;
-    //     else
-    //         throw Exception(ErrorCodes::INVALID_SETTING_VALUE, "Invalid setting value for topn_filtering_algorithm_for_unsorted_stream");
-    // }
+        if (default_algorithm == "SortAndLimit")
+            algorithm = TopNFilteringAlgorithm::SortAndLimit;
+        else if (default_algorithm == "Heap")
+            algorithm = TopNFilteringAlgorithm::Heap;
+        else
+            throw Exception(ErrorCodes::INVALID_SETTING_VALUE, "Invalid setting value for topn_filtering_algorithm_for_unsorted_stream");
+    }
 
-    // switch (algorithm)
-    // {
-    //     case TopNFilteringAlgorithm::SortAndLimit:
-    //         pipeline.addSimpleTransform(
-    //             [&](const Block & header) { return std::make_shared<PartialSortingTransform>(header, sort_description, 0); });
-    //         pipeline.addSimpleTransform([&](const Block & header) {
-    //             return std::make_shared<TopNFilteringByLimitingTransformExt>(header, sort_description, size, model);
-    //         });
-    //         break;
-    //     case TopNFilteringAlgorithm::Limit:
-    //         pipeline.addSimpleTransform([&](const Block & header) {
-    //             return std::make_shared<TopNFilteringByLimitingTransformExt>(header, sort_description, size, model);
-    //         });
-    //         break;
-    //     case TopNFilteringAlgorithm::Heap:
-    //         pipeline.addSimpleTransform([&](const Block & header) {
-    //             return std::make_shared<TopNFilteringByHeapTransformExt>(header, sort_description, size, model);
-    //         });
-    //         break;
-    //     default:
-    //         throw Exception(
-    //             ErrorCodes::NOT_IMPLEMENTED,
-    //             "Not implemented topn filtering algorithm `{}` is used",
-    //             TopNFilteringAlgorithmConverter::toString(algorithm));
-    // }
+    switch (algorithm)
+    {
+        case TopNFilteringAlgorithm::SortAndLimit:
+            pipeline.addSimpleTransform(
+                [&](const Block & header) { return std::make_shared<PartialSortingTransform>(header, sort_description, 0); });
+            pipeline.addSimpleTransform([&](const Block & header) {
+                return std::make_shared<TopNFilteringByLimitingTransformExt>(header, sort_description, size, model);
+            });
+            break;
+        case TopNFilteringAlgorithm::Limit:
+            pipeline.addSimpleTransform([&](const Block & header) {
+                return std::make_shared<TopNFilteringByLimitingTransformExt>(header, sort_description, size, model);
+            });
+            break;
+        case TopNFilteringAlgorithm::Heap:
+            pipeline.addSimpleTransform([&](const Block & header) {
+                return std::make_shared<TopNFilteringByHeapTransformExt>(header, sort_description, size, model);
+            });
+            break;
+        default:
+            throw Exception(
+                ErrorCodes::NOT_IMPLEMENTED,
+                "Not implemented topn filtering algorithm `{}` is used",
+                TopNFilteringAlgorithmConverter::toString(algorithm));
+    }
 }
 
 std::shared_ptr<IQueryPlanStep> TopNFilteringStepExt::copy(ContextPtr) const
 {
     return std::make_shared<TopNFilteringStepExt>(input_streams[0], sort_description, size, model, algorithm);
+}
+
+std::shared_ptr<TopNFilteringStepExt> TopNFilteringStepExt::fromProto(const Protos::TopNFilteringStepExt & proto, ContextPtr)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    SortDescription sort_description;
+    for (const auto & proto_element : proto.sort_description())
+    {
+        SortColumnDescription element;
+        ProtosSerDerHelper::fillFromProto(element,proto_element);
+        sort_description.emplace_back(std::move(element));
+    }
+    auto size = proto.size();
+    auto model = TopNModelConverter::fromProto(proto.model());
+    auto algorithm = TopNFilteringAlgorithmConverter::fromProto(proto.algorithm());
+    auto step = std::make_shared<TopNFilteringStepExt>(base_input_stream, sort_description, size, model, algorithm);
+    step->setStepDescription(step_description);
+    return step;
+}
+
+void TopNFilteringStepExt::toProto(Protos::TopNFilteringStepExt & proto, bool) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this ,*proto.mutable_query_plan_base());
+    for (const auto & element : sort_description)
+    ProtosSerDerHelper::toProto(element,*proto.add_sort_description());
+    proto.set_size(size);
+    proto.set_model(TopNModelConverter::toProto(model));
+    proto.set_algorithm(TopNFilteringAlgorithmConverter::toProto(algorithm));
 }
 }

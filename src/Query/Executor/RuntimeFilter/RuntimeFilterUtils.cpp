@@ -6,8 +6,8 @@
 #include <Parsers/IAST_fwd.h>
 #include <Parsers/formatAST.h>
 #include <Query/Parsers/ASTHelper.h>
-#include <Query/Common/Utils.h>
-#include <Query/Common/PredicateUtils.h>
+#include <Query/Optimizer/Utils.h>
+#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
 //#include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
 //#include <Functions/FunctionsRuntimeFilter.h>
@@ -158,10 +158,10 @@ std::pair<ASTs, ASTs> RuntimeFilterUtils::extractExecutableRuntimeFilters(const 
     return std::make_pair(runtime_filters, static_filters);
 }
 
-std::pair<ASTs, ASTs> RuntimeFilterUtils::extractRuntimeFilters(const ConstASTPtr & conjuncts)
+std::pair<ConstASTs, ConstASTs> RuntimeFilterUtils::extractRuntimeFilters(const ConstASTPtr & conjuncts)
 {
-    ASTs runtime_filters;
-    ASTs static_filters;
+    ConstASTs runtime_filters;
+    ConstASTs static_filters;
     if (!conjuncts)
         return std::make_pair(runtime_filters, static_filters);
 
@@ -173,7 +173,7 @@ std::pair<ASTs, ASTs> RuntimeFilterUtils::extractRuntimeFilters(const ConstASTPt
     return std::make_pair(runtime_filters, static_filters);
 }
 
-std::vector<RuntimeFilterId> RuntimeFilterUtils::extractRuntimeFilterId(const ASTPtr & conjuncts)
+std::vector<RuntimeFilterId> RuntimeFilterUtils::extractRuntimeFilterId(const ConstASTPtr & conjuncts)
 {
     std::vector<RuntimeFilterId> ids;
     if (!conjuncts)
@@ -186,7 +186,7 @@ std::vector<RuntimeFilterId> RuntimeFilterUtils::extractRuntimeFilterId(const AS
     return ids;
 }
 
-RuntimeFilterId RuntimeFilterUtils::extractId(const ASTPtr & runtime_filter)
+RuntimeFilterId RuntimeFilterUtils::extractId(const ConstASTPtr & runtime_filter)
 {
     Utils::checkArgument(isInternalRuntimeFilter(runtime_filter));
 
@@ -195,7 +195,7 @@ RuntimeFilterId RuntimeFilterUtils::extractId(const ASTPtr & runtime_filter)
     return id->as<ASTLiteral &>().value.get<RuntimeFilterId>();
 }
 
-std::optional<RuntimeFilterDescription> RuntimeFilterUtils::extractDescription(const ASTPtr & runtime_filter)
+std::optional<RuntimeFilterDescription> RuntimeFilterUtils::extractDescription(const ConstASTPtr & runtime_filter)
 {
     if (getAstType(runtime_filter) != ASTType::ASTFunction)
         return {};

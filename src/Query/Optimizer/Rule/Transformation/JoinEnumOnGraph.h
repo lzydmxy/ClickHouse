@@ -1,12 +1,11 @@
 #pragma once
+
 #include <Functions/FunctionsHashing.h>
 #include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/Property/Equivalences.h>
 #include <Query/Optimizer/Rule/Rule.h>
-#include <QueryPlan/JoinStep.h>
-#include <boost/dynamic_bitset.hpp>
+#include <Query/Processors/QueryPlan/JoinStepExt.h>
 
-#include <unordered_set>
 #include <utility>
 
 namespace DB
@@ -19,7 +18,7 @@ public:
     explicit JoinEnumOnGraph(bool support_filter_) : support_filter(support_filter_) { }
     RuleType getType() const override { return RuleType::JOIN_ENUM_ON_GRAPH; }
     String getName() const override { return "JOIN_ENUM_ON_GRAPH"; }
-    bool isEnabled(ContextPtr context) const override { return context->getSettingsRef().enable_join_enum_on_graph; }
+    bool isEnabled(ContextPtr context) const override { return context->getOptimizerContext()->getSettingsRef().enable_join_enum_on_graph; }
     ConstRefPatternPtr getPattern() const override;
 
     const std::vector<RuleType> & blockRules() const override;

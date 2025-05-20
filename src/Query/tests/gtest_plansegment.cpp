@@ -27,7 +27,7 @@ PlanSegmentPtr createPlanSegment()
     auto step = std::make_unique<ReadNothingStep>(Block{});
     // QueryPlan::Node remote_node{.step = std::move(step), .children = {}};
     // query_plan.addRoot(std::move(remote_node));
-    QueryPlan query_plan;
+    QueryPlanExt query_plan;
     query_plan.addStep(std::move(step));
     plan_segment->setQueryPlan(std::move(query_plan));
 

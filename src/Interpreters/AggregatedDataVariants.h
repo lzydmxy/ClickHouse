@@ -10,6 +10,7 @@ namespace DB
 {
 class Arena;
 class Aggregator;
+class AggregatorExt;
 
 struct AggregatedDataVariants : private boost::noncopyable
 {
@@ -31,6 +32,7 @@ struct AggregatedDataVariants : private boost::noncopyable
       * In this case, the pool will not be able to know with what offsets objects are stored.
       */
     const Aggregator * aggregator = nullptr;
+    const AggregatorExt * aggregator_ext = nullptr;
 
     size_t keys_size{};  /// Number of keys. NOTE do we need this field?
     Sizes key_sizes;     /// Dimensions of keys, if keys of fixed length

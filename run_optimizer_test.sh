@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 ./build/src/unit_tests_dbms debug --gtest_filter="HostWithPortsTest*"
 ./build/src/unit_tests_dbms debug --gtest_filter="LinkedHashMapTest*"
 ./build/src/unit_tests_dbms debug --gtest_filter="RuntimeFilterTest*"

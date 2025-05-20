@@ -5,7 +5,6 @@
 #include <Query/Optimizer/Property/Property.h>
 
 #include <algorithm>
-#include <optional>
 #include <vector>
 
 namespace DB
@@ -20,7 +19,7 @@ bool PropertyMatcher::matchNodePartitioning(
     if (required.getHandle() == Partitioning::Handle::ARBITRARY)
         return true;
 
-    if (required.getHandle() == Partitioning::Handle::FIXED_HASH && context.getSettingsRef().enforce_round_robin
+    if (required.getHandle() == Partitioning::Handle::FIXED_HASH && context.getOptimizerContext()->getSettingsRef().enforce_round_robin
         && required.isEnforceRoundRobin() && actual.normalize(equivalences).satisfy(required.normalize(equivalences), constants))
     {
         required.setHandle(Partitioning::Handle::FIXED_ARBITRARY);

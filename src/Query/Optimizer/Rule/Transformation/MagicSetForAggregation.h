@@ -2,7 +2,7 @@
 
 #include <Query/Optimizer/Cascades/GroupExpression.h>
 #include <Query/Optimizer/Rule/Rule.h>
-#include <QueryPlan/AnyStep.h>
+#include <Query/Processors/QueryPlan/AnyStepExt.h>
 
 namespace DB
 {
@@ -24,7 +24,7 @@ public:
     RuleType getType() const override = 0;
     ConstRefPatternPtr getPattern() const override = 0;
     const std::vector<RuleType> & blockRules() const override;
-    bool isEnabled(ContextPtr context) const override { return context->getSettingsRef().enable_magic_set; }
+    bool isEnabled(ContextPtr context) const override { return context->getOptimizerContext()->getSettingsRef().enable_magic_set; }
 
     static double getFilterFactor(
         const PlanNodeStatisticsPtr & source_statistics,

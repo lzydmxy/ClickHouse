@@ -14,6 +14,11 @@ namespace DB
 using RuntimeFilterId = UInt32;
 class CacheParam;
 
+namespace ErrorCodes
+{
+extern const int PROTOBUF_BAD_CAST;
+}
+
 namespace IntermediateResult
 {
 struct CacheHolder;
@@ -23,7 +28,8 @@ using CacheHolderPtr = std::shared_ptr<IntermediateResult::CacheHolder>;
 class IntermediateResultCacheStepExt : public IQueryPlanStep
 {
 public:
-    // TODO add CacheParam
+    // todo: lizhuoyu5, other feat: IntermediateResultCache is not necessary for the optimizer at this stage.
+    // todo: However, we might implement it in the future. For now, we have added the class definition without implementing its functionality.
     IntermediateResultCacheStepExt(const DataStream & input_stream_, /* CacheParam cache_param_,*/ Aggregator::Params aggregator_params_);
 
     String getName() const override { return "IntermediateResultCacheStepExt"; }
@@ -44,6 +50,16 @@ public:
     const std::unordered_set<RuntimeFilterId> & getIncludedRuntimeFilters() const { return included_runtime_filters; }
     const std::unordered_set<RuntimeFilterId> & getIgnoredRuntimeFilters() const { return ignored_runtime_filters; }
     const Block & getCacheOrder() const { return cache_order; }
+
+    [[noreturn]] void toProto(Protos::IntermediateResultCacheStepExt &, [[maybe_unused]] bool for_hash_equals = false) const
+    {
+        throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "unimplemented");
+    }
+
+    static std::shared_ptr<IntermediateResultCacheStepExt> fromProto(const Protos::IntermediateResultCacheStepExt &, ContextPtr)
+    {
+        throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "unimplemented");
+    }
 
 private:
     QueryPipelineBuilderPtr processCacheTransform(

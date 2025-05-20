@@ -9,23 +9,21 @@
 #include <DataTypes/IDataType.h>
 #include <IO/ReadHelpers.h>
 #include <IO/WriteHelpers.h>
-//#include <QueryPlan/Assignment.h>
 #include <Processors/QueryPlan/QueryPlan.h>
-#include <Query/ProtosHelper/QueryProto.h>
+#include <Query/Processors/QueryPlan/Assignment.h>
 #include <Query/ProtosHelper/DataTypeHelper.h>
+#include <Query/ProtosHelper/QueryProto.h>
+#include <Query/ProtosHelper/FieldHelper.h>
 
 namespace DB
 {
 
 namespace Protos
 {
-    class QueryPlanStep;
+class QueryPlanStep;
 }
 
 class DataStream;
-
-class IQueryPlanStep;
-using QueryPlanStepSharedPtr = std::shared_ptr<IQueryPlanStep>;
 
 class Context;
 using ContextPtr = std::shared_ptr<const Context>;
@@ -106,26 +104,26 @@ NameAndTypePair nameAndTypePairFromProto(const RNameAndTypePair & proto);
 void serializeHeaderToProto(const Block & block, RBlock & proto);
 Block deserializeHeaderFromProto(const RBlock & proto);
 
-// void serializeAssignmentsToProto(const Assignments & assignment, RAssignments & proto);
-// Assignments deserializeAssignmentsFromProto(const RAssignments & proto);
+void serializeAssignmentsToProto(const Assignments & assignment, RAssignments & proto);
+Assignments deserializeAssignmentsFromProto(const RAssignments & proto);
 
 namespace impl
 {
-    template <typename Type>
-    inline constexpr bool is_protobuf_native_v = std::is_fundamental_v<Type> || std::is_same_v<Type, String>;
+template <typename Type>
+inline constexpr bool is_protobuf_native_v = std::is_fundamental_v<Type> || std::is_same_v<Type, String>;
 
-    template <class>
-    inline constexpr bool always_false_v = false;
+template <class>
+inline constexpr bool always_false_v = false;
 
-    template <typename>
-    struct is_std_vector : std::false_type
-    {
-    };
+template <typename>
+struct is_std_vector : std::false_type
+{
+};
 
-    template <typename T, typename A>
-    struct is_std_vector<std::vector<T, A>> : std::true_type
-    {
-    };
+template <typename T, typename A>
+struct is_std_vector<std::vector<T, A>> : std::true_type
+{
+};
 }
 
 // assume proto type and obj is matched, won't check
@@ -222,14 +220,13 @@ auto deserializeOrderedMapFromProto(const ProtoType & proto) -> std::map<Key, Va
 
 // this made for struct Array, struct Tuple and struct Map
 template <typename T>
-void serializeFieldVectorToProto(const T & /*field_vector*/, RFieldVector & /*proto*/)
+void serializeFieldVectorToProto(const T & field_vector, RFieldVector & proto)
 {
     static_assert(std::is_base_of_v<FieldVector, T>, "not a FieldVector, see Core/Field.h");
-    //TODO: Need toProto method in T class
-    // for (auto & element : field_vector)
-    // {
-    //     element.toProto(*proto.add_fields());
-    // }
+    for (auto & element : field_vector)
+    {
+     FieldToProto(element, *proto.add_fields());
+    }
 }
 
 // this made for struct Array, struct Tuple and struct Map
@@ -239,11 +236,10 @@ T deserializeFieldVectorFromProto(const RFieldVector & proto)
     static_assert(std::is_base_of_v<FieldVector, T>, "not a FieldVector, see Core/Field.h");
     T res;
     res.resize(proto.fields_size());
-    //TODO: Need fromProto method in T class
-    // for (int i = 0; i < proto.fields_size(); ++i)
-    // {
-    //     res[i].fromProto(proto.fields(i));
-    // }
+    for (int i = 0; i < proto.fields_size(); ++i)
+    {
+        FieldFillFromProto(res[i], proto.fields(i));
+    }
     return res;
 }
 
@@ -260,4 +256,5 @@ QueryPlanStepPtr deserializeQueryPlanStepFromProto(const RQueryPlanStep & proto,
 
 bool isPlanStepEqual(const IQueryPlanStep & a, const IQueryPlanStep & b);
 UInt64 hashPlanStep(const IQueryPlanStep & step, bool ignore_output_stream);
+
 }

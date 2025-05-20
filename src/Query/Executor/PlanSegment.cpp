@@ -11,7 +11,6 @@
 #include <Interpreters/Context.h>
 #include <Parsers/IAST.h>
 #include <Parsers/queryToString.h>
-#include <Processors/QueryPlan/QueryPlan.h>
 #include <Query/ProtosHelper/PlanSerDerHelper.h>
 #include <Query/ProtosHelper/QueryProto.h>
 #include <Query/ProtosHelper/ExchangeMode.h>
@@ -248,7 +247,7 @@ String PlanSegmentOutput::toString(size_t indent) const
 }
 
 
-void PlanSegment::setPlanSegmentToQueryPlan(QueryPlan::Node * node, ContextPtr & context)
+void PlanSegment::setPlanSegmentToQueryPlan(QueryPlanExt::Node * node, ContextPtr & context)
 {
     if (!node)
         return;
@@ -263,7 +262,6 @@ void PlanSegment::setPlanSegmentToQueryPlan(QueryPlan::Node * node, ContextPtr &
     }
 }
 
-/*
 void PlanSegment::serialize(WriteBuffer & buf) const
 {
     writeBinary(segment_id, buf);
@@ -351,15 +349,6 @@ void PlanSegment::deserialize(ReadBuffer & buf, ContextMutablePtr context)
     readBinary(parallel_index, buf);
 }
 
-PlanSegmentPtr PlanSegment::deserializePlanSegment(ReadBuffer & buf, ContextMutablePtr context)
-{
-    auto plan_segment = std::make_unique<PlanSegment>();
-    plan_segment->deserialize(buf, context);
-    plan_segment->update(std::move(context));
-    return plan_segment;
-}
-*/
-
 void PlanSegment::toProto(RPlanSegment & plan_segment_proto)
 {
     auto plan_ptr = std::make_unique<RQueryPlan>();
@@ -428,6 +417,14 @@ void PlanSegment::update(ContextPtr context)
         != outputs.end();
 }
 
+PlanSegmentPtr PlanSegment::deserializePlanSegment(ReadBuffer & buf, ContextMutablePtr context)
+{
+    auto plan_segment = std::make_unique<PlanSegment>();
+    plan_segment->deserialize(buf, context);
+    plan_segment->update(std::move(context));
+    return plan_segment;
+}
+
 String PlanSegment::toString()
 {
     std::ostringstream ostr;
@@ -437,7 +434,7 @@ String PlanSegment::toString()
     ostr << "parallel_index: " << parallel_index << "\n";
 
     WriteBufferFromOwnString plan_str;
-    query_plan.explainPlan(plan_str, QueryPlan::ExplainPlanOptions{true, true, true, true});
+    query_plan.explainPlan(plan_str, QueryPlanExt::ExplainPlanOptions{true, true, true, true});
     ostr << plan_str.str() << "\n";
 
     ostr << "inputs: " << "\n";
@@ -454,15 +451,16 @@ String PlanSegment::toString()
     return ostr.str();
 }
 
-// void PlanSegment::getRemoteSegmentId(const QueryPlan::Node * node, std::unordered_map<PlanNodeId, size_t> & exchange_to_segment)
-// {
-//     auto * step = dynamic_cast<RemoteExchangeSourceStepExt *>(node->step.get());
-//     if (step)
-//         exchange_to_segment[node->id] = step->getInput()[0]->getPlanSegmentId();
+void PlanSegment::getRemoteSegmentId(const QueryPlanExt::Node * node, std::unordered_map<PlanNodeId, size_t> & exchange_to_segment)
+{
+    // TODO:Need Step
+    // auto * step = dynamic_cast<RemoteExchangeSourceStepExt *>(node->step.get());
+    // if (step)
+    //     exchange_to_segment[node->id] = step->getInput()[0]->getPlanSegmentId();
 
-//     for (const auto & child : node->children)
-//         getRemoteSegmentId(child, exchange_to_segment);
-// }
+    for (const auto & child : node->children)
+        getRemoteSegmentId(child, exchange_to_segment);
+}
 
 std::unordered_map<size_t, PlanSegmentPtr &> PlanSegmentTree::getPlanSegmentsMap()
 {

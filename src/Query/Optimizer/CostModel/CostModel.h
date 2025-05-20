@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Interpreters/Context.h>
+#include <Query/Common/OptimizerSettings.h>
+#include <Query/Common/OptimizerContext.h>
 
 namespace DB
 {
@@ -11,7 +13,7 @@ public:
     // static constexpr double NET_COST_RATIO = 0.16;
     // static constexpr double MEM_COST_RATIO = 0.1;
 
-    explicit CostModel(const Context & context) : context_settings(context.getSettingsRef()) { }
+    explicit CostModel(const Context & context) : context_settings(context.getOptimizerContext()->getSettingsRef()) { }
 
     double getCPUCostWeight() const { return context_settings.cost_calculator_cpu_cost_ratio; }
     double getMemCostWeight() const { return context_settings.cost_calculator_mem_cost_ratio; }
@@ -36,7 +38,7 @@ public:
     double getByteSizeWeight() const { return context_settings.cost_calculator_byte_size_weight; }
 
 private:
-    const Settings & context_settings;
+    const OptimizerSettings & context_settings;
 };
 
 }

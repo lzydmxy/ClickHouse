@@ -1,5 +1,8 @@
 #include <Query/Optimizer/Property/Constants.h>
 
+#include <Core/Field.h>
+#include <Query/Optimizer/FunctionInvoker.h>
+
 namespace DB
 {
 
@@ -32,7 +35,7 @@ String Constants::toString() const
     std::stringstream output;
     output << "{";
     for (const auto & item : values)
-        output << " " << item.first << "=" << item.second.value.toString();
+        output << " " << item.first << "=" << DB::toString(item.second.value);
     output << "}";
     return output.str();
 }

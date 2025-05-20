@@ -18,6 +18,8 @@ public:
     void describeActions(JSONBuilder::JSONMap & map) const override;
     void describeActions(FormatSettings & settings) const override;
 
+    size_t getOffset() const { return offset; }
+
     friend class QueryPlanStepHelper;
 private:
     void updateOutputStream() override

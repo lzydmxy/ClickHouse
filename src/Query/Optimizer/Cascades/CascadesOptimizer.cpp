@@ -1,14 +1,11 @@
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>
 
 #include <Interpreters/Context.h>
-#include <Interpreters/DistributedStages/PlanSegmentSplitter.h>
+#include <Query/Interpreters/DistributedStages/PlanSegmentSplitter.h>
 #include <Query/Optimizer/Cascades/GroupExpression.h>
 #include <Query/Optimizer/Cascades/Task.h>
-#include <Query/Optimizer/OptimizerMetrics.h>
 #include <Query/Optimizer/Property/PropertyEnforcer.h>
 #include <Query/Optimizer/Rule/Implementation/SetJoinDistribution.h>
-#include <Query/Optimizer/Rule/Rewrite/PullProjectionOnJoinThroughJoin.h>
-#include <Query/Optimizer/Rule/Rewrite/PushAggThroughJoinRules.h>
 #include <Query/Optimizer/Rule/Transformation/CardinalityBasedJoinReorder.h>
 #include <Query/Optimizer/Rule/Transformation/InlineCTE.h>
 #include <Query/Optimizer/Rule/Transformation/InnerJoinAssociate.h>
@@ -20,15 +17,13 @@
 #include <Query/Optimizer/Rule/Transformation/PullOuterJoin.h>
 #include <Query/Optimizer/Rule/Transformation/SelectivityBasedJoinReorder.h>
 #include <Query/Optimizer/Rule/Transformation/SemiJoinPushDown.h>
-#include <QueryPlan/AnyStep.h>
-#include <QueryPlan/CTERefStep.h>
-#include <QueryPlan/GraphvizPrinter.h>
-#include <QueryPlan/IQueryPlanStep.h>
-#include <QueryPlan/MultiJoinStep.h>
-#include <QueryPlan/PlanPattern.h>
-#include <Storages/DataLakes/StorageCnchLakeBase.h>
-#include <Storages/RemoteFile/IStorageCnchFile.h>
-#include <Storages/StorageCnchMergeTree.h>
+#include <Query/Processors/QueryPlan/AnyStepExt.h>
+#include <Query/Processors/QueryPlan/CTERefStepExt.h>
+#include <Query/Planner/GraphvizPrinter.h>
+#include <Query/Processors/IQueryPlanStepExt.h>
+#include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
+#include <Query/Processors/QueryPlan/PlanPattern.h>
+#include <Storages/StorageDistributed.h>
 
 #include <memory>
 
@@ -40,10 +35,10 @@ namespace ErrorCodes
 }
 
 
-static bool hasCBOType(const std::set<IQueryPlanStep::Type> & typs)
+static bool hasCBOType(const std::set<QueryPlanStepType> & typs)
 {
-    static std::set<IQueryPlanStep::Type> CBO_STEP_TYPE
-        = {IQueryPlanStep::Type::Join, IQueryPlanStep::Type::Aggregating, IQueryPlanStep::Type::CTERef};
+    static std::set<QueryPlanStepType> CBO_STEP_TYPE
+        = {QueryPlanStepType::JoinStepExt, QueryPlanStepType::AggregatingStepExt, QueryPlanStepType::CTERefStepExt};
     for (const auto & type : CBO_STEP_TYPE)
     {
         if (typs.find(type) != typs.end())
@@ -52,9 +47,9 @@ static bool hasCBOType(const std::set<IQueryPlanStep::Type> & typs)
     return false;
 }
 
-bool CascadesOptimizer::rewrite(QueryPlan & plan, ContextMutablePtr context) const
+bool CascadesOptimizer::rewrite(QueryPlanExt & plan, ContextMutablePtr context) const
 {
-    int id = context->getRuleId();
+    int id = context->getOptimizerContext()->getRuleId();
     CascadesContext cascades_context{
         context,
         plan.getCTEInfo(),
@@ -77,16 +72,16 @@ bool CascadesOptimizer::rewrite(QueryPlan & plan, ContextMutablePtr context) con
     catch (...)
     {
         LOG_WARNING(cascades_context.getLog(), "Optimize failed: {}", cascades_context.getInfo());
-        GraphvizPrinter::printMemo(cascades_context.getMemo(), root_id, context, std::to_string(id) + "_CascadesOptimizer-Memo-Graph");
+        GraphvizPrinter::printMemo(cascades_context.getMemo(), root_id, context, toString(id) + "_CascadesOptimizer-Memo-Graph");
         throw;
     }
-    LOG_DEBUG(cascades_context.getLog(), cascades_context.getInfo());
-    GraphvizPrinter::printMemo(cascades_context.getMemo(), root_id, context, std::to_string(id) + "_CascadesOptimizer-Memo-Graph");
+    LOG_DEBUG(cascades_context.getLog(), "{}", cascades_context.getInfo());
+    GraphvizPrinter::printMemo(cascades_context.getMemo(), root_id, context, toString(id) + "_CascadesOptimizer-Memo-Graph");
 
     auto result = buildPlanNode(root_id, cascades_context, single);
 
     // enforce a gather with keep_order if offloading_with_query_plan enabled
-    if (context->getSettingsRef().offloading_with_query_plan)
+    if (context->getOptimizerContext()->getSettingsRef().offloading_with_query_plan)
         result = PropertyEnforcer::enforceOffloadingGatherNode(result, *context);
 
     plan.getCTEInfo().clear();
@@ -121,19 +116,16 @@ WinnerPtr CascadesOptimizer::optimize(GroupId root_group_id, CascadesContext & c
 
         // Check to see if we have at least one plan, and if we have exceeded our
         // timeout limit
-        double duration = watch.elapsedMillisecondsAsDouble();
+        double duration = watch.elapsedMilliseconds();
         if (duration >= context.getTaskExecutionTimeout())
         {
-            throw Exception(
-                "Cascades exhausted the time limit of " + std::to_string(context.getTaskExecutionTimeout()) + " ms",
-                ErrorCodes::OPTIMIZER_TIMEOUT);
+            throw Exception(ErrorCodes::OPTIMIZER_TIMEOUT, 
+                "Cascades exhausted the time limit of {} ms", context.getTaskExecutionTimeout());
         }
         if (context.getTaskStack().size() > 100000)
         {
-            throw Exception(
-                "Cascades exhausted the task limit of " + std::to_string(100000) + ", there are "
-                    + std::to_string(context.getTaskStack().size()) + " tasks",
-                ErrorCodes::OPTIMIZER_TIMEOUT);
+            throw Exception(ErrorCodes::OPTIMIZER_TIMEOUT, 
+                "Cascades exhausted the task limit of 100000), there are {} tasks", context.getTaskStack().size());
         }
     }
 
@@ -172,7 +164,7 @@ GroupExprPtr CascadesContext::initMemo(const PlanNodePtr & plan_node)
         {
             queue.push(child);
         }
-        if (const auto * read_step = dynamic_cast<const CTERefStep *>(node->getStep().get()))
+        if (const auto * read_step = dynamic_cast<const CTERefStepExt *>(node->getStep().get()))
         {
             if (!memo.containsCTEId(read_step->getId()))
             {
@@ -203,10 +195,10 @@ GroupExprPtr CascadesContext::makeGroupExpression(const PlanNodePtr & node, Rule
     std::vector<GroupId> child_groups;
     for (auto & child : node->getChildren())
     {
-        if (child->getStep()->getType() == IQueryPlanStep::Type::Any)
+        if (getQueryPlanStepType(child->getStep()) == QueryPlanStepType::AnyStepExt)
         {
             // Special case for LEAF
-            const auto * const leaf = dynamic_cast<const AnyStep *>(child->getStep().get());
+            const auto * const leaf = dynamic_cast<const AnyStepExt *>(child->getStep().get());
             auto child_group = leaf->getGroupId();
             child_groups.push_back(child_group);
         }
@@ -236,12 +228,12 @@ CascadesContext::CascadesContext(
     : context(context_)
     , cte_info(cte_info_)
     , worker_size(worker_size_)
-    , support_filter(context->getSettingsRef().enable_join_graph_support_filter)
-    , task_execution_timeout(context->getSettingsRef().cascades_optimizer_timeout)
-    , enable_pruning((context->getSettingsRef().enable_cascades_pruning))
-    , enable_auto_cte(context->getSettingsRef().cte_mode == CTEMode::AUTO)
-    , enable_trace((context->getSettingsRef().log_optimizer_run_time))
-    , enable_cbo(enable_cbo_ && context->getSettingsRef().enable_cbo)
+    , support_filter(context->getOptimizerContext()->getSettingsRef().enable_join_graph_support_filter)
+    , task_execution_timeout(context->getOptimizerContext()->getSettingsRef().cascades_optimizer_timeout)
+    , enable_pruning((context->getOptimizerContext()->getSettingsRef().enable_cascades_pruning))
+    , enable_auto_cte(context->getOptimizerContext()->getSettingsRef().cte_mode == CTEMode::AUTO)
+    , enable_trace((context->getOptimizerContext()->getSettingsRef().log_optimizer_run_time))
+    , enable_cbo(enable_cbo_ && context->getOptimizerContext()->getSettingsRef().enable_cbo)
     , max_join_size(max_join_size_)
     , cost_model(CostModel(*context_))
     , log(getLogger("CascadesOptimizer"))
@@ -252,20 +244,20 @@ CascadesContext::CascadesContext(
 
     if (enable_cbo)
     {
-        if (context->getSettingsRef().enable_join_reorder)
+        if (context->getOptimizerContext()->getSettingsRef().enable_join_reorder)
         {
-            if (context->getSettingsRef().enable_non_equijoin_reorder && max_join_size_ <= context->getSettingsRef().max_graph_reorder_size)
+            if (context->getOptimizerContext()->getSettingsRef().enable_non_equijoin_reorder && max_join_size_ <= context->getOptimizerContext()->getSettingsRef().max_graph_reorder_size)
             {
                 transformation_rules.emplace_back(std::make_shared<InnerJoinAssociate>());
             }
             transformation_rules.emplace_back(std::make_shared<SemiJoinPushDown>());
             transformation_rules.emplace_back(std::make_shared<JoinEnumOnGraph>(support_filter));
             transformation_rules.emplace_back(std::make_shared<InnerJoinCommutation>());
-            if (context->getSettingsRef().heuristic_join_reorder_enumeration_times > 0)
+            if (context->getOptimizerContext()->getSettingsRef().heuristic_join_reorder_enumeration_times > 0)
                 transformation_rules.emplace_back(
-                    std::make_shared<CardinalityBasedJoinReorder>(context->getSettingsRef().max_graph_reorder_size));
+                    std::make_shared<CardinalityBasedJoinReorder>(context->getOptimizerContext()->getSettingsRef().max_graph_reorder_size));
             transformation_rules.emplace_back(
-                std::make_shared<SelectivityBasedJoinReorder>(context->getSettingsRef().max_graph_reorder_size));
+                std::make_shared<SelectivityBasedJoinReorder>(context->getOptimizerContext()->getSettingsRef().max_graph_reorder_size));
             transformation_rules.emplace_back(std::make_shared<JoinToMultiJoin>());
         }
 
@@ -290,10 +282,10 @@ CascadesContext::CascadesContext(
         // transformation_rules.emplace_back(std::make_shared<PushAggThroughInnerJoin>());
     }
 
-size_t WorkerSizeFinder::find(QueryPlan & query_plan, const Context & context)
+size_t WorkerSizeFinder::find(QueryPlanExt & query_plan, const Context & context)
 {
-    if (context.getSettingsRef().enable_memory_catalog)
-        return context.getSettingsRef().memory_catalog_worker_size;
+    if (context.getOptimizerContext()->getSettingsRef().enable_memory_catalog)
+        return context.getOptimizerContext()->getSettingsRef().memory_catalog_worker_size;
 
     WorkerSizeFinder visitor{query_plan.getCTEInfo()};
     // default schedule to worker cluster
@@ -314,24 +306,23 @@ std::optional<size_t> WorkerSizeFinder::visitPlanNode(PlanNodeBase & node, const
     return std::nullopt;
 }
 
-std::optional<size_t> WorkerSizeFinder::visitTableScanNode(TableScanNode & node, const Context & context)
+std::optional<size_t> WorkerSizeFinder::visitTableScanStepExtNode(TableScanStepExtNode & node, const Context & context)
 {
     const auto storage = node.getStep()->getStorage();
-    const auto * cnch_table = dynamic_cast<StorageCnchMergeTree *>(storage.get());
-    const auto * cnch_lake = dynamic_cast<StorageCnchLakeBase *>(storage.get());
-    const auto * cnch_file = dynamic_cast<IStorageCnchFile *>(storage.get());
+    const auto * distributed_table = dynamic_cast<StorageDistributed *>(storage.get());
 
-    if (cnch_table || cnch_lake || cnch_file)
+    /// diff: byconity uses work group
+    if (distributed_table)
     {
-        const auto & worker_group = context.getCurrentWorkerGroup();
-        return worker_group->getShardsInfo().size();
+        if (auto cluster = distributed_table->getCluster())
+            return cluster->getShardCount();
     }
     return std::nullopt;
 }
 
-std::optional<size_t> WorkerSizeFinder::visitCTERefNode(CTERefNode & node, const Context & context)
+std::optional<size_t> WorkerSizeFinder::visitCTERefStepExtNode(CTERefStepExtNode & node, const Context & context)
 {
-    const auto * step = dynamic_cast<const CTERefStep *>(node.getStep().get());
+    const auto * step = dynamic_cast<const CTERefStepExt *>(node.getStep().get());
     return VisitorUtil::accept(cte_info.getCTEDef(step->getId()), *this, context);
 }
 
@@ -399,4 +390,5 @@ String CascadesContext::getInfo() const
     }
     return ss.str();
 }
-    }
+
+}

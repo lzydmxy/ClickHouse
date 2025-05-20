@@ -16,7 +16,7 @@ namespace DB
 class DataStream;
 
 class IQueryPlanStep;
-using QueryPlanStepPtr = std::unique_ptr<IQueryPlanStep>;
+using QueryPlanStepPtr = std::shared_ptr<IQueryPlanStep>;
 
 class QueryPipelineBuilder;
 using QueryPipelineBuilderPtr = std::unique_ptr<QueryPipelineBuilder>;
@@ -114,7 +114,7 @@ public:
     void addRoot(Node && node);
     static std::pair<Nodes, QueryPlanResourceHolder> detachNodesAndResources(QueryPlan && plan);
 
-private:
+protected:
     QueryPlanResourceHolder resources;
     Nodes nodes;
     Node * root = nullptr;
@@ -122,8 +122,10 @@ private:
     void checkInitialized() const;
     void checkNotCompleted() const;
 
-    /// Those fields are passed to QueryPipeline.
     size_t max_threads = 0;
+
+private:
+    /// Those fields are passed to QueryPipeline.
     bool concurrency_control = false;
 };
 

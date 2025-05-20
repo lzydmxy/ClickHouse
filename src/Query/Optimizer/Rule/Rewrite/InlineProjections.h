@@ -1,0 +1,56 @@
+#pragma once
+
+#include <Query/Optimizer/Rule/Rule.h>
+#include <Query/Processors/QueryPlan/Assignment.h>
+
+namespace DB
+{
+
+/**
+ * Inlines expressions from a child project node into a parent project node
+ * as long as they are all identity or not used, or they are simple constants,
+ * or they are referenced only once (to avoid introducing duplicate computation)
+ * and the references don't appear within a TRY block (to avoid changing semantics).
+ */
+class InlineProjections : public Rule
+{
+public:
+    explicit InlineProjections(bool inline_arraysetcheck_ = false) : inline_arraysetcheck(inline_arraysetcheck_) { }
+    InlineProjections(PlanNodePtr & parent, PlanNodePtr & child, ContextMutablePtr & context, bool inline_arraysetcheck);
+
+    RuleType getType() const override { return RuleType::INLINE_PROJECTION; }
+    String getName() const override { return "INLINE_PROJECTION"; }
+    bool isEnabled(ContextPtr context) const override {return context->getOptimizerContext()->getSettingsRef().enable_inline_projection; }
+    ConstRefPatternPtr getPattern() const override;
+    TransformResult transformImpl(PlanNodePtr node, const Captures & captures, RuleContext & context) override;
+    static std::optional<PlanNodePtr> inlineProjections(PlanNodePtr & parent, PlanNodePtr & child, ContextMutablePtr & context, bool inline_arraysetcheck);
+
+private:
+    static std::set<String> extractInliningTargets(ProjectionStepExtNode * parent, ProjectionStepExtNode * child, ContextMutablePtr & context, bool inline_arraysetcheck);
+    static ASTPtr inlineReferences(const ConstASTPtr & expression, Assignments & assignments);
+    bool inline_arraysetcheck;
+};
+
+class InlineProjectionIntoJoin : public Rule
+{
+public:
+    RuleType getType() const override { return RuleType::INLINE_PROJECTION_INTO_JOIN; }
+    String getName() const override { return "INLINE_PROJECTION_INTO_JOIN"; }
+    bool isEnabled(ContextPtr context) const override {return context->getOptimizerContext()->getSettingsRef().enable_inline_projection_into_join; }
+    ConstRefPatternPtr getPattern() const override;
+
+    TransformResult transformImpl(PlanNodePtr node, const Captures & captures, RuleContext & context) override;
+};
+
+class InlineProjectionOnJoinIntoJoin : public Rule
+{
+public:
+    RuleType getType() const override { return RuleType::INLINE_PROJECTION_ON_JOIN_INTO_JOIN; }
+    String getName() const override { return "INLINE_PROJECTION_ON_JOIN_INTO_JOIN"; }
+    bool isEnabled(ContextPtr context) const override {return context->getOptimizerContext()->getSettingsRef().enable_inline_projection_on_join_into_join; }
+    ConstRefPatternPtr getPattern() const override;
+
+    TransformResult transformImpl(PlanNodePtr node, const Captures & captures, RuleContext & context) override;
+};
+
+}

@@ -44,11 +44,8 @@ void MarkDistinctTransformExt::transform(Chunk & chunk)
     }
 
     Block mark_block{distinct_columns};
-
-    //TODO class Set Add markDistinctBlock
-    // ColumnUInt8::MutablePtr result = distinct_set.markDistinctBlock(mark_block.getColumnsWithTypeAndName());
-
-    // chunk.addColumn(std::move(result));
+    /// Filter to extract distinct values from the block.// if (fill_set_elements)
+    ColumnUInt8::MutablePtr filter = ColumnUInt8::create(mark_block.rows());
+    chunk.addColumn(std::move(filter));
 }
-
 }

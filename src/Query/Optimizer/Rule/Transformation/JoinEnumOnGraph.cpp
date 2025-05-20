@@ -7,11 +7,9 @@
 #include <Query/Optimizer/Rule/Pattern.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Optimizer/Utils.h>
-#include <QueryPlan/AnyStep.h>
-#include <QueryPlan/MultiJoinStep.h>
+#include <Query/Common/NameToTypeExt.h>
 #include <boost/range/adaptor/map.hpp>
 #include <boost/range/algorithm/copy.hpp>
-#include "Optimizer/Rule/Rule.h"
 
 namespace DB
 {
@@ -19,8 +17,8 @@ ConstRefPatternPtr JoinEnumOnGraph::getPattern() const
 {
     (void)support_filter;
     // return Patterns::join()
-    //     .matchingStep<JoinStep>(
-    //         [&](const JoinStep & s) { return s.supportReorder(support_filter) && !s.isSimpleReordered() && !s.isOrdered(); })
+    //     .matchingStep<JoinStepExt>(
+    //         [&](const JoinStepExt & s) { return s.supportReorder(support_filter) && !s.isSimpleReordered() && !s.isOrdered(); })
     //     .with(Patterns::tree(), Patterns::tree())
     //     .result();
     static auto pattern = Patterns::multiJoin()
@@ -79,7 +77,7 @@ createJoinCondition(const UnionFind<String> & union_find, const std::vector<std:
     return {left_join_keys, right_join_keys};
 }
 
-static PlanNodePtr createJoinNode(
+static PlanNodePtr createJoinStepExtNode(
     OptContextPtr & context,
     GroupId left_id,
     GroupId right_id,
@@ -114,11 +112,11 @@ static PlanNodePtr createJoinNode(
         }
     }
 
-    auto join_step = std::make_shared<JoinStep>(
+    auto join_step = std::make_shared<JoinStepExt>(
         DataStreams{left->getStep()->getOutputStream(), right->getStep()->getOutputStream()},
-        DataStream{output},
-        ASTTableJoin::Kind::Inner,
-        ASTTableJoin::Strictness::All,
+        DataStream{ToColumnsWithTypeAndName(output)},
+        JoinKind::Inner,
+        JoinStrictness::All,
         context->getOptimizerContext().getContext()->getSettingsRef().max_threads,
         context->getOptimizerContext().getContext()->getSettingsRef().optimize_read_in_order,
         join_keys.first,
@@ -127,7 +125,7 @@ static PlanNodePtr createJoinNode(
         filter,
         false,
         std::nullopt,
-        ASOF::Inequality::GreaterOrEquals,
+        ASOFJoinInequality::GreaterOrEquals,
         DistributionType::UNKNOWN);
 
     return PlanNodeBase::createPlanNode(context->nextNodeId(), std::move(join_step), {left, right});
@@ -157,7 +155,7 @@ ConstASTs JoinEnumOnGraph::getJoinFilter(
     union_scope.insert(left_symbols.begin(), left_symbols.end());
     union_scope.insert(right_symbols.begin(), right_symbols.end());
 
-    std::vector<ConstASTPtr> join_predicates_builder;
+    ConstASTs join_predicates_builder;
     for (auto & tmp_conjunct : non_inferrable_conjuncts)
     {
         auto conjunct = all_filter_inference.rewrite(tmp_conjunct, union_scope);
@@ -177,7 +175,7 @@ ConstASTs JoinEnumOnGraph::getJoinFilter(
 }
 
 
-static GroupId buildJoinNode(
+static GroupId buildJoinStepExtNode(
     OptContextPtr & context,
     std::vector<GroupId> groups,
     const UnionFind<String> & union_find,
@@ -213,7 +211,7 @@ static GroupId buildJoinNode(
             require_left.insert(symbol);
         }
     }
-    auto left_id = buildJoinNode(context, left_groups, union_find, graph, require_left, all_filter);
+    auto left_id = buildJoinStepExtNode(context, left_groups, union_find, graph, require_left, all_filter);
 
     // build right node, using [1:] groups
     std::set<String> require_right = require_names;
@@ -225,7 +223,7 @@ static GroupId buildJoinNode(
             require_right.insert(symbol);
         }
     }
-    auto right_id = buildJoinNode(context, right_groups, union_find, graph, require_right, all_filter);
+    auto right_id = buildJoinStepExtNode(context, right_groups, union_find, graph, require_right, all_filter);
 
     if (left_id > right_id)
     {
@@ -233,12 +231,12 @@ static GroupId buildJoinNode(
         std::swap(left_id, right_id);
     }
 
-    auto join_node = createJoinNode(context, left_id, right_id, join_keys, require_names, filter);
+    auto join_node = createJoinStepExtNode(context, left_id, right_id, join_keys, require_names, filter);
     GroupExprPtr join_expr;
     context->getOptimizerContext().recordPlanNodeIntoGroup(join_node, join_expr, RuleType::JOIN_ENUM_ON_GRAPH);
     join_expr->setRuleExplored(RuleType::INNER_JOIN_COMMUTATION);
 
-    join_node = createJoinNode(context, right_id, left_id, {join_keys.second, join_keys.first}, require_names, filter);
+    join_node = createJoinStepExtNode(context, right_id, left_id, {join_keys.second, join_keys.first}, require_names, filter);
     context->getOptimizerContext().recordPlanNodeIntoGroup(join_node, join_expr, RuleType::JOIN_ENUM_ON_GRAPH, join_expr->getGroupId());
     join_expr->setRuleExplored(RuleType::INNER_JOIN_COMMUTATION);
 
@@ -250,9 +248,9 @@ TransformResult JoinEnumOnGraph::transformImpl(PlanNodePtr node, const Captures 
     auto group_id = context.group_id;
     auto group = context.optimization_context->getOptimizerContext().getMemo().getGroupById(group_id);
 
-    const auto * join_step = dynamic_cast<const MultiJoinStep *>(node->getStep().get());
+    const auto * join_step = dynamic_cast<const MultiJoinStepExt *>(node->getStep().get());
 
-    if (join_step->getGraph().getNodes().size() > context.context->getSettingsRef().max_graph_reorder_size)
+    if (join_step->getGraph().getNodes().size() > context.context->getOptimizerContext()->getSettingsRef().max_graph_reorder_size)
         return {};
 
     std::set<String> output_names;
@@ -310,7 +308,7 @@ TransformResult JoinEnumOnGraph::transformImpl(PlanNodePtr node, const Captures 
             }
         }
         auto new_left_id
-            = buildJoinNode(context.optimization_context, left_groups, graph.getUnionFind(), graph, require_left, graph.getFilter());
+            = buildJoinStepExtNode(context.optimization_context, left_groups, graph.getUnionFind(), graph, require_left, graph.getFilter());
 
         // build right node
         std::set<String> require_right = output_names;
@@ -323,11 +321,11 @@ TransformResult JoinEnumOnGraph::transformImpl(PlanNodePtr node, const Captures 
             }
         }
         auto new_right_id
-            = buildJoinNode(context.optimization_context, right_groups, graph.getUnionFind(), graph, require_right, graph.getFilter());
+            = buildJoinStepExtNode(context.optimization_context, right_groups, graph.getUnionFind(), graph, require_right, graph.getFilter());
 
 
-        result.emplace_back(createJoinNode(context.optimization_context, new_left_id, new_right_id, join_keys, output_names, filter));
-        result.emplace_back(createJoinNode(
+        result.emplace_back(createJoinStepExtNode(context.optimization_context, new_left_id, new_right_id, join_keys, output_names, filter));
+        result.emplace_back(createJoinStepExtNode(
             context.optimization_context,
             new_right_id,
             new_left_id,
@@ -344,41 +342,5 @@ const std::vector<RuleType> & JoinEnumOnGraph::blockRules() const
     static std::vector<RuleType> block{RuleType::JOIN_ENUM_ON_GRAPH, RuleType::INNER_JOIN_COMMUTATION};
     return block;
 }
-
-// Graph Graph::fromJoinSet(RuleContext & context, JoinSet & join_set)
-// {
-//     Graph graph;
-
-//     std::unordered_map<String, GroupId> symbol_to_group_id;
-//     for (auto group_id : join_set.getGroups())
-//     {
-//         for (const auto & symbol : context.optimization_context->getMemo().getGroupById(group_id)->getStep()->getOutputStream().header)
-//         {
-//             assert(!symbol_to_group_id.contains(symbol.name)); // duplicate symbol
-//             symbol_to_group_id[symbol.name] = group_id;
-//         }
-//         graph.nodes.emplace_back(group_id);
-//     }
-
-//     for (auto & sets : join_set.getUnionFind().getSets())
-//     {
-//         for (const auto & source_symbol : sets)
-//         {
-//             for (const auto & target_symbol : sets)
-//             {
-//                 Utils::checkState(symbol_to_group_id.contains(source_symbol));
-//                 Utils::checkState(symbol_to_group_id.contains(target_symbol));
-//                 auto source_id = symbol_to_group_id.at(source_symbol);
-//                 auto target_id = symbol_to_group_id.at(target_symbol);
-//                 if (source_id != target_id)
-//                 {
-//                     graph.edges[source_id][target_id].emplace_back(source_symbol, target_symbol);
-//                 }
-//             }
-//         }
-//     }
-
-//     return graph;
-// }
 
 }

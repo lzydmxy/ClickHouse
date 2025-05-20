@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Optimizer/Rule/Rule.h>
+#include <Query/Optimizer/Rule/Rule.h>
 
 namespace DB
 {
@@ -20,7 +20,7 @@ public:
 
     bool isEnabled(ContextPtr context) const override
     {
-        return context->getSettingsRef().enable_explain_analyze;
+        return context->getOptimizerContext()->getSettingsRef().enable_explain_analyze;
     }
 
     ConstRefPatternPtr getPattern() const override;

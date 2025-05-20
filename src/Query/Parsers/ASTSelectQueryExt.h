@@ -9,9 +9,16 @@ namespace DB
   */
 class ASTSelectQueryExt : public ASTSelectQuery
 {
-public:
+  public:
+    explicit ASTSelectQueryExt()
+          : ASTSelectQuery() {}
+
+    explicit ASTSelectQueryExt(const ASTSelectQuery& original)
+          : ASTSelectQuery(original) {}
+  
     static void collectAllTables(const IAST * ast, std::vector<ASTPtr> &, bool &);
 
+    String getID(char) const override { return "SelectQueryExt"; }
     ASTPtr & refGroupBy() { return getExpression(Expression::GROUP_BY); }
     ASTPtr & refWindow() { return getExpression(Expression::WINDOW); }
     ASTPtr & refOrderBy() { return getExpression(Expression::ORDER_BY); }
@@ -35,6 +42,7 @@ public:
 
     std::vector<Expression> getExpressionTypes() const;
     void removeSettingsAndOutputFormat();
+    ASTPtr clone() const override;
 };
 
 }

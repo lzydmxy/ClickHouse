@@ -1,13 +1,18 @@
 #pragma once
 
 #include <Query/Optimizer/Rule/Pattern.h>
-#include <QueryPlan/IQueryPlanStep.h>
-#include <QueryPlan/QueryPlan.h>
+#include <Processors/QueryPlan/IQueryPlanStep.h>
 
 #include <sstream>
 
 namespace DB::Patterns
 {
+
+template <typename F, typename Step>
+concept CallableWithStep = requires(F&& f, Step* s) {
+    { f(*s) };
+};
+
 class PatternBuilder
 {
 public:
@@ -42,29 +47,23 @@ public:
     PatternBuilder & matchingCapture(std::function<bool(const Captures &)> capture_predicate);
     PatternBuilder & matchingCapture(std::function<bool(const Captures &)> capture_predicate, const std::string & name);
     template <typename T, typename F>
-    PatternBuilder & matchingStep(F step_predicate)
-    {
+    PatternBuilder & matchingStep(F step_predicate) {
         return matchingStep<T>(std::move(step_predicate), "unknown");
     }
-    template <typename T, typename F>
-    PatternBuilder & matchingStep(F step_predicate, const std::string & name)
-    {
-        static_assert(std::is_base_of<const IQueryPlanStep, T>::value, "T must inherit from const IQueryPlanStep");
 
+    template <typename T, typename F>
+    PatternBuilder & matchingStep(F step_predicate, const std::string & name) {
+        static_assert(std::is_base_of<const IQueryPlanStep, T>::value, "T must inherit from const IQueryPlanStep");
         PatternPredicate predicate = [step_predicate = std::move(step_predicate)](const QueryPlanStepPtr & istep, Captures & captures) -> bool {
             auto * step = dynamic_cast<const T *>(istep.get());
-
             if (!step)
                 throw Exception(ErrorCodes::LOGICAL_ERROR, "Unexpected plan step found in pattern matching");
 
-            constexpr auto func_type1 = boost::hana::is_valid([](auto && x) -> decltype(x(*step)) {});
-
-            if constexpr (decltype(func_type1(step_predicate))::value)
+            if constexpr (CallableWithStep<decltype(step_predicate), T>)
                 return step_predicate(*step);
             else
                 return step_predicate(*step, captures);
         };
-
         return matching(std::move(predicate), name);
     }
 
@@ -99,41 +98,40 @@ private:
 };
 
 // typeOf patterns
-inline PatternBuilder typeOf(IQueryPlanStep::Type type) { return PatternBuilder(std::make_unique<TypeOfPattern>(type)); }
-inline PatternBuilder any() { return typeOf(IQueryPlanStep::Type::Any); }
-inline PatternBuilder tree() { return typeOf(IQueryPlanStep::Type::Tree); }
+inline PatternBuilder typeOf(QueryPlanStepType type) { return PatternBuilder(std::make_unique<TypeOfPattern>(type)); }
+inline PatternBuilder any() { return typeOf(QueryPlanStepType::AnyStepExt); }
+inline PatternBuilder tree() { return typeOf(QueryPlanStepType::Tree); }
 
-inline PatternBuilder project() { return typeOf(IQueryPlanStep::Type::Projection); }
-inline PatternBuilder filter() { return typeOf(IQueryPlanStep::Type::Filter); }
-inline PatternBuilder join() { return typeOf(IQueryPlanStep::Type::Join); }
-inline PatternBuilder multiJoin() { return typeOf(IQueryPlanStep::Type::MultiJoin); }
-inline PatternBuilder aggregating() { return typeOf(IQueryPlanStep::Type::Aggregating); }
-inline PatternBuilder window() { return typeOf(IQueryPlanStep::Type::Window); }
-inline PatternBuilder mergingAggregated() { return typeOf(IQueryPlanStep::Type::MergingAggregated); }
-inline PatternBuilder unionn() { return typeOf(IQueryPlanStep::Type::Union); }
-inline PatternBuilder intersect() { return typeOf(IQueryPlanStep::Type::Intersect); }
-inline PatternBuilder except() { return typeOf(IQueryPlanStep::Type::Except); }
-inline PatternBuilder exchange() { return typeOf(IQueryPlanStep::Type::Exchange); }
-inline PatternBuilder remoteSource() { return typeOf(IQueryPlanStep::Type::RemoteExchangeSource); }
-inline PatternBuilder tableScan() { return typeOf(IQueryPlanStep::Type::TableScan); }
-inline PatternBuilder readNothing() { return typeOf(IQueryPlanStep::Type::ReadNothing); }
-inline PatternBuilder limit() { return typeOf(IQueryPlanStep::Type::Limit); }
-inline PatternBuilder limitBy() { return typeOf(IQueryPlanStep::Type::LimitBy); }
-inline PatternBuilder sorting() { return typeOf(IQueryPlanStep::Type::Sorting); }
-inline PatternBuilder mergeSorting() { return typeOf(IQueryPlanStep::Type::MergeSorting); }
-inline PatternBuilder partialSorting() { return typeOf(IQueryPlanStep::Type::PartialSorting); }
-inline PatternBuilder mergingSorted() { return typeOf(IQueryPlanStep::Type::MergingSorted); }
-//inline PatternPtr materializing() { return typeOf(IQueryPlanStep::Type::Materializing); }
-inline PatternBuilder distinct() { return typeOf(IQueryPlanStep::Type::Distinct); }
-inline PatternBuilder extremes() { return typeOf(IQueryPlanStep::Type::Extremes); }
-inline PatternBuilder apply() { return typeOf(IQueryPlanStep::Type::Apply); }
-inline PatternBuilder enforceSingleRow() { return typeOf(IQueryPlanStep::Type::EnforceSingleRow); }
-inline PatternBuilder assignUniqueId() { return typeOf(IQueryPlanStep::Type::AssignUniqueId); }
-inline PatternBuilder cte() { return typeOf(IQueryPlanStep::Type::CTERef); }
-inline PatternBuilder buffer() { return typeOf(IQueryPlanStep::Type::Buffer); }
+inline PatternBuilder project() { return typeOf(QueryPlanStepType::ProjectionStepExt); }
+inline PatternBuilder filter() { return typeOf(QueryPlanStepType::FilterStepExt); }
+inline PatternBuilder join() { return typeOf(QueryPlanStepType::JoinStepExt); }
+inline PatternBuilder multiJoin() { return typeOf(QueryPlanStepType::MultiJoinStepExt); }
+inline PatternBuilder aggregating() { return typeOf(QueryPlanStepType::AggregatingStepExt); }
+inline PatternBuilder window() { return typeOf(QueryPlanStepType::WindowStep); }
+inline PatternBuilder mergingAggregated() { return typeOf(QueryPlanStepType::MergingAggregatedStepExt); }
+inline PatternBuilder unionn() { return typeOf(QueryPlanStepType::UnionStepExt); }
+inline PatternBuilder intersect() { return typeOf(QueryPlanStepType::IntersectOrExceptStep); }
+inline PatternBuilder except() { return typeOf(QueryPlanStepType::IntersectOrExceptStep); }
+inline PatternBuilder exchange() { return typeOf(QueryPlanStepType::ExchangeStepExt); }
+inline PatternBuilder remoteSource() { return typeOf(QueryPlanStepType::RemoteExchangeSourceStepExt); }
+inline PatternBuilder tableScan() { return typeOf(QueryPlanStepType::TableScanStepExt); }
+inline PatternBuilder readNothing() { return typeOf(QueryPlanStepType::ReadNothingStep); }
+inline PatternBuilder limit() { return typeOf(QueryPlanStepType::LimitStepExt); }
+inline PatternBuilder limitBy() { return typeOf(QueryPlanStepType::LimitByStep); }
+inline PatternBuilder sorting() { return typeOf(QueryPlanStepType::SortingStepExt); }
+inline PatternBuilder mergeSorting() { return typeOf(QueryPlanStepType::MergeSortingStepExt); }
+inline PatternBuilder partialSorting() { return typeOf(QueryPlanStepType::PartialSortingStepExt); }
+inline PatternBuilder mergingSorted() { return typeOf(QueryPlanStepType::MergingSortedStepExt); }
+inline PatternBuilder distinct() { return typeOf(QueryPlanStepType::DistinctStepExt); }
+inline PatternBuilder extremes() { return typeOf(QueryPlanStepType::ExtremesStep); }
+inline PatternBuilder apply() { return typeOf(QueryPlanStepType::ApplyStepExt); }
+inline PatternBuilder enforceSingleRow() { return typeOf(QueryPlanStepType::EnforceSingleRowStepExt); }
+inline PatternBuilder assignUniqueId() { return typeOf(QueryPlanStepType::AssignUniqueIdStepExt); }
+inline PatternBuilder cte() { return typeOf(QueryPlanStepType::CTERefStepExt); }
+inline PatternBuilder buffer() { return typeOf(QueryPlanStepType::BufferStepExt); }
 PatternBuilder topN();
-inline PatternBuilder topNFiltering() { return typeOf(IQueryPlanStep::Type::TopNFiltering); }
-inline PatternBuilder explainAnalyze() { return typeOf(IQueryPlanStep::Type::ExplainAnalyze); }
+inline PatternBuilder topNFiltering() { return typeOf(QueryPlanStepType::TopNFilteringStepExt); }
+inline PatternBuilder explainAnalyze() { return typeOf(QueryPlanStepType::ExplainAnalyzeStepExt); }
 
 template <typename... T>
 PatternBuilder oneOf(const T &... sub_builders)

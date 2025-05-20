@@ -223,4 +223,10 @@ IMPLEMENT_SETTING_ENUM(SQLSecurityType, ErrorCodes::BAD_ARGUMENTS,
     {{"DEFINER", SQLSecurityType::DEFINER},
      {"INVOKER", SQLSecurityType::INVOKER},
      {"NONE", SQLSecurityType::NONE}})
+
+IMPLEMENT_SETTING_ENUM(LogExplainAnalyzeType, ErrorCodes::BAD_ARGUMENTS,
+    {{"NONE", LogExplainAnalyzeType::NONE},
+     {"QUERY_PIPELINE", LogExplainAnalyzeType::QUERY_PIPELINE},
+     {"AGGREGATED_QUERY_PIPELINE", LogExplainAnalyzeType::AGGREGATED_QUERY_PIPELINE}})
+
 }

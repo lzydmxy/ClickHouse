@@ -1,26 +1,26 @@
 #include <Query/Processors/QueryPlan/JoinStepExt.h>
 
-#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
-#include <Query/Processors/Transforms/FilterTransformExt.h>
-#include <Query/Common/PredicateUtils.h>
 #include <Query/Common/OptimizerContext.h>
+#include <Query/Optimizer/PredicateUtils.h>
+#include <Query/Optimizer/SymbolsExtractor.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterConsumer.h>
 #include <Query/Executor/PlanSegmentInstance.h>
+#include <Query/Interpreters/TableJoinExt.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <Query/Processors/Transforms/FilterTransformExt.h>
+#include <Query/Pipeline/QueryPipelineBuilderHelper.h>
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
+#include <Query/ProtosHelper/ASTSerDerHelper.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 
 #include <QueryPipeline/QueryPipelineBuilder.h>
-
-
-#include <memory>
 #include <Interpreters/ConcurrentHashJoin.h>
 #include <Interpreters/GraceHashJoin.h>
 #include <Interpreters/HashJoin.h>
 #include <Interpreters/MergeJoin.h>
 #include <Interpreters/JoinSwitcher.h>
-#include <Query/Interpreters/TableJoinExt.h>
-#include <Query/Common/SymbolsExtractor.h>
-#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
-
+#include <memory>
 
 namespace DB
 {
@@ -46,7 +46,7 @@ JoinPtr JoinStepExt::makeJoin(
     if (kind != JoinKind::Inner && kind != JoinKind::Cross)
         table_join->setInequalCondition(filter_action, filter_column_name);
 
-    // TODO support storage join
+    // todo: lizhuoyu5, other feat: support join with dictionaries and join engine table
     //    if (table_to_join.database_and_table_name)
     //    {
     //        auto joined_table_id = context->resolveStorageID(table_to_join.database_and_table_name);
@@ -133,7 +133,7 @@ JoinPtr JoinStepExt::makeJoin(
     {
         if (context->getOptimizerContext()->getSettingsRef().enable_nested_loop_join)
             throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Set enable_nested_loop_join=1 to enable outer join with filter");
-        // TODO support NESTED_LOOP_JOIN join Algorithm, we may not need
+        // todo: lizhuoyu5, other feat: support NESTED_LOOP_JOIN join Algorithm, we may not need
         // table_join->join_algorithm = JoinAlgorithm::NESTED_LOOP_JOIN;
         // table_join->table_join.on_expression = filter->clone();
         // table_join->table_join.kind = isCrossJoin() ? JoinKind::Inner : kind;
@@ -149,7 +149,7 @@ JoinPtr JoinStepExt::makeJoin(
     String dict_name;
     String key_name;
 
-    // TODO support NESTED_LOOP_JOIN join Algorithm, we may not need
+    // todo: lizhuoyu5, other feat: support NESTED_LOOP_JOIN join Algorithm, we may not need
     // if (table_join->forceNestedLoopJoin())
     //     return std::make_shared<NestedLoopJoin>(table_join, r_sample_block, context);
 
@@ -157,7 +157,7 @@ JoinPtr JoinStepExt::makeJoin(
     {
         if (table_join->allowParallelHashJoin() && join_algorithm == JoinAlgorithm::PARALLEL_HASH)
         {
-            // TODO: Yuanning RuntimeFilter, compare with CE code when fix
+            // todo: lizhuoyu5, other feat: Yuanning RuntimeFilter, compare with CE code when fix
             // if (enable_parallel_hash_join)
             // {
             //     LOG_TRACE(getLogger("JoinStep::makeJoin"), "will use parallel Hash Join");
@@ -188,7 +188,7 @@ JoinPtr JoinStepExt::makeJoin(
         {
             if (GraceHashJoin::isSupported(table_join) ) {
                 table_join->join_algorithm = {JoinAlgorithm::GRACE_HASH};
-                // TODO support join left side parallel for GraceHashJoin
+                // todo: lizhuoyu5, other feat: Parallel execute left input and right input for join
                 // auto parallel = (context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel != 0 ? context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel: num_streams);
                 return std::make_shared<GraceHashJoin>(context, table_join, l_sample_block, r_sample_block, context->getTempDataOnDisk(), false);
             } else if (allow_merge_join) { // fallback into merge join
@@ -206,7 +206,7 @@ JoinPtr JoinStepExt::makeJoin(
     else if ((table_join->forceGraceHashJoin() || join_algorithm == JoinAlgorithm::GRACE_HASH) && allow_grace_hash_join)
     {
         if (GraceHashJoin::isSupported(table_join) ) {
-            // TODO support join left side parallel for GraceHashJoin
+            // todo: lizhuoyu5, other feat: Parallel execute left input and right input for join
             // auto parallel = (context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel != 0 ? context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel: num_streams);
             // return std::make_shared<GraceHashJoin>(context, table_join, l_sample_block, r_sample_block, context->getTempDataOnDisk(), parallel, context->getSettingsRef().spill_mode == SpillMode::AUTO, false, num_streams);
             return std::make_shared<GraceHashJoin>(context, table_join, l_sample_block, r_sample_block, context->getTempDataOnDisk(), false);
@@ -256,7 +256,7 @@ JoinStepExt::JoinStepExt(
     bool is_ordered_,
     bool simple_reordered_,
     LinkedHashMap<String, RuntimeFilter> runtime_filter_builders_)
-    : JoinStep({}, {}, nullptr, 0, max_streams_, keep_left_read_in_order_)
+    : JoinStep(0, max_streams_, keep_left_read_in_order_)
     , kind(kind_)
     , strictness(strictness_)
     , left_keys(std::move(left_keys_))
@@ -362,7 +362,7 @@ QueryPipelineBuilderPtr JoinStepExt::updatePipeline(QueryPipelineBuilders pipeli
                 1, /// for normal HashJoin only one right table, parallel or concurrent hash join will change it to num_streams
                 settings_ext.distributed_settings.parallel_size,
                 settings_ext.distributed_settings.coordinator_address,
-                settings_ext.context->getOptimizerContext()->getPlanSegmentInstanceID().parallel_index); // TODO: Yuanning RuntimeFilter, parallel_id
+                settings_ext.context->getOptimizerContext()->getPlanSegmentInstanceID().parallel_index);
 
             join = makeJoin(settings_ext.context, std::move(consumer), pipelines[0]->getNumStreams(), filter_action, filter->getColumnName());
             need_build_runtime_filter = true;
@@ -377,7 +377,7 @@ QueryPipelineBuilderPtr JoinStepExt::updatePipeline(QueryPipelineBuilders pipeli
         throw Exception(ErrorCodes::NOT_IMPLEMENTED, "QueryPipelineBuilder should support runtime filter.");
     }
 
-    auto pipeline = QueryPipelineBuilder::joinPipelinesRightLeft(
+    auto pipeline = QueryPipelineBuilderHelper::joinPipelinesWithRuntimeFilter(
         std::move(pipelines[0]),
         std::move(pipelines[1]),
         join,
@@ -385,8 +385,9 @@ QueryPipelineBuilderPtr JoinStepExt::updatePipeline(QueryPipelineBuilders pipeli
         max_block_size,
         max_streams,
         keep_left_read_in_order,
-        /* need_build_runtime_filter, TODO QueryPipelineBuilder::joinPipelinesRightLeft support runtime filter.*/
-        &processors);
+        true,
+        &processors,
+        need_build_runtime_filter);
 
     // if NestLoopJoin is choose, no need to add filter stream.
     if (filter && !PredicateUtils::isTruePredicate(filter) /*&& join->getType() != JoinType::NestedLoop*/
@@ -497,6 +498,121 @@ bool JoinStepExt::mustReplicate() const
 bool JoinStepExt::mustRepartition() const
 {
     return kind == JoinKind::Right || kind == JoinKind::Full;
+}
+
+void JoinStepExt::toProto(Protos::JoinStepExt & proto, bool for_hash_equals) const
+{
+    if (for_hash_equals)
+    {
+        // skip
+    }
+    else if (output_stream.has_value())
+            {
+        for (const auto & element : input_streams)
+            ProtosSerDerHelper::toProto(element, *proto.add_input_streams());
+        ProtosSerDerHelper::toProto(*output_stream, *proto.mutable_output_stream());
+    }
+    else
+        throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "required to have output stream");
+
+    proto.set_step_description(step_description);
+    proto.set_kind( JoinKindConverter::toProto(kind));
+    proto.set_strictness( JoinStrictnessConverter::toProto(strictness));
+    proto.set_max_streams(max_streams);
+    proto.set_keep_left_read_in_order(keep_left_read_in_order);
+    for (const auto & element : left_keys)
+        proto.add_left_keys(element);
+    for (const auto & element : right_keys)
+        proto.add_right_keys(element);
+    for (bool element : key_ids_null_safe)
+        proto.add_key_ids_null_safe(element);
+    serializeASTToProto(filter, *proto.mutable_filter());
+    proto.set_has_using(has_using);
+    proto.set_flag_require_right_keys(require_right_keys.has_value());
+    if (require_right_keys.has_value())
+        for (bool element : require_right_keys.value())
+            proto.add_require_right_keys(element);
+    proto.set_asof_inequality(ASOFJoinInequalityConverter::toProto(asof_inequality));
+    proto.set_distribution_type(DistributionTypeConverter::toProto(distribution_type));
+    proto.set_join_algorithm(JoinAlgorithmConverter::toProto(join_algorithm));
+    proto.set_is_magic(is_magic);
+    proto.set_is_ordered(is_ordered);
+    for (const auto & [k, v] : runtime_filter_builders)
+    {
+        auto * proto_element = proto.add_runtime_filter_builders();
+        proto_element->set_key(k);
+        v.toProto(*proto_element->mutable_value());
+    }
+}
+
+std::shared_ptr<JoinStepExt> JoinStepExt::fromProto(const Protos::JoinStepExt & proto, ContextPtr)
+{
+    DataStreams input_streams;
+    for (const auto & proto_element : proto.input_streams())
+    {
+        DataStream element;
+        ProtosSerDerHelper::fillFromProto(element, proto_element);
+        input_streams.emplace_back(std::move(element));
+    }
+    DataStream output_stream;
+    if (proto.has_output_stream())
+        ProtosSerDerHelper::fillFromProto(output_stream, proto.output_stream());
+    else
+        throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "required to have output stream");
+    const auto & step_description = proto.step_description();
+    auto kind = JoinKindConverter::fromProto(proto.kind());
+    auto strictness = JoinStrictnessConverter::fromProto(proto.strictness());
+    auto max_streams = proto.max_streams();
+    auto keep_left_read_in_order = proto.keep_left_read_in_order();
+    std::vector<String> left_keys;
+    for (const auto & element : proto.left_keys())
+        left_keys.emplace_back(element);
+    std::vector<String> right_keys;
+    for (const auto & element : proto.right_keys())
+        right_keys.emplace_back(element);
+    std::vector<bool> key_ids_null_safe;
+    for (const auto & null_safe : proto.key_ids_null_safe())
+        key_ids_null_safe.emplace_back(null_safe);
+    auto filter = deserializeASTFromProto(proto.filter());
+    auto has_using = proto.has_using();
+    std::optional<std::vector<bool>> require_right_keys;
+    if (proto.flag_require_right_keys())
+        require_right_keys = std::vector<bool>(proto.require_right_keys().begin(), proto.require_right_keys().end());
+    auto asof_inequality = ASOFJoinInequalityConverter::fromProto(proto.asof_inequality());
+    auto distribution_type = DistributionTypeConverter::fromProto(proto.distribution_type());
+    auto join_algorithm = JoinAlgorithmConverter::fromProto(proto.join_algorithm());
+    auto is_magic = proto.is_magic();
+    auto is_ordered = proto.is_ordered();
+
+    LinkedHashMap<String, RuntimeFilter> runtime_filter_builders;
+    for (const auto & element : proto.runtime_filter_builders())
+    {
+        auto key = element.key();
+        auto value = RuntimeFilter::fromProto(element.value());
+        runtime_filter_builders.emplace(key, value);
+    }
+    auto step = std::make_shared<JoinStepExt>(
+        input_streams,
+        output_stream,
+        kind,
+        strictness,
+        max_streams,
+        keep_left_read_in_order,
+        left_keys,
+        right_keys,
+        key_ids_null_safe,
+        filter,
+        has_using,
+        require_right_keys,
+        asof_inequality,
+        distribution_type,
+        join_algorithm,
+        is_magic,
+        is_ordered,
+        is_ordered,
+        runtime_filter_builders);
+    step->setStepDescription(step_description);
+    return step;
 }
 
 }

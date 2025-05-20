@@ -56,13 +56,14 @@ using RAST = Protos::AST;
 using RDataType = Protos::DataType;
 using RNameAndTypePair = Protos::NameAndTypePair;
 using RBlock = Protos::Block;
+using RAssignments = Protos::Assignments;
 using RAggregateFunction = Protos::AggregateFunction;
 using RQueryPlanStep = Protos::QueryPlanStep;
 using RFieldVector = Protos::FieldVector;
 
 using RProgress = Protos::Progress;
 
-using RQueryPlan = Protos::QueryPlan;
+using RQueryPlan = Protos::QueryPlanExt;
 
 //For bRPC server
 using RPlanSegmentService = Protos::PlanSegmentService;
@@ -75,10 +76,11 @@ using RProcessorProfileRequest = Protos::ProcessorProfileRequest;
 using RProcessorsProfileRequest = Protos::ProcessorsProfileRequest;
 using RProcessorProfileResponse = Protos::ProcessorProfileResponse;
 
+using RPartitioningHandle  = Protos::Partitioning_Handle;
+using RPartitioningComponent  = Protos::Partitioning_Component;
 using RRegistryRequest = Protos::RegistryRequest;
 using RRegistryResponse = Protos::RegistryResponse;
 using RRegistryService = Protos::RegistryService;
-
 
 String planSegmentTypeToString(const RIPlanSegment::Enum & type);
 

@@ -41,7 +41,7 @@ namespace DB
             { \
                 BOOST_PP_SEQ_FOR_EACH(PP_ENUM_WITH_PROTO_IMPL_CASE, (PROTO_SCOPE, _enumType), SEQS) \
                 default: { \
-                    throwBetterEnumException("protobuf", BOOST_PP_STRINGIZE(ENUM_NAME), static_cast<int>(proto)); \
+                    DB::throwBetterEnumException("protobuf", BOOST_PP_STRINGIZE(ENUM_NAME), static_cast<int>(proto)); \
                 } \
             } \
         } \
@@ -60,3 +60,9 @@ namespace DB
 /// the other behaviours is identical to ENUM_WITH_PROTO_CONVERTER
 #define ENUM_WITH_PROTO_CONVERTER_C_STYLE(ENUM_NAME, PROTO_SCOPE, ...) \
     ENUM_WITH_PROTO_CONVERTER_IMPL(ENUM_NAME, PROTO_SCOPE, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__), enum)
+
+#define ENUM_TO_PROTO_CONVERTER_IMPL(ENUM_NAME, PROTO_SCOPE, SEQS, ENUM_CLASS_KEYWORD) \
+    PP_ENUM_WITH_PROTO_CONVERTER_DEF(ENUM_NAME, PROTO_SCOPE, BOOST_PP_SEQ_TRANSFORM(BOOST_PPEX_FIRST_ELEMENT, ~, SEQS))
+
+#define ENUM_TO_PROTO_CONVERTER(ENUM_NAME, PROTO_SCOPE, ...) \
+    ENUM_TO_PROTO_CONVERTER_IMPL(ENUM_NAME, PROTO_SCOPE, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__), enum class)

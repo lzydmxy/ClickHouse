@@ -1,23 +1,15 @@
 #include <Query/Optimizer/Rule/Transformation/SemiJoinPushDown.h>
 
-#include <Core/Names.h>
 #include <Query/Optimizer/Cascades/CascadesOptimizer.h>
-#include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Optimizer/SymbolsExtractor.h>
 #include <Query/Optimizer/Utils.h>
 #include <Parsers/ASTIdentifier.h>
-#include <QueryPlan/AggregatingStep.h>
-#include <QueryPlan/AnyStep.h>
-#include <QueryPlan/Assignment.h>
-#include <QueryPlan/IQueryPlanStep.h>
-#include <QueryPlan/PlanNode.h>
-#include <QueryPlan/ProjectionStep.h>
-#include <QueryPlan/SymbolAllocator.h>
-#include <QueryPlan/SymbolMapper.h>
-#include <Parsers/ASTIdentifier.h>
-#include <QueryPlan/Assignment.h>
-#include <QueryPlan/ProjectionStep.h>
+#include <Query/Common/NameToTypeExt.h>
+#include <Query/Processors/QueryPlan/Assignment.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
+#include <Query/Processors/QueryPlan/ProjectionStepExt.h>
+#include <Query/Planner//SymbolMapper.h>
 
 #include <memory>
 #include <unordered_set>
@@ -27,14 +19,14 @@ namespace DB
 ConstRefPatternPtr SemiJoinPushDown::getPattern() const
 {
     static auto pattern = Patterns::join()
-        .matchingStep<JoinStep>([](const JoinStep & s) {
-            return s.getKind() == ASTTableJoin::Kind::Left
-                && (s.getStrictness() == ASTTableJoin::Strictness::Semi || s.getStrictness() == ASTTableJoin::Strictness::Anti)
+        .matchingStep<JoinStepExt>([](const JoinStepExt & s) {
+            return s.getKind() == JoinKind::Left
+                && (s.getStrictness() == JoinStrictness::Semi || s.getStrictness() == JoinStrictness::Anti)
                 && !s.isOrdered();
         }, "semijoin-matchingstep")
         .with(
             Patterns::join()
-                .matchingStep<JoinStep>([](const JoinStep & s) { return !s.isOuterJoin() && !s.isOrdered(); })
+                .matchingStep<JoinStepExt>([](const JoinStepExt & s) { return !s.isOuterJoin() && !s.isOrdered(); })
                 .with(Patterns::any(), Patterns::any()),
             Patterns::any())
         .result();
@@ -43,24 +35,15 @@ ConstRefPatternPtr SemiJoinPushDown::getPattern() const
 
 TransformResult SemiJoinPushDown::transformImpl(PlanNodePtr node, const Captures &, RuleContext & rule_context)
 {
-    auto * semi_join_node = dynamic_cast<JoinNode *>(node.get());
-    auto * join_node = dynamic_cast<JoinNode *>(node->getChildren()[0].get());
+    auto * semi_join_node = dynamic_cast<JoinStepExtNode *>(node.get());
+    auto * join_node = dynamic_cast<JoinStepExtNode *>(node->getChildren()[0].get());
 
-    auto a_outer_columns = join_node->getChildren()[0]->getCurrentDataStream().header.getNameSet();
+    auto a_outer_columns = ToNameSet(join_node->getChildren()[0]->getCurrentDataStream().header.getNamesAndTypes());
     for (const auto & col : semi_join_node->getStep()->getLeftKeys())
     {
         if (!a_outer_columns.contains(col))
             return {};
     }
-
-    // NameSet require_semi_output;
-    // auto keys = join_node->getStep()->getLeftKeys();
-    // require_semi_output.insert(keys.begin(), keys.end());
-    // keys = join_node->getStep()->getRightKeys();
-    // require_semi_output.insert(keys.begin(), keys.end());
-    // auto key_set = SymbolsExtractor::extract(join_node->getStep()->getFilter());
-    // require_semi_output.insert(key_set.begin(), key_set.end());
-
 
     DataStream output_stream;
     for (const auto & col : semi_join_node->getChildren()[0]->getChildren()[0]->getCurrentDataStream().header)
@@ -74,68 +57,66 @@ TransformResult SemiJoinPushDown::transformImpl(PlanNodePtr node, const Captures
             output_stream.header.insert(col);
     }
 
-    auto step = *semi_join_node->getStep();
+    auto step = semi_join_node->getStep();
     DataStreams streams
         = {semi_join_node->getChildren()[0]->getStep()->getInputStreams()[1], semi_join_node->getChildren()[1]->getCurrentDataStream()};
-    auto new_semi_step = std::make_shared<JoinStep>(
+    auto new_semi_step = std::make_shared<JoinStepExt>(
         streams,
         output_stream,
-        step.getKind(),
-        step.getStrictness(),
-        step.getMaxStreams(),
-        step.getKeepLeftReadInOrder(),
-        step.getLeftKeys(),
-        step.getRightKeys(),
-        step.getKeyIdsNullSafe(),
-        step.getFilter(),
-        step.isHasUsing(),
-        step.getRequireRightKeys(),
-        ASOF::Inequality::GreaterOrEquals,
+        step->getKind(),
+        step->getStrictness(),
+        step->getMaxStreams(),
+        step->getKeepLeftReadInOrder(),
+        step->getLeftKeys(),
+        step->getRightKeys(),
+        step->getKeyIdsNullSafe(),
+        step->getFilter(),
+        step->isHasUsing(),
+        step->getRequireRightKeys(),
+        ASOFJoinInequality::GreaterOrEquals,
         DistributionType::UNKNOWN,
         JoinAlgorithm::AUTO,
-        step.isMagic(),
-        step.isOrdered(),
-        step.isSimpleReordered(),
-        step.getRuntimeFilterBuilders(),
-        step.getHints());
-    auto new_semi_node = std::make_shared<JoinNode>(
-        rule_context.context->nextNodeId(),
+        step->isMagic(),
+        step->isOrdered(),
+        step->isSimpleReordered(),
+        step->getRuntimeFilterBuilders());
+    auto new_semi_node = std::make_shared<JoinStepExtNode>(
+        rule_context.context->getOptimizerContext()->nextNodeId(),
         new_semi_step,
         PlanNodes{semi_join_node->getChildren()[0]->getChildren()[0], semi_join_node->getChildren()[1]});
 
-    step = *join_node->getStep();
+    step = join_node->getStep();
     streams = {new_semi_step->getOutputStream(), join_node->getChildren()[1]->getCurrentDataStream()};
-    auto output_step = std::make_shared<JoinStep>(
+    auto output_step = std::make_shared<JoinStepExt>(
         streams,
         semi_join_node->getStep()->getOutputStream(),
-        step.getKind(),
-        step.getStrictness(),
-        step.getMaxStreams(),
-        step.getKeepLeftReadInOrder(),
-        step.getLeftKeys(),
-        step.getRightKeys(),
-        step.getKeyIdsNullSafe(),
-        step.getFilter(),
-        step.isHasUsing(),
-        step.getRequireRightKeys(),
-        ASOF::Inequality::GreaterOrEquals,
+        step->getKind(),
+        step->getStrictness(),
+        step->getMaxStreams(),
+        step->getKeepLeftReadInOrder(),
+        step->getLeftKeys(),
+        step->getRightKeys(),
+        step->getKeyIdsNullSafe(),
+        step->getFilter(),
+        step->isHasUsing(),
+        step->getRequireRightKeys(),
+        ASOFJoinInequality::GreaterOrEquals,
         DistributionType::UNKNOWN,
         JoinAlgorithm::AUTO,
         false,
-        step.isOrdered(),
-        step.isSimpleReordered(),
-        step.getRuntimeFilterBuilders(),
-        step.getHints());
+        step->isOrdered(),
+        step->isSimpleReordered(),
+        step->getRuntimeFilterBuilders());
     return PlanNodeBase::createPlanNode(
-        rule_context.context->nextNodeId(), output_step, PlanNodes{new_semi_node, join_node->getChildren()[1]});
+        rule_context.context->getOptimizerContext()->nextNodeId(), output_step, PlanNodes{new_semi_node, join_node->getChildren()[1]});
 }
 
 ConstRefPatternPtr SemiJoinPushDownProjection::getPattern() const
 {
     static auto pattern = Patterns::join()
-        .matchingStep<JoinStep>([](const JoinStep & s) {
-            return s.getKind() == ASTTableJoin::Kind::Left
-                && (s.getStrictness() == ASTTableJoin::Strictness::Semi || s.getStrictness() == ASTTableJoin::Strictness::Anti);
+        .matchingStep<JoinStepExt>([](const JoinStepExt & s) {
+            return s.getKind() == JoinKind::Left
+                && (s.getStrictness() == JoinStrictness::Semi || s.getStrictness() == JoinStrictness::Anti);
         })
         .with(Patterns::project().with(Patterns::any()), Patterns::any())
         .result();
@@ -144,9 +125,9 @@ ConstRefPatternPtr SemiJoinPushDownProjection::getPattern() const
 
 TransformResult SemiJoinPushDownProjection::transformImpl(PlanNodePtr node, const Captures &, RuleContext & rule_context)
 {
-    const auto * join_step = dynamic_cast<const JoinStep *>(node->getStep().get());
+    const auto * join_step = dynamic_cast<const JoinStepExt *>(node->getStep().get());
     auto & projection = node->getChildren()[0];
-    const auto * projection_step = dynamic_cast<const ProjectionStep *>(projection->getStep().get());
+    const auto * projection_step = dynamic_cast<const ProjectionStepExt *>(projection->getStep().get());
 
     auto identities = Utils::extractIdentities(*projection_step);
     for (const auto & left_key : join_step->getLeftKeys())
@@ -174,7 +155,7 @@ TransformResult SemiJoinPushDownProjection::transformImpl(PlanNodePtr node, cons
     auto mapper = SymbolMapper::simpleMapper(identities);
 
     auto context = rule_context.context;
-    auto new_join_step = std::make_shared<JoinStep>(
+    auto new_join_step = std::make_shared<JoinStepExt>(
         DataStreams{projection->getChildren()[0]->getStep()->getOutputStream(), node->getChildren()[1]->getStep()->getOutputStream()},
         output_stream,
         join_step->getKind(),
@@ -187,14 +168,13 @@ TransformResult SemiJoinPushDownProjection::transformImpl(PlanNodePtr node, cons
         mapper.map(join_step->getFilter()),
         join_step->isHasUsing(),
         join_step->getRequireRightKeys(),
-        ASOF::Inequality::GreaterOrEquals,
+        ASOFJoinInequality::GreaterOrEquals,
         DistributionType::UNKNOWN,
         JoinAlgorithm::AUTO,
         join_step->isMagic(),
         join_step->isOrdered(),
         join_step->isSimpleReordered(),
-        join_step->getRuntimeFilterBuilders(),
-        join_step->getHints());
+        join_step->getRuntimeFilterBuilders());
 
 
     // create new projection (add remaining symbols form right side if join is any join)
@@ -205,7 +185,7 @@ TransformResult SemiJoinPushDownProjection::transformImpl(PlanNodePtr node, cons
     for (const auto & item : projection_step->getNameToType())
         name_to_type.emplace(item.first, item.second);
     // add remaining symbols
-    for (const auto & output : join_step->getOutputStream().getNamesToTypes())
+    for (const auto & output : ToNameToType(join_step->getOutputStream().header.getColumnsWithTypeAndName()))
     {
         if (!assignments.contains(output.first))
         {
@@ -214,22 +194,22 @@ TransformResult SemiJoinPushDownProjection::transformImpl(PlanNodePtr node, cons
         }
     }
 
-    auto new_projection_step = std::make_shared<ProjectionStep>(new_join_step->getOutputStream(), assignments, name_to_type);
+    auto new_projection_step = std::make_shared<ProjectionStepExt>(new_join_step->getOutputStream(), assignments, name_to_type);
 
     return TransformResult{
         PlanNodeBase::createPlanNode(
-            context->nextNodeId(),
+            context->getOptimizerContext()->nextNodeId(),
             new_projection_step,
-            {PlanNodeBase::createPlanNode(context->nextNodeId(), new_join_step, {projection->getChildren()[0], node->getChildren()[1]})}),
+            {PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), new_join_step, {projection->getChildren()[0], node->getChildren()[1]})}),
         true};
 }
 
 ConstRefPatternPtr SemiJoinPushDownAggregate::getPattern() const
 {
     static auto pattern = Patterns::join()
-        .matchingStep<JoinStep>([](const JoinStep & s) {
-            return s.getKind() == ASTTableJoin::Kind::Left
-                && (s.getStrictness() == ASTTableJoin::Strictness::Semi || s.getStrictness() == ASTTableJoin::Strictness::Anti);
+        .matchingStep<JoinStepExt>([](const JoinStepExt & s) {
+            return s.getKind() == JoinKind::Left
+                && (s.getStrictness() == JoinStrictness::Semi || s.getStrictness() == JoinStrictness::Anti);
         })
         .with(Patterns::aggregating().with(Patterns::any()), Patterns::any())
         .result();
@@ -238,7 +218,7 @@ ConstRefPatternPtr SemiJoinPushDownAggregate::getPattern() const
 
 TransformResult SemiJoinPushDownAggregate::transformImpl(PlanNodePtr node, const Captures &, RuleContext & rule_context)
 {
-    const auto * join_step = dynamic_cast<const JoinStep *>(node->getStep().get());
+    const auto * join_step = dynamic_cast<const JoinStepExt *>(node->getStep().get());
 
     for (const auto & col : node->getChildren()[1]->getCurrentDataStream().header)
     {
@@ -248,7 +228,7 @@ TransformResult SemiJoinPushDownAggregate::transformImpl(PlanNodePtr node, const
     }
 
     auto & aggregate = node->getChildren()[0];
-    const auto * aggregating_step = dynamic_cast<const AggregatingStep *>(aggregate->getStep().get());
+    const auto * aggregating_step = dynamic_cast<const AggregatingStepExt *>(aggregate->getStep().get());
 
     auto identities = std::unordered_set<String>(aggregating_step->getKeys().begin(), aggregating_step->getKeys().end());
     for (const auto & left_key : join_step->getLeftKeys())
@@ -265,7 +245,7 @@ TransformResult SemiJoinPushDownAggregate::transformImpl(PlanNodePtr node, const
     }
 
     auto context = rule_context.context;
-    auto new_join_step = std::make_shared<JoinStep>(
+    auto new_join_step = std::make_shared<JoinStepExt>(
         DataStreams{aggregate->getChildren()[0]->getStep()->getOutputStream(), node->getChildren()[1]->getStep()->getOutputStream()},
         aggregate->getChildren()[0]->getStep()->getOutputStream(),
         join_step->getKind(),
@@ -278,20 +258,19 @@ TransformResult SemiJoinPushDownAggregate::transformImpl(PlanNodePtr node, const
         join_step->getFilter(),
         join_step->isHasUsing(),
         join_step->getRequireRightKeys(),
-        ASOF::Inequality::GreaterOrEquals,
+        ASOFJoinInequality::GreaterOrEquals,
         DistributionType::UNKNOWN,
         JoinAlgorithm::AUTO,
         join_step->isMagic(),
         join_step->isOrdered(),
         join_step->isSimpleReordered(),
-        join_step->getRuntimeFilterBuilders(),
-        join_step->getHints());
+        join_step->getRuntimeFilterBuilders());
 
     return TransformResult{
         PlanNodeBase::createPlanNode(
-            context->nextNodeId(),
+            context->getOptimizerContext()->nextNodeId(),
             aggregate->getStep(),
-            {PlanNodeBase::createPlanNode(context->nextNodeId(), new_join_step, {aggregate->getChildren()[0], node->getChildren()[1]})}),
+            {PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), new_join_step, {aggregate->getChildren()[0], node->getChildren()[1]})}),
         true};
 }
 }

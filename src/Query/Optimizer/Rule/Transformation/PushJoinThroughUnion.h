@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Query/Optimizer/Rule/Rule.h>
 
 namespace DB
@@ -31,7 +32,7 @@ class PushJoinThroughUnion : public Rule
 public:
     RuleType getType() const override { return RuleType::PUSH_JOIN_THROUGH_UNION; }
     String getName() const override { return "PUSH_JOIN_THROUGH_UNION"; }
-    bool isEnabled(ContextPtr context) const override {return context->getSettingsRef().enable_push_join_through_union; }
+    bool isEnabled(ContextPtr context) const override {return context->getOptimizerContext()->getSettingsRef().enable_push_join_through_union; }
     ConstRefPatternPtr getPattern() const override;
     const std::vector<RuleType> & blockRules() const override;
 

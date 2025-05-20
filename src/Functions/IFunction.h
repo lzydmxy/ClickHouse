@@ -315,6 +315,8 @@ public:
 
     virtual FunctionBasePtr build(const ColumnsWithTypeAndName & arguments) const;
 
+    DataTypePtr getReturnType(const ColumnsWithTypeAndName & arguments) const;
+
     void getLambdaArgumentTypes(DataTypes & arguments) const;
 
     void checkNumberOfArguments(size_t number_of_arguments) const;
@@ -408,8 +410,6 @@ protected:
     virtual bool canBeExecutedOnLowCardinalityDictionary() const { return true; }
 
 private:
-
-    DataTypePtr getReturnType(const ColumnsWithTypeAndName & arguments) const;
 
     DataTypePtr getReturnTypeWithoutLowCardinality(const ColumnsWithTypeAndName & arguments) const;
 };

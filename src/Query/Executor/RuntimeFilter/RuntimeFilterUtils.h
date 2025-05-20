@@ -36,11 +36,11 @@ public:
         RuntimeFilterId id, const std::string & symbol, const std::vector<String> & partition_columns, double filter_factor);
     static ConstASTPtr createRuntimeFilterExpression(const RuntimeFilterDescription & description);
 
-    static RuntimeFilterId extractId(const ASTPtr & runtime_filter);
-    static std::optional<RuntimeFilterDescription> extractDescription(const ASTPtr & runtime_filter);
+    static RuntimeFilterId extractId(const ConstASTPtr & runtime_filter);
+    static std::optional<RuntimeFilterDescription> extractDescription(const ConstASTPtr & runtime_filter);
 
     /* runtime_filters, static_filters */
-    static std::pair<ASTs, ASTs> extractRuntimeFilters(const ConstASTPtr & conjuncts);
+    static std::pair<ConstASTs, ConstASTs> extractRuntimeFilters(const ConstASTPtr & conjuncts);
     static std::pair<ASTs, ASTs> extractExecutableRuntimeFiltersAndPush1stRf(const ASTPtr & conjuncts);
     static std::pair<ASTs, ASTs> extractExecutableRuntimeFilters(const ASTPtr & conjuncts);
     static bool isInternalRuntimeFilter(const ConstASTPtr & expr);
@@ -62,7 +62,7 @@ public:
 
     static ASTs generateFunctionArgs(const RuntimeFilterDescription & description, const String & query_id);
     static bool containsRuntimeFilters(ConstASTPtr filter);
-    static std::vector<RuntimeFilterId> extractRuntimeFilterId(const ASTPtr & conjuncts);
+    static std::vector<RuntimeFilterId> extractRuntimeFilterId(const ConstASTPtr & conjuncts);
 
     static ASTPtr removeAllInternalRuntimeFilters(ASTPtr expr);
 };

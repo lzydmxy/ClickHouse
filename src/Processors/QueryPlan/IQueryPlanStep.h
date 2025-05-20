@@ -2,6 +2,7 @@
 #include <Core/Block.h>
 #include <Core/SortDescription.h>
 #include <Processors/QueryPlan/BuildQueryPipelineSettings.h>
+#include <Query/Protos/plan_node.pb.h>
 
 namespace DB
 {
@@ -157,5 +158,5 @@ protected:
     static void describePipeline(const Processors & processors, FormatSettings & settings);
 };
 
-using QueryPlanStepPtr = std::unique_ptr<IQueryPlanStep>;
+using QueryPlanStepPtr = std::shared_ptr<IQueryPlanStep>;
 }

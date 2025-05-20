@@ -1,8 +1,11 @@
 #include <Query/Optimizer/Graph.h>
 
-// #include <Query/Optimizer/Cascades/Memo.h>
-// #include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
-#include <Query/Common/Utils.h>
+#include <Query/Optimizer/Cascades/Memo.h>
+#include <Query/Optimizer/JoinGraph.h>
+#include <Query/Optimizer/Rule/Transformation/JoinEnumOnGraph.h>
+#include <Query/Optimizer/Signature/ExpressionReorderNormalizer.h>
+#include <Query/Optimizer/Utils.h>
+#include <Parsers/formatAST.h>
 
 namespace DB
 {
@@ -13,12 +16,11 @@ Graph Graph::build(const std::vector<GroupId> & groups, const UnionFind<String> 
     std::unordered_map<String, GroupId> symbol_to_group_id;
     for (auto group_id : groups)
     {
-        // TODO Impl memo
-        // for (const auto & symbol : memo.getGroupById(group_id)->getStep()->getOutputStream().header)
-        // {
-        //     assert(!symbol_to_group_id.contains(symbol.name)); // duplicate symbol
-        //     symbol_to_group_id[symbol.name] = group_id;
-        // }
+        for (const auto & symbol : memo.getGroupById(group_id)->getStep()->getOutputStream().header)
+        {
+            assert(!symbol_to_group_id.contains(symbol.name)); // duplicate symbol
+            symbol_to_group_id[symbol.name] = group_id;
+        }
         graph.nodes.emplace_back(group_id);
     }
 
@@ -61,8 +63,7 @@ void Graph::standardize()
             });
         }
     }
-    // ToDo
-    // ExpressionReorderNormalizer::reorder(filter);
+    ExpressionReorderNormalizer::reorder(filter);
 }
 
 
@@ -169,7 +170,7 @@ BitSet MinCutBranchAlg::neighbor(const BitSet & nodes)
     {
         if (!graph.getEdges().contains(pos))
         {
-            throw Exception(ErrorCodes::LOGICAL_ERROR, "Not found edge in graph");
+            throw Exception(DB::ErrorCodes::LOGICAL_ERROR, "Not found edge in graph");
         }
         for (const auto & item : graph.getEdges().at(pos))
         {

@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Processors/Chunk.h>
 #include <Processors/Transforms/AggregatingTransform.h>
 
@@ -30,8 +31,11 @@ public:
     ChunkType getType() const { return ChunkType::Extremes; }
 };
 
+using ChunkInfoPtr = std::shared_ptr<const ChunkInfo>;
+
 ChunkType getChunkType(const ChunkInfoPtr & chunk_info);
 void readAggregatedChunkInfo(ReadBuffer & in, std::shared_ptr<AggregatedChunkInfo> agg_info);
 void writeAggregatedChunkInfo(WriteBuffer & out, const AggregatedChunkInfo * agg_info);
 
 }
+

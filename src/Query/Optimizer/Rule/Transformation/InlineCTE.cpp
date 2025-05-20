@@ -7,11 +7,10 @@
 #include <Query/Optimizer/Rewriter/UnifyJoinOutputs.h>
 #include <Query/Optimizer/Rule/Patterns.h>
 #include <Query/Optimizer/Rule/Rules.h>
-#include <QueryPlan/CTEInfo.h>
-#include <QueryPlan/CTERefStep.h>
-#include <QueryPlan/GraphvizPrinter.h>
-#include <QueryPlan/IQueryPlanStep.h>
-#include <QueryPlan/PlanNode.h>
+#include <Query/Processors/QueryPlan/CTEInfo.h>
+#include <Query/Processors/QueryPlan/CTERefStepExt.h>
+#include <Query/Planner/GraphvizPrinter.h>
+#include <Query/Processors/QueryPlan/PlanNode.h>
 
 namespace DB
 {
@@ -23,7 +22,7 @@ ConstRefPatternPtr InlineCTE::getPattern() const
 
 TransformResult InlineCTE::transformImpl(PlanNodePtr node, const Captures &, RuleContext & context)
 {
-    const auto * cte_step = dynamic_cast<const CTERefStep *>(node->getStep().get());
+    const auto * cte_step = dynamic_cast<const CTERefStepExt *>(node->getStep().get());
     if (cte_step->hasFilter())
         return {}; // InlineCTEWithFilter
 
@@ -40,7 +39,7 @@ ConstRefPatternPtr InlineCTEWithFilter::getPattern() const
 TransformResult InlineCTEWithFilter::transformImpl(PlanNodePtr node, const Captures &, RuleContext & context)
 {
     auto cte = node->getChildren()[0];
-    const auto * cte_step = dynamic_cast<const CTERefStep *>(cte->getStep().get());
+    const auto * cte_step = dynamic_cast<const CTERefStepExt *>(cte->getStep().get());
     if (!cte_step->hasFilter())
         return {}; // InlineCTE
 
@@ -51,9 +50,9 @@ TransformResult InlineCTEWithFilter::transformImpl(PlanNodePtr node, const Captu
 
 PlanNodePtr InlineCTE::reoptimize(CTEId cte_id, const PlanNodePtr & node, CTEInfo & cte_info, ContextMutablePtr & context)
 {
-    if (context->getSettingsRef().print_graphviz)
+    if (context->getOptimizerContext()->getSettingsRef().print_graphviz)
         GraphvizPrinter::printLogicalPlan(
-            *node, context, std::to_string(context->getRuleId()) + "_cte_" + std::to_string(cte_id) + "_inlined");
+            *node, context, fmt::format("{}_cte_{}__inlined", context->getOptimizerContext()->getRuleId(), cte_id));
 
     static Rewriters rewriters
         = {std::make_shared<ColumnPruning>(),
@@ -65,7 +64,7 @@ PlanNodePtr InlineCTE::reoptimize(CTEId cte_id, const PlanNodePtr & node, CTEInf
            std::make_shared<IterativeRewriter>(Rules::removeRedundantRules(), "RemoveRedundant"),
            std::make_shared<UnifyJoinOutputs>()};
 
-    QueryPlan sub_plan{node, cte_info, context->getPlanNodeIdAllocator()};
+    QueryPlanExt sub_plan{node, cte_info, context->getOptimizerContext()->getPlanNodeIdAllocator()};
     for (auto & rewriter : rewriters)
         rewriter->rewritePlan(sub_plan, context);
     return sub_plan.getPlanNode();

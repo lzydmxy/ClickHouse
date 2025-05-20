@@ -4,14 +4,14 @@
 #include <farmhash.h>
 #include <metrohash.h>
 #include <wyhash.h>
-#include <MurmurHash2.h>
-#include <MurmurHash3.h>
+#include <murmurhash/MurmurHash2.h>
+#include <murmurhash/MurmurHash3.h>
 
 #include "config.h"
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wused-but-marked-unused"
-#include <xxhash.h>
+#include <../xxHash/xxhash.h>
 
 #include <Common/SipHash.h>
 #include <Common/typeid_cast.h>

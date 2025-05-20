@@ -5,6 +5,8 @@
 #include <Processors/Transforms/ExpressionTransform.h>
 #include <Query/Processors/QueryPlan/ProjectionStepExt.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
@@ -66,6 +68,27 @@ ActionsDAGPtr ProjectionStepExt::createActions(const Assignments & assignments, 
         output.emplace_back(NameWithAlias{item.second->getColumnName(), item.first});
     }
     return QueryPlanStepHelper::createExpressionActions(context, source, output, expr_list);
+}
+
+void ProjectionStepExt::toProto(Protos::ProjectionStepExt & proto, bool) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
+    serializeAssignmentsToProto(assignments, *proto.mutable_assignments());
+    serializeOrderedMapToProto(name_to_type, *proto.mutable_name_to_type());
+    proto.set_final_project(final_project);
+    proto.set_index_project(index_project);
+}
+
+std::shared_ptr<ProjectionStepExt> ProjectionStepExt::fromProto(const Protos::ProjectionStepExt & proto, ContextPtr)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    auto assignments = deserializeAssignmentsFromProto(proto.assignments());
+    auto name_to_type = deserializeOrderedMapFromProto<String, DataTypePtr>(proto.name_to_type());
+    auto final_project = proto.final_project();
+    auto index_project = proto.index_project();
+    auto step = std::make_shared<ProjectionStepExt>(base_input_stream, assignments, name_to_type, final_project, index_project);
+    step->setStepDescription(step_description);
+    return step;
 }
 
 }

@@ -1,15 +1,15 @@
 #include <Query/Optimizer/Rule/Patterns.h>
-#include <QueryPlan/SortingStep.h>
 
 namespace DB::Patterns
 {
 
 PatternBuilder topN()
 {
-    auto result = typeOf(IQueryPlanStep::Type::Sorting);
-    result.matchingStep<SortingStep>([&](const SortingStep & s) { return !s.hasPreparedParam() && s.getLimitValue() != 0; });
+    auto result = typeOf(QueryPlanStepType::SortingStepExt);
+    result.matchingStep<SortingStepExt>([&](const SortingStepExt & s) { return !s.hasPreparedParam() && s.getLimitValue() != 0; });
     return result;
 }
+
 PatternBuilder & PatternBuilder::capturedAs(const Capture & capture)
 {
     return capturedAs(

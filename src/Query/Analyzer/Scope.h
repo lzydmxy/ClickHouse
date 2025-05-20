@@ -161,7 +161,7 @@ struct Scope
         : type(type_), parent(parent_), query_boundary(query_boundary_), field_descriptions(std::move(field_description_))
     {
         if (!query_boundary_ && !parent)
-            throw Exception("A non-query-boundary scope must have a parent scope.", ErrorCodes::LOGICAL_ERROR);
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "A non-query-boundary scope must have a parent scope.");
     }
 private:
     ScopeType type;
@@ -244,7 +244,7 @@ private:
             if constexpr (check_ambiguous)
             {
                 if (matches.size() > 1)
-                    throw Exception("Identifier " + target.toString() + " is ambiguous.", ErrorCodes::AMBIGUOUS_IDENTIFIER);
+                    throw Exception(ErrorCodes::AMBIGUOUS_IDENTIFIER, "Identifier {} is ambiguous.", target.toString());
                 else if (matches.size() == 1)
                     return ResolvedField(scope, matches.front());
             }

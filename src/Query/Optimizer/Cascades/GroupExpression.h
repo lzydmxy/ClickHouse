@@ -4,7 +4,8 @@
 #include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
 #include <Query/Optimizer/Property/Property.h>
 #include <Query/Optimizer/Rule/Rule.h>
-#include <QueryPlan/IQueryPlanStep.h>
+#include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <Query/Processors/IQueryPlanStepExt.h>
 
 #include <memory>
 #include <utility>
@@ -100,8 +101,8 @@ public:
 
     const std::vector<GroupId> & getChildrenGroups() const { return child_groups; }
 
-    bool isPhysical() const { return step->isPhysical(); }
-    bool isLogical() const { return step->isLogical(); }
+    bool isPhysical() const { return QueryPlanStepHelper::isPhysicalQueryPlanStep(step); }
+    bool isLogical() const { return QueryPlanStepHelper::isLogicalQueryPlanStep(step); }
 
     void setDeleted(bool deleted_) { deleted = deleted_;}
     bool isDeleted() const { return deleted;}
@@ -140,7 +141,9 @@ public:
     bool operator==(const GroupExpression & r) const
     {
         // Having an undefined group id is considered equal to any group id
-        return (child_groups == r.child_groups) && ((group_id == UNDEFINED_GROUP) || (r.group_id == UNDEFINED_GROUP) || (r.group_id == group_id)) && (*step == *r.step);
+        return (child_groups == r.child_groups)
+            && ((group_id == UNDEFINED_GROUP) || (r.group_id == UNDEFINED_GROUP) || (r.group_id == group_id))
+            && QueryPlanStepHelper::isQueryPlanStepEqual(*step, *r.step);
     }
 
 private:

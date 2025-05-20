@@ -1,9 +1,8 @@
 #pragma once
 
-#include <Core/Names.h>
 #include <Core/SortDescription.h>
-#include <Core/Types.h>
 #include <Query/Optimizer/Property/SymbolEquivalencesDeriver.h>
+#include <Query/Optimizer/FunctionInvoker.h>
 
 namespace DB
 {

@@ -1,0 +1,104 @@
+#include <Query/Parsers/ASTQuantifiedComparisonExt.h>
+
+#include <IO/WriteHelpers.h>
+#include <IO/ReadHelpers.h>
+#include <IO/Operators.h>
+
+
+namespace DB
+{
+namespace ErrorCodes
+{
+    extern const int UNEXPECTED_AST_STRUCTURE;
+}
+
+void ASTQuantifiedComparisonExt::appendColumnNameImpl(WriteBuffer &ostr) const
+{
+    writeString(comparator, ostr);
+    switch (quantifier_type)
+    {
+        case QuantifierType::ANY:
+            writeString(" ANY ", ostr);
+            break;
+        case QuantifierType::ALL:
+            writeString(" ALL ", ostr);
+            break;
+        case QuantifierType::SOME:
+            writeString(" SOME ", ostr);
+            break;
+    }
+    writeChar('(', ostr);
+    for (auto it = children.begin(); it != children.end(); ++it)
+    {
+        if (it!=children.begin())
+            writeCString(", ", ostr);
+        (*it)->appendColumnName(ostr);
+    }
+    writeChar(')', ostr);
+}
+String ASTQuantifiedComparisonExt::getID(char delim) const
+{
+    switch (quantifier_type)
+    {
+        case QuantifierType::ANY:
+            return "QuantifiedComparison" + (delim + comparator) + "_ANY";
+        case QuantifierType::ALL:
+            return "QuantifiedComparison" + (delim + comparator) + "_ALL";
+        case QuantifierType::SOME:
+            return "QuantifiedComparison" + (delim + comparator) + "_SOME";
+    }
+    return "";
+}
+
+ASTPtr ASTQuantifiedComparisonExt::clone() const
+{
+    auto res = make_shared<ASTQuantifiedComparisonExt>(*this);
+    res->cloneChildren();
+    return res;
+}
+
+void ASTQuantifiedComparisonExt::formatImplWithoutAlias(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const
+{
+    FormatStateStacked nested_need_parens = frame;
+    FormatStateStacked nested_dont_need_parens = frame;
+    nested_need_parens.need_parens = true;
+    nested_dont_need_parens.need_parens = false;
+    const char * operators[] =
+        {
+            "notEquals",       " != ",
+            "lessOrEquals",    " <= ",
+            "greaterOrEquals", " >= ",
+            "less",            " < ",
+            "greater",         " > ",
+            "equals",          " = ",
+            nullptr
+        };
+    const char ** it = nullptr;
+    for (it = operators; *it; it+=2)
+    {
+        if(0 == strcmp(comparator.c_str(), it[0]))
+        {
+            if (frame.need_parens)
+                settings.ostr << '(';
+            children[0]->formatImpl(settings, state, nested_need_parens);
+            settings.ostr<<(settings.hilite ? hilite_operator : "") << it[1] << (settings.hilite ? hilite_none : "");
+            switch (quantifier_type)
+            {
+                case QuantifierType::ANY:
+                    settings.ostr << " ANY ";
+                    break;
+                case QuantifierType::ALL:
+                    settings.ostr << " ALL ";
+                    break;
+                case QuantifierType::SOME:
+                    settings.ostr << " SOME ";
+                    break;
+            }
+            children[1]->formatImpl(settings, state, nested_dont_need_parens);
+            if (frame.need_parens)
+                settings.ostr << ')';
+        }
+    }
+}
+
+}

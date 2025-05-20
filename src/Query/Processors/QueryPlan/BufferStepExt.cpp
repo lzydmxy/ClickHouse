@@ -1,5 +1,6 @@
 #include <Query/Processors/QueryPlan/BufferStepExt.h>
 #include <Query/Processors/Transforms/BufferTransformExt.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 
 namespace DB
@@ -27,6 +28,19 @@ void BufferStepExt::updateOutputStream()
 std::shared_ptr<IQueryPlanStep> BufferStepExt::copy(ContextPtr) const
 {
     return std::make_shared<BufferStepExt>(input_streams[0]);
+}
+
+void BufferStepExt::toProto(Protos::BufferStepExt & proto, bool) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
+}
+
+std::shared_ptr<BufferStepExt> BufferStepExt::fromProto(const Protos::BufferStepExt & proto, ContextPtr)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    auto step = std::make_shared<BufferStepExt>(base_input_stream);
+    step->setStepDescription(step_description);
+    return step;
 }
 
 }

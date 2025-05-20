@@ -8,54 +8,15 @@
 #include <Parsers/ASTExpressionList.h>
 #include <Processors/Sources/NullSource.h>
 #include <Processors/Transforms/ExpressionTransform.h>
-#include <Query/Common/Utils.h>
+#include <Query/Optimizer/Utils.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
 
 
 namespace DB
 {
-
-ColumnPtr getCommonColumnForUnion(const std::vector<const ColumnWithTypeAndName *> & columns)
-{
-    ColumnWithTypeAndName result = *columns[0];
-    size_t num_const = 0;
-    DataTypes types(columns.size());
-    for (size_t i = 0; i < columns.size(); ++i)
-    {
-        types[i] = columns[i]->type;
-        if (isColumnConst(*columns[i]->column))
-            ++num_const;
-    }
-
-    static auto same_constants = [](const IColumn & a, const IColumn & b) {
-        return assert_cast<const ColumnConst &>(a).getField() == assert_cast<const ColumnConst &>(b).getField();
-    };
-
-    /// Create supertype column saving constness if possible.
-    bool save_constness = false;
-    if (columns.size() == num_const)
-    {
-        save_constness = true;
-        for (size_t i = 1; i < columns.size(); ++i)
-        {
-            const ColumnWithTypeAndName & first = *columns[0];
-            const ColumnWithTypeAndName & other = *columns[i];
-
-            if (!same_constants(*first.column, *other.column))
-            {
-                save_constness = false;
-                break;
-            }
-        }
-    }
-
-    ColumnPtr column = result.type->createColumn();
-    if (save_constness)
-        column = result.type->createColumnConst(0, assert_cast<const ColumnConst &>(*columns[0]->column).getField());
-
-    return column;
-}
 
 UnionStepExt::UnionStepExt(
     DataStreams input_streams_, DataStream output_stream_, OutputToInputs output_to_inputs_, size_t max_threads_, bool local_)
@@ -212,6 +173,38 @@ QueryPipelineBuilderPtr UnionStepExt::updatePipeline(QueryPipelineBuilders pipel
 std::shared_ptr<IQueryPlanStep> UnionStepExt::copy(ContextPtr) const
 {
     return std::make_shared<UnionStepExt>(input_streams, output_stream.value(), output_to_inputs, getMaxThreads(), local);
+}
+
+std::shared_ptr<UnionStepExt> UnionStepExt::fromProto(const Protos::UnionStepExt & proto, ContextPtr)
+{
+    DataStreams input_streams;
+    for (const auto & proto_element : proto.input_streams())
+    {
+        DataStream element;
+        ProtosSerDerHelper::fillFromProto(element, proto_element);
+        input_streams.emplace_back(std::move(element));
+    }
+    DataStream output_stream;
+    ProtosSerDerHelper::fillFromProto(output_stream, proto.output_stream());
+    auto output_to_inputs = deserializeMapFromProto<String, std::vector<String>>(proto.output_to_inputs());
+
+    auto max_threads = proto.max_threads();
+    auto local = proto.local();
+    auto step = std::make_shared<UnionStepExt>(input_streams, output_stream, output_to_inputs, max_threads, local);
+
+    return step;
+}
+
+void UnionStepExt::toProto(Protos::UnionStepExt & proto, bool) const
+{
+    for (const auto & element : input_streams)
+        ProtosSerDerHelper::toProto(element, *proto.add_input_streams());
+    if (!output_stream.has_value())
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "empty output stream");
+    ProtosSerDerHelper::toProto(output_stream.value(), *proto.mutable_output_stream());
+
+    proto.set_max_threads(max_threads);
+    proto.set_local(local);
 }
 
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Query/Parsers/ASTHelper.h>
+#include <Query/Common/Void.h>
 
 namespace DB
 {

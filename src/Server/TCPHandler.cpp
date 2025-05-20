@@ -464,6 +464,7 @@ void TCPHandler::runImpl()
             });
 
             customizeContext(query_context);
+            query_context->initializeOptimizerContext();
 
             /// This callback is needed for requesting read tasks inside pipeline for distributed processing
             query_context->setReadTaskCallback([this]() -> String

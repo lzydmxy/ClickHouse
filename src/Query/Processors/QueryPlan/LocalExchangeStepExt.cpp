@@ -3,11 +3,13 @@
 #include <Processors/ResizeProcessor.h>
 #include <Processors/Transforms/ScatterByPartitionTransform.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 
 namespace DB
 {
-LocalExchangeStepExt::LocalExchangeStepExt(const DataStream & input_stream_, const RExchangeMode::Enum & mode_)
-    : ITransformingStep(input_stream_, input_stream_.header, {}), exchange_type(mode_)
+LocalExchangeStepExt::LocalExchangeStepExt(const DataStream & input_stream_, const RExchangeMode::Enum & mode_, Partitioning schema_)
+    : ITransformingStep(input_stream_, input_stream_.header, {}), exchange_type(mode_), schema(std::move(schema_))
 {
 }
 
@@ -16,7 +18,7 @@ void LocalExchangeStepExt::updateOutputStream()
     output_stream->header = input_streams[0].header;
 }
 
-void LocalExchangeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & build_context)
+void LocalExchangeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & build_settings)
 {
     auto streams = pipeline.getNumStreams();
     auto stream_header = pipeline.getHeader();
@@ -24,17 +26,16 @@ void LocalExchangeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, co
     if (streams <= 1)
     {
         /// Same as round-robin shuffle
-        // TODO: need context from BuildQueryPipelineSettings
-        // pipeline.addTransform(std::make_shared<ResizeProcessor>(
-        //     stream_header, 1, build_context.context->getSettingsRef().max_threads));
+        const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(build_settings);
+        pipeline.addTransform(std::make_shared<ResizeProcessor>( stream_header, 1, settings_ext.context->getSettingsRef().max_threads));
         return;
     }
 
     ColumnNumbers key_columns;
-    // TODO: need Partitioning
-    // key_columns.reserve(schema.getColumns().size());
-    // for (const auto & name : schema.getColumns())
-    //     key_columns.push_back(stream_header.getPositionByName(name));
+
+    key_columns.reserve(schema.getColumns().size());
+    for (const auto & name : schema.getColumns())
+        key_columns.push_back(stream_header.getPositionByName(name));
 
     pipeline.transform([&](OutputPortRawPtrs ports) {
         Processors processors;
@@ -64,10 +65,25 @@ void LocalExchangeStepExt::transformPipeline(QueryPipelineBuilder & pipeline, co
 
 }
 
+void LocalExchangeStepExt::toProto(Protos::LocalExchangeStepExt & proto, bool /*for_hash_equals*/) const
+{
+    ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
+    proto.set_exchange_type(exchange_type);
+    schema.toProto(*proto.mutable_schema());
+}
+
+std::shared_ptr<LocalExchangeStepExt> LocalExchangeStepExt::fromProto(const Protos::LocalExchangeStepExt & proto, ContextPtr /*context*/)
+{
+    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
+    auto schema = Partitioning::fromProto(proto.schema());
+    auto step = std::make_shared<LocalExchangeStepExt>(base_input_stream, proto.exchange_type(), schema);
+    step->setStepDescription(step_description);
+    return step;
+}
+
 std::shared_ptr<IQueryPlanStep> LocalExchangeStepExt::copy(ContextPtr) const
 {
-    // TODO: need Partitioning
-    return std::make_shared<LocalExchangeStepExt>(input_streams[0], exchange_type);
+    return std::make_shared<LocalExchangeStepExt>(input_streams[0], exchange_type, schema);
 }
 
 }

@@ -1,0 +1,143 @@
+#include <utility>
+#include <Query/Optimizer/MergeSetOperation.h>
+
+#include <Query/Processors/QueryPlan/ExceptStepExt.h>
+#include <Query/Processors/QueryPlan/IntersectStepExt.h>
+#include <Query/Processors/QueryPlan/UnionStepExt.h>
+
+
+namespace DB
+{
+
+/**
+ * Transforms:
+ *
+ * - Intersect
+ *   - Intersect
+ *     - Relation1
+ *     - Relation2
+ *   - Intersect
+ *     - Relation3
+ *     - Relation4
+ *
+ * Into
+ *
+ * - Intersect
+ *   - Relation1
+ *   - Relation2
+ *   - Relation3
+ *   - Relation4
+ *
+ */
+PlanNodePtr SetOperationMerge::merge()
+{
+    auto & sources = node->getChildren();
+
+    bool result_is_distinct = false;
+    bool rewritten = false;
+
+    std::unordered_map<String, std::vector<String>> output_to_inputs;
+
+    for (size_t i = 0; i < sources.size(); ++i)
+    {
+        // Determine if set operations can be merged and whether the resulting set operation is quantified DISTINCT or ALL
+        auto merged_quantifier = mergedQuantifierIsDistinct(node, sources[i]);
+        if (merged_quantifier.has_value())
+        {
+            addMergedMappings(sources[i], i, output_to_inputs);
+            result_is_distinct |= merged_quantifier.value();
+            rewritten = true;
+        }
+        else
+        {
+            // Keep mapping as it is
+            addOriginalMappings(sources[i], i, output_to_inputs);
+        }
+    }
+
+    if (!rewritten)
+    {
+        return nullptr;
+    }
+
+    DataStreams input_stream;
+
+    for (const auto & item : new_sources)
+        input_stream.emplace_back(item->getStep()->getOutputStream());
+
+    DataStream output;
+    for (const auto & col : node->getStep()->getOutputStream().header)
+    {
+        output.header.insert(ColumnWithTypeAndName{col.type, col.name});
+    }
+
+    if (getQueryPlanStepType(node->getStep()) == QueryPlanStepType::UnionStepExt)
+    {
+        auto union_step = std::make_unique<UnionStepExt>(std::move(input_stream), std::move(output), std::move(output_to_inputs));
+        PlanNodePtr union_node = std::make_shared<UnionStepExtNode>(context.getOptimizerContext()->nextNodeId(), std::move(union_step), std::move(new_sources));
+        return union_node;
+    }
+
+    auto intersect_step = std::make_unique<IntersectStepExt>(std::move(input_stream), std::move(output), std::move(output_to_inputs), result_is_distinct);
+    PlanNodePtr intersect_node = std::make_shared<IntersectStepExtNode>(context.getOptimizerContext()->nextNodeId(), std::move(intersect_step), std::move(new_sources));
+    return intersect_node;
+}
+
+PlanNodePtr SetOperationMerge::mergeFirstSource()
+{
+    auto & sources = node->getChildren();
+
+    auto & child = sources[0];
+
+    // Determine if set operations can be merged and whether the resulting set operation is quantified DISTINCT or ALL
+    auto merged_quantifier = mergedQuantifierIsDistinct(node, child);
+    if (!merged_quantifier.has_value())
+    {
+        return {};
+    }
+
+    std::unordered_map<String, std::vector<String>> output_to_inputs;
+
+    // Merge all sources of the first source.
+    addMergedMappings(child, 0, output_to_inputs);
+
+    // Keep remaining as it is
+    for (size_t i = 1; i < sources.size(); i++)
+    {
+        auto & source = sources[i];
+        addOriginalMappings(source, i, output_to_inputs);
+    }
+
+    DataStreams input_stream;
+
+    for (const auto & item : new_sources)
+        input_stream.emplace_back(item->getStep()->getOutputStream());
+
+    DataStream output;
+    for (const auto & col : node->getStep()->getOutputStream().header)
+    {
+        output.header.insert(ColumnWithTypeAndName{col.type, col.name});
+    }
+
+    if (getQueryPlanStepType(node->getStep()) == QueryPlanStepType::UnionStepExt)
+    {
+        auto union_step = std::make_unique<UnionStepExt>(input_stream, output);
+        PlanNodePtr union_node = std::make_shared<UnionStepExtNode>(context.getOptimizerContext()->nextNodeId(), std::move(union_step), new_sources);
+        return union_node;
+    }
+    if (getQueryPlanStepType(node->getStep()) == QueryPlanStepType::IntersectStepExt)
+    {
+        auto intersect_step = std::make_unique<IntersectStepExt>(std::move(input_stream), std::move(output), merged_quantifier.value());
+        PlanNodePtr intersect_node = std::make_shared<IntersectStepExtNode>(context.getOptimizerContext()->nextNodeId(), std::move(intersect_step), std::move(new_sources));
+        return intersect_node;
+    }
+    if (getQueryPlanStepType(node->getStep()) == QueryPlanStepType::ExceptStepExt)
+    {
+        auto except_step = std::make_unique<ExceptStepExt>(input_stream, output, merged_quantifier.value());
+        PlanNodePtr except_node = std::make_shared<ExceptStepExtNode>(context.getOptimizerContext()->nextNodeId(), std::move(except_step), std::move(new_sources));
+        return except_node;
+    }
+    return nullptr;
+}
+
+}

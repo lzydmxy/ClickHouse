@@ -68,13 +68,13 @@ void ExplainAnalyzeTransformExt::transform(Chunk & chunk)
         for (auto & [step_id, profile] : segment0_steps_profiles)
             addr_to_step_profile[coordinator_address][step_id] = profile;
 
-        // TODO: implement Optimizer
+        //todo: zhangwanyun, need optimizer: implement Optimizer
         // CardinalityEstimator::estimate(*query_plan_ptr, context);
         // std::unordered_map<PlanNodeId, double> costs = CostCalculator::calculate(*query_plan_ptr, *context);
         auto step_agg_operator_profiles = ProfileMetric::aggregateStepProfileBetweenWorkers(addr_to_step_profile);
         if (kind == ASTExplainQueryExt::ExplainKindExt::LogicalAnalyze)
         {
-            // TODO: implement Optimizer, PlanPrinter
+            //todo: zhangwanyun, need optimizer: implement Optimizer, PlanPrinter
             // if (settings.json)
             // {
             //     auto plan_cost = CostCalculator::calculatePlanCost(*query_plan_ptr, *context);
@@ -86,14 +86,14 @@ void ExplainAnalyzeTransformExt::transform(Chunk & chunk)
         }
         else if (kind == ASTExplainQueryExt::ExplainKindExt::DistributedAnalyze && !segment_descriptions.empty())
         {
-            // TODO: implement PlanPrinter
+            //todo: zhangwanyun, other feat: implement PlanPrinter
             // if (settings.json)
             //     explain = PlanPrinter::jsonDistributedPlan(segment_descriptions, step_agg_operator_profiles);
             // else
             //     explain = PlanPrinter::textDistributedPlan(
             //         segment_descriptions, context, costs, step_agg_operator_profiles, *query_plan_ptr, settings, profiles_map);
         }
-        // TODO: implement GraphvizPrinter
+        //todo: zhangwanyun, other feat: implement GraphvizPrinter
         // GraphvizPrinter::printLogicalPlan(*query_plan_ptr, context, "5999_explain_analyze", step_agg_operator_profiles);
     }
     else if (kind == ASTExplainQueryExt::ExplainKindExt::PipelineAnalyze)
@@ -119,7 +119,7 @@ void ExplainAnalyzeTransformExt::transform(Chunk & chunk)
 
         if (settings.aggregate_profiles)
             worker_grouped_profiles = GroupedProcessorProfile::aggregatePipelineProfileBetweenWorkers(worker_grouped_profiles);
-        // TODO: implement PlanPrinter
+        //todo: zhangwanyun, other feat: implement PlanPrinter
         // if (settings.json)
         //     explain = PlanPrinter::jsonPipelineProfile(segment_descriptions, worker_grouped_profiles);
         // else
@@ -129,7 +129,7 @@ void ExplainAnalyzeTransformExt::transform(Chunk & chunk)
     MutableColumns cols(1);
     auto type = std::make_shared<DataTypeString>();
     cols[0] = type->createColumn();
-    // TODO: need implementing in InterpreterExplainQuery
+    //todo: zhangwanyun, other feat: need implementing in InterpreterExplainQuery
     // InterpreterExplainQuery::fillColumn(*cols[0], explain);
     size_t row_num = cols[0]->size();
     has_final_transform = false;
@@ -217,7 +217,7 @@ void ExplainAnalyzeTransformExt::getRemoteProcessorProfiles(
         }
     }
 
-    // TODO: need implementing in InterpreterExplainQuery
+    //todo: zhangwanyun, other feat: need implementing in InterpreterExplainQuery
     // auto remote_profiles = dynamic_pointer_cast<ExplainConsumer>(consumer)->getStoreResult();
     // for (auto & profile_log : remote_profiles)
     // {
