@@ -7,10 +7,6 @@
 
 namespace DB
 {
-using SizeOrVariable = std::variant<size_t, String>;
-
-void setSizeOrVariableToProto(const SizeOrVariable & size_or_var, Protos::SizeOrVariable & proto);
-std::optional<SizeOrVariable> getSizeOrVariableFromProto(const Protos::SizeOrVariable & proto);
 
 /// Sorts stream of data. See MergeSortingTransform.
 class SortingStepExt : public ITransformingStep
@@ -25,7 +21,7 @@ public:
         (PARTIAL_NO_MERGE)
     );
 
-    explicit SortingStepExt(const DataStream & input_stream, SortDescription description_, SizeOrVariable limit_, Stage stage_, SortDescription prefix_description_ = {}, bool enable_adaptive_spill_ = false);
+    explicit SortingStepExt(const DataStream & input_stream, SortDescription description_, size_t limit_, Stage stage_, SortDescription prefix_description_ = {}, bool enable_adaptive_spill_ = false);
 
     String getName() const override { return "Sorting"; }
 
@@ -35,19 +31,8 @@ public:
     Stage getStage() const { return stage; }
     void setStage(Stage stage_) { stage = stage_; }
 
-    const SizeOrVariable & getLimit() const
-    {
-        return limit;
-    }
-    UInt64 getLimitValue() const
-    {
-        return std::get<UInt64>(limit);
-    }
+    const size_t & getLimit() const {return limit;}
     void setLimit(UInt64 limit_) { limit = limit_; }
-    bool hasPreparedParam() const
-    {
-        return std::holds_alternative<String>(limit);
-    }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 
     void describeActions(JSONBuilder::JSONMap & map) const override;
@@ -66,7 +51,7 @@ public:
 
 private:
     const SortDescription result_description;
-    SizeOrVariable limit;
+    size_t limit;
     Stage stage;
     SortDescription prefix_description;
     bool enable_adaptive_spill = false;

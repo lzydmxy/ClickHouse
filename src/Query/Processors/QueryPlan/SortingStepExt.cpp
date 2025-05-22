@@ -22,7 +22,7 @@ namespace CurrentMetrics
 namespace DB
 {
 
-static ITransformingStep::Traits getTraits(const SizeOrVariable & limit, bool is_final_sorting = false)
+static ITransformingStep::Traits getTraits(const size_t & limit, bool is_final_sorting = false)
 {
     return ITransformingStep::Traits{
         {
@@ -31,14 +31,14 @@ static ITransformingStep::Traits getTraits(const SizeOrVariable & limit, bool is
             .preserves_sorting = false,
         },
         {
-            .preserves_number_of_rows = std::holds_alternative<UInt64>(limit) && std::get<UInt64>(limit) == 0,
+            .preserves_number_of_rows = limit == 0,
         }};
 }
 
 SortingStepExt::SortingStepExt(
     const DataStream & input_stream_,
     SortDescription result_description_,
-    SizeOrVariable limit_,
+    size_t limit_,
     Stage stage_,
     SortDescription prefix_description_,
     bool enable_adaptive_spill_)
@@ -60,15 +60,6 @@ void SortingStepExt::setInputStreams(const DataStreams & input_streams_)
 {
     input_streams = input_streams_;
     output_stream->header = input_streams_[0].header;
-}
-
-void SortingStepExt::updateLimit(size_t limit_)
-{
-    if (limit_ && !hasPreparedParam() && (getLimitValue() == 0 || limit_ < getLimitValue()))
-    {
-        limit = limit_;
-        transform_traits.preserves_number_of_rows = false;
-    }
 }
 
 void SortingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings)
@@ -97,14 +88,14 @@ void SortingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const Bu
                         local_settings.max_block_size,
                         0,
                         SortingQueueStrategy::Batch,
-                        getLimitValue());
+                        limit);
 
                     pipeline.addTransform(std::move(transform));
                 }
-                if (getLimitValue() > 0)
+                if (limit > 0)
                 {
                     auto transform = std::make_shared<LimitTransform>(
-                        pipeline.getHeader(), getLimitValue(), 0, pipeline.getNumStreams(), false, false, result_description);
+                        pipeline.getHeader(), limit, 0, pipeline.getNumStreams(), false, false, result_description);
                     pipeline.addTransform(std::move(transform));
                 }
                 return;
@@ -129,7 +120,7 @@ void SortingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const Bu
                 if (stream_type != QueryPipelineBuilder::StreamType::Main)
                     return nullptr;
 
-                return std::make_shared<PartialSortingTransform>(header, result_description, getLimitValue());
+                return std::make_shared<PartialSortingTransform>(header, result_description, limit);
             });
 
             bool increase_sort_description_compile_attempts = true;
@@ -141,7 +132,7 @@ void SortingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const Bu
                     increase_sort_description_compile_attempts = false;
 
                 return std::make_shared<FinishSortingTransform>(
-                    header, prefix_description, result_description, local_settings.max_block_size, getLimitValue(), increase_sort_description_compile_attempts_current);
+                    header, prefix_description, result_description, local_settings.max_block_size, limit, increase_sort_description_compile_attempts_current);
             });
             return;
         }
@@ -150,7 +141,7 @@ void SortingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const Bu
             if (stream_type != QueryPipelineBuilder::StreamType::Main)
                 return nullptr;
 
-            return std::make_shared<PartialSortingTransform>(header, desc_copy, getLimitValue());
+            return std::make_shared<PartialSortingTransform>(header, desc_copy, limit);
         });
 
         StreamLocalLimits limits;
@@ -185,7 +176,7 @@ void SortingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const Bu
                 header,
                 result_description,
                 local_settings.max_block_size,
-                getLimitValue(),
+                limit,
                 increase_sort_description_compile_attempts_current,
                 local_settings.max_bytes_before_remerge_sort / pipeline.getNumStreams(),
                 local_settings.remerge_sort_lowered_memory_bytes_ratio,
@@ -204,7 +195,7 @@ void SortingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const Bu
                 local_settings.max_block_size,
                 0,
                 SortingQueueStrategy::Batch,
-                getLimitValue());
+                limit);
 
             pipeline.addTransform(std::move(transform));
         }
@@ -221,7 +212,7 @@ void SortingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const Bu
             local_settings.max_block_size,
             0,
             SortingQueueStrategy::Batch,
-            getLimitValue());
+            limit);
 
         pipeline.addTransform(std::move(transform));
     }
@@ -239,29 +230,13 @@ void SortingStepExt::describeActions(FormatSettings & settings) const
     settings.out << prefix << "Sort description: ";
     dumpSortDescription(result_description, settings.out);
     settings.out << '\n';
-
-    std::visit(
-        overloaded{
-            [&](const UInt64 & x) {
-                if (x)
-                    settings.out << prefix << "Limit " << x << '\n';
-            },
-            [&](const String & x) { settings.out << prefix << "Limit " << x << '\n'; }},
-        limit);
+    settings.out << prefix << "Limit " << limit << '\n';
 }
 
 void SortingStepExt::describeActions(JSONBuilder::JSONMap & map) const
 {
     map.add("Sort Description", explainSortDescription(result_description));
-
-    std::visit(
-        overloaded{
-            [&](const UInt64 & x) {
-                if (x)
-                    map.add("Limit", x);
-            },
-            [&](const String & x) { map.add("Limit", x); }},
-        limit);
+    map.add("Limit", limit);
 }
 
 std::shared_ptr<SortingStepExt> SortingStepExt::fromProto(const Protos::SortingStepExt & proto, ContextPtr)
@@ -280,7 +255,6 @@ std::shared_ptr<SortingStepExt> SortingStepExt::fromProto(const Protos::SortingS
         stage = StageConverter::fromProto(proto.stage());
 
     auto limit = proto.limit();
-    auto limit_or_var = getSizeOrVariableFromProto(proto.limit_or_var());
     SortDescription prefix_description;
     for (const auto & proto_element : proto.prefix_description())
     {
@@ -288,7 +262,7 @@ std::shared_ptr<SortingStepExt> SortingStepExt::fromProto(const Protos::SortingS
         ProtosSerDerHelper::fillFromProto(element, proto_element);
         prefix_description.emplace_back(std::move(element));
     }
-    auto step = std::make_shared<SortingStepExt>(base_input_stream, result_description, limit_or_var ? *limit_or_var : limit, stage, prefix_description);
+    auto step = std::make_shared<SortingStepExt>(base_input_stream, result_description, limit, stage, prefix_description);
     step->setStepDescription(step_description);
     return step;
 }
@@ -298,8 +272,7 @@ void SortingStepExt::toProto(Protos::SortingStepExt & proto, bool) const
     ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
     for (const auto & element : result_description)
         ProtosSerDerHelper::toProto(element, *proto.add_result_description());
-    proto.set_limit(0);
-    setSizeOrVariableToProto(limit, *proto.mutable_limit_or_var());
+    proto.set_limit(limit);
     proto.set_partial(false);
     proto.set_stage(StageConverter::toProto(stage));
     for (const auto & element : prefix_description)
@@ -309,24 +282,6 @@ void SortingStepExt::toProto(Protos::SortingStepExt & proto, bool) const
 std::shared_ptr<IQueryPlanStep> SortingStepExt::copy(ContextPtr) const
 {
     return std::make_shared<SortingStepExt>(input_streams[0], result_description, limit, stage, prefix_description, enable_adaptive_spill);
-}
-
-void setSizeOrVariableToProto(const SizeOrVariable & size_or_var, Protos::SizeOrVariable & proto)
-{
-    if (const auto * size = std::get_if<size_t>(&size_or_var))
-        proto.set_size(*size);
-    else
-        proto.set_variable(std::get<String>(size_or_var));
-}
-
-std::optional<SizeOrVariable> getSizeOrVariableFromProto(const Protos::SizeOrVariable & proto)
-{
-    if (proto.has_size())
-        return SizeOrVariable{proto.size()};
-    else if (proto.has_variable())
-        return SizeOrVariable{proto.variable()};
-    else
-        return std::nullopt;
 }
 
 }

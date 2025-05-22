@@ -277,9 +277,9 @@ TransformResult PushdownLimitIntoWindow::transformImpl(PlanNodePtr node, const C
 ConstRefPatternPtr PushLimitIntoSorting::getPattern() const
 {
     static auto pattern = Patterns::limit()
-        .matchingStep<LimitStepExt>([](const LimitStepExt & step) { return !step.hasPreparedParam() && step.getLimit() != 0; })
+        .matchingStep<LimitStepExt>([](const LimitStepExt & step) { return step.getLimit() != 0; })
         .withSingle(Patterns::sorting().matchingStep<SortingStepExt>(
-            [](const auto & sorting_step) { return !sorting_step.hasPreparedParam() && sorting_step.getLimitValue() == 0; }))
+            [](const auto & sorting_step) { return sorting_step.getLimit() == 0; }))
         .result();
     return pattern;
 }
@@ -289,9 +289,6 @@ TransformResult PushLimitIntoSorting::transformImpl(PlanNodePtr node, const Capt
     const auto *limit_step = dynamic_cast<const LimitStepExt *>(node->getStep().get());
     auto sorting = node->getChildren()[0];
     const auto *sorting_step = dynamic_cast<const SortingStepExt *>(sorting->getStep().get());
-
-    if (limit_step->hasPreparedParam())
-        return {};
 
     // when limit 0, we skip this rule since another rule will delete the whole node
     auto limit_value = limit_step->getLimit();

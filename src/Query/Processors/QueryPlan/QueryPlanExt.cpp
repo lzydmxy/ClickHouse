@@ -74,7 +74,7 @@ void QueryPlanExt::unitePlans(QueryPlanStepPtr step, std::vector<QueryPlanExtPtr
     for (auto & plan : plans)
         nodes.splice(nodes.end(), std::move(plan->nodes));
 
-    nodes.emplace_back(Node{.step = std::move(step)});
+    nodes.emplace_back(Node{std::move(step), {}, 0});
     root = &nodes.back();
 
     for (auto & plan : plans)
@@ -102,7 +102,7 @@ void QueryPlanExt::addStep(QueryPlanStepPtr step, PlanNodes children)
                 "Cannot add step {} to QueryPlanExt because step has no inputs, but QueryPlanExt is already initialized",
                 step->getName());
 
-        nodes.emplace_back(Node{.step = std::move(step)});
+        nodes.emplace_back(Node{std::move(step), {}, 0});
         root = &nodes.back();
         return;
     }
@@ -125,7 +125,7 @@ void QueryPlanExt::addStep(QueryPlanStepPtr step, PlanNodes children)
                 root_header.dumpStructure(),
                 step_header.dumpStructure());
 
-        nodes.emplace_back(Node{.step = std::move(step), .children = {root}});
+        nodes.emplace_back(Node{std::move(step), {root}, 0});
         root = &nodes.back();
         return;
     }
@@ -188,7 +188,7 @@ QueryPlanExt QueryPlanExt::getSubPlan(QueryPlan::Node * node_)
     QueryPlanExt sub_plan;
 
     std::stack<QueryPlan::Node *> plan_nodes;
-    sub_plan.addRoot(Node{.step = std::move(node_->step), .children = node_->children}, getNodeId(node_));
+    sub_plan.addRoot(Node{std::move(node_->step), node_->children, getNodeId(node_)}, getNodeId(node_));
     plan_nodes.push(sub_plan.getRoot());
     sub_plan.setResetStepId(reset_step_id);
 
@@ -200,7 +200,7 @@ QueryPlanExt QueryPlanExt::getSubPlan(QueryPlan::Node * node_)
         std::vector<Node *> result_children;
         for (auto & child : current->children)
         {
-            sub_plan.addNode(Node{.step = std::move(node_->step), .children = child->children}, getNodeId(child));
+            sub_plan.addNode(Node{std::move(node_->step), child->children, getNodeId(child)}, getNodeId(child));
             result_children.push_back(sub_plan.getLastNode());
             plan_nodes.push(sub_plan.getLastNode());
         }
@@ -418,7 +418,7 @@ void QueryPlanExt::fromProtoFlatten(const Protos::QueryPlanExt & proto)
         if (node_proto.plan_id() != id)
             throw Exception(ErrorCodes::LOGICAL_ERROR, "Invalid Proto");
         auto step = deserializeQueryPlanStepFromProto(node_proto.step(), context);
-        nodes.emplace_back(Node{step, {}});
+        nodes.emplace_back(Node{step, {}, id});
         node_id_map[&nodes.back()] = id;
         id_to_node[id] = &nodes.back();
     }

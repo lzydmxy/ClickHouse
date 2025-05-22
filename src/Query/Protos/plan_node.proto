@@ -156,13 +156,6 @@ message StringVec {
     repeated string values = 1;
 }
 
-message SizeOrVariable {
-    oneof size_or_variable {
-      uint64 size = 1;
-      string variable = 2;
-    }
-}
-
 message AST {
     bytes blob = 1;     // exact binary
     string text = 2;    // only for read
@@ -362,8 +355,6 @@ message LimitStepExt {
     bool with_ties = 5;
     repeated SortColumnDescription description = 6;
     bool partial = 7;
-    SizeOrVariable limit_or_var = 8;
-    SizeOrVariable offset_or_var = 9;
 }
 
 message MarkDistinctStepExt {
@@ -399,7 +390,6 @@ message SortingStepExt {
     bool partial = 4;
     repeated SortColumnDescription prefix_description = 5;
     optional Stage.Enum stage = 6;
-    SizeOrVariable limit_or_var = 7;
 }
 
 message ValuesStepExt {

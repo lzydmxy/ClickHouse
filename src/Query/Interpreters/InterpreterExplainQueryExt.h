@@ -2,6 +2,7 @@
 
 #include <Interpreters/InterpreterExplainQuery.h>
 #include <Query/Parsers/ASTExplainQueryExt.h>
+#include <Common/SettingsChanges.h>
 
 namespace DB
 {
@@ -14,6 +15,9 @@ public:
     BlockIO execute() override;
 
     static Block getSampleBlock(ASTExplainQueryExt::ExplainKindExt kind);
+
+    /// To extract SETTINGS clauses from query
+    static SettingsChanges extractSettingsFromQuery(const ASTPtr & ast, ContextMutablePtr context);
 
 private:
     ASTPtr query;

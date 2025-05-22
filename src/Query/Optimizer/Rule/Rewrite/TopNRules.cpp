@@ -59,10 +59,8 @@ ConstRefPatternPtr CreateTopNFilteringForAggregating::getPattern() const
 TransformResult CreateTopNFilteringForAggregating::transformImpl(PlanNodePtr node, const Captures &, RuleContext & context)
 {
     const auto & topn_step = dynamic_cast<const SortingStepExt &>(*node->getStep());
-    if (topn_step.hasPreparedParam())
-        return {};
 
-    if (topn_step.getLimitValue() > getMaxRowsToUseTopnFiltering(context.context))
+    if (topn_step.getLimit() > getMaxRowsToUseTopnFiltering(context.context))
         return {};
 
     auto & agg_like_node = node->getChildren()[0];
@@ -82,7 +80,7 @@ TransformResult CreateTopNFilteringForAggregating::transformImpl(PlanNodePtr nod
         }
     }
 
-    if (!createTopNFilteringForAggLike(agg_like_node, agg_keys, topn_step.getSortDescription(), topn_step.getLimitValue(), context.context))
+    if (!createTopNFilteringForAggLike(agg_like_node, agg_keys, topn_step.getSortDescription(), topn_step.getLimit(), context.context))
         return {};
 
     return TransformResult{node};
@@ -98,10 +96,8 @@ ConstRefPatternPtr CreateTopNFilteringForDistinct::getPattern() const
 TransformResult CreateTopNFilteringForDistinct::transformImpl(PlanNodePtr node, const Captures &, RuleContext & context)
 {
     const auto & topn_step = dynamic_cast<const SortingStepExt &>(*node->getStep());
-    if (topn_step.hasPreparedParam())
-        return {};
 
-    if (topn_step.getLimitValue() > getMaxRowsToUseTopnFiltering(context.context))
+    if (topn_step.getLimit() > getMaxRowsToUseTopnFiltering(context.context))
         return {};
 
     auto & agg_like_node = node->getChildren()[0];
@@ -109,7 +105,7 @@ TransformResult CreateTopNFilteringForDistinct::transformImpl(PlanNodePtr node, 
 
     NameSet agg_keys{agg_like_step.getColumns().begin(), agg_like_step.getColumns().end()};
 
-    if (!createTopNFilteringForAggLike(agg_like_node, agg_keys, topn_step.getSortDescription(), topn_step.getLimitValue(), context.context))
+    if (!createTopNFilteringForAggLike(agg_like_node, agg_keys, topn_step.getSortDescription(), topn_step.getLimit(), context.context))
         return {};
 
     return TransformResult{node};

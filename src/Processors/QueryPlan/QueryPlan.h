@@ -106,6 +106,8 @@ public:
     {
         QueryPlanStepPtr step;
         std::vector<Node *> children = {};
+
+        mutable size_t id = 0;
     };
 
     using Nodes = std::list<Node>;

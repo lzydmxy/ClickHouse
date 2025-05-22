@@ -983,7 +983,7 @@ PlanNodePtr PredicateVisitor::visitPartialSortingStepExtNode(PartialSortingStepE
 
 PlanNodePtr PredicateVisitor::visitSortingStepExtNode(SortingStepExtNode & node, PredicateContext & predicate_context)
 {
-    if (std::get<UInt64>(node.getStep()->getLimit()) != 0)
+    if (node.getStep()->getLimit() != 0)
         return visitPlanNode(node, predicate_context);
     return processChild(node, predicate_context);
 }
