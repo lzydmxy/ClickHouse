@@ -100,7 +100,9 @@ DB::ContextMutablePtr createQueryContext(const String & query_id, const std::uno
     // query_context->createPlanNodeIdAllocator();
     // query_context->createSymbolAllocator();
     // query_context->createOptimizerMetrics();
-    query_context->getOptimizerContext()->initQueryExpirationTimeStamp();
+    auto optimizer_context = query_context->getOptimizerContext();
+    optimizer_context->initQueryExpirationTimeStamp();
+    optimizer_context->createPlanNodeIdAllocator();
     for (const auto & item : settings)
         query_context->setSetting(item.first, item.second);
     return query_context;
