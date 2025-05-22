@@ -173,9 +173,8 @@ PlanSegmentResult PlanSegmentVisitor::visitExchangeStepExtNode(QueryPlanExt::Nod
     }
     QueryPlanStepPtr remote_step = std::make_unique<RemoteExchangeSourceStepExt>(inputs, step->getOutputStream(), is_add_totals, is_add_extremes);
     remote_step->setStepDescription(step->getStepDescription());
-    QueryPlanExt::Node remote_node{.step = std::move(remote_step), .children = {}, .id = 0};
-    auto node_id = plan_segment_context.query_plan.getNodeId(node);
-    plan_segment_context.query_plan.addNode(std::move(remote_node), node_id);
+    QueryPlanExt::Node remote_node{.step = std::move(remote_step), .children = {}, .id = node->id};
+    plan_segment_context.query_plan.addNode(std::move(remote_node));
     split_context.scalable &= step->isScalable();
     return plan_segment_context.query_plan.getLastNode();
 }
@@ -225,8 +224,7 @@ PlanSegmentResult PlanSegmentVisitor::visitCTERefStepExtNode(QueryPlanExt::Node 
     QueryPlanStepPtr remote_step = std::make_unique<RemoteExchangeSourceStepExt>(PlanSegmentInputs{input}, step->getOutputStream(), false, false); // with totals is not expected used in queries with multiple table
     remote_step->setStepDescription(step->getStepDescription());
     QueryPlanExt::Node remote_node{.step = std::move(remote_step), .children = {}, .id = node->id};
-    auto node_id = plan_segment_context.query_plan.getNodeId(node);
-    plan_segment_context.query_plan.addNode(std::move(remote_node), node_id);
+    plan_segment_context.query_plan.addNode(std::move(remote_node));
     
     if (!plan_segment_context.context->getOptimizerContext()->getPlanNodeIdAllocator())
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Can't get PlanNodeIdAllocator");
@@ -235,10 +233,8 @@ PlanSegmentResult PlanSegmentVisitor::visitCTERefStepExtNode(QueryPlanExt::Node 
     QueryPlanExt::Node projection_node{
         .step = step->toProjectionStep(),
         .children = {plan_segment_context.query_plan.getLastNode()},
-        .id = plan_segment_context.context->getOptimizerContext()->getPlanNodeIdAllocator()->nextId()
-    };
-
-    plan_segment_context.query_plan.addNode(std::move(projection_node), plan_segment_context.context->getOptimizerContext()->getPlanNodeIdAllocator()->nextId());
+        .id = plan_segment_context.context->getOptimizerContext()->getPlanNodeIdAllocator()->nextId()};
+    plan_segment_context.query_plan.addNode(std::move(projection_node));
 
     return plan_segment_context.query_plan.getLastNode();
 }
