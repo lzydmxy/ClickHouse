@@ -110,10 +110,12 @@ TEST_F(PlanSegmentExecutorTest, ExecuteTest)
     auto coordinator_address_str = extractExchangeHostPort(*coordinator_address);
     LocalChannelOptions options{10, exchange_options.exchange_timeout_ts, false};
 
+    LOG_TRACE(log, "Create source");
     auto source_key = std::make_shared<ExchangeDataKey>(query_tx_id, 1, 0, 0);
     BroadcastSenderProxyPtr source_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(source_key);
     source_sender->accept(context, header);
 
+    LOG_TRACE(log, "Create sink");
     auto sink_key = std::make_shared<ExchangeDataKey>(query_tx_id, 2, 0, 0);
     BroadcastSenderProxyPtr sink_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(sink_key);
     auto sink_channel = std::make_shared<LocalBroadcastChannel>(sink_key, options, LocalBroadcastChannel::generateNameForTest(100));
@@ -124,8 +126,8 @@ TEST_F(PlanSegmentExecutorTest, ExecuteTest)
     plan_segment_instance->info.parallel_id = 1;
     plan_segment_instance->info.execution_address = local_address;
 
+    LOG_TRACE(log, "Create inputs");
     PlanSegmentInputs inputs;
-
     auto input = std::make_shared<PlanSegmentInput>(header, RIPlanSegment::EXCHANGE);
     input->setExchangeParallelSize(1);
     input->setExchangeId(1);
@@ -140,6 +142,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteTest)
     output->setPlanSegmentId(30);
     output->setExchangeMode(RExchangeMode::REPARTITION);
 
+    LOG_TRACE(log, "Create plan segment");
     PlanSegment plan_segment = PlanSegment();
     plan_segment.setQueryId(query_id);
     plan_segment.setPlanSegmentId(20);
@@ -152,11 +155,13 @@ TEST_F(PlanSegmentExecutorTest, ExecuteTest)
     optimizer_context->setCoordinatorAddress(coordinator_address);
     setQueryDuration(context);
 
+    LOG_TRACE(log, "Create plan exchange source step");
     DataStream datastream{.header = header};
     auto exchange_source_step = std::make_unique<RemoteExchangeSourceStepExt>(inputs, datastream, false, false);
     exchange_source_step->setPlanSegment(&plan_segment, context);
     exchange_source_step->setExchangeOptions(exchange_options);
 
+    LOG_TRACE(log, "Source send data aync");
     auto sender_func = [&]() {
         for (int i = 0; i < 5; i++)
         {
@@ -172,6 +177,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteTest)
             thread.join();
     });
 
+    LOG_TRACE(log, "Build query plan & pipe line");
     QueryPlanExt query_plan;
     QueryPlan::Node remote_node{.step = std::move(exchange_source_step), .children = {}};
     query_plan.addRoot(std::move(remote_node));
@@ -179,6 +185,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteTest)
     auto plan_segment_process_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(context, plan_segment.getPlanSegmentId());
     plan_segment_instance->plan_segment = std::make_unique<PlanSegment>(std::move(plan_segment));
     PlanSegmentExecutor executor(std::move(plan_segment_instance), context, std::move(plan_segment_process_entry), exchange_options);
+    LOG_TRACE(log, "Execute query");
     executor.execute();
     for (int i = 0; i < 5; i++)
     {
@@ -188,6 +195,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteTest)
         ASSERT_TRUE(recv_chunk.getNumRows() == rows);
         ASSERT_TRUE(recv_chunk.bytes() == chunk.bytes());
     }
+    LOG_TRACE(log, "Finished");
 
     // Another way to test code logic
     // QueryPipelineBuilder builder;
@@ -704,7 +712,6 @@ TEST_F(PlanSegmentExecutorTest, ExecuteAsyncTest1)
 
     QueryPlanExt query_plan;
     QueryPlan::Node remote_node{.step = std::move(exchange_source_step), .children = {}};
-    //query_plan.addRoot(std::move(remote_node));
     query_plan.addRoot(std::move(remote_node));
     plan_segment->setQueryPlan(std::move(query_plan));
     auto plan_segment_process_entry = context->getOptimizerContext()->getPlanSegmentProcessList()->insertGroup(context, plan_segment->getPlanSegmentId());
