@@ -706,6 +706,24 @@ std::unique_ptr<WriteBufferFromFileBase> DiskObjectStorageTransaction::writeFile
     auto object = StoredObject(object_key.serialize(), path);
     std::function<void(size_t count)> create_metadata_callback;
 
+    std::function<void()> undo;
+
+    undo = [tx = shared_from_this(), object] ()
+    {
+        try
+        {
+            if (!tx->metadata_storage.exists(object.local_path))
+            {
+                LOG_WARNING(getLogger("DiskObjectStorageTransaction"), "The metadata {} not exists, we should remove remote file {}.", object.local_path, object.remote_path);
+                tx->object_storage.removeObjectIfExists(object);
+            }
+        }
+        catch (Exception & e)
+        {
+            e.addMessage(fmt::format( "while undo write file for metadata {}, remote {}.", object.local_path, object.remote_path));
+        }
+    };
+
     if (autocommit)
     {
         create_metadata_callback = [tx = shared_from_this(), mode, path, key_ = std::move(object_key)](size_t count)
@@ -773,7 +791,7 @@ std::unique_ptr<WriteBufferFromFileBase> DiskObjectStorageTransaction::writeFile
         settings);
 
     return std::make_unique<WriteBufferWithFinalizeCallback>(
-        std::move(impl), std::move(create_metadata_callback), object.remote_path);
+        std::move(impl), std::move(create_metadata_callback), std::move(undo), object.remote_path);
 }
 
 

@@ -9,6 +9,7 @@ namespace DB
 {
 
 using FinalizeCallback = std::function<void(size_t bytes_count)>;
+using Undo = std::function<void()>;
 
 /// Stores data in S3/HDFS and adds the object path and object size to metadata file on local FS.
 class WriteBufferWithFinalizeCallback final : public WriteBufferFromFileDecorator
@@ -17,7 +18,10 @@ public:
     WriteBufferWithFinalizeCallback(
         std::unique_ptr<WriteBuffer> impl_,
         FinalizeCallback && create_callback_,
+        Undo && undo_,
         const String & remote_path_);
+
+    ~WriteBufferWithFinalizeCallback() override;
 
     String getFileName() const override { return remote_path; }
 
@@ -25,6 +29,7 @@ private:
     void finalizeImpl() override;
 
     FinalizeCallback create_metadata_callback;
+    Undo undo;
     String remote_path;
 };
 
