@@ -54,12 +54,10 @@ private:
     SimpleCTEVisitHelper<PlanAndPropConstants> cte_helper;
 };
 
-using SizeOrVariable = std::variant<size_t, String>;
-
 struct SortInfo
 {
     SortDescription sort_desc;
-    SizeOrVariable limit = 0ul;
+    size_t limit = 0ul;
 };
 
 class PruneSortingInfoRewriter : public SimplePlanRewriter<SortInfo>

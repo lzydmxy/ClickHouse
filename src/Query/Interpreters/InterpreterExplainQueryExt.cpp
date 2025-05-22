@@ -84,6 +84,37 @@ namespace
 
     using ExplainAnalyzedSyntaxVisitor = InDepthNodeVisitor<ExplainAnalyzedSyntaxMatcher, true>;
 
+    static SettingsChanges extractSettingsFromSetQuery(const ASTPtr & ast)
+    {
+        if (!ast)
+            return {};
+
+        const auto & set_query = ast->as<ASTSetQuery &>();
+        return set_query.changes;
+    }
+
+    static SettingsChanges extractSettingsFromSelectWithUnion(const ASTSelectWithUnionQuery & select_with_union)
+    {
+        auto settings = extractSettingsFromSetQuery(select_with_union.settings_ast);
+        const ASTs & children = select_with_union.list_of_selects->children;
+        if (!children.empty())
+        {
+            // We might have an arbitrarily complex UNION tree, so just give
+            // up if the last first-order child is not a plain SELECT.
+            // It is flattened later, when we process UNION ALL/DISTINCT.
+            const auto * last_select = children.back()->as<ASTSelectQuery>();
+            if (last_select && last_select->settings())
+            {
+                auto select_settings = extractSettingsFromSetQuery(last_select->settings());
+                for (const auto & select_setting : select_settings)
+                {
+                    settings.insertSetting(select_setting.name, select_setting.value);
+                }
+            }
+        }
+        return settings;
+    }
+
 }
 
 BlockIO InterpreterExplainQueryExt::execute()
@@ -91,6 +122,53 @@ BlockIO InterpreterExplainQueryExt::execute()
     BlockIO res;
     res.pipeline = executeImpl();
     return res;
+}
+
+SettingsChanges InterpreterExplainQueryExt::extractSettingsFromQuery(const ASTPtr & ast, ContextMutablePtr settings_context)
+{
+    if (!ast)
+        return {};
+
+    if (const auto * select_query = ast->as<ASTSelectQuery>())
+    {
+        return extractSettingsFromSetQuery(select_query->settings());
+    }
+    else if (const auto * select_with_union_query = ast->as<ASTSelectWithUnionQuery>())
+    {
+        return extractSettingsFromSelectWithUnion(*select_with_union_query);
+    }
+    else if (const auto * explain_query = ast->as<ASTExplainQuery>())
+    {
+        auto settings = extractSettingsFromSetQuery(explain_query->settings_ast);
+
+        if (const auto * inner_select_union = explain_query->getExplainedQuery()->as<ASTSelectWithUnionQuery>())
+        {
+            auto inner_select_union_settings = extractSettingsFromSelectWithUnion(*inner_select_union);
+            for (const auto & select_setting : inner_select_union_settings)
+            {
+                settings.insertSetting(select_setting.name, select_setting.value);
+            }
+        }
+        else if (const auto * inner_insert = explain_query->getExplainedQuery()->as<ASTInsertQuery>())
+        {
+            auto inner_insert_settings = extractSettingsFromSetQuery(inner_insert->settings_ast);
+            for (const auto & select_setting : inner_insert_settings)
+            {
+                settings.insertSetting(select_setting.name, select_setting.value);
+            }
+        }
+        return settings;
+    }
+    else if (const auto * insert_query = ast->as<ASTInsertQuery>())
+    {
+        return extractSettingsFromSetQuery(insert_query->settings_ast);
+    }
+    else if (const auto * query_with_output = dynamic_cast<const ASTQueryWithOutput *>(ast.get()))
+    {
+        return extractSettingsFromSetQuery(query_with_output->settings_ast);
+    }
+
+    return {};
 }
 
 
@@ -619,15 +697,6 @@ QueryPipeline InterpreterExplainQueryExt::executeImpl()
     }
 
     return QueryPipeline(std::make_shared<SourceFromSingleChunk>(sample_block.cloneWithColumns(std::move(res_columns))));
-}
-
-void registerInterpreterExplainQuery(InterpreterFactory & factory)
-{
-    auto create_fn = [] (const InterpreterFactory::Arguments & args)
-    {
-        return std::make_unique<InterpreterExplainQueryExt>(args.query, args.context);
-    };
-    factory.registerInterpreter("InterpreterExplainQueryExt", create_fn);
 }
 
 }

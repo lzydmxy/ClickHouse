@@ -33,8 +33,6 @@
 namespace DB
 {
 
-using SizeOrVariable = std::variant<size_t, String>;
-
 bool ColumnPruning::rewrite(QueryPlanExt & plan, ContextMutablePtr context) const
 {
     ColumnPruningVisitor visitor{

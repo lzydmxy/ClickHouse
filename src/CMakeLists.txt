@@ -81,6 +81,7 @@ add_subdirectory (Bridge)
 add_subdirectory (Daemon)
 add_subdirectory (Loggers)
 add_subdirectory (Formats)
+add_subdirectory (Query/Optimizer)
 
 add_headers_and_sources(clickhouse_common_io Common)
 add_headers_and_sources(clickhouse_common_io Common/HashTable)
@@ -733,6 +734,10 @@ if (ENABLE_TESTS)
 
     if (TARGET ch_contrib::simdjson)
         target_link_libraries(unit_tests_dbms PRIVATE ch_contrib::simdjson)
+    endif()
+
+    if (TARGET ch_contrib::datasketches)
+        target_link_libraries(unit_tests_dbms PRIVATE ch_contrib::datasketches)
     endif()
 
     if (TARGET ch_contrib::yaml_cpp)

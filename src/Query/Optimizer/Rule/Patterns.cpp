@@ -6,7 +6,7 @@ namespace DB::Patterns
 PatternBuilder topN()
 {
     auto result = typeOf(QueryPlanStepType::SortingStepExt);
-    result.matchingStep<SortingStepExt>([&](const SortingStepExt & s) { return !s.hasPreparedParam() && s.getLimitValue() != 0; });
+    result.matchingStep<SortingStepExt>([&](const SortingStepExt & s) { return s.getLimit() != 0; });
     return result;
 }
 

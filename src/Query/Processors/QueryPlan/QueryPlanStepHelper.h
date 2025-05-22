@@ -288,9 +288,6 @@ break; \
     static bool getWindowStepStreamsFanOut(const WindowStep & window) {return window.streams_fan_out;}
     static const WindowDescription & getWindowStepWindow(const WindowStep & window) {return window.window_description;}
 
-    static void setSortingStepPrefixDescription(SortingStep & sorting_step, const SortDescription & prefix_description_) {sorting_step.prefix_description = prefix_description_;}
-    static const SortDescription & getSortingStepPrefixDescription(const SortingStep & sorting_step) {return sorting_step.prefix_description;}
-
     static const SortDescription & getFillingStepFillDescription(const FillingStep & filling_step) {return filling_step.fill_description;}
     static bool getFillingStepUseWithFillBySortingPrefix(const FillingStep & filling_step) {return filling_step.use_with_fill_by_sorting_prefix;}
 
