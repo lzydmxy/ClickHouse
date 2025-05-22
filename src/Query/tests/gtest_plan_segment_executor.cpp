@@ -180,8 +180,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteTest)
     LOG_TRACE(log, "Build query plan & pipe line");
     QueryPlanExt query_plan;
     QueryPlan::Node remote_node{.step = std::move(exchange_source_step), .children = {}};
-    auto root_id = optimizer_context->getPlanNodeIdAllocator()->nextId();
-    query_plan.addRoot(std::move(remote_node), root_id);
+    query_plan.addRoot(std::move(remote_node));
     plan_segment.setQueryPlan(std::move(query_plan));
     auto plan_segment_process_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(context, plan_segment.getPlanSegmentId());
     plan_segment_instance->plan_segment = std::make_unique<PlanSegment>(std::move(plan_segment));
@@ -307,8 +306,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteAsyncTest)
 
     QueryPlanExt query_plan;
     QueryPlan::Node remote_node{.step = std::move(exchange_source_step), .children = {}};
-    auto root_id = optimizer_context->getPlanNodeIdAllocator()->nextId();
-    query_plan.addRoot(std::move(remote_node), root_id);
+    query_plan.addRoot(std::move(remote_node));
     plan_segment.setQueryPlan(std::move(query_plan));
 
     auto plan_segment_process_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(context, plan_segment.getPlanSegmentId());
@@ -495,8 +493,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteCancelTest)
 
     QueryPlanExt query_plan;
     QueryPlan::Node remote_node{.step = std::move(exchange_source_step), .children = {}};
-    auto root_id = optimizer_context->getPlanNodeIdAllocator()->nextId();
-    query_plan.addRoot(std::move(remote_node), root_id);
+    query_plan.addRoot(std::move(remote_node));
     plan_segment.setQueryPlan(std::move(query_plan));
     auto plan_segment_process_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(context, plan_segment.getPlanSegmentId());
     plan_segment_instance->plan_segment = std::make_unique<PlanSegment>(std::move(plan_segment));
@@ -607,8 +604,7 @@ void planExecutor(String query_id, size_t query_tx_id, AddressInfoPtr coordinato
     //QueryPlan root node -> exchange_source_step -> plan_segment -> inputs/output
     QueryPlanExt query_plan;
     QueryPlan::Node remote_node{.step = std::move(exchange_source_step), .children = {}};
-    auto root_id = optimizer_context->getPlanNodeIdAllocator()->nextId();
-    query_plan.addRoot(std::move(remote_node), root_id);
+    query_plan.addRoot(std::move(remote_node));
     plan_segment.setQueryPlan(std::move(query_plan));
     auto plan_segment_process_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(context, plan_segment.getPlanSegmentId());
     plan_segment_instance->plan_segment = std::make_unique<PlanSegment>(std::move(plan_segment));
@@ -716,8 +712,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteAsyncTest1)
 
     QueryPlanExt query_plan;
     QueryPlan::Node remote_node{.step = std::move(exchange_source_step), .children = {}};
-    auto root_id = context->getOptimizerContext()->getPlanNodeIdAllocator()->nextId();
-    query_plan.addRoot(std::move(remote_node), root_id);
+    query_plan.addRoot(std::move(remote_node));
     plan_segment->setQueryPlan(std::move(query_plan));
     auto plan_segment_process_entry = context->getOptimizerContext()->getPlanSegmentProcessList()->insertGroup(context, plan_segment->getPlanSegmentId());
     plan_segment_instance->plan_segment = std::move(plan_segment);
@@ -836,8 +831,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteCancelTest1)
 
     QueryPlanExt query_plan;
     QueryPlan::Node remote_node{.step = std::move(exchange_source_step), .children = {}};
-    auto root_id = context->getOptimizerContext()->getPlanNodeIdAllocator()->nextId();
-    query_plan.addRoot(std::move(remote_node), root_id);
+    query_plan.addRoot(std::move(remote_node));
     plan_segment->setQueryPlan(std::move(query_plan));
     auto plan_segment_process_entry = context->getOptimizerContext()->getPlanSegmentProcessList()->insertGroup(context, plan_segment->getPlanSegmentId());
     plan_segment_instance->plan_segment = std::move(plan_segment);
@@ -969,8 +963,7 @@ void planExecutor1(String query_id, AddressInfo coordinator_address)
 
         QueryPlanExt query_plan;
         QueryPlan::Node remote_node{.step = std::move(exchange_source_step), .children = {}};
-        auto root_id = context->getOptimizerContext()->getPlanNodeIdAllocator()->nextId();
-        query_plan.addRoot(std::move(remote_node), root_id);
+        query_plan.addRoot(std::move(remote_node));
         plan_segment->setQueryPlan(std::move(query_plan));
         auto plan_segment_process_entry = context->getOptimizerContext()->getPlanSegmentProcessList()->insertGroup(context, plan_segment->getPlanSegmentId());
         plan_segment_instance->plan_segment = std::move(plan_segment);

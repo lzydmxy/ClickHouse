@@ -131,25 +131,15 @@ void QueryPlanExt::addStep(QueryPlanStepPtr step, PlanNodes children)
     }
 }
 
-void QueryPlanExt::addNode(Node && node_, size_t id)
+void QueryPlanExt::addNode(Node && node_)
 {
     nodes.emplace_back(std::move(node_));
-    node_id_map[&node_] = id;
 }
 
-void QueryPlanExt::addRoot(Node && node_, size_t id)
+void QueryPlanExt::addRoot(Node && node_)
 {
     nodes.emplace_back(std::move(node_));
     root = &nodes.back();
-    node_id_map[root] = id;
-}
-
-size_t QueryPlanExt::getNodeId(const Node * node)
-{
-    auto it = node_id_map.find(node);
-    if (it != node_id_map.end())
-        return it->second;
-    throw Exception(ErrorCodes::LOGICAL_ERROR, "Node not found in map");
 }
 
 /**
@@ -188,7 +178,7 @@ QueryPlanExt QueryPlanExt::getSubPlan(QueryPlan::Node * node_)
     QueryPlanExt sub_plan;
 
     std::stack<QueryPlan::Node *> plan_nodes;
-    sub_plan.addRoot(Node{std::move(node_->step), node_->children, getNodeId(node_)}, getNodeId(node_));
+    sub_plan.addRoot(Node{.step = node_->step, .children = node_->children, .id = node_->id});
     plan_nodes.push(sub_plan.getRoot());
     sub_plan.setResetStepId(reset_step_id);
 
@@ -200,7 +190,7 @@ QueryPlanExt QueryPlanExt::getSubPlan(QueryPlan::Node * node_)
         std::vector<Node *> result_children;
         for (auto & child : current->children)
         {
-            sub_plan.addNode(Node{std::move(node_->step), child->children, getNodeId(child)}, getNodeId(child));
+            sub_plan.addNode(Node{.step = child->step, .children = child->children, .id = child->id});
             result_children.push_back(sub_plan.getLastNode());
             plan_nodes.push(sub_plan.getLastNode());
         }
@@ -389,21 +379,21 @@ void QueryPlanExt::toProtoFlatten(Protos::QueryPlanExt & proto)
     if (reset_step_id)
     {
         size_t id = 0;
-        for (auto & node : nodes)
-            node_id_map[&node] = id++;
+        for (const auto & node : nodes)
+            node.id = id++; // this is mutable field
     }
 
     for (const auto & node : nodes)
     {
-        auto id = getNodeId(&node);
+        auto id = node.id;
         auto & node_proto = (*proto.mutable_plan_nodes())[id];
         node_proto.set_plan_id(id);
         serializeQueryPlanStepToProto(node.step, *node_proto.mutable_step());
         for (const auto & child : node.children)
-            node_proto.add_children(getNodeId(child));
+            node_proto.add_children(child->id);
     }
 
-    proto.set_root_id(getNodeId(root));
+    proto.set_root_id(root->id);
 }
 
 void QueryPlanExt::fromProtoFlatten(const Protos::QueryPlanExt & proto)
@@ -419,13 +409,12 @@ void QueryPlanExt::fromProtoFlatten(const Protos::QueryPlanExt & proto)
             throw Exception(ErrorCodes::LOGICAL_ERROR, "Invalid Proto");
         auto step = deserializeQueryPlanStepFromProto(node_proto.step(), context);
         nodes.emplace_back(Node{step, {}, id});
-        node_id_map[&nodes.back()] = id;
         id_to_node[id] = &nodes.back();
     }
 
     for (auto & node : nodes)
     {
-        auto id = getNodeId(&node);
+        auto id = node.id;
         for (auto child_id : id_to_node_proto.at(id).children())
         {
             auto * child = id_to_node[child_id];

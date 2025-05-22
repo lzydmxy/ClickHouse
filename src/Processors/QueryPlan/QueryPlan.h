@@ -106,7 +106,9 @@ public:
     {
         QueryPlanStepPtr step;
         std::vector<Node *> children = {};
-
+        /**
+         * Only used for serialize query plan for distributed query.
+         */
         mutable size_t id = 0;
     };
 
