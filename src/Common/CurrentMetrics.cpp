@@ -293,6 +293,8 @@
     M(RaftThreadsActive, "Number of active threads in the raft server for requests.") \
     M(RaftThreadsScheduled, "Number of scheduled threads in the raft server for requests.") \
     \
+    M(Consumer, "Number of consumer task") \
+    \
     M(ProfileThreads, "Number of total threads in the profile hub consumer.") \
     M(ProfileThreadsActive, "Number of active threads in the profile hub consumer.") \
     M(ProfileThreadsScheduled, "Number of scheduled threads in the profile hub consumer.")

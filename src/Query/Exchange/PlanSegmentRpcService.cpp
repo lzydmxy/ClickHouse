@@ -31,6 +31,12 @@ namespace ErrorCodes
     extern const int EPOCH_MISMATCH;
 }
 
+RepeatedTimerTask::RepeatedTimerTask(BackgroundSchedulePool &pool_, UInt64 interval_, const std::string& name_)
+    : interval(interval_)
+{
+    task = pool_.createTask(name_, [this]{ run(); });
+}
+
 void ResourceMonitorTimer::updateResourceData() {
 }
 

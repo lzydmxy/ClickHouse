@@ -31,8 +31,9 @@ public:
     PlanSegmentInstanceID plan_segment_instance_id;
 };
 
-OptimizerContext::OptimizerContext(const Settings & settings_)
+OptimizerContext::OptimizerContext(const Settings & settings_, const Poco::Util::AbstractConfiguration & config)
 {
+    optimizer_settings.loadFromConfig("optimizer", config);
     if (settings_.max_execution_time.totalSeconds() != 0)
         query_max_execution_time = std::min(settings_.max_execution_time.totalSeconds() * UInt64(1000), UInt64(UINT32_MAX));
     else if (optimizer_settings.exchange_timeout_ms != 0)
@@ -42,18 +43,6 @@ OptimizerContext::OptimizerContext(const Settings & settings_)
     initQueryExpirationTimeStamp();
     data = std::make_shared<OptimizerContextData>();
     plan_segment_process_list = std::make_shared<PlanSegmentProcessList>();
-}
-
-OptimizerContext::OptimizerContext(const Settings & settings_, OptimizerSettings & optimizer_settings_)
-    :optimizer_settings(optimizer_settings_)
-{
-    if (settings_.max_execution_time.totalSeconds() != 0)
-        query_max_execution_time = std::min(settings_.max_execution_time.totalSeconds() * UInt64(1000), UInt64(UINT32_MAX));
-    else if (optimizer_settings.exchange_timeout_ms != 0)
-        query_max_execution_time = std::min(UInt64(optimizer_settings.exchange_timeout_ms), UInt64(UINT32_MAX));
-    else
-        query_max_execution_time = 100 * 60 * 1000; // default as 100min
-    data = std::make_shared<OptimizerContextData>();
 }
 
 void OptimizerContext::setQueryMaxExecutionTime(UInt32 milli_second)
@@ -246,6 +235,16 @@ StatisticsMemoryStorePtr OptimizerContext::getStatisticsMemoryStore()
         this->stats_memory_store = std::make_shared<QueryStatistics::StatisticsMemoryStore>();
     }
     return stats_memory_store;
+}
+
+void OptimizerContext::setComplexQueryActive(bool complex_query_active_)
+{
+    complex_query_active = complex_query_active_;
+}
+
+bool OptimizerContext::getComplexQueryActive()
+{
+    return complex_query_active;
 }
 
 }

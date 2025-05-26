@@ -78,7 +78,7 @@ void ExecutePrewhereSubquery::rewriteSubqueryToScalarLiteral(ASTSubquery & subqu
     subquery_settings.max_result_rows = 1;
     subquery_settings.extremes = false;
     // internal SQL doesn't work well in optimizer mode, mainly due to PlanSegmentExecutor
-    subquery_context->getOptimizerContext()->getSettingsRef().enable_jd_optimizer = false;
+    subquery_context->getOptimizerContext()->getSettingsRef().enable_optimizer = false;
     subquery_context->setSettings(subquery_settings);
 
     ASTPtr subquery_select = subquery.children.at(0);
@@ -179,7 +179,7 @@ bool ExecutePrewhereSubquery::rewriteSubqueryToSet(ASTSubquery & subquery, ASTPt
     Settings subquery_settings = context->getSettings();
     subquery_settings.extremes = false;
     // internal SQL doesn't work well in optimizer mode, mainly due to PlanSegmentExecutor
-    subquery_context->getOptimizerContext()->getSettingsRef().enable_jd_optimizer = false;
+    subquery_context->getOptimizerContext()->getSettingsRef().enable_optimizer = false;
     subquery_context->setSettings(subquery_settings);
 
     ASTPtr subquery_select = subquery.children.at(0);

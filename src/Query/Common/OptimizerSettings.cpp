@@ -64,6 +64,13 @@ IMPLEMENT_SETTING_ENUM(MaterializedViewConsistencyCheckMethod, ErrorCodes::BAD_A
     {{"NONE", MaterializedViewConsistencyCheckMethod::NONE},
      {"PARTITION", MaterializedViewConsistencyCheckMethod::PARTITION}})
 
+
+// config & settings examples
+// conf/config.xml
+// <optimizer>
+//     <enable_optimizer>1</enable_optimizer>
+//     <rpc_port>8106</rpc_port>
+// </optimizer>
 void OptimizerSettings::loadFromConfig(const String & config_elem, const Poco::Util::AbstractConfiguration & config)
 {
     if (!config.has(config_elem))
@@ -75,7 +82,12 @@ void OptimizerSettings::loadFromConfig(const String & config_elem, const Poco::U
     try
     {
         for (const String & key : config_keys)
+        {
+            if (key == "rpc_port")
+                continue;
+            LOG_DEBUG(getLogger("OptiminzerSettings"), "Load settings item {}.{} from config", config_elem, key);
             set(key, config.getString(config_elem + "." + key));
+        }
     }
     catch (Exception & e)
     {
@@ -83,6 +95,8 @@ void OptimizerSettings::loadFromConfig(const String & config_elem, const Poco::U
             e.addMessage("in Optimizer settings config");
         throw;
     }
+
+    LOG_DEBUG(getLogger("OptiminzerSettings"), "Load settings {} from config", config_elem);
 }
 
 }

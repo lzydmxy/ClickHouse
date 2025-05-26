@@ -3549,7 +3549,9 @@ std::shared_ptr<RaftDispatcher> Context::tryGetRaftDispatcher() const
 
 void Context::initializeOptimizerContext()
 {
-    optimizer_context = std::make_shared<OptimizerContext>(getSettingsRef());
+    std::lock_guard lock(shared->mutex);
+    const auto & config = shared->getConfigRefWithLock(lock);
+    optimizer_context = std::make_shared<OptimizerContext>(getSettingsRef(), config);
 }
 
 OptimizerContextPtr Context::getOptimizerContext() const

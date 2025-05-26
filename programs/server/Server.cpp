@@ -107,6 +107,7 @@
 #include <Core/ServerSettings.h>
 #include <filesystem>
 #include <unordered_set>
+#include <Query/Executor/BrpcServerHolder.h>
 
 #include "config.h"
 #include <Common/config_version.h>
@@ -2104,6 +2105,38 @@ try
 
         startup_watch.stop();
         ProfileEvents::increment(ProfileEvents::ServerStartupMilliseconds, startup_watch.elapsedMilliseconds());
+
+        const char * enable_optimizer_name = "optimizer.enable_optimizer";
+        const char * rpc_port_name = "optimizer.rpc_port";
+
+        if (config().has(enable_optimizer_name) && config().getBool(enable_optimizer_name))
+        {
+            if (config().has(rpc_port_name))
+            {
+                global_context->initializeOptimizerContext();
+                auto rpc_port = config().getInt(rpc_port_name);
+                LOG_DEBUG(log, "Start RPC server with port {}.", rpc_port);
+                std::vector<std::unique_ptr<BrpcServerHolder>> rpc_server_holders;
+                for (auto & host : listen_hosts)
+                {
+                    std::string brpc_host_port = createHostPortString(host, rpc_port);
+                    rpc_server_holders.emplace_back(std::make_unique<BrpcServerHolder>(brpc_host_port, global_context, listen_try));
+                }
+                bool service_available = false;
+                for (auto& holder : rpc_server_holders)
+                {
+                    service_available |= holder->available();
+                }
+                if (!service_available)
+                {
+                    throw Exception(ErrorCodes::BRPC_EXCEPTION, "Failed to start rpc server in all listen_hosts.");
+                }
+            }
+            else
+                LOG_WARNING(log, "Without the configuration item of optimizer.rpc_port, the RPC server cannot be started");
+        }
+        else
+            LOG_WARNING(log, "Without the configuration item or the value is false of optimizer.enable_optimizer, the RPC server cannot be started");
 
         try
         {

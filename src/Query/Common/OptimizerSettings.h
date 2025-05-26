@@ -90,15 +90,8 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
  * and should not be changed by the user without a reason.
   */
 #define LIST_OF_OPTIMIZER_SETTINGS(M, ALIAS) \
-    /** General extension settings */ \
-    M(Bool, log_normalized_query_plan_hash, 0, "Log json format query plan to the system query_log table.", 0) \
-    M(Bool, log_query_exchange, false, "Log query exchange metric.", 0) \
-    /** Coordinator settings*/ \
-    M(SchedulerMode, scheduler_mode, SchedulerMode::RANDOM, "scheduler shard mode: random/first_order/random_order/cpu_rank/memory_rank", 0) \
-    M(UInt64, operator_profile_receive_timeout, 3000, "Max waiting time for operator profile in ms", 0) \
-    M(UInt64, push_queue_timeout_millseconds, 10, "Timeout millseconds of push profile or others to queue.", 0) \
-    /** Query optimizer relative settings */ \
-    M(Bool, enable_jd_optimizer, true, "Whether enable jd query optimizer", 0) \
+    /** Query optimizer relative settings*/ \
+    M(Bool, enable_optimizer, true, "Whether enable jd query optimizer", 0) \
     M(Bool, enable_legacy_optimizer, false, "Whether enable query optimizer", 0) \
     M(UInt64, exchange_buffer_send_threshold_in_bytes, 1000000, "The minimum bytes when exchange will flush send buffer ", 0) \
     M(UInt64, exchange_buffer_send_threshold_in_row, 65505, "The minimum row num when exchange will flush send buffer", 0) \
@@ -118,6 +111,12 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, memory_catalog_worker_size, 8, "Memory catalog work size for unittest", 0) \
     M(UInt64, plan_optimizer_timeout, 600000, "Max running time of a plan rewriter optimizer in ms", 0) \
     M(Bool, enable_active_prewhere, false, "Whether to actively generate prewhere by statistics", 0) \
+    M(Bool, log_normalized_query_plan_hash, 0, "Log json format query plan to the system query_log table.", 0) \
+    M(Bool, log_query_exchange, false, "Log query exchange metric.", 0) \
+    /** Coordinator settings*/ \
+    M(SchedulerMode, scheduler_mode, SchedulerMode::RANDOM, "scheduler shard mode: random/first_order/random_order/cpu_rank/memory_rank", 0) \
+    M(UInt64, operator_profile_receive_timeout, 3000, "Max waiting time for operator profile in ms", 0) \
+    M(UInt64, push_queue_timeout_millseconds, 10, "Timeout millseconds of push profile or others to queue.", 0) \
     /** Exchange settings */ \
     M(UInt64, exchange_timeout_ms, 300000, "Exchange request timeout ms",0) \
     M(UInt64, exchange_queue_bytes, 209715200, "Queue size(bytes) for exchange queue, 0 means disable", 0) \

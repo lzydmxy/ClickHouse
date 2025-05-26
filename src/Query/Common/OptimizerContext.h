@@ -69,8 +69,7 @@ enum ServiceType
 class OptimizerContext
 {
 public:
-    OptimizerContext(const Settings & settings_);
-    OptimizerContext(const Settings & settings_, OptimizerSettings & optimizer_settings_);
+    OptimizerContext(const Settings & settings_, const Poco::Util::AbstractConfiguration & config);
 
     const OptimizerSettings & getSettingsRef() const { return optimizer_settings; }
     OptimizerSettings & getSettingsRef() { return optimizer_settings; }
@@ -149,6 +148,9 @@ public:
         graphviz_sub_query_path = "";
     }
 
+    void setComplexQueryActive(bool complex_query_active);
+    bool getComplexQueryActive();
+
     PlanNodeIdAllocatorPtr & getPlanNodeIdAllocator() { return id_allocator; }
     int incAndGetSubQueryId() { return ++sub_query_id; }
     UInt32 nextNodeId() { return id_allocator->nextId(); }
@@ -189,6 +191,7 @@ private:
     QueryStatusPtr query_process_element;
     std::function<void()> send_tcp_progress{nullptr};
     bool is_explain_query{false};
+    bool complex_query_active{false};
     QueryExchangeLogPtr query_exchange_log;
 	UInt64 txt_id{0};
     // make sure a context not be passed to ExprAnalyzer::analyze concurrently

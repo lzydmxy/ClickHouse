@@ -242,7 +242,7 @@ std::unordered_set<String> SettingsChanges::WHITELIST_SETTINGS =
         "enable_nullable_sorting_key",
         "enable_operator_level_profile",
         "enable_optimize_predicate_expression",
-        "enable_jd_optimizer",
+        "enable_optimizer",
         "enable_optimizer_fallback",
         "enable_optimizer_for_create_select",
         "enable_parts_sync_preload",
