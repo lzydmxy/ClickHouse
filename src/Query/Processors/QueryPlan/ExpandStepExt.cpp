@@ -53,10 +53,8 @@ ExpandStepExt::ExpandStepExt(
     output_stream->header.insert(ColumnWithTypeAndName{group_id_symbol_type, group_id_symbol});
 }
 
-void ExpandStepExt::updateInputStreams(const DataStreams & input_streams_)
+void ExpandStepExt::updateOutputStream()
 {
-    input_streams = input_streams_;
-
     Block block;
     for (auto & input : input_streams[0].header)
         block.insert(ColumnWithTypeAndName{input.type, input.name});

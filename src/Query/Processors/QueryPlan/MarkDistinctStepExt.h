@@ -23,12 +23,13 @@ public:
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
     void toProto(Protos::MarkDistinctStepExt & proto, bool for_hash_equals = false) const;
     static std::shared_ptr<MarkDistinctStepExt> fromProto(const Protos::MarkDistinctStepExt & proto, ContextPtr);
-    void updateInputStreams(const DataStreams & input_streams_);
 
     String getMarkerSymbol() const { return marker_symbol;}
     const std::vector<String> & getDistinctSymbols() const {return distinct_symbols;}
     friend class QueryPlanStepHelper;
 private:
+    void updateOutputStream() override;
+
     String marker_symbol;
     std::vector<String> distinct_symbols;
 };

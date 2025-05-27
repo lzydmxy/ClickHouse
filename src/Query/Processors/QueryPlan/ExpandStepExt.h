@@ -71,7 +71,6 @@ public:
     const String & getGroupIdSymbol() const { return group_id_symbol; }
     const std::set<Int32> & getGroupIdValue() const { return group_id_value; }
     const std::map<Int32, Names> & getGroupIdNonNullSymbol() const { return group_id_non_null_symbol; }
-    void updateInputStreams(const DataStreams & input_streams_);
 
     std::vector<Assignments> generateAssignmentsGroups() const;
     NamesAndTypesList generateNameTypePreGroup() const;
@@ -79,6 +78,8 @@ public:
     // void prepare(const PreparedStatementContext & prepared_context);
     friend class QueryPlanStepHelper;
 private:
+    void updateOutputStream() override;
+
     Assignments assignments;
     NameToType name_to_type;
 

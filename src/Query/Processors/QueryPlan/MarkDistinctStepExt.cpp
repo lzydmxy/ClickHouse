@@ -16,9 +16,8 @@ MarkDistinctStepExt::MarkDistinctStepExt(const DataStream & input_stream_, Strin
 {
 }
 
-void MarkDistinctStepExt::updateInputStreams(const DataStreams & input_streams_)
+void MarkDistinctStepExt::updateOutputStream()
 {
-    input_streams = input_streams_;
     output_stream = input_streams[0];
     output_stream->header.insert(ColumnWithTypeAndName{std::make_shared<DataTypeUInt8>(), marker_symbol});
 }

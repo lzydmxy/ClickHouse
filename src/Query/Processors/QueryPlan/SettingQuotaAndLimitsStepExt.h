@@ -37,9 +37,10 @@ public:
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 
-    void updateInputStreams(const DataStreams & input_streams_);
     friend class QueryPlanStepHelper;
 private:
+    void updateOutputStream() override;
+
     ContextPtr context;
     StoragePtr storage;
     TableLockHolder table_lock;

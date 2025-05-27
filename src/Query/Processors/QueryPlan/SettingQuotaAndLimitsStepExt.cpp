@@ -40,10 +40,9 @@ SettingQuotaAndLimitsStepExt::SettingQuotaAndLimitsStepExt(
 {
 }
 
-void SettingQuotaAndLimitsStepExt::updateInputStreams(const DataStreams & input_streams_)
+void SettingQuotaAndLimitsStepExt::updateOutputStream()
 {
-    input_streams = input_streams_;
-    output_stream->header = input_streams_[0].header;
+    output_stream->header = input_streams[0].header;
 }
 
 void SettingQuotaAndLimitsStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &)

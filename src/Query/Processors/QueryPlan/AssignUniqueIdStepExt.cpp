@@ -14,9 +14,8 @@ namespace DB
 {
 }
 
-void AssignUniqueIdStepExt::updateInputStreams(const DataStreams & input_streams_)
+void AssignUniqueIdStepExt::updateOutputStream()
 {
-    input_streams = input_streams_;
     output_stream = input_streams[0];
     output_stream->header.insert(ColumnWithTypeAndName{std::make_shared<DataTypeUInt64>(), unique_id});
 }

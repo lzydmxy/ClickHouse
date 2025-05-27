@@ -40,7 +40,6 @@ public:
     String getName() const override { return "TopNFilteringStepExt"; }
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
-    void updateInputStreams(const DataStreams & input_streams_);
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
     void describeActions(JSONBuilder::JSONMap & map) const override {};
     void describeActions(FormatSettings & settings) const override {};
@@ -60,6 +59,8 @@ public:
     }
     friend class QueryPlanStepHelper;
 private:
+    void updateOutputStream() override;
+
     SortDescription sort_description;
     UInt64 size;
     TopNModel model;
