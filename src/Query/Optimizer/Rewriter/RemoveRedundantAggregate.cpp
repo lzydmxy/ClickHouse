@@ -47,7 +47,8 @@ PlanNodePtr RemoveRedundantAggregateVisitor::resetChildren(PlanNodeBase & node,P
     for(auto & child : children)
         inputs.push_back(child->getStep()->getOutputStream());
     auto new_step =  QueryPlanStepHelper::copyQueryPlanStep(node.getStep(), ctx.context);
-    new_step->updateInputStreams(inputs);
+    if (new_step->canUpdateInputStream())
+        new_step->updateInputStreams(inputs);
     node.setStep(new_step);
     node.replaceChildren(children);
     return node.shared_from_this();
@@ -220,7 +221,8 @@ PlanNodePtr RemoveRedundantAggregateVisitor::visitCTERefStepExtNode(CTERefStepEx
 
     DataStreams input_streams;
     input_streams.emplace_back(cte_plan->getStep()->getOutputStream());
-    node.getStep()->updateInputStreams(input_streams);
+    if (node.getStep()->canUpdateInputStream())
+        node.getStep()->updateInputStreams(input_streams);
     return node.shared_from_this();
 }
 

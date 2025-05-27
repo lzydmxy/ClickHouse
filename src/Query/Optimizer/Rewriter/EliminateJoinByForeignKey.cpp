@@ -803,7 +803,8 @@ PlanNodePtr EliminateJoinByFK::Eliminator::visitPlanNode(PlanNodeBase & node, Jo
         }
     }
 
-    node.getStep()->updateInputStreams(inputs);
+    if (node.getStep()->canUpdateInputStream())
+        node.getStep()->updateInputStreams(inputs);
     node.replaceChildren(children);
 
     return node.shared_from_this();

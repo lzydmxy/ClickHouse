@@ -43,7 +43,8 @@ PlanAndDataDependencyWithConstants GroupByKeysPruning::Rewriter::visitPlanNode(P
         input_constants.emplace_back(result.constants);
     }
 
-    node.getStep()->updateInputStreams(inputs);
+    if (node.getStep()->canUpdateInputStream())
+        node.getStep()->updateInputStreams(inputs);
 
     node.replaceChildren(children);
     DataDependency depend = DataDependencyDeriver::deriveDataDependency(

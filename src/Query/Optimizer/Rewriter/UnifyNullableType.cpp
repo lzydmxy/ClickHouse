@@ -61,7 +61,8 @@ return visit##TYPE##NodeImpl(dynamic_cast<TYPE##Node &>(node), context); \
             }
 
             QueryPlanStepPtr step = node.getStep();
-            step->updateInputStreams(new_inputs);
+            if (step->canUpdateInputStream())
+                step->updateInputStreams(new_inputs);
 
             return PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(step), new_children/*, node.getStatistics()*/);
 
