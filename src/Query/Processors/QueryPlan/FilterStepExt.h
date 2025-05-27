@@ -34,6 +34,8 @@ public:
     static std::shared_ptr<FilterStepExt> fromProto(const Protos::FilterStepExt & proto, ContextPtr context);
 
 private:
+    void updateOutputStream() override;
+
     ConstASTPtr filter;
 };
 
