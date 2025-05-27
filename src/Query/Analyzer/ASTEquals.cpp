@@ -9,7 +9,7 @@
 #include <Parsers/ASTWindowDefinition.h>
 #include <Parsers/ASTSetQuery.h>
 #include <Query/Parsers/ASTTableColumnReference.h>
-#include <Query/Parsers/ASTSelectQueryExt.h>
+#include <Parsers/ASTSelectQuery.h>
 #include <Query/Parsers/ASTClusterByElementExt.h>
 #include <Common/SipHash.h>
 
@@ -156,13 +156,13 @@ bool compareTree(const ASTPtr & left, const ASTPtr & right, const SubtreeCompara
         return false;
 
     /// for ASTSelectQuery, we also check if children with same index are same clause
-    if (getAstType(left) == ASTType::ASTSelectQueryExt)
+    if (getAstType(left) == ASTType::ASTSelectQuery)
     {
-        const auto & left_query = left->as<ASTSelectQueryExt &>();
-        const auto & right_query = right->as<ASTSelectQueryExt &>();
+        // const auto & left_query = left->as<ASTSelectQuery &>();
+        // const auto & right_query = right->as<ASTSelectQuery &>();
 
-        if (left_query.getExpressionTypes() != right_query.getExpressionTypes())
-            return false;
+        // if (left_query.getExpressionTypes() != right_query.getExpressionTypes())
+        //     return false;
     }
 
     for (int i = 0; i < static_cast<int>(left->children.size()); ++i)

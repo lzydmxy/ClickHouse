@@ -37,12 +37,12 @@ ScopePtr Analysis::getScope(IAST & statement)
     MAP_GET(scopes, &statement);
 }
 
-void Analysis::setQueryWithoutFromScope(ASTSelectQueryExt & query, ScopePtr scope)
+void Analysis::setQueryWithoutFromScope(ASTSelectQuery & query, ScopePtr scope)
 {
     MAP_SET(query_without_from_scopes, &query, scope);
 }
 
-ScopePtr Analysis::getQueryWithoutFromScope(ASTSelectQueryExt & query)
+ScopePtr Analysis::getQueryWithoutFromScope(ASTSelectQuery & query)
 {
     MAP_GET(query_without_from_scopes, &query);
 }
@@ -107,12 +107,12 @@ ExpressionTypes Analysis::getExpressionTypes()
     return expression_types;
 }
 
-void Analysis::setPreWhere(ASTSelectQueryExt & select_query, const ASTPtr & prewhere)
+void Analysis::setPreWhere(ASTSelectQuery & select_query, const ASTPtr & prewhere)
 {
     MAP_SET(pre_wheres, &select_query, prewhere);
 }
 
-ASTPtr Analysis::tryGetPreWhere(ASTSelectQueryExt & select_query)
+ASTPtr Analysis::tryGetPreWhere(ASTSelectQuery & select_query)
 {
     if (auto it = pre_wheres.find(&select_query); it != pre_wheres.end())
         return it->second;
@@ -142,27 +142,27 @@ const LinkedHashMap<const IAST *, StorageAnalysis> & Analysis::getStorages() con
     return storage_results;
 }
 
-UInt64 Analysis::getLimitByValue(ASTSelectQueryExt & select_query)
+UInt64 Analysis::getLimitByValue(ASTSelectQuery & select_query)
 {
     MAP_GET(limit_by_values, &select_query);
 }
 
-std::vector<ASTPtr> & Analysis::getLimitByItem(ASTSelectQueryExt & select_query)
+std::vector<ASTPtr> & Analysis::getLimitByItem(ASTSelectQuery & select_query)
 {
     return limit_by_items[&select_query];
 }
 
-UInt64 Analysis::getLimitByOffsetValue(ASTSelectQueryExt & select_query)
+UInt64 Analysis::getLimitByOffsetValue(ASTSelectQuery & select_query)
 {
     MAP_GET(limit_by_offset_values, &select_query);
 }
 
-UInt64 Analysis::getLimitLength(ASTSelectQueryExt & select_query)
+UInt64 Analysis::getLimitLength(ASTSelectQuery & select_query)
 {
     MAP_GET(limit_lengths, &select_query);
 }
 
-UInt64 Analysis::getLimitOffset(ASTSelectQueryExt & select_query)
+UInt64 Analysis::getLimitOffset(ASTSelectQuery & select_query)
 {
     MAP_GET(limit_offsets, &select_query);
 }
@@ -226,22 +226,22 @@ std::optional<ResolvedField> Analysis::tryGetLambdaArgumentReference(const ASTPt
     return std::nullopt;
 }
 
-std::vector<AggregateAnalysis> & Analysis::getAggregateAnalysis(ASTSelectQueryExt & select_query)
+std::vector<AggregateAnalysis> & Analysis::getAggregateAnalysis(ASTSelectQuery & select_query)
 {
     return aggregate_results[&select_query];
 }
 
-std::vector<std::pair<String, UInt16>> & Analysis::getInterestEvents(ASTSelectQueryExt & select_query)
+std::vector<std::pair<String, UInt16>> & Analysis::getInterestEvents(ASTSelectQuery & select_query)
 {
     return interest_events[&select_query];
 }
 
-std::vector<ASTFunctionPtr> & Analysis::getGroupingOperations(ASTSelectQueryExt & select_query)
+std::vector<ASTFunctionPtr> & Analysis::getGroupingOperations(ASTSelectQuery & select_query)
 {
     return grouping_operations[&select_query];
 }
 
-void Analysis::addWindowAnalysis(ASTSelectQueryExt & select_query, WindowAnalysisPtr analysis)
+void Analysis::addWindowAnalysis(ASTSelectQuery & select_query, WindowAnalysisPtr analysis)
 {
     window_results_by_select_query[&select_query].push_back(analysis);
     MAP_SET(window_results_by_ast, analysis->expression, analysis);
@@ -252,32 +252,32 @@ WindowAnalysisPtr Analysis::getWindowAnalysis(const ASTPtr & ast)
     MAP_GET(window_results_by_ast, ast);
 }
 
-std::vector<WindowAnalysisPtr> & Analysis::getWindowAnalysisOfSelectQuery(ASTSelectQueryExt & select_query)
+std::vector<WindowAnalysisPtr> & Analysis::getWindowAnalysisOfSelectQuery(ASTSelectQuery & select_query)
 {
     return window_results_by_select_query[&select_query];
 }
 
-bool Analysis::needAggregate(ASTSelectQueryExt & select_query)
+bool Analysis::needAggregate(ASTSelectQuery & select_query)
 {
     return !getAggregateAnalysis(select_query).empty() || select_query.groupBy();
 }
 
-std::vector<ASTPtr> & Analysis::getScalarSubqueries(ASTSelectQueryExt & select_query)
+std::vector<ASTPtr> & Analysis::getScalarSubqueries(ASTSelectQuery & select_query)
 {
     return scalar_subqueries[&select_query];
 }
 
-std::vector<ASTPtr> & Analysis::getInSubqueries(ASTSelectQueryExt & select_query)
+std::vector<ASTPtr> & Analysis::getInSubqueries(ASTSelectQuery & select_query)
 {
     return in_subqueries[&select_query];
 }
 
-std::vector<ASTPtr> & Analysis::getExistsSubqueries(ASTSelectQueryExt & select_query)
+std::vector<ASTPtr> & Analysis::getExistsSubqueries(ASTSelectQuery & select_query)
 {
     return exists_subqueries[&select_query];
 }
 
-std::vector<ASTPtr> & Analysis::getQuantifiedComparisonSubqueries(ASTSelectQueryExt & select_query)
+std::vector<ASTPtr> & Analysis::getQuantifiedComparisonSubqueries(ASTSelectQuery & select_query)
 {
     return quantified_comparison_subqueries[&select_query];
 }
@@ -305,17 +305,17 @@ std::optional<CTEAnalysis> Analysis::tryGetCTEAnalysis(ASTSubquery & subquery)
     return std::nullopt;
 }
 
-ASTs & Analysis::getSelectExpressions(ASTSelectQueryExt & select_query)
+ASTs & Analysis::getSelectExpressions(ASTSelectQuery & select_query)
 {
     return select_expressions[&select_query];
 }
 
-GroupByAnalysis & Analysis::getGroupByAnalysis(ASTSelectQueryExt & select_query)
+GroupByAnalysis & Analysis::getGroupByAnalysis(ASTSelectQuery & select_query)
 {
     return group_by_results[&select_query];
 }
 
-std::vector<std::shared_ptr<ASTOrderByElement>> & Analysis::getOrderByAnalysis(ASTSelectQueryExt & select_query)
+std::vector<std::shared_ptr<ASTOrderByElement>> & Analysis::getOrderByAnalysis(ASTSelectQuery & select_query)
 {
     return order_by_results[&select_query];
 }
@@ -344,17 +344,17 @@ bool Analysis::hasOutputDescription(IAST & ast)
     return output_descriptions.contains(&ast);
 }
 
-void Analysis::setRegisteredWindow(ASTSelectQueryExt & select_query, const String & name, ResolvedWindowPtr & window)
+void Analysis::setRegisteredWindow(ASTSelectQuery & select_query, const String & name, ResolvedWindowPtr & window)
 {
     MAP_SET(registered_windows[&select_query], name, window);
 }
 
-ResolvedWindowPtr Analysis::getRegisteredWindow(ASTSelectQueryExt & select_query, const String & name)
+ResolvedWindowPtr Analysis::getRegisteredWindow(ASTSelectQuery & select_query, const String & name)
 {
     MAP_GET(registered_windows[&select_query], name);
 }
 
-const std::unordered_map<String, ResolvedWindowPtr> & Analysis::getRegisteredWindows(ASTSelectQueryExt & select_query)
+const std::unordered_map<String, ResolvedWindowPtr> & Analysis::getRegisteredWindows(ASTSelectQuery & select_query)
 {
     return registered_windows[&select_query];
 }
@@ -414,7 +414,7 @@ void Analysis::addNonDeterministicFunctions(IAST & ast)
     non_deterministic_functions.insert(&ast);
 }
 
-ArrayJoinAnalysis & Analysis::getArrayJoinAnalysis(ASTSelectQueryExt & select_query)
+ArrayJoinAnalysis & Analysis::getArrayJoinAnalysis(ASTSelectQuery & select_query)
 {
     return array_join_analysis[&select_query];
 }

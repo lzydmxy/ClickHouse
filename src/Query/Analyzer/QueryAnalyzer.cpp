@@ -39,7 +39,7 @@
 #include <Query/Common/OptimizerSettings.h>
 #include <Query/Interpreters/JoinUtilsExt.h>
 #include <Query/Parsers/ASTFieldReferenceExt.h>
-#include <Query/Parsers/ASTSelectQueryExt.h>
+#include <Parsers/ASTSelectQuery.h>
 #include <Query/Parsers/ASTVisitor.h>
 #include <Query/Common/Void.h>
 #include <Query/Storages/StorageHelper.h>
@@ -88,7 +88,7 @@ public:
     // Void visitASTInsertQuery(ASTPtr & node, const Void &) override;
     Void visitASTSelectIntersectExceptQuery(ASTPtr & node, const Void &) override;
     Void visitASTSelectWithUnionQuery(ASTPtr & node, const Void &) override;
-    Void visitASTSelectQueryExt(ASTPtr & node, const Void &) override;
+    Void visitASTSelectQuery(ASTPtr & node, const Void &) override;
     Void visitASTSubquery(ASTPtr & node, const Void &) override;
     Void visitASTExplainQueryExt(ASTPtr & node, const Void &) override;
     // todo: zhangwanyun1, now do not support ASTCreatePreparedStatementQuery
@@ -131,17 +131,17 @@ private:
     void analyzeSetOperation(ASTPtr & node, ASTs & selects);
 
     /// FROM clause
-    ScopePtr analyzeWithoutFrom(ASTSelectQueryExt & select_query);
-    ScopePtr analyzeFrom(ASTTablesInSelectQuery & tables_in_select, ASTSelectQueryExt & select_query, Aliases & query_aliases);
+    ScopePtr analyzeWithoutFrom(ASTSelectQuery & select_query);
+    ScopePtr analyzeFrom(ASTTablesInSelectQuery & tables_in_select, ASTSelectQuery & select_query, Aliases & query_aliases);
     ScopePtr analyzeTableExpression(
         ASTTableExpression & table_expression,
         const QualifiedName & column_prefix,
-        ASTSelectQueryExt & select_query,
+        ASTSelectQuery & select_query,
         Aliases & query_aliases);
     ScopePtr analyzeTable(
         ASTTableIdentifier & db_and_table,
         const QualifiedName & column_prefix,
-        ASTSelectQueryExt & select_query,
+        ASTSelectQuery & select_query,
         Aliases & query_aliases);
     ScopePtr analyzeSubquery(ASTPtr & node, const QualifiedName & column_prefix);
     ScopePtr analyzeTableFunction(ASTFunction & table_function, const QualifiedName & column_prefix);
@@ -150,26 +150,26 @@ private:
         ScopePtr left_scope,
         ScopePtr right_scope,
         const String & right_table_qualifier,
-        ASTSelectQueryExt & select_query);
+        ASTSelectQuery & select_query);
     ScopePtr analyzeJoinUsing(
         ASTTableJoin & table_join,
         ScopePtr left_scope,
         ScopePtr right_scope,
         const String & right_table_qualifier,
-        ASTSelectQueryExt & select_query);
+        ASTSelectQuery & select_query);
     ScopePtr analyzeJoinOn(ASTTableJoin & table_join, ScopePtr left_scope, ScopePtr right_scope, const String & right_table_qualifier);
-    ScopePtr analyzeArrayJoin(ASTArrayJoin & array_join, ASTSelectQueryExt & select_query, ScopePtr source_scope);
+    ScopePtr analyzeArrayJoin(ASTArrayJoin & array_join, ASTSelectQuery & select_query, ScopePtr source_scope);
 
-    void analyzeWindow(ASTSelectQueryExt & select_query);
-    void analyzePrewhere(ASTSelectQueryExt & select_query, ScopePtr source_scope, ASTPtr & alias_columns, Aliases & query_aliases);
-    void analyzeWhere(ASTSelectQueryExt & select_query, ScopePtr source_scope);
-    ASTs analyzeSelect(ASTSelectQueryExt & select_query, ScopePtr source_scope);
-    void analyzeGroupBy(ASTSelectQueryExt & select_query, ASTs & select_expressions, ScopePtr source_scope);
-    // void analyzeInterestEvents(ASTSelectQueryExt & select_query);
-    void analyzeHaving(ASTSelectQueryExt & select_query, ScopePtr source_scope);
-    void analyzeOrderBy(ASTSelectQueryExt & select_query, ASTs & select_expressions, ScopePtr output_scope);
-    void analyzeLimitBy(ASTSelectQueryExt & select_query, ASTs & select_expressions, ScopePtr output_scope);
-    void analyzeLimitAndOffset(ASTSelectQueryExt & select_query);
+    void analyzeWindow(ASTSelectQuery & select_query);
+    void analyzePrewhere(ASTSelectQuery & select_query, ScopePtr source_scope, ASTPtr & alias_columns, Aliases & query_aliases);
+    void analyzeWhere(ASTSelectQuery & select_query, ScopePtr source_scope);
+    ASTs analyzeSelect(ASTSelectQuery & select_query, ScopePtr source_scope);
+    void analyzeGroupBy(ASTSelectQuery & select_query, ASTs & select_expressions, ScopePtr source_scope);
+    // void analyzeInterestEvents(ASTSelectQuery & select_query);
+    void analyzeHaving(ASTSelectQuery & select_query, ScopePtr source_scope);
+    void analyzeOrderBy(ASTSelectQuery & select_query, ASTs & select_expressions, ScopePtr output_scope);
+    void analyzeLimitBy(ASTSelectQuery & select_query, ASTs & select_expressions, ScopePtr output_scope);
+    void analyzeLimitAndOffset(ASTSelectQuery & select_query);
 
     void analyzeOutfile(ASTSelectWithUnionQuery & outfile_query);
 
@@ -177,13 +177,13 @@ private:
     ScopePtr createScope(FieldDescriptions field_descriptions, ScopePtr parent = nullptr);
     DatabaseAndTableWithAlias extractTableWithAlias(const ASTTableExpression & table_expression);
     void verifyNoAggregateWindowOrGroupingOperations(ASTPtr & expression, const String & statement_name);
-    void verifyAggregate(ASTSelectQueryExt & select_query, ScopePtr source_scope);
-    void verifyNoFreeReferencesToLambdaArgument(ASTSelectQueryExt & select_query);
+    void verifyAggregate(ASTSelectQuery & select_query, ScopePtr source_scope);
+    void verifyNoFreeReferencesToLambdaArgument(ASTSelectQuery & select_query);
     UInt64 analyzeUIntConstExpression(const ASTPtr & expression);
     // todo: zhangwanyun1, do not support Hint now
     // void countLeadingHint(const IAST & ast);
     // todo: zhangwanyun1, do not support ansi semantic now
-    // void rewriteSelectInANSIMode(ASTSelectQueryExt & select_query, const Aliases & aliases, ScopePtr source_scope);
+    // void rewriteSelectInANSIMode(ASTSelectQuery & select_query, const Aliases & aliases, ScopePtr source_scope);
     void normalizeAliases(ASTPtr & expr, ASTPtr & aliases_expr);
     void normalizeAliases(ASTPtr & expr, Aliases & aliases, const NameSet & source_columns_set);
 };
@@ -236,9 +236,9 @@ Void QueryAnalyzerVisitor::visitASTSelectWithUnionQuery(ASTPtr & node, const Voi
     return {};
 }
 
-Void QueryAnalyzerVisitor::visitASTSelectQueryExt(ASTPtr & node, const Void &)
+Void QueryAnalyzerVisitor::visitASTSelectQuery(ASTPtr & node, const Void &)
 {
-    auto & select_query = node->as<ASTSelectQueryExt &>();
+    auto & select_query = node->as<ASTSelectQuery &>();
     ScopePtr source_scope;
 
     // Collect query aliases for aliases rewritting, for ANSI only.
@@ -403,7 +403,7 @@ void QueryAnalyzerVisitor::analyzeSetOperation(ASTPtr & node, ASTs & selects)
     analysis.setOutputDescription(*node, output_desc);
 }
 
-ScopePtr QueryAnalyzerVisitor::analyzeWithoutFrom(ASTSelectQueryExt & select_query)
+ScopePtr QueryAnalyzerVisitor::analyzeWithoutFrom(ASTSelectQuery & select_query)
 {
     FieldDescriptions fields;
     fields.emplace_back("dummy", std::make_shared<DataTypeUInt8>());
@@ -413,7 +413,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeWithoutFrom(ASTSelectQueryExt & select_que
 }
 
 ScopePtr
-QueryAnalyzerVisitor::analyzeFrom(ASTTablesInSelectQuery & tables_in_select, ASTSelectQueryExt & select_query, Aliases & query_aliases)
+QueryAnalyzerVisitor::analyzeFrom(ASTTablesInSelectQuery & tables_in_select, ASTSelectQuery & select_query, Aliases & query_aliases)
 {
     if (tables_in_select.children.empty())
         throw Exception(ErrorCodes::LOGICAL_ERROR, "ASTTableInSelectQuery can not be empty.");
@@ -470,7 +470,7 @@ QueryAnalyzerVisitor::analyzeFrom(ASTTablesInSelectQuery & tables_in_select, AST
 ScopePtr QueryAnalyzerVisitor::analyzeTableExpression(
     ASTTableExpression & table_expression,
     const QualifiedName & column_prefix,
-    ASTSelectQueryExt & select_query,
+    ASTSelectQuery & select_query,
     Aliases & query_aliases)
 {
     ScopePtr scope;
@@ -491,7 +491,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeTableExpression(
 }
 
 ScopePtr QueryAnalyzerVisitor::analyzeTable(
-    ASTTableIdentifier & db_and_table, const QualifiedName & column_prefix, ASTSelectQueryExt & select_query, Aliases & query_aliases)
+    ASTTableIdentifier & db_and_table, const QualifiedName & column_prefix, ASTSelectQuery & select_query, Aliases & query_aliases)
 {
     // get storage information
     StoragePtr storage;
@@ -704,7 +704,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeJoin(
     ScopePtr left_scope,
     ScopePtr right_scope,
     const String & right_table_qualifier,
-    ASTSelectQueryExt & select_query)
+    ASTSelectQuery & select_query)
 {
     // set join strictness if unspecified
     {
@@ -800,7 +800,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeJoinUsing(
     ScopePtr left_scope,
     ScopePtr right_scope,
     const String & right_table_qualifier,
-    ASTSelectQueryExt & select_query)
+    ASTSelectQuery & select_query)
 {
     auto & expr_list = table_join.using_expression_list->children;
 
@@ -1246,7 +1246,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeJoinOn(
     return output_scope;
 }
 
-ScopePtr QueryAnalyzerVisitor::analyzeArrayJoin(ASTArrayJoin & array_join, ASTSelectQueryExt & select_query, ScopePtr source_scope)
+ScopePtr QueryAnalyzerVisitor::analyzeArrayJoin(ASTArrayJoin & array_join, ASTSelectQuery & select_query, ScopePtr source_scope)
 {
     ASTPtr array_join_expression_list = array_join.expression_list;
     if (array_join_expression_list->children.empty())
@@ -1334,7 +1334,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeArrayJoin(ASTArrayJoin & array_join, ASTSe
     return output_scope;
 }
 
-void QueryAnalyzerVisitor::analyzeWindow(ASTSelectQueryExt & select_query)
+void QueryAnalyzerVisitor::analyzeWindow(ASTSelectQuery & select_query)
 {
     if (!select_query.window())
         return;
@@ -1356,7 +1356,7 @@ void QueryAnalyzerVisitor::analyzeWindow(ASTSelectQueryExt & select_query)
 }
 
 void QueryAnalyzerVisitor::analyzePrewhere(
-    ASTSelectQueryExt & select_query, ScopePtr source_scope, ASTPtr & alias_columns, Aliases & query_aliases)
+    ASTSelectQuery & select_query, ScopePtr source_scope, ASTPtr & alias_columns, Aliases & query_aliases)
 {
     if (!select_query.prewhere())
         return;
@@ -1387,7 +1387,7 @@ void QueryAnalyzerVisitor::analyzePrewhere(
 
 }
 
-void QueryAnalyzerVisitor::analyzeWhere(ASTSelectQueryExt & select_query, ScopePtr source_scope)
+void QueryAnalyzerVisitor::analyzeWhere(ASTSelectQuery & select_query, ScopePtr source_scope)
 {
     if (!select_query.where())
         return;
@@ -1406,7 +1406,7 @@ void QueryAnalyzerVisitor::analyzeWhere(ASTSelectQueryExt & select_query, ScopeP
     }
 }
 
-ASTs QueryAnalyzerVisitor::analyzeSelect(ASTSelectQueryExt & select_query, ScopePtr source_scope)
+ASTs QueryAnalyzerVisitor::analyzeSelect(ASTSelectQuery & select_query, ScopePtr source_scope)
 {
     if (!select_query.select() || select_query.refSelect()->children.empty())
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Empty select list found");
@@ -1545,7 +1545,7 @@ ASTs QueryAnalyzerVisitor::analyzeSelect(ASTSelectQueryExt & select_query, Scope
     return select_expressions;
 }
 
-void QueryAnalyzerVisitor::analyzeGroupBy(ASTSelectQueryExt & select_query, ASTs & select_expressions, ScopePtr source_scope)
+void QueryAnalyzerVisitor::analyzeGroupBy(ASTSelectQuery & select_query, ASTs & select_expressions, ScopePtr source_scope)
 {
     std::vector<ASTPtr> grouping_expressions;
     std::vector<ASTs> grouping_sets;
@@ -1621,7 +1621,7 @@ void QueryAnalyzerVisitor::analyzeGroupBy(ASTSelectQueryExt & select_query, ASTs
     analysis.group_by_results[&select_query] = GroupByAnalysis{std::move(grouping_expressions), std::move(grouping_sets)};
 }
 
-void QueryAnalyzerVisitor::analyzeHaving(ASTSelectQueryExt & select_query, ScopePtr source_scope)
+void QueryAnalyzerVisitor::analyzeHaving(ASTSelectQuery & select_query, ScopePtr source_scope)
 {
     if (!select_query.having())
         return;
@@ -1633,7 +1633,7 @@ void QueryAnalyzerVisitor::analyzeHaving(ASTSelectQueryExt & select_query, Scope
     ExprAnalyzer::analyze(select_query.refHaving(), source_scope, context, analysis, expr_options);
 }
 
-void QueryAnalyzerVisitor::analyzeOrderBy(ASTSelectQueryExt & select_query, ASTs & select_expressions, ScopePtr output_scope)
+void QueryAnalyzerVisitor::analyzeOrderBy(ASTSelectQuery & select_query, ASTs & select_expressions, ScopePtr output_scope)
 {
     if (select_query.orderBy())
     {
@@ -1679,7 +1679,7 @@ void QueryAnalyzerVisitor::analyzeOrderBy(ASTSelectQueryExt & select_query, ASTs
     }
 }
 
-void QueryAnalyzerVisitor::analyzeLimitBy(ASTSelectQueryExt & select_query, ASTs & select_expressions, ScopePtr output_scope)
+void QueryAnalyzerVisitor::analyzeLimitBy(ASTSelectQuery & select_query, ASTs & select_expressions, ScopePtr output_scope)
 {
     if (select_query.limitBy())
     {
@@ -1713,15 +1713,15 @@ void QueryAnalyzerVisitor::analyzeLimitBy(ASTSelectQueryExt & select_query, ASTs
         auto limit_by_value = analyzeUIntConstExpression(select_query.limitByLength());
         analysis.limit_by_values[&select_query] = limit_by_value;
 
-        if (select_query.getLimitByOffset())
+        if (select_query.getExpression(ASTSelectQuery::Expression::LIMIT_BY_OFFSET, true))
         {
-            auto limit_by_offset_value = analyzeUIntConstExpression(select_query.getLimitByOffset());
+            auto limit_by_offset_value = analyzeUIntConstExpression(select_query.getExpression(ASTSelectQuery::Expression::LIMIT_BY_OFFSET, true));
             analysis.limit_by_offset_values[&select_query] = limit_by_offset_value;
         }
     }
 }
 
-void QueryAnalyzerVisitor::analyzeLimitAndOffset(ASTSelectQueryExt & select_query)
+void QueryAnalyzerVisitor::analyzeLimitAndOffset(ASTSelectQuery & select_query)
 {
     if (select_query.limitLength())
         analysis.limit_lengths[&select_query] = analyzeUIntConstExpression(select_query.limitLength());
@@ -1927,7 +1927,7 @@ namespace
 
 }
 
-void QueryAnalyzerVisitor::verifyAggregate(ASTSelectQueryExt & select_query, ScopePtr source_scope)
+void QueryAnalyzerVisitor::verifyAggregate(ASTSelectQuery & select_query, ScopePtr source_scope)
 {
     if (!analysis.needAggregate(select_query))
     {
@@ -2018,7 +2018,7 @@ namespace
     };
 }
 
-void QueryAnalyzerVisitor::verifyNoFreeReferencesToLambdaArgument(ASTSelectQueryExt & select_query)
+void QueryAnalyzerVisitor::verifyNoFreeReferencesToLambdaArgument(ASTSelectQuery & select_query)
 {
     FreeReferencesToLambdaArgumentVisitor aggregate_visitor{"aggregate function", ErrorCodes::UNKNOWN_IDENTIFIER, context, analysis};
     FreeReferencesToLambdaArgumentVisitor window_visitor{"window function", ErrorCodes::UNKNOWN_IDENTIFIER, context, analysis};

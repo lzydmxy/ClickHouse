@@ -92,7 +92,7 @@ using ASTFunctionPtr = std::shared_ptr<ASTFunction>;
     M(ASTDictionaryRange) \
     M(ASTDictionarySettings) \
     M(ASTExplainQueryExt) \
-    M(ASTExpressionListExt) \
+    M(ASTExpressionList) \
     M(ASTFieldReferenceExt) \
     M(ASTFunction) \
     M(ASTFunctionWithKeyValueArguments) \
@@ -120,7 +120,7 @@ using ASTFunctionPtr = std::shared_ptr<ASTFunction>;
     M(ASTRowPolicyNames) \
     M(ASTSampleRatio) \
     M(ASTSelectIntersectExceptQuery) \
-    M(ASTSelectQueryExt) \
+    M(ASTSelectQuery) \
     M(ASTSelectWithUnionQuery) \
     M(ASTSetQuery) \
     M(ASTSettingsProfileElement) \

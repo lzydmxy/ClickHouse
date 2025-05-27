@@ -182,9 +182,9 @@ public:
             process(node, {});
     }
 
-    void visitASTSelectQueryExt(ASTPtr & node, const Void &) override
+    void visitASTSelectQuery(ASTPtr & node, const Void &) override
     {
-        auto & select_query = node->as<ASTSelectQueryExt &>();
+        auto & select_query = node->as<ASTSelectQuery &>();
 
         if (auto tables = select_query.tables())
             process(tables);
@@ -207,7 +207,7 @@ public:
         process(node->as<ASTSelectWithUnionQuery &>().list_of_selects);
     }
 
-    void visitASTExpressionListExt(ASTPtr & node, const Void &) override { process(node->children); }
+    void visitASTExpressionList(ASTPtr & node, const Void &) override { process(node->children); }
 
     void visitASTOrderByElement(ASTPtr & node, const Void &) override { process(node->children[0]); }
 
@@ -245,7 +245,7 @@ public:
     using ExpressionTraversalIncludeSubqueryVisitor<UserContext>::ExpressionTraversalIncludeSubqueryVisitor;
     using ExpressionTraversalIncludeSubqueryVisitor<UserContext>::process;
 
-    void visitASTSelectQueryExt(ASTPtr &, const Void &) override { }
+    void visitASTSelectQuery(ASTPtr &, const Void &) override { }
 
     void visitASTSelectWithUnionQuery(ASTPtr &, const Void &) override { }
 };

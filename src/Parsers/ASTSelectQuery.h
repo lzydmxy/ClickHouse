@@ -99,6 +99,7 @@ public:
     ASTPtr & refPrewhere()  { return getExpression(Expression::PREWHERE); }
     ASTPtr & refWhere()     { return getExpression(Expression::WHERE); }
     ASTPtr & refHaving()    { return getExpression(Expression::HAVING); }
+    ASTPtr & refLimitLength() { return getExpression(Expression::LIMIT_LENGTH); }
 
     ASTPtr with()           const { return getExpression(Expression::WITH); }
     ASTPtr select()         const { return getExpression(Expression::SELECT); }

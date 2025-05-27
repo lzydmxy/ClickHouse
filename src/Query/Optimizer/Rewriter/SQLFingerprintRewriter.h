@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <arrow/compute/expression.h>
+#include <capnp/compiler/grammar.capnp.h>
 #include <Query/Optimizer/SimpleExpressionRewriter.h>
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/IAST_fwd.h>
@@ -33,10 +35,11 @@ public:
         return visitNode(node, context);
     }
 
-    ASTPtr visitASTSelectQueryExt(ASTPtr & node, Void & context) override
+    ASTPtr visitASTSelectQuery(ASTPtr & node, Void & context) override
     {
-        auto select_ptr = std::dynamic_pointer_cast<ASTSelectQueryExt>(node);
-        select_ptr->removeSettingsAndOutputFormat();
+        auto select_ptr = std::dynamic_pointer_cast<ASTSelectQuery>(node);
+        // select_ptr->removeSettingsAndOutputFormat();
+        select_ptr->setExpression(ASTSelectQuery::Expression::SETTINGS, nullptr);
         return visitNode(node, context);
     }
 

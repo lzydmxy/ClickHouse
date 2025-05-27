@@ -44,9 +44,9 @@
 #include <Query/Parsers/ASTDataTypeExt.h>
 #include <Query/Parsers/ASTDictionaryExt.h>
 #include <Query/Parsers/ASTExplainQueryExt.h>
-#include <Query/Parsers/ASTExpressionListExt.h>
+#include <Parsers/ASTExpressionList.h>
 #include <Query/Parsers/ASTFieldReferenceExt.h>
-#include <Query/Parsers/ASTSelectQueryExt.h>
+#include <Parsers/ASTSelectQuery.h>
 #include <Query/Parsers/ASTTableColumnReference.h>
 #include <Query/Parsers/ASTQuantifiedComparisonExt.h>
 #include <Query/Parsers/ASTType.h>

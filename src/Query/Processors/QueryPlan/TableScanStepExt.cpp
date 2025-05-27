@@ -278,7 +278,7 @@ TableScanExecutor::TableScanExecutor(TableScanStepExt & step, const MergeTreeDat
     if (!select_query_info.query) 
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not set");
 
-    auto * select_query = select_query_info.query->as<ASTSelectQueryExt>();
+    auto * select_query = select_query_info.query->as<ASTSelectQuery>();
     if (!select_query)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not a ASTSelectQuery");
 
@@ -668,7 +668,7 @@ TableScanStepExt::TableScanStepExt(
     if (!query_info.query) 
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not set");
 
-    auto * select_query = query_info.query->as<ASTSelectQueryExt>();
+    auto * select_query = query_info.query->as<ASTSelectQuery>();
     if (!select_query)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not a ASTSelectQuery");
     
@@ -701,7 +701,7 @@ void TableScanStepExt::formatOutputStream(ContextPtr context)
     }
 
     table_output_stream.header.clear();
-    const auto select_expression_list = query_info.query->as<ASTSelectQueryExt>()->select();
+    const auto select_expression_list = query_info.query->as<ASTSelectQuery>()->select();
     select_expression_list->children.clear();
 
     for (const auto & name : getRequiredColumns(GetFlags::Output))
@@ -790,7 +790,7 @@ SelectQueryInfo TableScanStepExt::fillQueryInfo(ContextPtr context)
     if (!query_info.query) 
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not set");
 
-    auto * select_query = query_info.query->as<ASTSelectQueryExt>();
+    auto * select_query = query_info.query->as<ASTSelectQuery>();
     if (!select_query)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not a ASTSelectQuery");
 
@@ -901,7 +901,7 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
             partition_filter ? queryToString(*partition_filter) : "null");
     }
 
-    auto * query = select_query.query->as<ASTSelectQueryExt>();
+    auto * query = select_query.query->as<ASTSelectQuery>();
     auto where = query->where();
     auto prehwere = query->prewhere();
     if (where || prehwere)
@@ -1059,7 +1059,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     }
 
     const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(build_context);
-    auto * query = query_info.query->as<ASTSelectQueryExt>();
+    auto * query = query_info.query->as<ASTSelectQuery>();
     bool use_expand_pipe = settings_ext.is_expand;
     if (!use_expand_pipe && (query->where() || query->prewhere()))
     {
@@ -1553,7 +1553,7 @@ void TableScanStepExt::allocate(ContextPtr context)
     size_t shards=1;
     if (shards > 1)
     {
-        ASTSelectQuery * select = query_info.query->as<ASTSelectQueryExt>();
+        ASTSelectQuery * select = query_info.query->as<ASTSelectQuery>();
         ASTPtr rewrite_ast = query_info.query->clone();
         if (select && select->sampleSize())
             query_info.query = rewrite_ast;
@@ -1583,7 +1583,7 @@ void TableScanStepExt::allocate(ContextPtr context)
 
 bool TableScanStepExt::hasLimit() const
 {
-    auto * query = query_info.query->as<ASTSelectQueryExt>();
+    auto * query = query_info.query->as<ASTSelectQuery>();
     return query->limitLength().get();
 }
 
@@ -1603,8 +1603,8 @@ static UInt64 getUIntValue(const ASTPtr & node, const ContextPtr & context)
 
 bool TableScanStepExt::setLimit(size_t limit, const ContextMutablePtr & context)
 {
-    auto & query = *query_info.query->as<ASTSelectQueryExt>();
-    auto limit_length = query.getLimitLength();
+    auto & query = *query_info.query->as<ASTSelectQuery>();
+    auto limit_length = query.getExpression(ASTSelectQuery::Expression::LIMIT_LENGTH, true);
     if (limit_length)
     {
         if (getUIntValue(limit_length, context) <= limit)
@@ -1789,7 +1789,7 @@ ASTPtr TableScanStepExt::getPrewhere() const
     if (!query_info.query) 
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not set");
 
-    auto * select_query = query_info.query->as<ASTSelectQueryExt>();
+    auto * select_query = query_info.query->as<ASTSelectQuery>();
     if (!select_query)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not a ASTSelectQuery");
 
@@ -1846,7 +1846,7 @@ void TableScanStepExt::fillQueryInfoV2(ContextPtr context)
     if (!query_info.query) 
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not set");
 
-    auto * select_query = query_info.query->as<ASTSelectQueryExt>();
+    auto * select_query = query_info.query->as<ASTSelectQuery>();
     if (!select_query)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not a ASTSelectQuery");
 

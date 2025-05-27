@@ -96,7 +96,7 @@ public:
 
     RelationPlan visitASTSelectIntersectExceptQuery(ASTPtr & node, const Void &) override;
     RelationPlan visitASTSelectWithUnionQuery(ASTPtr & node, const Void &) override;
-    RelationPlan visitASTSelectQueryExt(ASTPtr & node, const Void &) override;
+    RelationPlan visitASTSelectQuery(ASTPtr & node, const Void &) override;
     RelationPlan visitASTSubquery(ASTPtr & node, const Void &) override;
 
     RelationPlan process(ASTPtr & node) { return ASTVisitorUtil::accept(node, *this, {}); }
@@ -111,12 +111,12 @@ private:
     const bool enable_subcolumn_optimization_through_union;
 
     /// plan FROM
-    PlanBuilder planFrom(ASTSelectQueryExt &);
-    PlanBuilder planWithoutTables(ASTSelectQueryExt & select_query);
-    PlanBuilder planTables(ASTTablesInSelectQuery & tables_in_select, ASTSelectQueryExt & select_query);
-    PlanBuilder planTableExpression(ASTTableExpression & table_expression, ASTSelectQueryExt & select_query);
-    PlanBuilder planTable(ASTTableIdentifier & db_and_table, ASTSelectQueryExt & select_query);
-    PlanBuilder planTableFunction(ASTFunction & table_function, ASTSelectQueryExt & select_query);
+    PlanBuilder planFrom(ASTSelectQuery &);
+    PlanBuilder planWithoutTables(ASTSelectQuery & select_query);
+    PlanBuilder planTables(ASTTablesInSelectQuery & tables_in_select, ASTSelectQuery & select_query);
+    PlanBuilder planTableExpression(ASTTableExpression & table_expression, ASTSelectQuery & select_query);
+    PlanBuilder planTable(ASTTableIdentifier & db_and_table, ASTSelectQuery & select_query);
+    PlanBuilder planTableFunction(ASTFunction & table_function, ASTSelectQuery & select_query);
     PlanBuilder planTableSubquery(ASTSubquery & subquery, ASTPtr & node);
 
     /// plan join
@@ -131,37 +131,37 @@ private:
     prepareJoinOnKeys(ASTTableJoin & table_join, PlanBuilder & left_builder, PlanBuilder & right_builder);
     static DataStream getJoinOutputStream(ASTTableJoin & table_join, PlanBuilder & left_builder, PlanBuilder & right_builder);
 
-    RelationPlan planReadFromStorage(IAST & table_ast, ScopePtr table_scope, ASTSelectQueryExt & origin_query, bool is_table_function = false);
+    RelationPlan planReadFromStorage(IAST & table_ast, ScopePtr table_scope, ASTSelectQuery & origin_query, bool is_table_function = false);
 
-    void planArrayJoin(ASTArrayJoin & array_join, PlanBuilder & builder, ASTSelectQueryExt & select_query);
-    void planFilter(PlanBuilder & builder, ASTSelectQueryExt & select_query, const ASTPtr & filter);
-    void planAggregate(PlanBuilder & builder, ASTSelectQueryExt & select_query);
-    void planWindow(PlanBuilder & builder, ASTSelectQueryExt & select_query);
-    void planSelect(PlanBuilder & builder, ASTSelectQueryExt & select_query);
-    void planDistinct(PlanBuilder & builder, ASTSelectQueryExt & select_query);
-    void planOrderBy(PlanBuilder & builder, ASTSelectQueryExt & select_query);
-    void planWithFill(PlanBuilder & builder, ASTSelectQueryExt & select_query);
-    void planLimitBy(PlanBuilder & builder, ASTSelectQueryExt & select_query);
-    void planTotalsAndHaving(PlanBuilder & builder, ASTSelectQueryExt & select_query);
-    void planLimitAndOffset(PlanBuilder & builder, ASTSelectQueryExt & select_query);
-    void planSampling(PlanBuilder & builder, ASTSelectQueryExt & select_query);
+    void planArrayJoin(ASTArrayJoin & array_join, PlanBuilder & builder, ASTSelectQuery & select_query);
+    void planFilter(PlanBuilder & builder, ASTSelectQuery & select_query, const ASTPtr & filter);
+    void planAggregate(PlanBuilder & builder, ASTSelectQuery & select_query);
+    void planWindow(PlanBuilder & builder, ASTSelectQuery & select_query);
+    void planSelect(PlanBuilder & builder, ASTSelectQuery & select_query);
+    void planDistinct(PlanBuilder & builder, ASTSelectQuery & select_query);
+    void planOrderBy(PlanBuilder & builder, ASTSelectQuery & select_query);
+    void planWithFill(PlanBuilder & builder, ASTSelectQuery & select_query);
+    void planLimitBy(PlanBuilder & builder, ASTSelectQuery & select_query);
+    void planTotalsAndHaving(PlanBuilder & builder, ASTSelectQuery & select_query);
+    void planLimitAndOffset(PlanBuilder & builder, ASTSelectQuery & select_query);
+    void planSampling(PlanBuilder & builder, ASTSelectQuery & select_query);
 
-    RelationPlan planFinalSelect(PlanBuilder & builder, ASTSelectQueryExt & select_query);
+    RelationPlan planFinalSelect(PlanBuilder & builder, ASTSelectQuery & select_query);
 
     // the routine to plan expressions in most scenarios, which handle non-deterministic function & subqueries within expressions
     template <typename T>
-    void planExpression(PlanBuilder & builder, ASTSelectQueryExt & select_query, const T & expressions);
+    void planExpression(PlanBuilder & builder, ASTSelectQuery & select_query, const T & expressions);
     template <typename T>
-    void planNonDeterministicFunction(PlanBuilder & builder, ASTSelectQueryExt & select_query, const T & expressions);
+    void planNonDeterministicFunction(PlanBuilder & builder, ASTSelectQuery & select_query, const T & expressions);
 
     // plan subquery expressions, only subquery expressions under parent_expression will be planned
     // return apply nodes in order to setOuterColumns
     template <typename T>
-    PlanNodes planSubqueryExpression(PlanBuilder & builder, ASTSelectQueryExt & select_query, const T & expressions);
+    PlanNodes planSubqueryExpression(PlanBuilder & builder, ASTSelectQuery & select_query, const T & expressions);
     void planScalarSubquery(PlanBuilder & builder, const ASTPtr & scalar_subquery);
-    void planInSubquery(PlanBuilder & builder, const ASTPtr & node, ASTSelectQueryExt & select_query);
+    void planInSubquery(PlanBuilder & builder, const ASTPtr & node, ASTSelectQuery & select_query);
     void planExistsSubquery(PlanBuilder & builder, const ASTPtr & node);
-    void planQuantifiedComparisonSubquery(PlanBuilder & builder, const ASTPtr & node, ASTSelectQueryExt & select_query);
+    void planQuantifiedComparisonSubquery(PlanBuilder & builder, const ASTPtr & node, ASTSelectQuery & select_query);
     RelationPlan combineSubqueryOutputsToTuple(const RelationPlan & plan, const ASTPtr & subquery);
 
     /// plan UNION/INTERSECT/EXCEPT
@@ -179,7 +179,7 @@ private:
 
     /// utils
     SizeLimits extractDistinctSizeLimits();
-    std::pair<UInt64, UInt64> getLimitLengthAndOffset(ASTSelectQueryExt & query);
+    std::pair<UInt64, UInt64> getLimitLengthAndOffset(ASTSelectQuery & query);
     PlanBuilder toPlanBuilder(const RelationPlan & plan, ScopePtr scope);
 
     void processSubqueryArgs(
@@ -188,8 +188,8 @@ private:
         String & rhs_symbol,
         String & lhs_symbol,
         RelationPlan & rhs_plan,
-        ASTSelectQueryExt & select_query);
-    bool needAggregateOverflowRow(ASTSelectQueryExt & select_query) const;
+        ASTSelectQuery & select_query);
+    bool needAggregateOverflowRow(ASTSelectQuery & select_query) const;
 };
 
 namespace
@@ -349,9 +349,9 @@ RelationPlan QueryPlannerVisitor::visitASTSelectWithUnionQuery(ASTPtr & node, co
     return planSetOperation(select_with_union.list_of_selects->children, select_with_union.union_mode);
 }
 
-RelationPlan QueryPlannerVisitor::visitASTSelectQueryExt(ASTPtr & node, const Void &)
+RelationPlan QueryPlannerVisitor::visitASTSelectQuery(ASTPtr & node, const Void &)
 {
-    auto & select_query = node->as<ASTSelectQueryExt &>();
+    auto & select_query = node->as<ASTSelectQuery &>();
 
     PlanBuilder builder = planFrom(select_query);
     // PRINT_PLAN(builder.plan, plan_from);
@@ -436,7 +436,7 @@ RelationPlan QueryPlannerVisitor::visitASTSubquery(ASTPtr & node, const Void &)
     return process(node->children.front());
 }
 
-PlanBuilder QueryPlannerVisitor::planWithoutTables(ASTSelectQueryExt & select_query)
+PlanBuilder QueryPlannerVisitor::planWithoutTables(ASTSelectQuery & select_query)
 {
     PlanNodePtr node;
     auto symbol = context->getOptimizerContext()->getSymbolAllocator()->newSymbol("dummy");
@@ -462,7 +462,7 @@ PlanBuilder QueryPlannerVisitor::planWithoutTables(ASTSelectQueryExt & select_qu
     return toPlanBuilder(plan, analysis.getQueryWithoutFromScope(select_query));
 }
 
-PlanBuilder QueryPlannerVisitor::planTables(ASTTablesInSelectQuery & tables_in_select, ASTSelectQueryExt & select_query)
+PlanBuilder QueryPlannerVisitor::planTables(ASTTablesInSelectQuery & tables_in_select, ASTSelectQuery & select_query)
 {
     auto & first_table_elem = tables_in_select.children[0]->as<ASTTablesInSelectQueryElement &>();
     auto builder = planTableExpression(first_table_elem.table_expression->as<ASTTableExpression &>(), select_query);
@@ -488,7 +488,7 @@ PlanBuilder QueryPlannerVisitor::planTables(ASTTablesInSelectQuery & tables_in_s
     return builder;
 }
 
-PlanBuilder QueryPlannerVisitor::planTableExpression(ASTTableExpression & table_expression, ASTSelectQueryExt & select_query)
+PlanBuilder QueryPlannerVisitor::planTableExpression(ASTTableExpression & table_expression, ASTSelectQuery & select_query)
 {
     if (table_expression.database_and_table_name)
         return planTable(table_expression.database_and_table_name->as<ASTTableIdentifier &>(), select_query);
@@ -500,7 +500,7 @@ PlanBuilder QueryPlannerVisitor::planTableExpression(ASTTableExpression & table_
     __builtin_unreachable();
 }
 
-PlanBuilder QueryPlannerVisitor::planTable(ASTTableIdentifier & db_and_table, ASTSelectQueryExt & select_query)
+PlanBuilder QueryPlannerVisitor::planTable(ASTTableIdentifier & db_and_table, ASTSelectQuery & select_query)
 {
     // Reading a table consists of 3 steps:
     //  1. Read ordinary columns from storage
@@ -539,7 +539,7 @@ PlanBuilder QueryPlannerVisitor::planTable(ASTTableIdentifier & db_and_table, AS
     return builder;
 }
 
-PlanBuilder QueryPlannerVisitor::planTableFunction(ASTFunction & table_function, ASTSelectQueryExt & select_query)
+PlanBuilder QueryPlannerVisitor::planTableFunction(ASTFunction & table_function, ASTSelectQuery & select_query)
 {
     const auto * scope = analysis.getScope(table_function);
     auto relation_plan = planReadFromStorage(table_function, scope, select_query, true);
@@ -879,7 +879,7 @@ DataStream QueryPlannerVisitor::getJoinOutputStream(ASTTableJoin &, PlanBuilder 
 }
 
 RelationPlan
-QueryPlannerVisitor::planReadFromStorage(IAST & table_ast, ScopePtr table_scope, ASTSelectQueryExt & origin_query, bool is_table_function)
+QueryPlannerVisitor::planReadFromStorage(IAST & table_ast, ScopePtr table_scope, ASTSelectQuery & origin_query, bool is_table_function)
 {
     const auto & storage_analysis = analysis.getStorageAnalysis(table_ast);
     const auto & storage = storage_analysis.storage;
@@ -964,7 +964,7 @@ QueryPlannerVisitor::planReadFromStorage(IAST & table_ast, ScopePtr table_scope,
     }
 
     /// create ASTSelectQuery for "SELECT * FROM table" as if written by hand
-    const auto generated_query = std::make_shared<ASTSelectQueryExt>();
+    const auto generated_query = std::make_shared<ASTSelectQuery>();
     generated_query->setExpression(ASTSelectQuery::Expression::SELECT, std::make_shared<ASTExpressionList>());
     const auto select_expression_list = generated_query->select();
 
@@ -1036,7 +1036,7 @@ QueryPlannerVisitor::planReadFromStorage(IAST & table_ast, ScopePtr table_scope,
 }
 
 
-PlanBuilder QueryPlannerVisitor::planFrom(ASTSelectQueryExt & select_query)
+PlanBuilder QueryPlannerVisitor::planFrom(ASTSelectQuery & select_query)
 {
     if (select_query.tables())
             return planTables(select_query.refTables()->as<ASTTablesInSelectQuery &>(), select_query);
@@ -1044,7 +1044,7 @@ PlanBuilder QueryPlannerVisitor::planFrom(ASTSelectQueryExt & select_query)
             return planWithoutTables(select_query);
 }
 
-void QueryPlannerVisitor::planArrayJoin(ASTArrayJoin & array_join, PlanBuilder & builder, ASTSelectQueryExt & select_query)
+void QueryPlannerVisitor::planArrayJoin(ASTArrayJoin & array_join, PlanBuilder & builder, ASTSelectQuery & select_query)
 {
     const auto & array_join_analysis = analysis.getArrayJoinAnalysis(select_query);
     const auto & array_join_descs = array_join_analysis.descriptions;
@@ -1070,7 +1070,7 @@ void QueryPlannerVisitor::planArrayJoin(ASTArrayJoin & array_join, PlanBuilder &
     // PRINT_PLAN(builder.plan, plan_array_join);
 }
 
-void QueryPlannerVisitor::planFilter(PlanBuilder & builder, ASTSelectQueryExt & select_query, const ASTPtr & filter)
+void QueryPlannerVisitor::planFilter(PlanBuilder & builder, ASTSelectQuery & select_query, const ASTPtr & filter)
 {
     if (!filter || ASTEquality::compareTree(filter, PredicateConst::TRUE_VALUE))
         return;
@@ -1099,7 +1099,7 @@ void QueryPlannerVisitor::planFilter(PlanBuilder & builder, ASTSelectQueryExt & 
     builder.addStep(std::move(filter_step));
 }
 
-void QueryPlannerVisitor::planAggregate(PlanBuilder & builder, ASTSelectQueryExt & select_query)
+void QueryPlannerVisitor::planAggregate(PlanBuilder & builder, ASTSelectQuery & select_query)
 {
     if (!analysis.needAggregate(select_query))
     {
@@ -1318,7 +1318,7 @@ void QueryPlannerVisitor::planAggregate(PlanBuilder & builder, ASTSelectQueryExt
     // PRINT_PLAN(builder.plan, plan_aggregate);
 }
 
-void QueryPlannerVisitor::planTotalsAndHaving(PlanBuilder & builder, ASTSelectQueryExt & select_query)
+void QueryPlannerVisitor::planTotalsAndHaving(PlanBuilder & builder, ASTSelectQuery & select_query)
 {
     const auto & settings = context->getSettingsRef();
     AggregateDescriptions aggregate_descriptions;
@@ -1337,7 +1337,7 @@ void QueryPlannerVisitor::planTotalsAndHaving(PlanBuilder & builder, ASTSelectQu
     builder.addStep(std::move(totals_having_step));
 }
 
-void QueryPlannerVisitor::planWindow(PlanBuilder & builder, ASTSelectQueryExt & select_query)
+void QueryPlannerVisitor::planWindow(PlanBuilder & builder, ASTSelectQuery & select_query)
 {
     if (analysis.getWindowAnalysisOfSelectQuery(select_query).empty())
         return;
@@ -1483,13 +1483,13 @@ void QueryPlannerVisitor::planWindow(PlanBuilder & builder, ASTSelectQueryExt & 
     }
 }
 
-void QueryPlannerVisitor::planSelect(PlanBuilder & builder, ASTSelectQueryExt & select_query)
+void QueryPlannerVisitor::planSelect(PlanBuilder & builder, ASTSelectQuery & select_query)
 {
     auto & select_expressions = analysis.getSelectExpressions(select_query);
     planExpression(builder, select_query, select_expressions);
 }
 
-void QueryPlannerVisitor::planDistinct(PlanBuilder & builder, ASTSelectQueryExt & select_query)
+void QueryPlannerVisitor::planDistinct(PlanBuilder & builder, ASTSelectQuery & select_query)
 {
     if (!select_query.distinct)
         return;
@@ -1509,7 +1509,7 @@ void QueryPlannerVisitor::planDistinct(PlanBuilder & builder, ASTSelectQueryExt 
     // PRINT_PLAN(builder.plan, plan_distinct);
 }
 
-void QueryPlannerVisitor::planOrderBy(PlanBuilder & builder, ASTSelectQueryExt & select_query)
+void QueryPlannerVisitor::planOrderBy(PlanBuilder & builder, ASTSelectQuery & select_query)
 {
     if (!select_query.orderBy())
         return;
@@ -1552,7 +1552,7 @@ void QueryPlannerVisitor::planOrderBy(PlanBuilder & builder, ASTSelectQueryExt &
     // PRINT_PLAN(builder.plan, plan_order_by);
 }
 
-void QueryPlannerVisitor::planWithFill(PlanBuilder & builder, ASTSelectQueryExt & select_query)
+void QueryPlannerVisitor::planWithFill(PlanBuilder & builder, ASTSelectQuery & select_query)
 {
     if (!select_query.orderBy())
         return;
@@ -1593,7 +1593,7 @@ void QueryPlannerVisitor::planWithFill(PlanBuilder & builder, ASTSelectQueryExt 
     // PRINT_PLAN(builder.plan, plan_with_fill);
 }
 
-void QueryPlannerVisitor::planLimitBy(PlanBuilder & builder, ASTSelectQueryExt & select_query)
+void QueryPlannerVisitor::planLimitBy(PlanBuilder & builder, ASTSelectQuery & select_query)
 {
     if (!select_query.limitBy())
         return;
@@ -1610,7 +1610,7 @@ void QueryPlannerVisitor::planLimitBy(PlanBuilder & builder, ASTSelectQueryExt &
     planExpression(builder, select_query, limit_by_expressions);
     // PRINT_PLAN(builder.plan, plan_prepare_limit_by);
 
-    UInt64 offset = select_query.getLimitByOffset() ? analysis.getLimitByOffsetValue(select_query) : 0;
+    UInt64 offset = select_query.getExpression(ASTSelectQuery::Expression::LIMIT_BY_OFFSET, true) ? analysis.getLimitByOffsetValue(select_query) : 0;
 
     // plan limit by node
     auto step = std::make_shared<LimitByStep>(
@@ -1660,7 +1660,7 @@ RelationPlan QueryPlannerVisitor::projectFieldSymbols(const RelationPlan & plan,
     return {new_root, std::move(new_mappings)};
 }
 
-static bool hasWithTotalsInAnySubqueryInFromClause(const ASTSelectQueryExt & query)
+static bool hasWithTotalsInAnySubqueryInFromClause(const ASTSelectQuery & query)
 {
     if (query.group_by_with_totals)
         return true;
@@ -1679,9 +1679,9 @@ static bool hasWithTotalsInAnySubqueryInFromClause(const ASTSelectQueryExt & que
             * number of children in those nodes is always 2.
             */
             std::function<bool(ASTPtr)> traverse_recursively = [&](ASTPtr child_ast) -> bool {
-                if (const auto * select_child = child_ast->as<ASTSelectQueryExt>())
+                if (const auto * select_child = child_ast->as<ASTSelectQuery>())
                 {
-                    if (hasWithTotalsInAnySubqueryInFromClause(select_child->as<ASTSelectQueryExt &>()))
+                    if (hasWithTotalsInAnySubqueryInFromClause(select_child->as<ASTSelectQuery &>()))
                         return true;
                 }
                 else if (const auto * union_child = child_ast->as<ASTSelectWithUnionQuery>())
@@ -1709,7 +1709,7 @@ static bool hasWithTotalsInAnySubqueryInFromClause(const ASTSelectQueryExt & que
     return false;
 }
 
-void QueryPlannerVisitor::planLimitAndOffset(PlanBuilder & builder, ASTSelectQueryExt & select_query)
+void QueryPlannerVisitor::planLimitAndOffset(PlanBuilder & builder, ASTSelectQuery & select_query)
 {
     if (select_query.limitLength())
     {
@@ -1736,7 +1736,7 @@ void QueryPlannerVisitor::planLimitAndOffset(PlanBuilder & builder, ASTSelectQue
         auto step = std::make_shared<LimitStep>(builder.getCurrentDataStream(), limit_length, limit_offset, always_read_till_end);
         builder.addStep(std::move(step));
     }
-    else if (select_query.getLimitOffset())
+    else if (select_query.getExpression(ASTSelectQuery::Expression::LIMIT_BY_OFFSET, true))
     {
         UInt64 offset = analysis.getLimitOffset(select_query);
         auto offsets_step = std::make_unique<OffsetStep>(builder.getCurrentDataStream(), offset);
@@ -1744,7 +1744,7 @@ void QueryPlannerVisitor::planLimitAndOffset(PlanBuilder & builder, ASTSelectQue
     }
 }
 
-void QueryPlannerVisitor::planSampling(PlanBuilder & builder, ASTSelectQueryExt & select_query)
+void QueryPlannerVisitor::planSampling(PlanBuilder & builder, ASTSelectQuery & select_query)
 {
     if (select_query.sampleSize() && context->getOptimizerContext()->getSettingsRef().enable_final_sample)
     {
@@ -1763,7 +1763,7 @@ void QueryPlannerVisitor::planSampling(PlanBuilder & builder, ASTSelectQueryExt 
     }
 }
 
-RelationPlan QueryPlannerVisitor::planFinalSelect(PlanBuilder & builder, ASTSelectQueryExt & select_query)
+RelationPlan QueryPlannerVisitor::planFinalSelect(PlanBuilder & builder, ASTSelectQuery & select_query)
 {
     const auto & select_expressions = analysis.getSelectExpressions(select_query);
     FieldSymbolInfos field_symbol_infos;
@@ -1900,7 +1900,7 @@ namespace
 }
 
 template <typename T>
-PlanNodes QueryPlannerVisitor::planSubqueryExpression(PlanBuilder & builder, ASTSelectQueryExt & select_query, const T & expressions)
+PlanNodes QueryPlannerVisitor::planSubqueryExpression(PlanBuilder & builder, ASTSelectQuery & select_query, const T & expressions)
 {
     if constexpr (std::is_same_v<T, ASTs>)
     {
@@ -1970,7 +1970,7 @@ void QueryPlannerVisitor::planScalarSubquery(PlanBuilder & builder, const ASTPtr
     // PRINT_PLAN(builder.plan, plan_scalar_subquery);
 }
 
-void QueryPlannerVisitor::planInSubquery(PlanBuilder & builder, const ASTPtr & node, ASTSelectQueryExt & select_query)
+void QueryPlannerVisitor::planInSubquery(PlanBuilder & builder, const ASTPtr & node, ASTSelectQuery & select_query)
 {
     // filter out planned subqueries
     if (builder.canTranslateToSymbol(node))
@@ -2050,7 +2050,7 @@ void QueryPlannerVisitor::planExistsSubquery(PlanBuilder & builder, const ASTPtr
     // PRINT_PLAN(builder.plan, plan_exists_subquery);
 }
 
-void QueryPlannerVisitor::planQuantifiedComparisonSubquery(PlanBuilder & builder, const ASTPtr & node, ASTSelectQueryExt & select_query)
+void QueryPlannerVisitor::planQuantifiedComparisonSubquery(PlanBuilder & builder, const ASTPtr & node, ASTSelectQuery & select_query)
 {
     if (builder.canTranslateToSymbol(node))
         return;
@@ -2415,7 +2415,7 @@ PlanBuilder QueryPlannerVisitor::toPlanBuilder(const RelationPlan & plan, ScopeP
     auto translation_map = std::make_shared<TranslationMap>(outer_context, scope, plan.field_symbol_infos, analysis, context);
     return {analysis, context->getOptimizerContext()->getPlanNodeIdAllocator(), context->getOptimizerContext()->getSymbolAllocator(), plan.root, translation_map};
 }
-std::pair<UInt64, UInt64> QueryPlannerVisitor::getLimitLengthAndOffset(ASTSelectQueryExt & query)
+std::pair<UInt64, UInt64> QueryPlannerVisitor::getLimitLengthAndOffset(ASTSelectQuery & query)
 {
     UInt64 length = 0;
     UInt64 offset = 0;
@@ -2436,7 +2436,7 @@ void QueryPlannerVisitor::processSubqueryArgs(
     String & rhs_symbol,
     String & lhs_symbol,
     RelationPlan & rhs_plan,
-    ASTSelectQueryExt & select_query)
+    ASTSelectQuery & select_query)
 {
     //process lhs
     auto & lhs_ast = children.at(0);
@@ -2461,7 +2461,7 @@ void QueryPlannerVisitor::processSubqueryArgs(
     rhs_symbol = rhs_plan.getFirstPrimarySymbol();
 }
 
-bool QueryPlannerVisitor::needAggregateOverflowRow(ASTSelectQueryExt & select_query) const
+bool QueryPlannerVisitor::needAggregateOverflowRow(ASTSelectQuery & select_query) const
 {
     const auto & settings = context->getSettingsRef();
     return select_query.group_by_with_totals && settings.max_rows_to_group_by && settings.group_by_overflow_mode == OverflowMode::ANY
@@ -2469,7 +2469,7 @@ bool QueryPlannerVisitor::needAggregateOverflowRow(ASTSelectQueryExt & select_qu
 }
 
 template <typename T>
-void QueryPlannerVisitor::planExpression(PlanBuilder & builder, ASTSelectQueryExt & select_query, const T & expressions)
+void QueryPlannerVisitor::planExpression(PlanBuilder & builder, ASTSelectQuery & select_query, const T & expressions)
 {
     if constexpr (std::is_same_v<T, ASTPtr>)
     {
@@ -2488,7 +2488,7 @@ void QueryPlannerVisitor::planExpression(PlanBuilder & builder, ASTSelectQueryEx
 }
 
 template <typename T>
-void QueryPlannerVisitor::planNonDeterministicFunction(PlanBuilder & builder, ASTSelectQueryExt & select_query, const T & expressions)
+void QueryPlannerVisitor::planNonDeterministicFunction(PlanBuilder & builder, ASTSelectQuery & select_query, const T & expressions)
 {
     if constexpr (std::is_same_v<T, ASTPtr>)
     {

@@ -48,8 +48,8 @@ PlanNodeStatisticsPtr TableScanEstimator::estimate(ContextMutablePtr context, co
     }
 
     auto query_info = step.getQueryInfo();
-    auto *query = query_info.query->as<ASTSelectQueryExt>();
-    if (step.hasLimit() && query->getLimitLength())
+    auto *query = query_info.query->as<ASTSelectQuery>();
+    if (step.hasLimit() && query->getExpression(ASTSelectQuery::Expression::LIMIT_LENGTH, true))
     {
         Field converted = convertFieldToType(query->refLimitLength()->as<ASTLiteral>()->value, DataTypeUInt64());
         return LimitEstimator::getLimitStatistics(plan_node_stats, converted.safeGet<UInt64>());

@@ -322,7 +322,7 @@ std::set<std::string> RemoveRedundantAggregateVisitor::extractSymbol(const Const
         if(function.name == "tuple")
         {
             const auto & child_node = function.children[0];
-            if(getAstType(child_node) == ASTType::ASTExpressionListExt)
+            if(getAstType(child_node) == ASTType::ASTExpressionList)
             {
                 auto & expression_list = child_node->as<ASTExpressionList &>();
                 std::set<std::string> symbols;

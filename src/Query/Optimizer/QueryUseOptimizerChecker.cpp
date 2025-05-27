@@ -231,7 +231,7 @@ checkDatabaseAndTable(const ASTTableExpression & table_expression, const Context
     return true;
 }
 
-bool QueryUseOptimizerVisitor::visitASTSelectQueryExt(ASTPtr & node, QueryUseOptimizerContext & context)
+bool QueryUseOptimizerVisitor::visitASTSelectQuery(ASTPtr & node, QueryUseOptimizerContext & context)
 {
     auto * select = node->as<ASTSelectQuery>();
 

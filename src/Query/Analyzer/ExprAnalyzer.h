@@ -33,7 +33,7 @@ struct ExprAnalyzerOptions
     String statement_name;                                                // the statement name of the analyzed expression,
                                                                           // used for error reporting
 
-    ASTSelectQueryExt * select_query = nullptr;                              // the ASTSelectQuery of the analyzed expression,
+    ASTSelectQuery * select_query = nullptr;                              // the ASTSelectQuery of the analyzed expression,
                                                                           // used for register subquery, aggregates & windows functions
 
     AggregateSupport aggregate_support = AggregateSupport::DISALLOWED;
@@ -49,7 +49,7 @@ struct ExprAnalyzerOptions
     {}
 
     // setters
-    ExprAnalyzerOptions & selectQuery(ASTSelectQueryExt & query)
+    ExprAnalyzerOptions & selectQuery(ASTSelectQuery & query)
     {
         select_query = &query;
         return *this;

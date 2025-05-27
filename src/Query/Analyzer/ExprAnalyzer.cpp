@@ -79,7 +79,7 @@ public:
     ColumnWithTypeAndName visitASTTableColumnReference(ASTPtr & node, AnalyzeContext &) override;
     // todo: zhangwanyun1, now do not support ASTPreparedParameter
     // ColumnWithTypeAndName visitASTPreparedParameter(ASTPtr & node, AnalyzeContext &) override;
-    ColumnWithTypeAndName visitASTExpressionListExt(ASTPtr & node, AnalyzeContext &) override;
+    ColumnWithTypeAndName visitASTExpressionList(ASTPtr & node, AnalyzeContext &) override;
 
     ExprAnalyzerVisitor(ContextPtr context_, Analysis & analysis_, ScopePtr scope_, ExprAnalyzerOptions options_)
         : context(std::move(context_))
@@ -190,7 +190,7 @@ ColumnWithTypeAndName ExprAnalyzerVisitor::visitNode(ASTPtr & node, AnalyzeConte
     throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Unsupported Node {}", node->getID());
 }
 
-ColumnWithTypeAndName ExprAnalyzerVisitor::visitASTExpressionListExt(ASTPtr &, AnalyzeContext &)
+ColumnWithTypeAndName ExprAnalyzerVisitor::visitASTExpressionList(ASTPtr &, AnalyzeContext &)
 {
     return ColumnWithTypeAndName{nullptr, std::make_shared<DataTypeNothing>(), "list"};
 }

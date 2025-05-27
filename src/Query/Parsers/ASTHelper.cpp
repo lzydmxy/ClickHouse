@@ -345,7 +345,7 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
             writeFieldBinary(change.value, buf);
         }
     }
-    else if (const auto * casted = ast.as<ASTExpressionListExt>())
+    else if (const auto * casted = ast.as<ASTExpressionList>())
     {
         writeBinary(casted->separator, buf);
         serializeASTs(casted->children, buf);
@@ -400,7 +400,7 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
     {
         serializeASTs(casted->children, buf);
     }
-    else if (const auto * casted = ast.as<ASTSelectQueryExt>())
+    else if (const auto * casted = ast.as<ASTSelectQuery>())
     {
         writeBinary(casted->distinct, buf);
         writeBinary(casted->group_by_with_totals, buf);
@@ -497,6 +497,29 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
         writeFieldBinary(casted->value, buf);
         writeBinary(casted->unique_column_name, buf);
         writeBinary(casted->use_legacy_column_name_of_tuple, buf);
+    }
+    else if (const auto * casted = ast.as<ASTSelectWithUnionQuery>())
+    {
+        // serialize ASTQueryWithOutput
+        serializeAST(casted->out_file, buf);
+        serializeAST(casted->format, buf);
+        serializeAST(casted->compression, buf);
+        serializeAST(casted->compression_level, buf);
+        serializeAST(casted->settings_ast, buf);
+
+        serializeEnum(casted->union_mode, buf);
+
+        writeBinary(casted->list_of_modes.size(), buf);
+        for (auto & mode : casted->list_of_modes)
+            serializeEnum(mode, buf);
+
+        writeBinary(casted->is_normalized, buf);
+
+        serializeAST(casted->list_of_selects, buf);
+
+        writeBinary(casted->set_of_modes.size(), buf);
+        for (auto & mode : casted->set_of_modes)
+            serializeEnum(mode, buf);
     }
     // todo wujianchao add more types
     else
@@ -680,9 +703,9 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
 
             return ast;
         }
-        case ASTType::ASTExpressionListExt:
+        case ASTType::ASTExpressionList:
         {
-            auto ast = std::make_shared<ASTExpressionListExt>();
+            auto ast = std::make_shared<ASTExpressionList>();
             readBinary(ast->separator, buf);
             ast->children = deserializeASTs(buf);
             return ast;
@@ -747,9 +770,9 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
             ast->children = deserializeASTs(buf);
             return ast;
         }
-        case ASTType::ASTSelectQueryExt:
+        case ASTType::ASTSelectQuery:
         {
-            auto ast = std::make_shared<ASTSelectQueryExt>();
+            auto ast = std::make_shared<ASTSelectQuery>();
             ast->children.clear();
             ast->positions.clear();
 
@@ -890,6 +913,38 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
             ast->prefer_alias_to_column_name = prefer_alias_to_column_name;
             readBinary(ast->unique_column_name, buf);
             readBinary(ast->use_legacy_column_name_of_tuple, buf);
+            return ast;
+        }
+        case ASTType::ASTSelectWithUnionQuery:
+        {
+            auto ast = std::make_shared<ASTSelectWithUnionQuery>();
+            // deserialize ASTQueryWithOutput
+            ast->out_file = deserializeASTWithChildren(ast->children, buf);
+            ast->format = deserializeASTWithChildren(ast->children, buf);
+            ast->compression = deserializeASTWithChildren(ast->children, buf);
+            ast->compression_level = deserializeASTWithChildren(ast->children, buf);
+            ast->settings_ast = deserializeASTWithChildren(ast->children, buf);
+
+            deserializeEnum(ast->union_mode, buf);
+
+            size_t s1;
+            readBinary(s1, buf);
+            ast->list_of_modes.resize(s1);
+            for (size_t i = 0; i < s1; ++i)
+                deserializeEnum(ast->list_of_modes[i], buf);
+
+            readBinary(ast->is_normalized, buf);
+
+            ast->list_of_selects = deserializeASTWithChildren(ast->children, buf);
+
+            size_t s2;
+            readBinary(s2, buf);
+            for (size_t i = 0; i < s2; ++i)
+            {
+                SelectUnionMode mode;
+                deserializeEnum(mode, buf);
+                ast->set_of_modes.insert(mode);
+            }
             return ast;
         }
 

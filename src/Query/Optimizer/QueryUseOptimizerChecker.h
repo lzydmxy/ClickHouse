@@ -29,7 +29,7 @@ class QueryUseOptimizerVisitor : public ASTVisitor<bool, QueryUseOptimizerContex
 {
 public:
     bool visitNode(ASTPtr & node, QueryUseOptimizerContext &) override;
-    bool visitASTSelectQueryExt(ASTPtr & node, QueryUseOptimizerContext &) override;
+    bool visitASTSelectQuery(ASTPtr & node, QueryUseOptimizerContext &) override;
     bool visitASTTableJoin(ASTPtr & node, QueryUseOptimizerContext &) override;
     bool visitASTIdentifier(ASTPtr & node, QueryUseOptimizerContext &) override;
     bool visitASTFunction(ASTPtr & node, QueryUseOptimizerContext &) override;
