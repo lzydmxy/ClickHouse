@@ -43,6 +43,7 @@ OptimizerContext::OptimizerContext(const Settings & settings_, const Poco::Util:
     initQueryExpirationTimeStamp();
     data = std::make_shared<OptimizerContextData>();
     plan_segment_process_list = std::make_shared<PlanSegmentProcessList>();
+    segment_scheduler = std::make_shared<SegmentScheduler>();
 }
 
 void OptimizerContext::setQueryMaxExecutionTime(UInt32 milli_second)
@@ -221,7 +222,6 @@ std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> OptimizerCon
 
 SegmentSchedulerPtr OptimizerContext::getSegmentScheduler() const
 {
-    //todo: zhangdongdong92, other feat: need a part shared lock
     return segment_scheduler;
 }
 
