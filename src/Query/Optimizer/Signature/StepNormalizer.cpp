@@ -163,7 +163,8 @@ StepAndOutputOrder StepNormalizer::visitStep(const IQueryPlanStep & step, StepsA
     QueryPlanStepPtr normal_step = symbol_mapper.map(step);
 
     // replace the input_stream because of reordering
-    normal_step->updateInputStreams(normal_input_streams);
+    if (normal_step->canUpdateInputStream())
+        normal_step->updateInputStreams(normal_input_streams);
     Block output_order = getOutputOrder(step, *normal_step, symbol_mapper);
     return StepAndOutputOrder{normal_step, std::move(output_order)};
 }
@@ -242,9 +243,9 @@ StepAndOutputOrder StepNormalizer::visitTableScanStepExt(const TableScanStepExt 
         nullptr, // push down filter
         mapped_table_output_stream);
 
-//     // if (normalize_storage && step.getStorage())
-//     //     normal_table_scan->setOriginalTable(
-//     //         StorageCnchMergeTree::getOriginalTableName(normal_table_scan->getStorageID().table_name, context->getCurrentTransactionID()));
+    //     // if (normalize_storage && step.getStorage())
+    //     //     normal_table_scan->setOriginalTable(
+    //     //         StorageCnchMergeTree::getOriginalTableName(normal_table_scan->getStorageID().table_name, context->getCurrentTransactionID()));
 
     // for table scan, we also need to normalize push downs
     if (const QueryPlanStepPtr & push_down_filter = step.getPushdownFilter())

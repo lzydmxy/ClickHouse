@@ -150,7 +150,8 @@ private:
         for (const auto & child : children)
             inputs.emplace_back(child->getCurrentDataStream());
 
-        getStep()->updateInputStreams(inputs);
+        if (getStep()->canUpdateInputStream())
+            getStep()->updateInputStreams(inputs);
     }
 
     void setStepImpl(QueryPlanStepPtr & step_) override
