@@ -209,7 +209,7 @@ BlockIO PlanSegmentExecutor::lazyExecute(bool /*add_output_processors*/)
     if (!CurrentThread::get().getQueryContext() || CurrentThread::get().getQueryContext().get() != context.get())
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Context not match");
 
-    auto plan_segment_process_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(context, plan_segment->getPlanSegmentId());
+    // auto plan_segment_process_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(context, plan_segment->getPlanSegmentId());
     // optimizer_context->getPlanSegmentProcessList()->insertProcessList(plan_segment_process_entry, plan_segment->getPlanSegmentId(), context);
     // set entry before buildPipeline to control memory usage of exchange queue
     // optimizer_context->setPlanSegmentProcessListEntry(plan_segment_process_entry);

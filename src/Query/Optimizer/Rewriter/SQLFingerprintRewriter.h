@@ -38,8 +38,7 @@ public:
     ASTPtr visitASTSelectQuery(ASTPtr & node, Void & context) override
     {
         auto select_ptr = std::dynamic_pointer_cast<ASTSelectQuery>(node);
-        // select_ptr->removeSettingsAndOutputFormat();
-        select_ptr->setExpression(ASTSelectQuery::Expression::SETTINGS, nullptr);
+        select_ptr->removeSettingsAndOutputFormat();
         return visitNode(node, context);
     }
 

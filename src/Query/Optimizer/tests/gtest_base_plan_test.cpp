@@ -219,7 +219,7 @@ std::string AbstractPlanTestSuite::explain(const std::string & name)
     auto context = createQueryContext(query.settings);
     for (auto & sql : query.sql)
     {
-        if (getAstType(sql.second) == DB::ASTType::ASTSelectQueryExt || getAstType(sql.second) == DB::ASTType::ASTSelectWithUnionQuery)
+        if (getAstType(sql.second) == DB::ASTType::ASTSelectQuery || getAstType(sql.second) == DB::ASTType::ASTSelectWithUnionQuery)
         {
             auto query_plan = plan(sql.first, context);
 

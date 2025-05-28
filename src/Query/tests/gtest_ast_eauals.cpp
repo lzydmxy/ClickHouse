@@ -176,15 +176,15 @@ namespace {
     // create different SelectQuery
     ASTPtr createBaseSelect()
     {
-        auto query = std::make_shared<ASTSelectQueryExt>();
-        query->setExpression(ASTSelectQueryExt::Expression::SELECT, makeASTFunction("tuple", makeIdentifier("col1")));
-        query->setExpression(ASTSelectQueryExt::Expression::TABLES, makeASTFunction("table", makeIdentifier("tbl")));
+        auto query = std::make_shared<ASTSelectQuery>();
+        query->setExpression(ASTSelectQuery::Expression::SELECT, makeASTFunction("tuple", makeIdentifier("col1")));
+        query->setExpression(ASTSelectQuery::Expression::TABLES, makeASTFunction("table", makeIdentifier("tbl")));
         return query;
     }
 
-    void addWhereClause(ASTSelectQueryExt & query, ASTPtr condition)
+    void addWhereClause(ASTSelectQuery & query, ASTPtr condition)
     {
-        query.setExpression(ASTSelectQueryExt::Expression::WHERE, std::move(condition));
+        query.setExpression(ASTSelectQuery::Expression::WHERE, std::move(condition));
     }
 }
 
@@ -941,7 +941,7 @@ TEST(ASTEqualsTest, CompareASTSelectQuery)
         // different clause test
         auto base = createBaseSelect();
         auto with_where = createBaseSelect();
-        addWhereClause(*with_where->as<ASTSelectQueryExt>(), makeASTFunction("equals", makeIdentifier("id"), makeIntLiteral(1)));
+        addWhereClause(*with_where->as<ASTSelectQuery>(), makeASTFunction("equals", makeIdentifier("id"), makeIntLiteral(1)));
 
         EXPECT_FALSE(DB::ASTEquality::compareTree(base, with_where));
     }
@@ -949,7 +949,7 @@ TEST(ASTEqualsTest, CompareASTSelectQuery)
         // different flag test
         auto q1 = createBaseSelect();
         auto q2 = createBaseSelect();
-        q2->as<ASTSelectQueryExt>()->distinct = true;
+        q2->as<ASTSelectQuery>()->distinct = true;
         EXPECT_TRUE(DB::ASTEquality::compareTree(q1, q2));
     }
     {
@@ -960,30 +960,30 @@ TEST(ASTEqualsTest, CompareASTSelectQuery)
         auto group_by1 = makeASTFunction("grouping_sets", makeIdentifier("dept"));
         auto group_by2 = makeASTFunction("grouping_sets", makeIdentifier("team"));
 
-        q1->as<ASTSelectQueryExt>()->setExpression(ASTSelectQueryExt::Expression::GROUP_BY, group_by1);
-        q2->as<ASTSelectQueryExt>()->setExpression(ASTSelectQueryExt::Expression::GROUP_BY, group_by2);
+        q1->as<ASTSelectQuery>()->setExpression(ASTSelectQuery::Expression::GROUP_BY, group_by1);
+        q2->as<ASTSelectQuery>()->setExpression(ASTSelectQuery::Expression::GROUP_BY, group_by2);
         EXPECT_FALSE(DB::ASTEquality::compareTree(q1, q2));
     }
     {
         // hash consistency test
         auto q1 = createBaseSelect();
-        q1->as<ASTSelectQueryExt>()->setExpression(ASTSelectQueryExt::Expression::LIMIT_LENGTH, makeIntLiteral(10));
+        q1->as<ASTSelectQuery>()->setExpression(ASTSelectQuery::Expression::LIMIT_LENGTH, makeIntLiteral(10));
 
         size_t hash1 = DB::ASTEquality::hashTree(q1);
         size_t hash2 = DB::ASTEquality::hashTree(q1->clone());
         EXPECT_EQ(hash1, hash2);
 
-        q1->as<ASTSelectQueryExt>()->limit_with_ties = true;
+        q1->as<ASTSelectQuery>()->limit_with_ties = true;
         size_t hash3 = DB::ASTEquality::hashTree(q1);
         EXPECT_EQ(hash1, hash3);
 
-        q1->as<ASTSelectQueryExt>()->setExpression(ASTSelectQueryExt::Expression::LIMIT_OFFSET, makeIntLiteral(5));
+        q1->as<ASTSelectQuery>()->setExpression(ASTSelectQuery::Expression::LIMIT_OFFSET, makeIntLiteral(5));
         size_t hash4 = DB::ASTEquality::hashTree(q1);
         EXPECT_NE(hash1, hash4);
     }
     {
         // empty clause test
-        auto empty = std::make_shared<ASTSelectQueryExt>();
+        auto empty = std::make_shared<ASTSelectQuery>();
         auto with_select = createBaseSelect();
         EXPECT_FALSE(DB::ASTEquality::compareTree(empty, with_select));
     }
@@ -992,11 +992,11 @@ TEST(ASTEqualsTest, CompareASTSelectQuery)
         auto q1 = createBaseSelect();
         auto q2 = createBaseSelect();
 
-        q1->as<ASTSelectQueryExt>()->setExpression(ASTSelectQueryExt::Expression::WHERE, makeIntLiteral(true));
-        q1->as<ASTSelectQueryExt>()->setExpression(ASTSelectQueryExt::Expression::HAVING, makeIntLiteral(false));
+        q1->as<ASTSelectQuery>()->setExpression(ASTSelectQuery::Expression::WHERE, makeIntLiteral(true));
+        q1->as<ASTSelectQuery>()->setExpression(ASTSelectQuery::Expression::HAVING, makeIntLiteral(false));
 
-        q2->as<ASTSelectQueryExt>()->setExpression(ASTSelectQueryExt::Expression::HAVING, makeIntLiteral(false));
-        q2->as<ASTSelectQueryExt>()->setExpression(ASTSelectQueryExt::Expression::WHERE, makeIntLiteral(true));
+        q2->as<ASTSelectQuery>()->setExpression(ASTSelectQuery::Expression::HAVING, makeIntLiteral(false));
+        q2->as<ASTSelectQuery>()->setExpression(ASTSelectQuery::Expression::WHERE, makeIntLiteral(true));
 
         EXPECT_FALSE(DB::ASTEquality::compareTree(q1, q2));
     }

@@ -1611,7 +1611,7 @@ void QueryPlannerVisitor::planLimitBy(PlanBuilder & builder, ASTSelectQuery & se
     planExpression(builder, select_query, limit_by_expressions);
     // PRINT_PLAN(builder.plan, plan_prepare_limit_by);
 
-    UInt64 offset = select_query.getExpression(ASTSelectQuery::Expression::LIMIT_BY_OFFSET, true) ? analysis.getLimitByOffsetValue(select_query) : 0;
+    UInt64 offset = select_query.limitByOffset() ? analysis.getLimitByOffsetValue(select_query) : 0;
 
     // plan limit by node
     auto step = std::make_shared<LimitByStep>(
@@ -1734,10 +1734,10 @@ void QueryPlannerVisitor::planLimitAndOffset(PlanBuilder & builder, ASTSelectQue
         UInt64 limit_length;
         UInt64 limit_offset;
         std::tie(limit_length, limit_offset) = getLimitLengthAndOffset(select_query);
-        auto step = std::make_shared<LimitStep>(builder.getCurrentDataStream(), limit_length, limit_offset, always_read_till_end);
+        auto step = std::make_shared<LimitStepExt>(builder.getCurrentDataStream(), limit_length, limit_offset, always_read_till_end);
         builder.addStep(std::move(step));
     }
-    else if (select_query.getExpression(ASTSelectQuery::Expression::LIMIT_BY_OFFSET, true))
+    else if (select_query.limitOffset())
     {
         UInt64 offset = analysis.getLimitOffset(select_query);
         auto offsets_step = std::make_unique<OffsetStep>(builder.getCurrentDataStream(), offset);

@@ -1193,11 +1193,11 @@ String PlanPrinter::TextPrinter::printDetail(QueryPlanStepPtr plan, const TextPr
             // }
         }
 
-        if (auto where = query->getExpression(ASTSelectQuery::Expression::WHERE, true))
+        if (auto where = query->where())
             out << intent.detailIntent() << "Where: " << printFilter(where, max_predicate_text_length);
-        if (auto prewhere = query->getExpression(ASTSelectQuery::Expression::PREWHERE, true))
+        if (auto prewhere = query->prewhere())
             out << intent.detailIntent() << "Prewhere: " << printFilter(prewhere, max_predicate_text_length);
-        if (query->getExpression(ASTSelectQuery::Expression::LIMIT_LENGTH, true))
+        if (query->limitLength())
         {
             out << intent.detailIntent() << "Limit: ";
             Field converted = convertFieldToType(query->refLimitLength()->as<ASTLiteral>()->value, DataTypeUInt64());
@@ -1500,11 +1500,11 @@ void NodeDescription::setStepDetail(QueryPlanStepPtr step)
         const auto & query_info = table_scan->getQueryInfo();
         auto * query = query_info.query->as<ASTSelectQuery>();
 
-        if (auto where = query->getExpression(ASTSelectQuery::Expression::WHERE, true))
+        if (auto where = query->where())
             step_detail["Where"] = PlanPrinter::TextPrinter::printFilter(where);
-        if (auto prewhere = query->getExpression(ASTSelectQuery::Expression::PREWHERE, true))
+        if (auto prewhere = query->prewhere())
             step_detail["Prewhere"] = PlanPrinter::TextPrinter::printFilter(prewhere);
-        if (query->getExpression(ASTSelectQuery::Expression::LIMIT_LENGTH, true))
+        if (query->limitLength())
         {
             Field converted = convertFieldToType(query->refLimitLength()->as<ASTLiteral>()->value, DataTypeUInt64());
             step_detail["Limit"] = std::to_string(converted.safeGet<UInt64>());

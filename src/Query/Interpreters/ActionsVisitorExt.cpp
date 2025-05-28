@@ -4,7 +4,7 @@
 #include <Core/Field.h>
 #include <DataTypes/DataTypeTuple.h>
 #include <DataTypes/DataTypeArray.h>
-#include <Query/Parsers/ASTExpressionListExt.h>
+#include <Parsers/ASTExpressionList.h>
 #include <Interpreters/Context.h>
 #include <Interpreters/convertFieldToType.h>
 #include <Interpreters/evaluateConstantExpression.h>
@@ -239,7 +239,7 @@ Block createBlockForSet(
     /// 1 in 1; (1, 2) in (1, 2); identity(tuple(tuple(tuple(1)))) in tuple(tuple(tuple(1))); etc.
     if (left_tuple_depth == right_tuple_depth)
     {
-        ASTPtr exp_list = std::make_shared<ASTExpressionListExt>();
+        ASTPtr exp_list = std::make_shared<ASTExpressionList>();
         exp_list->children.push_back(right_arg);
         elements_ast = exp_list;
     }

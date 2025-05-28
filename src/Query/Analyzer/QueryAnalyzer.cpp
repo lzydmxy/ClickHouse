@@ -1713,9 +1713,9 @@ void QueryAnalyzerVisitor::analyzeLimitBy(ASTSelectQuery & select_query, ASTs & 
         auto limit_by_value = analyzeUIntConstExpression(select_query.limitByLength());
         analysis.limit_by_values[&select_query] = limit_by_value;
 
-        if (select_query.getExpression(ASTSelectQuery::Expression::LIMIT_BY_OFFSET, true))
+        if (select_query.limitByOffset())
         {
-            auto limit_by_offset_value = analyzeUIntConstExpression(select_query.getExpression(ASTSelectQuery::Expression::LIMIT_BY_OFFSET, true));
+            auto limit_by_offset_value = analyzeUIntConstExpression(select_query.limitByOffset());
             analysis.limit_by_offset_values[&select_query] = limit_by_offset_value;
         }
     }

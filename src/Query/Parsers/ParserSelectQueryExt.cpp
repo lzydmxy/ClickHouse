@@ -2,7 +2,7 @@
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/ASTOrderByElement.h>
-#include <Query/Parsers/ASTSelectQueryExt.h>
+#include <Parsers/ASTSelectQuery.h>
 #include <Parsers/IParserBase.h>
 #include <Parsers/CommonParsers.h>
 #include <Parsers/ExpressionElementParsers.h>
@@ -12,7 +12,7 @@
 #include <Query/Parsers/ParserSelectQueryExt.h>
 #include <Parsers/ParserTablesInSelectQuery.h>
 #include <Parsers/ParserWithElement.h>
-#include <Query/Parsers/ASTExpressionListExt.h>
+#include <Parsers/ASTExpressionList.h>
 #include <Parsers/ASTInterpolateElement.h>
 #include <Poco/Logger.h>
 #include <Parsers/formatAST.h>
@@ -36,7 +36,7 @@ namespace ErrorCodes
 
 bool ParserSelectQueryExt::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
 {
-    auto select_query = std::make_shared<ASTSelectQueryExt>();
+    auto select_query = std::make_shared<ASTSelectQuery>();
     node = select_query;
 
     ParserKeyword s_select(Keyword::SELECT);
@@ -287,7 +287,7 @@ bool ParserSelectQueryExt::parseImpl(Pos & pos, ASTPtr & node, Expected & expect
                     if (!close_bracket.ignore(pos, expected))
                         return false;
                 } else
-                    interpolate_expression_list = std::make_shared<ASTExpressionListExt>();
+                    interpolate_expression_list = std::make_shared<ASTExpressionList>();
             }
         }
         else if (order_expression_list->children.size() == 1)

@@ -27,11 +27,6 @@ FilterStepExt::FilterStepExt(const DataStream & input_stream_, const ConstASTPtr
 {
 }
 
-void FilterStepExt::updateOutputStream()
-{
-    output_stream->header = input_streams[0].header;
-}
-
 std::shared_ptr<IQueryPlanStep> FilterStepExt::copy(ContextPtr) const
 {
     return std::make_shared<FilterStepExt>(input_streams[0], filter->clone(), remove_filter_column);
@@ -183,6 +178,11 @@ void FilterStepExt::toProto(Protos::FilterStepExt & proto, bool) const
     ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
     serializeASTToProto(filter, *proto.mutable_filter());
     proto.set_remove_filter_column(remove_filter_column);
+}
+
+void FilterStepExt::updateOutputStream()
+{
+    output_stream->header = input_streams[0].header;
 }
 
 }

@@ -15,6 +15,7 @@
 #include <Interpreters/misc.h>
 #include <Query/Optimizer/SymbolsExtractor.h>
 #include <Query/Common/NameToTypeExt.h>
+#include <Processors/QueryPlan/Optimizations/QueryPlanOptimizationSettings.h>
 
 namespace DB
 {
@@ -1177,7 +1178,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     if (execute_plan.empty())
     {
         // Here columns of PREWHERE being included in required columns is by design
-        QueryPlan storage_plan;
+        QueryPlanExt storage_plan;
         using Nodes = std::list<QueryPlanExt::Node>;
         Nodes nodes;
         storage->read(
@@ -1189,6 +1190,11 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             QueryProcessingStage::Enum::FetchColumns,
             max_block_size,
             max_streams);
+
+        auto pipe = storage_plan.convertToPipe(
+        QueryPlanOptimizationSettings::fromContext(BuildQueryPipelineSettingsExt::cast(build_context).context),
+        BuildQueryPipelineSettings::fromContext(BuildQueryPipelineSettingsExt::cast(build_context).context));
+
         {
             for (auto & node : nodes)
             {
@@ -1205,7 +1211,6 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             }
         }
 
-        Pipe pipe;
         std::shared_ptr<IQueryPlanStep> step;
         if (pipe.empty())
         {
@@ -1604,7 +1609,7 @@ static UInt64 getUIntValue(const ASTPtr & node, const ContextPtr & context)
 bool TableScanStepExt::setLimit(size_t limit, const ContextMutablePtr & context)
 {
     auto & query = *query_info.query->as<ASTSelectQuery>();
-    auto limit_length = query.getExpression(ASTSelectQuery::Expression::LIMIT_LENGTH, true);
+    auto limit_length = query.limitLength();
     if (limit_length)
     {
         if (getUIntValue(limit_length, context) <= limit)

@@ -529,11 +529,11 @@ public:
     static SelectQueryInfo generateSelectQueryInfo(std::default_random_engine &)
     {
         SelectQueryInfo res;
-        auto list = std::make_shared<ASTExpressionListExt>();
+        auto list = std::make_shared<ASTExpressionList>();
         list->children.emplace_back(std::make_shared<ASTIdentifier>("a"));
         list->children.emplace_back(std::make_shared<ASTIdentifier>("b"));
 
-        const auto generated_query = std::make_shared<ASTSelectQueryExt>();
+        const auto generated_query = std::make_shared<ASTSelectQuery>();
         generated_query->setExpression(ASTSelectQuery::Expression::SELECT, list);
         const auto select_expression_list = generated_query->select();
 

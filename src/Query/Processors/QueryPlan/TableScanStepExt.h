@@ -41,6 +41,7 @@ using DataTypePtr = std::shared_ptr<const IDataType>;
 using NameToType = std::map<String, DataTypePtr>;
 using ASTSelectQueryPtr = std::shared_ptr<ASTSelectQuery>;
 using RuntimeFilterId = UInt32;
+struct BuildQueryPipelineSettingsExt;
 
 StreamLocalLimits getLimitsForStorage(const Settings & settings, const SelectQueryOptions & options);
 
@@ -132,7 +133,7 @@ public:
     }
 
     String getName() const override { return "TableScanStepExt"; }
-    void initializePipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
+    void initializePipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings  &) override;
     const String & getDatabase() const { return storage_id.database_name; }
     const String & getTable() const { return storage_id.table_name; }
     const String & getTableAlias() const { return alias; }
@@ -228,7 +229,7 @@ public:
 
     Names getRequiredColumns(GetFlags flags = All) const;
     void rewriteInForBucketTable(ContextPtr context) const;
-    void setQuotaAndLimits(QueryPipelineBuilder & pipeline, const SelectQueryOptions & options, const BuildQueryPipelineSettings & build_context);
+    void setQuotaAndLimits(QueryPipelineBuilder & pipeline, const SelectQueryOptions & options, const BuildQueryPipelineSettings  & build_context);
 
     void toProto(Protos::TableScanStepExt & proto, bool for_hash_equals = false) const;
     static std::shared_ptr<TableScanStepExt> fromProto(const Protos::TableScanStepExt & proto, ContextPtr context);
@@ -273,9 +274,9 @@ private:
 
     LoggerPtr log;
 
-    void rewriteDynamicFilter(SelectQueryInfo & select_query, const BuildQueryPipelineSettings & build_settings, bool use_expand_pipe);
+    void rewriteDynamicFilter(SelectQueryInfo & select_query, const BuildQueryPipelineSettings  & build_settings, bool use_expand_pipe);
 
-    void aliasColumns(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &, const String & pipeline_name);
+    void aliasColumns(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings  &, const String & pipeline_name);
 
     bool hasFunctionCanUseBitmapIndex() const;
     void initMetadataAndStorageSnapshot(ContextPtr context);

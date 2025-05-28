@@ -3,8 +3,8 @@
 #include <Parsers/IAST.h>
 #include <memory>
 #include <unordered_map>
-#include <Query/Parsers/ASTSelectQueryExt.h>
-#include <Query/Parsers/ASTExpressionListExt.h>
+#include <Parsers/ASTSelectQuery.h>
+#include <Parsers/ASTExpressionList.h>
 #include <Parsers/ASTSelectWithUnionQuery.h>
 
 namespace DB {
@@ -30,7 +30,7 @@ private:
         if (!p_original) {
             throw Exception(ErrorCodes::UNKNOWN_TYPE_OF_AST_NODE, "Expected ASTExpressionList node");
         }
-        return std::make_shared<ASTExpressionListExt>(*p_original);
+        return std::make_shared<ASTExpressionList>(*p_original);
     }
 
     static ASTPtr replacerSelectQuery(const IAST & ast) {
@@ -38,7 +38,7 @@ private:
         if (!p_original) {
             throw Exception(ErrorCodes::UNKNOWN_TYPE_OF_AST_NODE, "Expected ASTSelectQuery node");
         }
-        return std::make_shared<ASTSelectQueryExt>(*p_original);
+        return std::make_shared<ASTSelectQuery>(*p_original);
     }
     
     inline static const std::unordered_map<std::string_view, ReplacerFunc> rule_map = {

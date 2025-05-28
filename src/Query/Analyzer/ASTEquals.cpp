@@ -158,11 +158,11 @@ bool compareTree(const ASTPtr & left, const ASTPtr & right, const SubtreeCompara
     /// for ASTSelectQuery, we also check if children with same index are same clause
     if (getAstType(left) == ASTType::ASTSelectQuery)
     {
-        // const auto & left_query = left->as<ASTSelectQuery &>();
-        // const auto & right_query = right->as<ASTSelectQuery &>();
+        const auto & left_query = left->as<ASTSelectQuery &>();
+        const auto & right_query = right->as<ASTSelectQuery &>();
 
-        // if (left_query.getExpressionTypes() != right_query.getExpressionTypes())
-        //     return false;
+        if (left_query.getExpressionTypes() != right_query.getExpressionTypes())
+            return false;
     }
 
     for (int i = 0; i < static_cast<int>(left->children.size()); ++i)

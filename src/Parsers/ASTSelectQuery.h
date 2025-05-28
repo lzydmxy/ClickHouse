@@ -16,7 +16,6 @@ struct StorageID;
 class ASTSelectQuery : public IAST
 {
 public:
-    friend class ASTSelectQueryExt;
     friend ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf);
 
     enum class Expression : uint8_t
@@ -99,7 +98,6 @@ public:
     ASTPtr & refPrewhere()  { return getExpression(Expression::PREWHERE); }
     ASTPtr & refWhere()     { return getExpression(Expression::WHERE); }
     ASTPtr & refHaving()    { return getExpression(Expression::HAVING); }
-    ASTPtr & refLimitLength() { return getExpression(Expression::LIMIT_LENGTH); }
 
     ASTPtr with()           const { return getExpression(Expression::WITH); }
     ASTPtr select()         const { return getExpression(Expression::SELECT); }
@@ -149,6 +147,10 @@ public:
 
     QueryKind getQueryKind() const override { return QueryKind::Select; }
     bool hasQueryParameters() const;
+
+    ASTPtr & refLimitLength() { return getExpression(Expression::LIMIT_LENGTH); }
+    std::vector<Expression> getExpressionTypes() const;
+    void removeSettingsAndOutputFormat();
 
 protected:
     void formatImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override;
