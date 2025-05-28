@@ -108,6 +108,7 @@
 #include <filesystem>
 #include <unordered_set>
 #include <Query/Executor/BrpcServerHolder.h>
+#include <Query/Exchange/bRPC/BrpcApplication.h>
 
 #include "config.h"
 #include <Common/config_version.h>
@@ -743,6 +744,22 @@ try
         server_settings.max_thread_pool_size,
         server_settings.max_thread_pool_free_size,
         server_settings.thread_pool_queue_size);
+
+    do
+    {
+        unsigned cores = getNumberOfPhysicalCPUCores() * 2;
+
+        if (cores < 4)
+            break;
+
+        int res = bthread_setconcurrency(cores);
+        if (res)
+            LOG_ERROR(log, "Error when calling bthread_setconcurrency. Error number {}.", res);
+    } while (false);
+
+    // Init bRPC
+    BrpcApplication::getInstance().initialize(config());
+
     /// Wait for all threads to avoid possible use-after-free (for example logging objects can be already destroyed).
     SCOPE_EXIT({
         Stopwatch watch;

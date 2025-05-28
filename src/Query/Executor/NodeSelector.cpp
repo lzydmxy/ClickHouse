@@ -40,7 +40,7 @@ inline size_t getRandomIndex(const size_t & max)
 
 ClusterNodes::ClusterNodes(const std::string cluster_name_, ContextPtr & query_context) : cluster_name(cluster_name_)
 {
-    auto cluster = query_context->getCluster(cluster_name);
+    cluster = query_context->getCluster(cluster_name);
     auto rpc_port = static_cast<UInt16>(query_context->getConfigRef().getUInt("rpc_port", 0));
     auto http_port = static_cast<UInt16>(query_context->getConfigRef().getUInt("http_port", 0));
     switch(query_context->getOptimizerContext()->getSettingsRef().scheduler_mode)
@@ -75,7 +75,7 @@ ClusterNodes::ClusterNodes(const std::string cluster_name_, ContextPtr & query_c
         }
         if (selected_address == NULL)
         {
-            size_t replica_index = getRandomIndex(shards_addresses[index].size());
+            size_t replica_index = getRandomIndex(shards_addresses[index].size() - 1);
             selected_address = &shards_addresses[index][replica_index];
             node_type = NodeType::Remote;
         }
