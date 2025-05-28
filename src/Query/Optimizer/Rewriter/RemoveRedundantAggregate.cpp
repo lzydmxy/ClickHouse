@@ -33,7 +33,8 @@ PlanNodePtr RemoveRedundantAggregateVisitor::visitPlanNode(PlanNodeBase & node, 
     }
 
     auto new_step = QueryPlanStepHelper::copyQueryPlanStep(node.getStep(), ctx.context);
-    new_step->updateInputStreams(inputs);
+    if (new_step->canUpdateInputStream())
+        new_step->updateInputStreams(inputs);
     node.setStep(new_step);
 
     node.replaceChildren(children);

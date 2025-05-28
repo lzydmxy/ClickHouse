@@ -1497,12 +1497,13 @@ void QueryPlannerVisitor::planDistinct(PlanBuilder & builder, ASTSelectQuery & s
     auto & select_expressions = analysis.getSelectExpressions(select_query);
     UInt64 limit_for_distinct = 0;
 
-    auto distinct_step = std::make_shared<DistinctStep>(
+    auto distinct_step = std::make_shared<DistinctStepExt>(
         builder.getCurrentDataStream(),
         extractDistinctSizeLimits(),
         limit_for_distinct,
         builder.translateToSymbols(select_expressions),
         false,
+        true,
         true);
 
     builder.addStep(std::move(distinct_step));
@@ -2331,8 +2332,8 @@ RelationPlan QueryPlannerVisitor::planSetOperation(ASTs & selects, SelectUnionMo
         for (size_t i = 0; i < field_symbols.size(); ++i)
             distinct_columns.push_back(set_operation_node->getCurrentDataStream().header.getByPosition(i).name);
 
-        auto distinct_step = std::make_shared<DistinctStep>(
-            set_operation_node->getCurrentDataStream(), extractDistinctSizeLimits(), 0, distinct_columns, false, true);
+        auto distinct_step = std::make_shared<DistinctStepExt>(
+            set_operation_node->getCurrentDataStream(), extractDistinctSizeLimits(), 0, distinct_columns, false, true, true);
 
         auto distinct_node = set_operation_node->addStep(context->getOptimizerContext()->nextNodeId(), std::move(distinct_step), {});
 

@@ -409,12 +409,9 @@ message IntersectStepExt {
 }
 
 message UnionStepExt {
-    repeated DataStream input_streams = 1;
-    DataStream output_stream = 2;
-    map<string, StringVec> output_to_inputs = 3;
-    Block header = 4;
-    uint64 max_threads = 5;
-    bool local = 6;
+    SetOperationStepExt query_plan_base = 1;
+    uint64 max_threads = 2;
+    bool local = 3;
 }
 
 message ExchangeStepExt {

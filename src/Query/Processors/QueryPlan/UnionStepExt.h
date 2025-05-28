@@ -1,13 +1,14 @@
 #pragma once
 
 #include <Processors/QueryPlan/UnionStep.h>
+#include <Query/Processors/QueryPlan/SetOperationStepExt.h>
 
 namespace DB
 {
 
 using OutputToInputs = std::unordered_map<String, std::vector<String>>;
 
-class UnionStepExt : public UnionStep
+class UnionStepExt : public SetOperationStepExt
 {
 public:
     /// max_threads is used to limit the number of threads for result pipeline.
@@ -18,13 +19,11 @@ public:
     {
     }
 
-    const OutputToInputs & getOutToInputs() const;
-    NameToNameMap getOutToInput(size_t source_idx) const;
-
     String getName() const override { return "UnionStepExt"; }
 
     QueryPipelineBuilderPtr updatePipeline(QueryPipelineBuilders pipelines, const BuildQueryPipelineSettings &) override;
 
+    size_t getMaxThreads() const { return max_threads; }
     bool isLocal() const { return local; }
 
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr ptr) const;
@@ -33,8 +32,9 @@ public:
     static std::shared_ptr<UnionStepExt> fromProto(const Protos::UnionStepExt & proto, ContextPtr context);
 
 private:
+    Block header;
+    size_t max_threads;
     bool local;
-    OutputToInputs output_to_inputs;
 };
 
 }

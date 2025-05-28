@@ -90,6 +90,7 @@ public:
     GroupingDescription map(const GroupingDescription & desc);
     SortDescription map(const SortDescription & sort_desc);
     std::map<Int32, Names> map(const std::map<Int32, Names> & group_id_non_null_symbol);
+    SortColumnDescriptionWithColumnIndex map(const SortColumnDescriptionWithColumnIndex & sort_column_description);
 
     LinkedHashMap<String, RuntimeFilter> map(const LinkedHashMap<String, RuntimeFilter> & infos);
     PlanNodeStatisticsEstimate map(const PlanNodeStatisticsEstimate & estimate);

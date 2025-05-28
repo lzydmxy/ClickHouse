@@ -387,6 +387,11 @@ SortDescription SymbolMapper::map(const SortDescription & sort_desc)
     return res;
 }
 
+SortColumnDescriptionWithColumnIndex SymbolMapper::map(const SortColumnDescriptionWithColumnIndex & sort_column_description)
+{
+    return SortColumnDescriptionWithColumnIndex{map(sort_column_description.base), sort_column_description.column_number};
+}
+
 std::map<Int32, Names> SymbolMapper::map(const std::map<Int32, Names> & group_id_non_null_symbol)
 {
     std::map<Int32, Names> res;
@@ -399,7 +404,20 @@ std::map<Int32, Names> SymbolMapper::map(const std::map<Int32, Names> & group_id
 
 std::shared_ptr<AggregatingStepExt> SymbolMapper::map(const AggregatingStepExt & agg)
 {
-    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Need Imp AggregatingStep first");
+    return std::make_shared<AggregatingStepExt>(
+        map(agg.getInputStreams()[0]),
+        distinct(map(agg.getKeys())),
+        map(agg.getKeysNotHashed()),
+        map(agg.getAggregates()),
+        map(agg.getGroupingSetsParams()),
+        agg.isFinal(),
+        agg.getStagePolicy(),
+        SortDescriptionWithPositions{map(agg.getGroupBySortDescription())},
+        map(agg.getGroupings()),
+        agg.needOverflowRow(),
+        agg.shouldProduceResultsInOrderOfBucketNumber(),
+        agg.isNoShuffle(),
+        agg.isStreamingForCache());
 }
 
 std::shared_ptr<ApplyStepExt> SymbolMapper::map(const ApplyStepExt & apply)
@@ -554,7 +572,29 @@ std::shared_ptr<MergingSortedStepExt> SymbolMapper::map(const MergingSortedStepE
 
 std::shared_ptr<MergingAggregatedStepExt> SymbolMapper::map(const MergingAggregatedStepExt & merging_agg)
 {
-    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Need Imp AggregatingStep first");
+    const auto & agg_params = merging_agg.getParams();
+    Aggregator::Params new_params(
+        merging_agg.getKeys(),
+        agg_params.aggregates,
+        agg_params.overflow_row,
+        agg_params.max_threads,
+        agg_params.max_block_size,
+        agg_params.min_hit_rate_to_use_consecutive_keys_optimization);
+
+    return std::make_shared<MergingAggregatedStepExt>(
+        map(merging_agg.getInputStreams()[0]),
+        distinct(map(merging_agg.getKeys())),
+        map(merging_agg.getGroupingSetsParamsList()),
+        map(merging_agg.getGroupings()),
+        merging_agg.isFinal(),
+        agg_params,
+        merging_agg.isMemoryEfficientAggregation(),
+        merging_agg.getMaxThreads(),
+        merging_agg.getMemoryEfficientMergeThreads(),
+        merging_agg.getMaxBlockSize(),
+        merging_agg.getMemoryBoundMergingMaxBlockBytes(),
+        map(merging_agg.getGroupBySortDescription()),
+        merging_agg.getMemoryBoundMergingOfAggregationResultsEnabled());
 }
 
 

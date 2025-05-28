@@ -71,6 +71,9 @@ public:
         // CREATE_PLAN_NODE(Any)
         // CREATE_PLAN_NODE(MultiJoin)
 #undef CREATE_PLAN_NODE
+        if (!plan_node)
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "Failed to create PlanNode: unsupported step type {}",
+                            toString(getQueryPlanStepType(step_)));
         plan_node->setStatistics(statistics_);
         return plan_node;
     }
@@ -116,8 +119,7 @@ public:
         auto new_step = dynamic_pointer_cast<Step>(QueryPlanStepHelper::copyQueryPlanStep(step, context));
         if (!new_step)
             throw Exception(ErrorCodes::LOGICAL_ERROR, "Failed to copy step with type mismatch");
-        //return createPlanNode(new_id, std::move(new_step), children, statistics);
-        return createPlanNode(new_id, std::move(new_step), children);
+        return createPlanNode(new_id, std::move(new_step), children, statistics);
     }
 
     PlanNodePtr addStep(PlanNodeId new_id, QueryPlanStepPtr new_step, PlanNodes new_children) override

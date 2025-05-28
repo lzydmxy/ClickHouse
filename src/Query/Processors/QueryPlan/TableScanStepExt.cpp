@@ -1567,7 +1567,7 @@ void TableScanStepExt::allocate(ContextPtr context)
         // cnch->read(column_names, query_info, context, processed_stage, max_block_size, 1);
         // cnch->genPlanSegmentQueryAndAllocate(column_names, query_info, context);
         auto db_table = getDatabaseAndTable(query_info.query->as<ASTSelectQuery &>(), 0);
-        if (!db_table->table.empty())
+        if (db_table.has_value() && !db_table->table.empty())
         {
             if (db_table->table != storage_id.table_name)
             {
