@@ -284,4 +284,10 @@ std::shared_ptr<IQueryPlanStep> SortingStepExt::copy(ContextPtr) const
     return std::make_shared<SortingStepExt>(input_streams[0], result_description, limit, stage, prefix_description, enable_adaptive_spill);
 }
 
+void SortingStepExt::updateOutputStream()
+{
+    output_stream = createOutputStream(input_streams.front(), input_streams.front().header, getDataStreamTraits());
+    output_stream->sort_description = result_description;
+    output_stream->sort_scope = DataStream::SortScope::Global;
+}
 }

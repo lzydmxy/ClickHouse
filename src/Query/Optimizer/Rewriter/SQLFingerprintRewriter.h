@@ -1,8 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <arrow/compute/expression.h>
-#include <capnp/compiler/grammar.capnp.h>
 #include <Query/Optimizer/SimpleExpressionRewriter.h>
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/IAST_fwd.h>

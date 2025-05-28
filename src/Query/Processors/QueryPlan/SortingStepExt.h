@@ -50,6 +50,8 @@ public:
     // void prepare(const PreparedStatementContext & prepared_context) override;
 
 private:
+    void updateOutputStream() override;
+
     const SortDescription result_description;
     size_t limit;
     Stage stage;

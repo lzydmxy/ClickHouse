@@ -1545,10 +1545,8 @@ void QueryPlannerVisitor::planOrderBy(PlanBuilder & builder, ASTSelectQuery & se
         limit = limit_length + limit_offset;
     }
 
-    SortingStep::Settings sort_settings(*context);
-
-    auto sorting_step = std::make_shared<SortingStep>(
-        builder.getCurrentDataStream(), sort_description, limit, context->getSettingsRef().optimize_sorting_by_input_stream_properties);
+    auto sorting_step = std::make_shared<SortingStepExt>(
+        builder.getCurrentDataStream(), sort_description, limit, SortingStepExt::Stage::FULL, SortDescription{});
     builder.addStep(std::move(sorting_step));
     // PRINT_PLAN(builder.plan, plan_order_by);
 }
