@@ -179,7 +179,7 @@ namespace CreateMockedPlanNode
         });
     }
 
-    MockedPlanNodePtr exchange(const ExchangeMode & mode, Partitioning schema, bool keep_order)
+    MockedPlanNodePtr exchange(const RExchangeMode::Enum & mode, Partitioning schema, bool keep_order)
     {
         return MockedPlanNode::of([=](const HandlerContext & c) {
             DataStreams input_streams;

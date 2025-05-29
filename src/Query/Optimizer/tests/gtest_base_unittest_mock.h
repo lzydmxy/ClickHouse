@@ -90,7 +90,7 @@ namespace CreateMockedPlanNode
 
     MockedPlanNodePtr filter(ConstASTPtr filter);
     MockedPlanNodePtr sorting(SortDescription description, size_t limit = 0, SortingStepExt::Stage stage = SortingStepExt::Stage::FULL);
-    MockedPlanNodePtr exchange(const ExchangeMode & mode, Partitioning schema, bool keep_order = false);
+    MockedPlanNodePtr exchange(const RExchangeMode::Enum & mode, Partitioning schema, bool keep_order = false);
 
     MockedPlanNodePtr join(
         Names left_keys,

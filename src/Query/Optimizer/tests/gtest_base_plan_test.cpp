@@ -159,6 +159,7 @@ ContextMutablePtr BasePlanTest::createQueryContext(std::unordered_map<std::strin
     query_context->setSessionContext(session_context);
     query_context->setQueryContext(query_context);
     query_context->setCurrentQueryId("test_plan");
+    query_context->initializeOptimizerContext();
     query_context->getOptimizerContext()->createPlanNodeIdAllocator();
     query_context->getOptimizerContext()->createSymbolAllocator();
     query_context->getOptimizerContext()->createOptimizerMetrics();
