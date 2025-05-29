@@ -36,7 +36,7 @@ struct QueryMetadataSettings
 
 struct QueryPlanSettings
 {
-    QueryPlan::ExplainPlanOptions query_plan_options;
+    QueryPlan::ExplainPlanOptions query_plan_options{};
 
     /// Apply query plan optimizations.
     bool optimize = true;
