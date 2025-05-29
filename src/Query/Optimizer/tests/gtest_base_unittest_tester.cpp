@@ -34,6 +34,11 @@
 namespace DB
 {
 
+namespace ErrorCodes
+{
+extern const int OPTIMIZER_TEST_FAILED;
+}
+
 void OptimizerTester::registerTable(const String & DDL)
 {
     QueryStatistics::CacheManager::initialize(100000, std::chrono::seconds(1800));
