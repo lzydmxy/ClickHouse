@@ -27,6 +27,7 @@
 #include <Query/Analyzer/QueryAnalyzer.h>
 #include <Query/Statistics/CacheManager.h>
 #include <Query/Interpreters/InterpreterSelectQueryUseOptimizer.h>
+#include <Storages/System/attachSystemTables.h>
 
 
 #include <fstream>
@@ -81,6 +82,15 @@ BasePlanTest::BasePlanTest(const String & database_name_, const std::unordered_m
 
     auto database = std::make_shared<DatabaseMemory>(database_name, session_context);
     DatabaseCatalog::instance().attachDatabase(database_name, database);
+
+    const String system_db_name = "system";
+    if (!DatabaseCatalog::instance().tryGetDatabase(system_db_name))
+    {
+        auto database_system = std::make_shared<DatabaseMemory>(system_db_name, session_context);
+        DatabaseCatalog::instance().attachDatabase(system_db_name, database_system);
+        attachSystemTablesServer(session_context, *DatabaseCatalog::instance().getSystemDatabase(), false);
+    }
+
     session_context->setCurrentDatabase(database_name);
 }
 
