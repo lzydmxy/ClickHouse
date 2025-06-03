@@ -144,6 +144,7 @@ void LocalBroadcastChannel::registerToSenders(UInt32 timeout_ms)
     Stopwatch s;
     auto sender_proxy = BroadcastSenderProxyRegistry::instance().getOrCreate(data_key);
     sender_proxy->waitAccept(timeout_ms);
+    LOG_TRACE(log, "Local broadcast channel become real sender {}", *data_key);
     sender_proxy->becomeRealSender(shared_from_this());
     if (enable_receiver_metrics)
         receiver_metrics.register_time_ms << s.elapsedMilliseconds();

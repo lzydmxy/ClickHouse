@@ -78,6 +78,10 @@ public:
 
     static void fillQueryPlan(ContextPtr context, QueryPlanExt & query_plan);
 
+    static Block getSampleBlock(const ASTPtr & query,
+    const ContextPtr & context,
+    const SelectQueryOptions & select_query_options = {});
+
     Block getSampleBlock();
 
     static void setUnsupportedSettings(ContextMutablePtr & context);

@@ -484,7 +484,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, check_identifier_begin_valid, true, "Whether to check identifier", 0) \
     M(Bool, ignore_array_join_check_in_join_on_condition, false, "Ignore array-join function check in join on condition", 0) \
     M(Bool, bsp_mode, false, "If enabled, query will execute in bsp mode", 0) \
-    M(String, exchange_shuffle_method_name, "cityHash64V2", "Shuffle method name used in exchange", 0) \
+    M(String, exchange_shuffle_method_name, "cityHash64", "Shuffle method name used in exchange", 0) \
     M(UInt64, distributed_max_parallel_size, false, "Max distributed execution parallel size", 0) \
     M(Bool, log_optimizer_run_time, false, "Whether Log optimizer runtime", 0) \
     M(Bool, log_query_plan, 0, "Log json format query plan to the system query_log table.", 0) \

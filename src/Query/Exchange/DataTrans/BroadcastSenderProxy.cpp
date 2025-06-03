@@ -118,7 +118,7 @@ void BroadcastSenderProxy::waitAccept(UInt32 timeout_ms)
 
 void BroadcastSenderProxy::accept(ContextPtr context_, Block header_)
 {
-    LOG_TRACE(logger, "BroadcastSenderProxy::accept {}", *data_key);
+    LOG_TRACE(logger, "BroadcastSenderProxy::accept {}, header {}", *data_key, header_.operator bool());
 
     std::unique_lock lock(mutex);
     if (header || context)

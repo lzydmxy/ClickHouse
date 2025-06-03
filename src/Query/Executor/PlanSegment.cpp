@@ -66,7 +66,6 @@ void IPlanSegment::deserialize(ReadBuffer & buf, ContextPtr)
 
 void IPlanSegment::toProtoBase(RIPlanSegment & proto) const
 {
-    //TODO: wait query plan code
     serializeHeaderToProto(header, *proto.mutable_header());
 
     proto.set_type(type);
@@ -81,8 +80,7 @@ void IPlanSegment::toProtoBase(RIPlanSegment & proto) const
 
 void IPlanSegment::fromProtoBase(const RIPlanSegment & proto)
 {
-    //TODO:
-    //header = deserializeHeaderFromProto(proto.header());
+    header = deserializeHeaderFromProto(proto.header());
 
     type = proto.type();
     exchange_mode = proto.exchange_mode();
@@ -354,7 +352,7 @@ void PlanSegment::toProto(RPlanSegment & plan_segment_proto)
     auto plan_ptr = std::make_unique<RQueryPlan>();
     
     // TODO: Add toProto function for QueryPlan
-    // query_plan.toProto(*plan_ptr);
+    query_plan.toProto(*plan_ptr);
     plan_segment_proto.set_allocated_query_plan(plan_ptr.release());
     plan_segment_proto.set_cluster_name(cluster_name);
     plan_segment_proto.set_parallel(parallel);
@@ -378,7 +376,7 @@ void PlanSegment::fromProto(const RPlanSegment & proto, ContextMutablePtr contex
 {
     query_plan.addInterpreterContext(context_);
     //TODO: Add fromProto function for QueryPlan
-    //query_plan.fromProto(proto.query_plan());
+    query_plan.fromProto(proto.query_plan());
     cluster_name = proto.cluster_name();
     parallel = proto.parallel();
     exchange_parallel_size = proto.exchange_parallel_size();

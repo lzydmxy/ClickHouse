@@ -235,21 +235,27 @@ NameAndTypePair nameAndTypePairFromProto(const RNameAndTypePair & proto)
 void serializeHeaderToProto(const Block & block, RBlock & proto)
 {
     for (const auto & pair : block.getNamesAndTypes())
-        nameAndTypePairToProto(pair, *proto.add_names_and_types());
+        ProtosSerDerHelper::toProto(pair, *proto.add_names_and_types());
+        // nameAndTypePairToProto(pair, *proto.add_names_and_types());
 }
 
 Block deserializeHeaderFromProto(const RBlock & proto)
 {
-    ColumnsWithTypeAndName cols;
+    std::vector<NameAndTypePair> pairs;
     for (const auto & pair_pb : proto.names_and_types())
     {
-        NameAndTypePair pair = nameAndTypePairFromProto(pair_pb);
-        ColumnWithTypeAndName column;
-        column.name = pair.name;
-        column.type = pair.type;
-        cols.push_back(column);
+        NameAndTypePair pair;
+        ProtosSerDerHelper::fillFromProto(pair, pair_pb);
+        pairs.emplace_back(std::move(pair));
     }
-    return Block(cols);
+
+    ColumnsWithTypeAndName data;
+
+    for (const auto & item : pairs)
+    {
+        data.emplace_back(item.type, item.name);
+    }
+    return Block(std::move(data));
 }
 
 void serializeAggregateFunctionToProto(

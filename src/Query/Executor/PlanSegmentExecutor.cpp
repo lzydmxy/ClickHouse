@@ -151,7 +151,7 @@ PlanSegmentExecutor::~PlanSegmentExecutor() noexcept
 
 std::optional<PlanSegmentExecutor::ExecutionResult> PlanSegmentExecutor::execute()
 {
-    // LOG_DEBUG(logger, "Execute planSegment:[\n{}\n]", plan_segment->toString());
+    LOG_DEBUG(logger, "Execute planSegment:[\n{}\n]", plan_segment->toString());
 
     try
     {
@@ -385,14 +385,14 @@ void PlanSegmentExecutor::doExecute()
     //pipeline_executor = async_pipeline_executor.getPipelineExecutor();
     // GraphvizPrinter::printPipeline(pipeline_executor->getProcessors(), pipeline_executor->getExecutingGraph(), 
     //     context, plan_segment->getPlanSegmentId(), extractExchangeHostPort(plan_segment_instance->info.execution_address));
-    // for (const auto & sender : senders)
-    // {
-    //     auto status = sender->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "Upstream pipeline finished");
-    //     /// bsp mode will fsync data in finish, so we need to check if exception is thrown here.
-    //     if (status.code != BroadcastStatusCode::ALL_SENDERS_DONE)
-    //         throw Exception(ErrorCodes::BSP_WRITE_DATA_FAILED, "Write data into disk failed in bsp mode, code {}, error message: {}",
-    //             status.code, status.message);
-    // }
+    for (const auto & sender : senders)
+    {
+        auto status = sender->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "Upstream pipeline finished");
+        /// bsp mode will fsync data in finish, so we need to check if exception is thrown here.
+        if (status.code != BroadcastStatusCode::ALL_SENDERS_DONE)
+            throw Exception(ErrorCodes::BSP_WRITE_DATA_FAILED, "Write data into disk failed in bsp mode, code {}, error message: {}",
+                status.code, status.message);
+    }
 
     //TODO: Need PlanSegmentDescription in PlanPrinter.h
     // if (optimizer_context->getSettingsRef().log_segment_profiles)
@@ -480,8 +480,8 @@ QueryPipeline PlanSegmentExecutor::buildPipeline(BroadcastSenderPtrs & senders)
             size_t partition_id = i;
             auto data_key = std::make_shared<ExchangeDataKey>(query_tx_id, exchange_id, partition_id);
 
-            // LOG_TRACE(logger, "output index {}, query_tx_id {}, exchange id {}, partition_id {}", 
-            //     output_index, query_tx_id, exchange_id, partition_id);
+            LOG_TRACE(logger, "output index {}, query_tx_id {}, exchange id {}, partition_id {}",
+                output_index, query_tx_id, exchange_id, partition_id);
 
             BroadcastSenderPtr sender;
             auto proxy = sender_registry.getOrCreate(data_key, sender_options);

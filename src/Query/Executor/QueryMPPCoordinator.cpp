@@ -64,7 +64,9 @@ BlockIO QueryMPPCoordinator::execute()
                                           entry = optimizer_context->getProcessListEntry()](const Progress & p) {
         if (previous_progress_callback)
             previous_progress_callback(p);
-        entry->getQueryStatus()->updateProgressIn(p);
+        // Todo: lizhuoyu, impl processlist
+        if (entry)
+            entry->getQueryStatus()->updateProgressIn(p);
     });
 
     {
@@ -111,7 +113,7 @@ BlockIO QueryMPPCoordinator::execute()
         if (isAmbiguosError(e.code()))
         {
             auto status = waitUntilFinish(e.code(), String(e.message()));
-            throw Exception(ErrorCodes::LOGICAL_ERROR, "Execute error code {}, message {}", status.error_code, status.summarized_error_msg);
+            throw Exception(ErrorCodes::DISTRIBUTE_STAGE_QUERY_EXCEPTION, "Execute error code {}, message {}", status.error_code, status.summarized_error_msg);
         }
         throw;
     }

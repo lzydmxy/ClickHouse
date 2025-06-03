@@ -2126,14 +2126,16 @@ try
         const char * enable_optimizer_name = "optimizer.enable_optimizer";
         const char * rpc_port_name = "optimizer.rpc_port";
 
+        std::vector<std::unique_ptr<BrpcServerHolder>> rpc_server_holders;
         if (config().has(enable_optimizer_name) && config().getBool(enable_optimizer_name))
         {
             if (config().has(rpc_port_name))
             {
                 global_context->initializeOptimizerContext();
+                global_context->getOptimizerContext()->setComplexQueryActive(true);
                 auto rpc_port = config().getInt(rpc_port_name);
                 LOG_DEBUG(log, "Start RPC server with port {}.", rpc_port);
-                std::vector<std::unique_ptr<BrpcServerHolder>> rpc_server_holders;
+                global_context->getOptimizerContext()->setRPCPort(rpc_port);
                 for (auto & host : listen_hosts)
                 {
                     std::string brpc_host_port = createHostPortString(host, rpc_port);
@@ -2192,6 +2194,8 @@ try
                     server.stop();
                     current_connections += server.currentConnections();
                 }
+                for (auto & holder : rpc_server_holders)
+                    holder->stop();
             }
 
             if (current_connections)

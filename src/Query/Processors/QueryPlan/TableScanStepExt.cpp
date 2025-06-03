@@ -773,7 +773,17 @@ TableScanStepExt::TableScanStepExt(
         column_names.emplace_back(item.first);
     }
 
-    if (storage_id.empty() && context->getOptimizerContext()->getSettingsRef().enable_prune_source_plan_segment)
+    if (!query_info.query)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not set");
+
+    auto * select_query = query_info.query->as<ASTSelectQuery>();
+    if (!select_query)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not a ASTSelectQuery");
+
+    const auto & table_expression = getTableExpression(*select_query, 0);
+    if (table_expression && table_expression->table_function)
+        storage = context->getQueryContext()->executeTableFunction(table_expression->table_function);
+    else if (storage_id.empty() && context->getOptimizerContext()->getSettingsRef().enable_prune_source_plan_segment)
     {
         LOG_DEBUG(log, "Create TableScanStepExt without storage");
         is_null_source = true;
@@ -781,7 +791,7 @@ TableScanStepExt::TableScanStepExt(
     else
     {
         storage = DatabaseCatalog::instance().getTable(storage_id, context);
-        // metadata_snapshot & storage_snapshot will be initialized in initializePipeline
+        storage_id.uuid = storage->getStorageID().uuid;
     }
 }
 
@@ -1090,7 +1100,8 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     Stopwatch stage_watch, total_watch;
     total_watch.start();
     stage_watch.start();
-    storage = DatabaseCatalog::instance().getTable(storage_id, settings_ext.context);
+    if (!storage)
+        storage = DatabaseCatalog::instance().getTable(storage_id, settings_ext.context);
     initMetadataAndStorageSnapshot(settings_ext.context);
     auto * merge_tree_storage = dynamic_cast<MergeTreeData *>(storage.get());
 

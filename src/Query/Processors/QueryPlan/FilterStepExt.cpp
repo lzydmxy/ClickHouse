@@ -185,4 +185,38 @@ void FilterStepExt::updateOutputStream()
     output_stream->header = input_streams[0].header;
 }
 
+void FilterStepExt::describeActions(FormatSettings & settings) const
+{
+    String prefix(settings.offset, ' ');
+    settings.out << prefix << "Filter column: " << filter_column_name;
+
+    if (remove_filter_column)
+        settings.out << " (removed)";
+    settings.out << '\n';
+
+    if (filter)
+    {
+        settings.out << filter->formatForLogging();
+        settings.out << '\n';
+    }
+
+    if (actions_dag)
+    {
+        bool first = true;
+        auto expression = std::make_shared<ExpressionActions>(actions_dag);
+        for (const auto & action : expression->getActions())
+        {
+            settings.out << prefix << (first ? "Actions: " : "         ");
+            first = false;
+            settings.out << action.toString() << '\n';
+        }
+        settings.out << prefix << "Positions:";
+        for (const auto & pos : expression->getResultPositions())
+            settings.out << ' ' << pos;
+    }
+
+
+    settings.out << '\n';
+}
+
 }

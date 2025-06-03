@@ -1,17 +1,19 @@
-#include <Interpreters/InterpreterSelectWithUnionQuery.h>
 #include <Interpreters/InterpreterSelectQueryAnalyzer.h>
+#include <Interpreters/InterpreterSelectWithUnionQuery.h>
+#include <Query/Interpreters/InterpreterSelectQueryUseOptimizer.h>
+#include <Interpreters/evaluateConstantExpression.h>
+#include <Interpreters/parseColumnsListForTableFunction.h>
+#include <Parsers/ASTCreateQuery.h>
 #include <Parsers/ASTFunction.h>
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/ASTSelectWithUnionQuery.h>
-#include <Parsers/ASTCreateQuery.h>
-#include <base/types.h>
 #include <Storages/StorageNull.h>
 #include <Storages/StorageView.h>
 #include <Storages/checkAndGetLiteralArgument.h>
 #include <TableFunctions/ITableFunction.h>
 #include <TableFunctions/TableFunctionFactory.h>
-#include <Interpreters/parseColumnsListForTableFunction.h>
-#include <Interpreters/evaluateConstantExpression.h>
+#include <base/types.h>
+#include "Query/Common/OptimizerContext.h"
 #include "registerTableFunctions.h"
 
 
@@ -113,7 +115,11 @@ bool TableFunctionViewIfPermitted::isPermitted(const ContextPtr & context, const
 
     try
     {
-        if (context->getSettingsRef().allow_experimental_analyzer)
+        if (context->getOptimizerContext() && context->getOptimizerContext()->getSettingsRef().enable_optimizer)
+        {
+            sample_block = InterpreterSelectQueryUseOptimizer::getSampleBlock(create.children[0], context);
+        }
+        else if (context->getSettingsRef().allow_experimental_analyzer)
         {
             sample_block = InterpreterSelectQueryAnalyzer::getSampleBlock(create.children[0], context);
         }

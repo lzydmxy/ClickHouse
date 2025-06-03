@@ -16,10 +16,9 @@ AddressInfo getLocalAddress(ContextPtr & context)
 
 AddressInfoPtr getLocalAddressPtr(ContextPtr & context)
 {
-    auto optimizer_context = context->getOptimizerContext();
     const auto & host = getFQDNOrHostName();
     auto tcp_port = context->getTCPPort();
-    auto rpc_port = optimizer_context->getRPCPort();
+    auto rpc_port = context->getGlobalContext()->getOptimizerContext()->getRPCPort();
     const ClientInfo & info = context->getClientInfo();
     return std::make_shared<AddressInfo>(host, tcp_port, info.current_user, "", rpc_port);
 }

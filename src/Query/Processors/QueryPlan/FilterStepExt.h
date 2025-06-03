@@ -33,6 +33,8 @@ public:
     void toProto(Protos::FilterStepExt & proto, bool for_hash_equals = false) const;
     static std::shared_ptr<FilterStepExt> fromProto(const Protos::FilterStepExt & proto, ContextPtr context);
 
+    void describeActions(FormatSettings & settings) const override;
+
 private:
     void updateOutputStream() override;
 

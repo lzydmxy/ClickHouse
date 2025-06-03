@@ -302,10 +302,13 @@ void PlanSegmentRpcService::innerExecutePlanSegment(
 {
     LOG_INFO(log, "execute plan segment: {}_{}, parallel index {}", query_common->query_id(), segment_id, execution_info.parallel_id);
 
-    ThreadFromGlobalPool async_thread([global_context = context,
-                                       query_common = std::move(query_common),
+    if (!query_context)
+        query_context = createQueryContext(context, query_common, remote_side_port, {segment_id, execution_info.parallel_id});
+
+    initQueryContext(query_context, query_common, settings_changes, *execution_info.execution_address);
+
+    ThreadFromGlobalPool async_thread([query_common = std::move(query_common),
                                        settings_changes = std::move(settings_changes),
-                                       remote_side_port = remote_side_port,
                                        segment_id = segment_id,
                                        execution_info = std::move(execution_info),
                                        plan_segment_buf = std::move(plan_segment_buf),
@@ -314,11 +317,6 @@ void PlanSegmentRpcService::innerExecutePlanSegment(
         bool before_execute = true;
         try
         {
-            if (!query_context)
-                query_context = createQueryContext(global_context, query_common, remote_side_port, {segment_id, execution_info.parallel_id});
-
-            initQueryContext(query_context, query_common, settings_changes, *execution_info.execution_address);
-
             auto optimizer_context = query_context->getOptimizerContext();
 
             if (!process_plan_segment_entry)

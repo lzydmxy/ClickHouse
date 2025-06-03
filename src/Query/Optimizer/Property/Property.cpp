@@ -8,6 +8,8 @@
 #include <Query/Optimizer/ExpressionRewriter.h>
 #include <Common/Exception.h>
 #include <Core/Field.h>
+#include <Query/Analyzer/QualifiedColumnName.h>
+#include <Functions/FunctionsHashing.h>
 
 namespace DB
 {

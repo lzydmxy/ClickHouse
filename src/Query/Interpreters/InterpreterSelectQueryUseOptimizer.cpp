@@ -34,6 +34,17 @@ namespace ErrorCodes
     extern const int BAD_PREPARED_PARAMETER;
 }
 
+Block InterpreterSelectQueryUseOptimizer::getSampleBlock(const ASTPtr & query,
+    const ContextPtr & context,
+    const SelectQueryOptions & select_query_options)
+{
+    auto select_query_options_copy = select_query_options;
+    select_query_options_copy.only_analyze = true;
+    InterpreterSelectQueryUseOptimizer interpreter(query, context->getQueryContext(), select_query_options_copy);
+
+    return interpreter.getSampleBlock();
+}
+
 Block InterpreterSelectQueryUseOptimizer::getSampleBlock()
 {
     if (!block)

@@ -1,8 +1,6 @@
 #pragma once
 
 #include <Core/QualifiedTableName.h>
-#include <Functions/FunctionsHashing.h>
-
 #include <string>
 
 
@@ -35,13 +33,7 @@ namespace DB
             return database == other.database && table == other.table && column == other.column;
         }
 
-        std::size_t hash() const
-        {
-            size_t hash = MurmurHash3Impl64::combineHashes(
-                MurmurHash3Impl64::apply(database.c_str(), database.size()), MurmurHash3Impl64::apply(table.c_str(), table.size()));
-            hash = MurmurHash3Impl64::combineHashes(hash, MurmurHash3Impl64::apply(column.c_str(), column.size()));
-            return hash;
-        }
+        std::size_t hash() const;
 
         std::string getFullName() const { return database + "." + table + "." + column; }
 

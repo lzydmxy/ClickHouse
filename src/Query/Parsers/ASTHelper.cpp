@@ -615,12 +615,25 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
         }
         case ASTType::ASTTableIdentifier:
         {
-            auto ast = std::make_shared<ASTTableIdentifier>("");
-            readBinary(ast->alias, buf);
-            readBinary(ast->prefer_alias_to_column_name, buf);
+            String full_name;
+            String alias;
+            bool prefer_alias_to_column_name;
+            std::vector<String> name_parts;
+            readBinary(alias, buf);
+            readBinary(prefer_alias_to_column_name, buf);
 
-            readBinary(ast->full_name, buf);
-            readBinary(ast->name_parts, buf);
+            readBinary(full_name, buf);
+            readBinary(name_parts, buf);
+
+            std::shared_ptr<ASTTableIdentifier> ast;
+            if (name_parts.size() == 1)
+                ast = std::make_shared<ASTTableIdentifier>(name_parts[0]);
+            if (name_parts.size() == 2)
+                ast = std::make_shared<ASTTableIdentifier>(name_parts[0], name_parts[1]);
+
+            ast->full_name = full_name;
+            ast->alias = alias;
+            ast->prefer_alias_to_column_name = prefer_alias_to_column_name;
         
             bool has_semantic;
             readBinary(has_semantic, buf);
