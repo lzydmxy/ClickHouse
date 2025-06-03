@@ -195,7 +195,7 @@ PlanNodePtr ColumnPruningVisitor::visitIntersectOrExceptStepNode(IntersectOrExce
 
     auto intersect_except_step = std::make_shared<IntersectOrExceptStep>(children_streams, QueryPlanStepHelper::getIntersectOrExceptStepOperator(*step), QueryPlanStepHelper::getIntersectOrExceptStepMaxThreads(*step));
     auto intersect_except_node
-        = IntersectOrExceptStepNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(intersect_except_step), children/*, node.getStatistics()*/);
+        = IntersectOrExceptStepNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(intersect_except_step), children, node.getStatistics());
     return intersect_except_node;
 }
 
@@ -249,7 +249,7 @@ PlanNodePtr ColumnPruningVisitor::visitValuesStepExtNode(ValuesStepExtNode & nod
     }
 
     auto values_step = std::make_shared<ValuesStepExt>(header, data, step->getRows());
-    auto values_node = ValuesStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(values_step), {}/*, node.getStatistics()*/);
+    auto values_node = ValuesStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(values_step), {}, node.getStatistics());
     return values_node;
 }
 
@@ -297,7 +297,7 @@ PlanNodePtr ColumnPruningVisitor::visitLimitByStepNode(LimitByStepNode & node, C
     auto child = VisitorUtil::accept(node.getChildren()[0], *this, column_pruning_context);
     auto limit_step = std::make_shared<LimitByStep>(
         child->getStep()->getOutputStream(), QueryPlanStepHelper::getLimitByStepGroupLength(*step), QueryPlanStepHelper::getLimitByStepGroupOffset(*step), QueryPlanStepHelper::getLimitByStepColumns(*step));
-    return LimitByStepNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(limit_step), PlanNodes{child}/*, node.getStatistics()*/);
+    return LimitByStepNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(limit_step), PlanNodes{child}, node.getStatistics());
 }
 
 PlanNodePtr ColumnPruningVisitor::visitWindowStepNode(WindowStepNode & node, ColumnPruningContext & column_pruning_context)
@@ -337,7 +337,7 @@ PlanNodePtr ColumnPruningVisitor::visitWindowStepNode(WindowStepNode & node, Col
         child->getStep()->getOutputStream(), QueryPlanStepHelper::getWindowStepWindow(*step), window_functions, QueryPlanStepHelper::getWindowStepStreamsFanOut(*step));
 
     PlanNodes children{child};
-    return WindowStepNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(window_step), children/*, node.getStatistics()*/);
+    return WindowStepNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(window_step), children, node.getStatistics());
 }
 
 PlanNodePtr ColumnPruningVisitor::visitFilterStepExtNode(FilterStepExtNode & node, ColumnPruningContext & column_pruning_context)
@@ -357,7 +357,7 @@ PlanNodePtr ColumnPruningVisitor::visitFilterStepExtNode(FilterStepExtNode & nod
 
     auto expr_step = std::make_shared<FilterStepExt>(child->getStep()->getOutputStream(), step->getFilter(), remove);
     PlanNodes children{child};
-    auto expr_node = FilterStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(expr_step), children/*, node.getStatistics()*/);
+    auto expr_node = FilterStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(expr_step), children, node.getStatistics());
     if (remove && filter_window_to_sort_limit)
         return convertFilterWindowToSortingLimit(expr_node, require);
     if (!column_pruning_context.is_parent_from_projection)
@@ -379,7 +379,7 @@ PlanNodePtr ColumnPruningVisitor::visitArrayJoinStepNode(ArrayJoinStepNode & nod
     ColumnPruningContext child_column_pruning_context{.name_set = child_require};
     auto child = VisitorUtil::accept(node.getChildren()[0], *this, child_column_pruning_context);
     auto array_join_step = std::make_shared<ArrayJoinStep>(child->getCurrentDataStream(), step->arrayJoin());
-    return ArrayJoinStepNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(array_join_step), {child}/*, node.getStatistics()*/);
+    return ArrayJoinStepNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(array_join_step), {child}, node.getStatistics());
 }
 
 PlanNodePtr ColumnPruningVisitor::visitProjectionStepExtNode(ProjectionStepExtNode & node, ColumnPruningContext & column_pruning_context)
@@ -419,7 +419,7 @@ PlanNodePtr ColumnPruningVisitor::visitProjectionStepExtNode(ProjectionStepExtNo
     auto expr_step = std::make_shared<ProjectionStepExt>(
         child->getStep()->getOutputStream(), assignments, name_to_type, step->isFinalProject(), step->isIndexProject());
     PlanNodes children{child};
-    auto expr_node = ProjectionStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(expr_step), children/*, node.getStatistics()*/);
+    auto expr_node = ProjectionStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(expr_step), children, node.getStatistics());
     return expr_node;
 }
 
@@ -457,7 +457,7 @@ PlanNodePtr ColumnPruningVisitor::visitExpandStepExtNode(ExpandStepExtNode & nod
         step->getGroupIdValue(),
         step->getGroupIdNonNullSymbol());
     PlanNodes children{child};
-    auto expr_node = ExpandStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(expr_step), children/*, node.getStatistics()*/);
+    auto expr_node = ExpandStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(expr_step), children, node.getStatistics());
     return expr_node;
 }
 
@@ -511,7 +511,7 @@ PlanNodePtr ColumnPruningVisitor::visitApplyStepExtNode(ApplyStepExtNode & node,
         step->getOuterColumns(),
         step->supportSemiAnti());
     PlanNodes children{left, right};
-    auto apply_node = ApplyStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(apply_step), children/*, node.getStatistics()*/);
+    auto apply_node = ApplyStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(apply_step), children, node.getStatistics());
     return apply_node;
 }
 
@@ -584,7 +584,7 @@ PlanNodePtr ColumnPruningVisitor::visitTableScanStepExtNode(TableScanStepExtNode
         step->isBucketScan(),
         inline_expressions);
 
-    auto read_node = PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(read_step), {}/*, node.getStatistics()*/);
+    auto read_node = PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(read_step), {}, node.getStatistics());
     return read_node;
 }
 
@@ -648,7 +648,7 @@ PlanNodePtr ColumnPruningVisitor::visitAggregatingStepExtNode(AggregatingStepExt
         step->isStreamingForCache());
 
     PlanNodes children{child};
-    auto agg_node = AggregatingStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(agg_step), children/*, node.getStatistics()*/);
+    auto agg_node = AggregatingStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(agg_step), children, node.getStatistics());
     return agg_node;
 }
 
@@ -664,7 +664,7 @@ PlanNodePtr ColumnPruningVisitor::visitMarkDistinctStepExtNode(MarkDistinctStepE
     auto child = VisitorUtil::accept(node.getChildren()[0], *this, column_pruning_context);
     auto mark_distinct_step
         = std::make_shared<MarkDistinctStepExt>(child->getStep()->getOutputStream(), step->getMarkerSymbol(), step->getDistinctSymbols());
-    return MarkDistinctStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(mark_distinct_step), PlanNodes{child}/*, node.getStatistics()*/);
+    return MarkDistinctStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(mark_distinct_step), PlanNodes{child}, node.getStatistics());
 }
 
 PlanNodePtr ColumnPruningVisitor::visitSortingStepExtNode(SortingStepExtNode & node, ColumnPruningContext & column_pruning_context)
@@ -679,7 +679,7 @@ PlanNodePtr ColumnPruningVisitor::visitSortingStepExtNode(SortingStepExtNode & n
     auto child = addProjection(VisitorUtil::accept(node.getChildren()[0], *this, column_pruning_context), require);
     auto sort_step = std::make_shared<SortingStepExt>(
         child->getStep()->getOutputStream(), step->getSortDescription(), step->getLimit(), step->getStage());
-    return SortingStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(sort_step), PlanNodes{child}/*, node.getStatistics()*/);
+    return SortingStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(sort_step), PlanNodes{child}, node.getStatistics());
 }
 
 PlanNodePtr ColumnPruningVisitor::visitMergeSortingStepExtNode(MergeSortingStepExtNode & node, ColumnPruningContext & column_pruning_context)
@@ -693,7 +693,7 @@ PlanNodePtr ColumnPruningVisitor::visitMergeSortingStepExtNode(MergeSortingStepE
     }
     auto child = addProjection(VisitorUtil::accept(node.getChildren()[0], *this, column_pruning_context), require);
     auto sort_step = std::make_shared<MergeSortingStepExt>(child->getStep()->getOutputStream(), step->getSortDescription(), step->getLimit());
-    return MergeSortingStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(sort_step), PlanNodes{child}/*, node.getStatistics()*/);
+    return MergeSortingStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(sort_step), PlanNodes{child}, node.getStatistics());
 }
 
 PlanNodePtr ColumnPruningVisitor::visitMergingSortedStepExtNode(MergingSortedStepExtNode & node, ColumnPruningContext & column_pruning_context)
@@ -708,7 +708,7 @@ PlanNodePtr ColumnPruningVisitor::visitMergingSortedStepExtNode(MergingSortedSte
     auto child = addProjection(VisitorUtil::accept(node.getChildren()[0], *this, column_pruning_context), require);
     auto sort_step = std::make_shared<MergingSortedStepExt>(
         child->getStep()->getOutputStream(), step->getSortDescription(), step->getMaxBlockSize(), step->getLimit());
-    return MergingSortedStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(sort_step), PlanNodes{child}/*, node.getStatistics()*/);
+    return MergingSortedStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(sort_step), PlanNodes{child}, node.getStatistics());
 }
 
 PlanNodePtr ColumnPruningVisitor::visitPartialSortingStepExtNode(PartialSortingStepExtNode & node, ColumnPruningContext & column_pruning_context)
@@ -723,7 +723,7 @@ PlanNodePtr ColumnPruningVisitor::visitPartialSortingStepExtNode(PartialSortingS
     auto child = addProjection(VisitorUtil::accept(node.getChildren()[0], *this, column_pruning_context), require);
     auto sort_step
         = std::make_shared<PartialSortingStepExt>(child->getStep()->getOutputStream(), step->getSortDescription(), step->getLimit());
-    return PartialSortingStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(sort_step), PlanNodes{child}/*, node.getStatistics()*/);
+    return PartialSortingStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(sort_step), PlanNodes{child}, node.getStatistics());
 }
 
 PlanNodePtr ColumnPruningVisitor::visitJoinStepExtNode(JoinStepExtNode & node, ColumnPruningContext & column_pruning_context)
@@ -831,7 +831,7 @@ PlanNodePtr ColumnPruningVisitor::visitJoinStepExtNode(JoinStepExtNode & node, C
         step->getRuntimeFilterBuilders());
 
     PlanNodes children{left, right};
-    auto join_node = JoinStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(join_step), children/*, node.getStatistics()*/);
+    auto join_node = JoinStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(join_step), children, node.getStatistics());
     return join_node;
 }
 
@@ -871,7 +871,7 @@ PlanNodePtr ColumnPruningVisitor::visitDistinctStepExtNode(DistinctStepExtNode &
         child->getStep()->getOutputStream(), step->getSetSizeLimits(), step->getLimitHint(), columns, step->preDistinct(), step->getOptimizeDistinctInOrder(), step->canToAgg());
 
     PlanNodes children{child};
-    auto distinct_node = DistinctStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(distinct_step), children/*, node.getStatistics()*/);
+    auto distinct_node = DistinctStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(distinct_step), children, node.getStatistics());
 
     if (can_convert_group_by && distinct_to_aggregate)
         return convertDistinctToGroupBy(distinct_node);
@@ -926,7 +926,7 @@ PlanNodePtr ColumnPruningVisitor::visitUnionStepExtNode(UnionStepExtNode & node,
 
     auto union_step
         = std::make_shared<UnionStepExt>(children_streams, output_stream, output_to_inputs, step->getMaxThreads(), step->isLocal());
-    auto union_node = UnionStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(union_step), children/*, node.getStatistics()*/);
+    auto union_node = UnionStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(union_step), children, node.getStatistics());
     return union_node;
 }
 
@@ -1045,7 +1045,7 @@ PlanNodePtr ColumnPruningVisitor::visitExchangeStepExtNode(ExchangeStepExtNode &
     }
 
     auto exchange_step = std::make_shared<ExchangeStepExt>(std::move(input_streams), step->getExchangeMode(), step->getSchema(), step->needKeepOrder());
-    return ExchangeStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(exchange_step), children/*, node.getStatistics()*/);
+    return ExchangeStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(exchange_step), children, node.getStatistics());
 }
 
 PlanNodePtr ColumnPruningVisitor::visitCTERefStepExtNode(CTERefStepExtNode & node, ColumnPruningContext & column_pruning_context)
@@ -1077,7 +1077,7 @@ PlanNodePtr ColumnPruningVisitor::visitCTERefStepExtNode(CTERefStepExtNode & nod
 
     auto exchange_step = std::make_shared<CTERefStepExt>(
         DataStream{std::move(result_columns)}, with_step->getId(), std::move(output_columns), with_step->hasFilter());
-    return CTERefStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(exchange_step), {}/*, node.getStatistics()*/);
+    return CTERefStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(exchange_step), {}, node.getStatistics());
 }
 
 PlanNodePtr ColumnPruningVisitor::visitExplainAnalyzeStepExtNode(ExplainAnalyzeStepExtNode & node, ColumnPruningContext &)
@@ -1118,7 +1118,7 @@ PlanNodePtr ColumnPruningVisitor::visitTopNFilteringStepExtNode(TopNFilteringSte
     auto child = VisitorUtil::accept(*node.getChildren()[0], *this, column_pruning_context);
     auto topn_filter_step = std::make_shared<TopNFilteringStepExt>(
         child->getStep()->getOutputStream(), step->getSortDescription(), step->getSize(), step->getModel(), step->getAlgorithm());
-    return TopNFilteringStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(topn_filter_step), PlanNodes{child}/*, node.getStatistics()*/);
+    return TopNFilteringStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(topn_filter_step), PlanNodes{child}, node.getStatistics());
 }
 
 PlanNodePtr ColumnPruningVisitor::visitFillingStepNode(FillingStepNode & node, ColumnPruningContext & column_pruning_context)
@@ -1132,7 +1132,7 @@ PlanNodePtr ColumnPruningVisitor::visitFillingStepNode(FillingStepNode & node, C
     }
     auto child = VisitorUtil::accept(node.getChildren()[0], *this, column_pruning_context);
     auto fill_step = std::make_shared<FillingStep>(child->getStep()->getOutputStream(), step->getSortDescription(), QueryPlanStepHelper::getFillingStepFillDescription(*step), nullptr, QueryPlanStepHelper::getFillingStepUseWithFillBySortingPrefix(*step));
-    return FillingStepNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(fill_step), PlanNodes{child}/*, node.getStatistics()*/);
+    return FillingStepNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(fill_step), PlanNodes{child}, node.getStatistics());
 }
 
 PlanNodePtr ColumnPruningVisitor::visitTotalsHavingStepExtNode(TotalsHavingStepExtNode & node, ColumnPruningContext & column_pruning_context)
@@ -1203,7 +1203,7 @@ PlanNodePtr ColumnPruningVisitor::visitMergingAggregatedStepExtNode(MergingAggre
 
     PlanNodes children{rewritten_child};
     auto rewritten_merge_node
-        = MergingAggregatedStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(rewritten_merge_step), children/*, node.getStatistics()*/);
+        = MergingAggregatedStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(rewritten_merge_step), children, node.getStatistics());
     return rewritten_merge_node;
 }
 
@@ -1394,11 +1394,11 @@ PlanNodePtr ColumnPruningVisitor::convertFilterWindowToSortingLimit(PlanNodePtr 
         limit,
         SortingStepExt::Stage::FULL);
     auto child_node = SortingStepExtNode::createPlanNode(
-        context->getOptimizerContext()->nextNodeId(), std::move(sorting_step), PlanNodes{window_node->getChildren()}/*, node.getStatistics()*/);
+        context->getOptimizerContext()->nextNodeId(), std::move(sorting_step), PlanNodes{window_node->getChildren()}, node->getStatistics());
 
     UInt64 offset = 0;
     auto limit_step = std::make_shared<LimitStepExt>(child_node->getStep()->getOutputStream(), limit, offset);
-    child_node = LimitStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(limit_step), PlanNodes{child_node}/*, node.getStatistics()*/);
+    child_node = LimitStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(limit_step), PlanNodes{child_node}, node->getStatistics());
 
     if (new_conjuncts.empty())
         return child_node;
@@ -1406,7 +1406,7 @@ PlanNodePtr ColumnPruningVisitor::convertFilterWindowToSortingLimit(PlanNodePtr 
     auto new_filter = PredicateUtils::combineConjuncts(new_conjuncts);
     auto new_filter_step = std::make_shared<FilterStepExt>(child_node->getStep()->getOutputStream(), new_filter);
     auto new_filter_node
-        = FilterStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(new_filter_step), {child_node}/*, node.getStatistics()*/);
+        = FilterStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(new_filter_step), {child_node}, node->getStatistics());
 
     return new_filter_node;
 }

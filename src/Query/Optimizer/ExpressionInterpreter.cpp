@@ -252,10 +252,10 @@ struct LogicalFunctionRewriter
                 rewrite_result = {std::make_shared<DataTypeUInt8>(), node, ternary_to_field(const_value)};
                 return true;
             }
-            // else if (FunctionImpl::isNeutralValueTernary(const_value))
-            // {
-            //     // `x AND 1` return `x`
-            // }
+            else if (FunctionImpl::isNeutralValueTernary(const_value))
+            {
+                // `x AND 1` return `x`
+            }
             else
             {
                 // `x AND NULL` return `x AND NULL`
