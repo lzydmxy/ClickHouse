@@ -44,7 +44,8 @@
 #include <Query/Common/Void.h>
 #include <Query/Storages/StorageHelper.h>
 #include <Storages/IStorage.h>
-#include <Storages/MergeTree/MergeTreeData.h>
+#include <Storages/StorageMergeTree.h>
+#include <Storages/StorageReplicatedMergeTree.h>
 #include <Storages/StorageDistributed.h>
 #include <Storages/StorageDistributed.h>
 #include <Storages/StorageMaterializedView.h>
@@ -509,7 +510,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeTable(
 
         // todo: zhangwanyun1, need !storage->supportsOptimizer(), temporarily use the type judgment method to identify whether support optimizer
         bool support_optimizer = false;
-        if (storage->as<MergeTreeData>() || storage->as<StorageMaterializedView>())
+        if (storage->as<StorageMergeTree>() || storage->as<StorageReplicatedMergeTree>() || storage->as<StorageMaterializedView>())
         {
             support_optimizer = true;
         }
