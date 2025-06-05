@@ -504,7 +504,7 @@ const Rewriters & PlanOptimizer::getShortCircuitRewriters()
 void PlanOptimizer::optimize(QueryPlanExt & plan, ContextMutablePtr context)
 {
     int i = GraphvizPrinter::PRINT_PLAN_OPTIMIZE_INDEX;
-    GraphvizPrinter::printLogicalPlan(plan, context, std::to_string(i++) + "_Init_Plan");
+    GraphvizPrinter::printLogicalPlan(plan, context, toString(i++) + "_Init_Plan");
 
     // Check init plan to satisfy with :
     // 1 Symbol exist check

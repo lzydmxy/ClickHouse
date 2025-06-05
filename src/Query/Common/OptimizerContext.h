@@ -174,6 +174,9 @@ public:
     void incRuleId() { ++rule_id; }
 	void setTransactionID(UInt64 txt_id_);
 	UInt64 getTransactionID();
+    int getStepId() const { return step_id; }
+    void setStepId(int step_id_) { step_id = step_id_; }
+    int getAndIncStepId() { return ++step_id; }
 protected:
     std::shared_ptr<QueryStatistics::StatisticsMemoryStore> stats_memory_store = nullptr;
 
@@ -206,6 +209,7 @@ private:
     std::shared_ptr<OptimizerProfile> optimizer_profile = nullptr;
 
     int sub_query_id = 0;
+    int step_id = 2000;
     int rule_id = 3000;
     String graphviz_sub_query_path;
 
