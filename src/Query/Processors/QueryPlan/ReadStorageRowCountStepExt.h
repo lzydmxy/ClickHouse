@@ -25,7 +25,7 @@ public:
     void setNumRows(UInt64 num_rows_) { num_rows = num_rows_; }
 
     UInt64 getNumRows() const { return num_rows; }
-
+    ContextPtr getContext() const { return context; }
     bool isFinal() const { return is_final_agg; }
 
     void initializePipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;

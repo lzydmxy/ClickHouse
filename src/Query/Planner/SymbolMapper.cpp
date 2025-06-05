@@ -778,7 +778,7 @@ std::shared_ptr<LocalExchangeStepExt> SymbolMapper::map(const LocalExchangeStepE
 std::shared_ptr<ReadStorageRowCountStepExt> SymbolMapper::map(const ReadStorageRowCountStepExt & step)
 {
     auto new_step = std::make_shared<ReadStorageRowCountStepExt>(
-        map(step.getOutputStream().header), step.getQuery(), step.getAggregateDescription(), step.isFinal(), step.getStorageID(), nullptr);
+        map(step.getOutputStream().header), step.getQuery(), step.getAggregateDescription(), step.isFinal(), step.getStorageID(), step.getContext());
     new_step->setNumRows(step.getNumRows());
     return new_step;
 }
