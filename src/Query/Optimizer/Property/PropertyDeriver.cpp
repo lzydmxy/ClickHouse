@@ -72,7 +72,7 @@ Property PropertyDeriver::deriveProperty(
 
 Property PropertyDeriver::deriveStorageProperty(const StoragePtr & storage, const Property & required, ContextMutablePtr & context)
 {
-    if (storage->getStorageID().getDatabaseName() == "system")
+    if (storage->getStorageID().getDatabaseName() == "system" || storage->getStorageID().getDatabaseName() == "_table_function")
     {
         auto node = Partitioning(Partitioning::Handle::SINGLE);
         node.setComponent(Partitioning::Component::COORDINATOR);

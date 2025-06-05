@@ -204,6 +204,73 @@ inline QueryPlanStepType getQueryPlanStepType(const IQueryPlanStep & query_plan_
 #undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF
 
 
+using DataStreamSortScope = DataStream::SortScope;
+ENUM_TO_PROTO_CONVERTER(
+    DataStreamSortScope,
+    Protos::DataStream::SortScope,
+    (None),
+    (Chunk),
+    (Stream),
+    (Global)
+);
+
+using WindowFrameType = WindowFrame::FrameType;
+ENUM_TO_PROTO_CONVERTER(
+    WindowFrameType, // enum name
+    Protos::WindowFrame::FrameType, // proto enum message
+    (ROWS),
+    (GROUPS),
+    (RANGE));
+
+using WindowFrameBoundaryType = WindowFrame::BoundaryType;
+ENUM_TO_PROTO_CONVERTER(
+    WindowFrameBoundaryType, // enum name
+    Protos::WindowFrame::BoundaryType, // proto enum message
+    (Unbounded),
+    (Current),
+    (Offset));
+
+using ASTSelectIntersectExceptQueryOperator = ASTSelectIntersectExceptQuery::Operator;
+ENUM_TO_PROTO_CONVERTER(
+    ASTSelectIntersectExceptQueryOperator, // enum name
+    Protos::IntersectExceptOperator, // proto enum message
+    (UNKNOWN),
+    (EXCEPT_ALL),
+    (EXCEPT_DISTINCT),
+    (INTERSECT_ALL),
+    (INTERSECT_DISTINCT));
+
+/// diff bc has ExcludeType
+
+using FieldTypeWhich = Field::Types::Which;
+ENUM_TO_PROTO_CONVERTER(
+    FieldTypeWhich, // enum name
+    Protos::Field::FieldType, // proto enum message
+    (Null, 0),
+    (UInt64, 1),
+    (Int64, 2),
+    (Float64, 3),
+    (UInt128, 4),
+    (Int128, 5),
+
+    (String, 16),
+    (Array, 17),
+    (Tuple, 18),
+    (Decimal32, 19),
+    (Decimal64, 20),
+    (Decimal128, 21),
+    (AggregateFunctionState, 22),
+    (Decimal256, 23),
+    (UInt256, 24),
+    (Int256, 25),
+    (Map, 26),
+    (UUID, 27),
+    (Bool, 28),
+    (Object, 29),
+    (IPv4, 30),
+    (IPv6, 31),
+    (CustomType, 32));
+
 class QueryPlanStepHelper
 {
 public:
@@ -291,77 +358,17 @@ break; \
     static const SortDescription & getFillingStepFillDescription(const FillingStep & filling_step) {return filling_step.fill_description;}
     static bool getFillingStepUseWithFillBySortingPrefix(const FillingStep & filling_step) {return filling_step.use_with_fill_by_sorting_prefix;}
 
+    static String getIntersectOrExceptStepOperatorStr(const IntersectOrExceptStep & intersect_or_except_step)
+    {
+        const auto & name = ASTSelectIntersectExceptQueryOperatorConverter::toString(intersect_or_except_step.current_operator);
+        if (name.empty())
+            return "UNKNOWN";
+        return name;
+    }
+
 
     static const ASTSelectIntersectExceptQuery::Operator & getIntersectOrExceptStepOperator(const IntersectOrExceptStep & intersect_or_except) {return intersect_or_except.current_operator;}
     static size_t getIntersectOrExceptStepMaxThreads(const IntersectOrExceptStep & intersect_or_except) {return intersect_or_except.max_threads;}
 };
-
-
-using DataStreamSortScope = DataStream::SortScope;
-ENUM_TO_PROTO_CONVERTER(
-    DataStreamSortScope,
-    Protos::DataStream::SortScope,
-    (None),
-    (Chunk),
-    (Stream),
-    (Global)
-);
-
-using WindowFrameType = WindowFrame::FrameType;
-ENUM_TO_PROTO_CONVERTER(
-    WindowFrameType, // enum name
-    Protos::WindowFrame::FrameType, // proto enum message
-    (ROWS),
-    (GROUPS),
-    (RANGE));
-
-using WindowFrameBoundaryType = WindowFrame::BoundaryType;
-ENUM_TO_PROTO_CONVERTER(
-    WindowFrameBoundaryType, // enum name
-    Protos::WindowFrame::BoundaryType, // proto enum message
-    (Unbounded),
-    (Current),
-    (Offset));
-
-using ASTSelectIntersectExceptQueryOperator = ASTSelectIntersectExceptQuery::Operator;
-ENUM_TO_PROTO_CONVERTER(
-    ASTSelectIntersectExceptQueryOperator, // enum name
-    Protos::IntersectExceptOperator, // proto enum message
-    (UNKNOWN),
-    (EXCEPT_ALL),
-    (EXCEPT_DISTINCT),
-    (INTERSECT_ALL),
-    (INTERSECT_DISTINCT));
-
-/// diff bc has ExcludeType
-
-using FieldTypeWhich = Field::Types::Which;
-ENUM_TO_PROTO_CONVERTER(
-    FieldTypeWhich, // enum name
-    Protos::Field::FieldType, // proto enum message
-    (Null, 0),
-    (UInt64, 1),
-    (Int64, 2),
-    (Float64, 3),
-    (UInt128, 4),
-    (Int128, 5),
-
-    (String, 16),
-    (Array, 17),
-    (Tuple, 18),
-    (Decimal32, 19),
-    (Decimal64, 20),
-    (Decimal128, 21),
-    (AggregateFunctionState, 22),
-    (Decimal256, 23),
-    (UInt256, 24),
-    (Int256, 25),
-    (Map, 26),
-    (UUID, 27),
-    (Bool, 28),
-    (Object, 29),
-    (IPv4, 30),
-    (IPv6, 31),
-    (CustomType, 32));
 
 }
