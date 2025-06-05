@@ -37,6 +37,8 @@ public:
         buf.resize(buf.size() - available());
         /// Prevent further writes.
         set(nullptr, 0);
+        finalized = true;
+        finalize();
     }
 
     const auto & getIntermediateBuf() const { return buf; }
