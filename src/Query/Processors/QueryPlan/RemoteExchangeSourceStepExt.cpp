@@ -113,7 +113,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
 
     const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(settings);
     auto optimizer_context = context->getOptimizerContext();
-    UInt64 current_tx_id = optimizer_context->getTransactionID();
+    UInt64 current_tx_id = optimizer_context->getTransactionID(context->getInitialQueryId());
 
     bool keep_order = optimizer_context->getSettingsRef().exchange_enable_force_keep_order ||  optimizer_context->getSettingsRef().enable_shuffle_with_order;
     if (!keep_order)

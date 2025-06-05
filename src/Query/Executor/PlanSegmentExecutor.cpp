@@ -447,7 +447,7 @@ QueryPipeline PlanSegmentExecutor::buildPipeline(BroadcastSenderPtrs & senders)
         = SenderProxyOptions{.wait_timeout_ms = opt_settings.exchange_wait_accept_max_timeout_ms + opt_settings.wait_runtime_filter_timeout};
     auto & sender_registry = BroadcastSenderProxyRegistry::instance();
     auto thread_group = CurrentThread::getGroup();
-    UInt64 query_tx_id = optimizer_context->getTransactionID();
+    UInt64 query_tx_id = optimizer_context->getTransactionID(context->getInitialQueryId());
 
     size_t output_index = 0;
     for (const auto &cur_plan_segment_output : plan_segment_outputs)

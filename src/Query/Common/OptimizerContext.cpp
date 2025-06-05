@@ -13,6 +13,7 @@
 #include <Query/Executor/PlanSegmentInstance.h>
 #include <Query/Executor/SegmentScheduler.h>
 #include <Query/Executor/PlanSegmentProcessList.h>
+#include <Query/Statistics/StringHash.h>
 
 namespace DB
 {
@@ -207,9 +208,11 @@ void OptimizerContext::setTransactionID(UInt64 txt_id_)
     txt_id = txt_id_;
 }
 
-UInt64 OptimizerContext::getTransactionID()
+// todo: lizhuoyu5, Currently, there is no transaction ID available, so we are temporarily using the hash value of the query_id instead.
+// todo: In the future, the transaction ID can be obtained from Keeper.
+UInt64 OptimizerContext::getTransactionID(std::string_view query_id)
 {
-    return txt_id;
+    return QueryStatistics::stringHash64(query_id);
 }
 
 std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> OptimizerContext::getProcessorProfileElementConsumer() const

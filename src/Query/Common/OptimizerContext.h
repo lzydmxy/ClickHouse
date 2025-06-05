@@ -173,7 +173,7 @@ public:
     void setRuleId(int rule_id_) { rule_id = rule_id_; }
     void incRuleId() { ++rule_id; }
 	void setTransactionID(UInt64 txt_id_);
-	UInt64 getTransactionID();
+	UInt64 getTransactionID(std::string_view query_id);
     int getStepId() const { return step_id; }
     void setStepId(int step_id_) { step_id = step_id_; }
     int getAndIncStepId() { return ++step_id; }
