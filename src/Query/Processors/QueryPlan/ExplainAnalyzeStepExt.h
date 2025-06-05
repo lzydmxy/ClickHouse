@@ -22,7 +22,7 @@ public:
         std::shared_ptr<QueryPlan> query_plan_ptr_,
         QueryPlanSettings settings);
 
-    String getName() const override { return "ExplainAnalyzeStepExt"; }
+    String getName() const override { return "ExplainAnalyzeExt"; }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 
     bool hasPlan() const { return query_plan_ptr != nullptr; }

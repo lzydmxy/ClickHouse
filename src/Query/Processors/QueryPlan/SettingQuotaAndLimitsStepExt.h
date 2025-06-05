@@ -32,7 +32,7 @@ public:
         std::shared_ptr<const EnabledQuota> quota_,
         ContextPtr context_);
 
-    String getName() const override { return "SettingQuotaAndLimitsStepExt"; }
+    String getName() const override { return "SettingQuotaAndLimitsExt"; }
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;

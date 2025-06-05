@@ -13,7 +13,7 @@ class PartialSortingStepExt : public ITransformingStep
 public:
     explicit PartialSortingStepExt(const DataStream & input_stream, SortDescription sort_description_, UInt64 limit_, SizeLimits size_limits_ = {});
 
-    String getName() const override { return "PartialSorting"; }
+    String getName() const override { return "PartialSortingExt"; }
 
     const SortDescription & getSortDescription() const { return sort_description; }
     UInt64 getLimit() const { return limit; }

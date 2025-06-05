@@ -30,7 +30,7 @@ public:
 
     void setSampleSize(size_t sample_size_) { sample_size = sample_size_; }
 
-    String getName() const override { return "FinalSample"; }
+    String getName() const override { return "FinalSampleExt"; }
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override
     {

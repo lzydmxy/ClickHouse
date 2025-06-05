@@ -18,7 +18,7 @@ public:
         size_t max_block_size,
         UInt64 limit);
 
-    String getName() const override { return "FinishSorting"; }
+    String getName() const override { return "FinishSortingExt"; }
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 

@@ -13,7 +13,7 @@ public:
     explicit PartitionTopNStepExt(
         const DataStream & input_stream_, const Names & partition_, const Names & order_by_, UInt64 limit_, TopNModel model_);
 
-    String getName() const override { return "PartitionTopNStepExt"; }
+    String getName() const override { return "PartitionTopNExt"; }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 
     void describeActions(JSONBuilder::JSONMap & map) const override {};

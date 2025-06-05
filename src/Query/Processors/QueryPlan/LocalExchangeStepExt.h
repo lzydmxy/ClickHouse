@@ -15,7 +15,7 @@ namespace DB
 
         String getName() const override
         {
-            return "LocalExchangeStepExt";
+            return "LocalExchangeExt";
         }
 
         void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;

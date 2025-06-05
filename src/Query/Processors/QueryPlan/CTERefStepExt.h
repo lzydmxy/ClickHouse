@@ -31,7 +31,7 @@ public:
     {
         throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not supported");
     }
-    String getName() const override { return "CTERefStepExt"; }
+    String getName() const override { return "CTERefExt"; }
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr context) const;
     bool hasFilter() const { return has_filter; }
     void setFilter(bool has_filter_) { has_filter = has_filter_;}

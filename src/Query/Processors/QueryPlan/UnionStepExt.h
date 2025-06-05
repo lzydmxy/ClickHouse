@@ -19,7 +19,7 @@ public:
     {
     }
 
-    String getName() const override { return "UnionStepExt"; }
+    String getName() const override { return "UnionExt"; }
 
     QueryPipelineBuilderPtr updatePipeline(QueryPipelineBuilders pipelines, const BuildQueryPipelineSettings &) override;
 

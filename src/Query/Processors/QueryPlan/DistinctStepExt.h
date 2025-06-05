@@ -24,7 +24,7 @@ DistinctStepExt(
             bool optimize_distinct_in_order_,
             bool can_to_agg_); /// If is enabled, execute distinct for separate streams. Otherwise, merge streams.
 
-    String getName() const override { return "DistinctStepExt"; }
+    String getName() const override { return "DistinctExt"; }
     const Names & getColumns() const { return columns; }
     bool preDistinct() const { return pre_distinct; }
     bool canToAgg() const { return can_to_agg; }

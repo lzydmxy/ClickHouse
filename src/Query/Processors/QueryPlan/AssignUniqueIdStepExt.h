@@ -10,7 +10,7 @@ class AssignUniqueIdStepExt : public ITransformingStep
 public:
     explicit AssignUniqueIdStepExt(const DataStream & input_stream_, String unique_id_);
 
-    String getName() const override { return "AssignUniqueIdStepExt"; }
+    String getName() const override { return "AssignUniqueIdExt"; }
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;

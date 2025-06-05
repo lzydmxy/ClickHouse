@@ -26,7 +26,7 @@ public:
     {
     }
 
-    String getName() const override { return "MergeSorting"; }
+    String getName() const override { return "MergeSortingExt"; }
 
     const SortDescription & getSortDescription() const { return description; }
     UInt64 getLimit() const { return limit; }

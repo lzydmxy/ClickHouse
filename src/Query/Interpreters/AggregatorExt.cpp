@@ -1019,12 +1019,29 @@ bool AggregatorExt::executeOnBlock(
        * To make them work anyway, we materialize them.
        */
     Columns materialized_columns;
+    bool all_keys_are_const = false;
+    if (params.optimize_group_by_constant_keys)
+    {
+        all_keys_are_const = true;
+        for (size_t i = 0; i < params.keys_size; ++i)
+            all_keys_are_const &= isColumnConst(*columns.at(params.keys[i]));
+    }
 
     /// Remember the columns we will work with
     for (size_t i = 0; i < params.keys_size; ++i)
     {
         materialized_columns.push_back(columns.at(params.keys[i])->convertToFullColumnIfConst());
         key_columns[i] = materialized_columns.back().get();
+
+        if (all_keys_are_const)
+        {
+            key_columns[i] = assert_cast<const ColumnConst &>(*columns.at(params.keys[i])).getDataColumnPtr().get();
+        }
+        else
+        {
+            materialized_columns.push_back(recursiveRemoveSparse(columns.at(params.keys[i]))->convertToFullColumnIfConst());
+            key_columns[i] = materialized_columns.back().get();
+        }
 
         if (!result.isLowCardinality())
         {

@@ -37,7 +37,7 @@ public:
         TopNModel model_,
         TopNFilteringAlgorithm algorithm = TopNFilteringAlgorithm::Unspecified);
 
-    String getName() const override { return "TopNFilteringStepExt"; }
+    String getName() const override { return "TopNFilteringExt"; }
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;

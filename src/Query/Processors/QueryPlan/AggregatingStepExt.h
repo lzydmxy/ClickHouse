@@ -172,7 +172,7 @@ public:
 
     static Block appendGroupingColumn(Block block, bool has_grouping);
 
-    String getName() const override { return "Aggregating"; }
+    String getName() const override { return "AggregatingExt"; }
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 

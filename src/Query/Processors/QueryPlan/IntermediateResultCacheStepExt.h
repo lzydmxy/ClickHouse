@@ -32,7 +32,7 @@ public:
     // todo: However, we might implement it in the future. For now, we have added the class definition without implementing its functionality.
     IntermediateResultCacheStepExt(const DataStream & input_stream_, /* CacheParam cache_param_,*/ Aggregator::Params aggregator_params_);
 
-    String getName() const override { return "IntermediateResultCacheStepExt"; }
+    String getName() const override { return "IntermediateResultCacheExt"; }
 
     QueryPipelineBuilderPtr updatePipeline(QueryPipelineBuilders pipelines, const BuildQueryPipelineSettings & build_settings) override;
 

@@ -17,7 +17,7 @@ public:
         String marker_symbol_,
         std::vector<String> distinct_symbols_);
 
-    String getName() const override { return "MarkDistinctStepExt"; }
+    String getName() const override { return "MarkDistinctExt"; }
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;

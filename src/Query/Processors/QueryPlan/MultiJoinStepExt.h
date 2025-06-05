@@ -11,7 +11,7 @@ class MultiJoinStepExt : public IQueryPlanStep
 public:
     explicit MultiJoinStepExt(const DataStream & output_, const Graph & graph_) : graph(graph_) { output_stream = output_; }
 
-    String getName() const override { return "MultiJoinStepExt"; }
+    String getName() const override { return "MultiJoinExt"; }
 
     QueryPipelineBuilderPtr updatePipeline(QueryPipelineBuilders pipelines, const BuildQueryPipelineSettings & settings) override;
 

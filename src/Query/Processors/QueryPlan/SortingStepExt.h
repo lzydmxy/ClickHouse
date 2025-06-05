@@ -23,7 +23,7 @@ public:
 
     explicit SortingStepExt(const DataStream & input_stream, SortDescription description_, size_t limit_, Stage stage_, SortDescription prefix_description_ = {}, bool enable_adaptive_spill_ = false);
 
-    String getName() const override { return "Sorting"; }
+    String getName() const override { return "SortingExt"; }
 
     const SortDescription & getSortDescription() const { return result_description; }
     const SortDescription & getPrefixDescription() const { return prefix_description; }

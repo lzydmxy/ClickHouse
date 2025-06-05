@@ -19,7 +19,7 @@ public:
 
     const ConstASTPtr & getFilter() const { return filter; }
     void setFilter(ConstASTPtr new_filter) { filter = std::move(new_filter); }
-    String getName() const override { return "FilterStepExt"; }
+    String getName() const override { return "FilterExt"; }
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr context) const;
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings) override;

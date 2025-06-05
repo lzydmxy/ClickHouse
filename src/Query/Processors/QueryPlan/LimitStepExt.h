@@ -22,7 +22,7 @@ public:
 
     String getName() const override
     {
-        return "LimitStepExt";
+        return "LimitExt";
     }
 
     size_t getLimitForSorting() const

@@ -27,7 +27,7 @@ class RemoteExchangeSourceStepExt : public ISourceStep
 public:
     explicit RemoteExchangeSourceStepExt(PlanSegmentInputs inputs_, DataStream input_stream_, bool is_add_totals_, bool is_add_extremes_);
 
-    String getName() const override { return "RemoteExchangeSourceStepExt"; }
+    String getName() const override { return "RemoteExchangeSourceExt"; }
 
     void initializePipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings) override;
 

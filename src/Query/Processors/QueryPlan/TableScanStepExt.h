@@ -132,7 +132,7 @@ public:
             storage_id.uuid = storage->getStorageID().uuid;
     }
 
-    String getName() const override { return "TableScanStepExt"; }
+    String getName() const override { return "TableScanExt"; }
     void initializePipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings  &) override;
     const String & getDatabase() const { return storage_id.database_name; }
     const String & getTable() const { return storage_id.table_name; }

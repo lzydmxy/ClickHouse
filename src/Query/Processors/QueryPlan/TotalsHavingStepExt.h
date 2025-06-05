@@ -23,7 +23,7 @@ public:
             double auto_include_threshold_,
             bool final_);
 
-    String getName() const override { return "TotalsHavingStepExt"; }
+    String getName() const override { return "TotalsHavingExt"; }
     bool isOverflowRow() const { return overflow_row; }
     String getFilterColumnName() const { return filter_column_name; }
     TotalsMode getTotalsMode() const { return totals_mode; }

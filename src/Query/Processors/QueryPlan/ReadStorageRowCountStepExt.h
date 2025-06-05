@@ -14,7 +14,7 @@ class ReadStorageRowCountStepExt : public ISourceStep
 public:
     explicit ReadStorageRowCountStepExt(Block output_header, ASTPtr query_, AggregateDescription agg_desc_, bool is_final_agg_, StorageID storage_id_, ContextPtr context_);
     
-    String getName() const override { return "ReadStorageRowCountStepExt"; }
+    String getName() const override { return "ReadStorageRowCountExt"; }
     
     AggregateDescription getAggregateDescription() const { return agg_desc; }
 

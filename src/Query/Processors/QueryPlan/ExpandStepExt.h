@@ -59,7 +59,7 @@ public:
         std::set<Int32> group_id_value_,
         std::map<Int32, Names> group_id_non_null_symbol_);
 
-    String getName() const override { return "ExpandStepExt"; }
+    String getName() const override { return "ExpandExt"; }
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & settings) override;

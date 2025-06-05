@@ -28,7 +28,7 @@ public:
         SortDescription group_by_sort_description_,
         bool memory_bound_merging_of_aggregation_results_enabled_);
 
-    String getName() const override { return "MergingAggregatedStepExt"; }
+    String getName() const override { return "MergingAggregatedExt"; }
     std::shared_ptr<IQueryPlanStep> copy(ContextPtr) const;
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;

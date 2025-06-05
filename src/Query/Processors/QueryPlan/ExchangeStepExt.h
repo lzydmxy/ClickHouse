@@ -15,7 +15,7 @@ class ExchangeStepExt : public IQueryPlanStep
 public:
     explicit ExchangeStepExt(DataStreams input_streams_, const RExchangeMode::Enum & mode_, Partitioning schema_, bool keep_order_ = false);
 
-    String getName() const override { return "ExchangeStepExt"; }
+    String getName() const override { return "ExchangeExt"; }
 
     QueryPipelineBuilderPtr updatePipeline(QueryPipelineBuilders pipelines, const BuildQueryPipelineSettings & context) override;
 

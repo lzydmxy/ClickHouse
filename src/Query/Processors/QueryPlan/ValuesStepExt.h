@@ -32,7 +32,7 @@ class ValuesStepExt : public ISourceStep
 public:
     ValuesStepExt(Block header, Fields fields_, size_t rows_ = 1);
 
-    String getName() const override { return "ValuesStepExt"; }
+    String getName() const override { return "ValuesExt"; }
     const Fields & getFields() const { return fields; }
     size_t getRows() const { return rows; }
 
