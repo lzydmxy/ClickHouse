@@ -947,10 +947,12 @@ void AggregatorExt::prepareAggregateInstructions(
             materialized_columns.push_back(columns.at(params.aggregates[i].arguments[j])->convertToFullColumnIfConst());
             aggregate_columns[i][j] = materialized_columns.back().get();
 
-            auto column_no_lc = recursiveRemoveLowCardinality(aggregate_columns[i][j]->getPtr());
-            if (column_no_lc.get() != aggregate_columns[i][j])
+            auto full_column = recursiveRemoveSparse(aggregate_columns[i][j]->getPtr());
+            full_column = recursiveRemoveLowCardinality(full_column);
+
+            if (full_column.get() != aggregate_columns[i][j])
             {
-                materialized_columns.emplace_back(std::move(column_no_lc));
+                materialized_columns.emplace_back(std::move(full_column));
                 aggregate_columns[i][j] = materialized_columns.back().get();
             }
         }
