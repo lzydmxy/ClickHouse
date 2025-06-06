@@ -74,6 +74,7 @@ SegmentScheduler::insertPlanSegments(const String & query_id, PlanSegmentTree * 
     query_context->getSettingsRef().write(settings_write_buf, SettingsWriteFormat::STRINGS_WITH_FLAGS);
     settings_write_buf.finalize();
     dag_ptr->query_settings_buf.append(settings_write_buf.getFinishedBuf().movable());
+    
     if (!dag_ptr->plan_segment_status_ptr->is_final_stage_start)
     {
         dag_ptr->plan_segment_status_ptr->final_execution_info = scheduleV2(query_id, query_context, dag_ptr);
