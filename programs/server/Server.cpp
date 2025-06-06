@@ -524,7 +524,7 @@ static void sanityChecks(Server & server)
     try
     {
         const char * filename = "/proc/sys/vm/overcommit_memory";
-        if (readNumber(filename) == 2)
+        if (Poco::File(filename).exists() && readNumber(filename) == 2)
             server.context()->addWarningMessage("Linux memory overcommit is disabled. Check " + String(filename));
     }
     catch (...) // NOLINT(bugprone-empty-catch)
@@ -534,7 +534,7 @@ static void sanityChecks(Server & server)
     try
     {
         const char * filename = "/sys/kernel/mm/transparent_hugepage/enabled";
-        if (readLine(filename).find("[always]") != std::string::npos)
+        if (Poco::File(filename).exists() && readLine(filename).find("[always]") != std::string::npos)
             server.context()->addWarningMessage("Linux transparent hugepages are set to \"always\". Check " + String(filename));
     }
     catch (...) // NOLINT(bugprone-empty-catch)
@@ -544,7 +544,7 @@ static void sanityChecks(Server & server)
     try
     {
         const char * filename = "/proc/sys/kernel/pid_max";
-        if (readNumber(filename) < 30000)
+        if (Poco::File(filename).exists() && readNumber(filename) < 30000)
             server.context()->addWarningMessage("Linux max PID is too low. Check " + String(filename));
     }
     catch (...) // NOLINT(bugprone-empty-catch)
@@ -554,7 +554,7 @@ static void sanityChecks(Server & server)
     try
     {
         const char * filename = "/proc/sys/kernel/threads-max";
-        if (readNumber(filename) < 30000)
+        if (Poco::File(filename).exists() && readNumber(filename) < 30000)
             server.context()->addWarningMessage("Linux threads max count is too low. Check " + String(filename));
     }
     catch (...) // NOLINT(bugprone-empty-catch)
@@ -564,7 +564,7 @@ static void sanityChecks(Server & server)
     try
     {
         const char * filename = "/proc/sys/kernel/task_delayacct";
-        if (readNumber(filename) == 0)
+        if (Poco::File(filename).exists() && readNumber(filename) == 0)
             server.context()->addWarningMessage("Delay accounting is not enabled, OSIOWaitMicroseconds will not be gathered. You can enable it using `echo 1 > " + String(filename) + "` or by using sysctl.");
     }
     catch (...) // NOLINT(bugprone-empty-catch)
