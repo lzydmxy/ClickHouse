@@ -58,6 +58,7 @@ void registerInterpreterDropIndexQuery(InterpreterFactory & factory);
 void registerInterpreterBackupQuery(InterpreterFactory & factory);
 void registerInterpreterDeleteQuery(InterpreterFactory & factory);
 void registerInterpreterSelectQueryUseOptimizer(InterpreterFactory & factory);
+void registerInterpreterExplainQueryUseOptimizer(InterpreterFactory & factory);
 
 void registerInterpreters()
 {
@@ -118,5 +119,6 @@ void registerInterpreters()
     registerInterpreterBackupQuery(factory);
     registerInterpreterDeleteQuery(factory);
     registerInterpreterSelectQueryUseOptimizer(factory);
+    registerInterpreterExplainQueryUseOptimizer(factory);
 }
 }

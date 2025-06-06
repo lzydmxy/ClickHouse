@@ -7,6 +7,7 @@
 #include <Interpreters/Context.h>
 #include <Interpreters/GetAggregatesVisitor.h>
 #include <Interpreters/InDepthNodeVisitor.h>
+#include <Interpreters/InterpreterFactory.h>
 #include <Interpreters/InterpreterSelectQuery.h>
 #include <Interpreters/InterpreterSelectWithUnionQuery.h>
 #include <Interpreters/InterpreterSetQuery.h>
@@ -1119,6 +1120,13 @@ void InterpreterExplainQueryUseOptimizer::explainPipelineWithOptimizer(
 void ExplainConsumer::consume(ProcessorProfileLogElement & element)
 {
     store_vector.emplace_back(element);
+}
+
+void registerInterpreterExplainQueryUseOptimizer(InterpreterFactory & factory)
+{
+    auto create_fn = [](const InterpreterFactory::Arguments & args)
+    { return std::make_unique<InterpreterExplainQueryUseOptimizer>(args.query, args.context); };
+    factory.registerInterpreter("InterpreterExplainQueryUseOptimizer", create_fn);
 }
 
 }

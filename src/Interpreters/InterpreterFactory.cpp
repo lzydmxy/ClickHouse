@@ -229,7 +229,10 @@ InterpreterFactory::InterpreterPtr InterpreterFactory::get(ASTPtr & query, Conte
         if (kind == ASTExplainQuery::ParsedAST || kind == ASTExplainQuery::AnalyzedSyntax)
             context->setSetting("allow_experimental_analyzer", false);
 
-        interpreter_name = "InterpreterExplainQuery";
+        if (context->getOptimizerContext()->getSettingsRef().enable_optimizer && query->as<ASTExplainQueryExt>())
+            interpreter_name = "InterpreterExplainQueryUseOptimizer";
+        else
+            interpreter_name = "InterpreterExplainQuery";
     }
     else if (query->as<ASTShowProcesslistQuery>())
     {
