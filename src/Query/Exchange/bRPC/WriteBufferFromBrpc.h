@@ -68,7 +68,6 @@ private:
     static constexpr size_t initial_size = 32;
     static constexpr size_t size_multiplier = 2;
     butil::IOBuf buf;
-    // bool finalized = false;
 };
 
 }
