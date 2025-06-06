@@ -250,4 +250,41 @@ bool OptimizerContext::getComplexQueryActive()
     return complex_query_active;
 }
 
+String OptimizerContext::getOptimizerProfile(bool print_rule)
+{
+    if (optimizer_profile)
+    {
+        String profile = optimizer_profile->getOptimizerProfile(print_rule);
+        clearOptimizerProfile();
+        return profile;
+    }
+    else
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "OptimizerProfile is not initialized");
+}
+
+void OptimizerContext::clearOptimizerProfile()
+{
+    if (!optimizer_profile)
+        return;
+    optimizer_profile->clear();
+    optimizer_profile = nullptr;
+}
+
+void OptimizerContext::setSetting(std::string_view name, const String & value)
+{
+    // todo: hongzhigao1, lock and set
+    // std::lock_guard lock(mutex);
+    // setSettingWithLock(name, value, lock);
+    optimizer_settings.set(name, value);
+}
+
+void OptimizerContext::setSetting(std::string_view name, const Field & value)
+{
+    // todo: hongzhigao1, lock and set
+    // std::lock_guard lock(mutex);
+    // setSettingWithLock(name, value, lock);
+    // contextSanityCheckWithLock(*this, settings, lock);
+    optimizer_settings.set(name, value);
+}
+
 }

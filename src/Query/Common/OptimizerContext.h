@@ -177,6 +177,13 @@ public:
     int getStepId() const { return step_id; }
     void setStepId(int step_id_) { step_id = step_id_; }
     int getAndIncStepId() { return ++step_id; }
+
+    String getOptimizerProfile(bool print_rule = false);
+    void clearOptimizerProfile();
+
+    /// Set settings by name.
+    void setSetting(std::string_view name, const String & value);
+    void setSetting(std::string_view name, const Field & value);
 protected:
     std::shared_ptr<QueryStatistics::StatisticsMemoryStore> stats_memory_store = nullptr;
 

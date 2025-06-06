@@ -93,6 +93,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     /** Query optimizer relative settings*/ \
     M(Bool, enable_optimizer, true, "Whether enable jd query optimizer", 0) \
     M(Bool, enable_legacy_optimizer, false, "Whether enable query optimizer", 0) \
+    M(Bool, enable_optimizer_fallback, false, "Whether enable query optimizer fallback to clickhouse origin when failed", 0) \
     M(UInt64, exchange_buffer_send_threshold_in_bytes, 1000000, "The minimum bytes when exchange will flush send buffer ", 0) \
     M(UInt64, exchange_buffer_send_threshold_in_row, 65505, "The minimum row num when exchange will flush send buffer", 0) \
     M(Bool, exchange_enable_force_remote_mode, false, "Force exchange data transfer through network", 0) \
@@ -327,6 +328,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Float, ab_test_traffic_factor, 0.0f, "Proportion of queries that perform ab test, meaningful between 0 and 1", 0) \
     M(String, ab_test_profile, "default", "Profile name for ab test", 0) \
     M(Bool, optimize_json_function_to_subcolumn, false, "Whether to optimize json extract functions to subcolumn read", 0) \
+    M(Bool, enable_element_mv_rows, false, "Whether enable element query calculate base rows and view rows", 0) \
     /** Optimizer relative settings, CBO, CTE, MagicSet, MV */ \
     M(Bool, enable_join_reorder, true, "Whether enable join reorder", 0) \
     M(UInt64, max_predicate_text_length, 5000, "Max length of predicate text", 0) \
