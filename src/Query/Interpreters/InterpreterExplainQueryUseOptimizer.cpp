@@ -10,6 +10,7 @@
 #include <Interpreters/InterpreterSelectQuery.h>
 #include <Interpreters/InterpreterSelectWithUnionQuery.h>
 #include <Interpreters/InterpreterSetQuery.h>
+#include <Parsers/ASTInsertQuery.h>
 #include <Parsers/ASTTablesInSelectQuery.h>
 #include <Parsers/DumpASTNode.h>
 #include <Parsers/ParserQuery.h>
@@ -82,6 +83,107 @@ struct ExplainAnalyzedSyntaxMatcher
 };
 
 using ExplainAnalyzedSyntaxVisitor = InDepthNodeVisitor<ExplainAnalyzedSyntaxMatcher, true>;
+
+SettingsChanges extractSettingsFromSetQuery(const ASTPtr & ast)
+{
+    if (!ast)
+        return {};
+
+    const auto & set_query = ast->as<ASTSetQuery &>();
+    return set_query.changes;
+}
+
+SettingsChanges extractSettingsFromSelectWithUnion(const ASTSelectWithUnionQuery & select_with_union)
+{
+    auto settings = extractSettingsFromSetQuery(select_with_union.settings_ast);
+    const ASTs & children = select_with_union.list_of_selects->children;
+    if (!children.empty())
+    {
+        // We might have an arbitrarily complex UNION tree, so just give
+        // up if the last first-order child is not a plain SELECT.
+        // It is flattened later, when we process UNION ALL/DISTINCT.
+        const auto * last_select = children.back()->as<ASTSelectQuery>();
+        if (last_select && last_select->settings())
+        {
+            auto select_settings = extractSettingsFromSetQuery(last_select->settings());
+            for (const auto & select_setting : select_settings)
+                settings.insertSetting(select_setting.name, select_setting.value);
+        }
+    }
+    return settings;
+}
+
+SettingsChanges extractSettingsFromQuery(const ASTPtr & ast)
+{
+    if (!ast)
+        return {};
+
+    if (const auto * select_query = ast->as<ASTSelectQuery>())
+    {
+        return extractSettingsFromSetQuery(select_query->settings());
+    }
+    else if (const auto * select_with_union_query = ast->as<ASTSelectWithUnionQuery>())
+    {
+        return extractSettingsFromSelectWithUnion(*select_with_union_query);
+    }
+    else if (const auto * explain_query = ast->as<ASTExplainQuery>())
+    {
+        auto settings = extractSettingsFromSetQuery(explain_query->settings_ast);
+
+        if (const auto * inner_select_union = explain_query->getExplainedQuery()->as<ASTSelectWithUnionQuery>())
+        {
+            auto inner_select_union_settings = extractSettingsFromSelectWithUnion(*inner_select_union);
+            for (const auto & select_setting : inner_select_union_settings)
+                settings.insertSetting(select_setting.name, select_setting.value);
+        }
+        else if (const auto * inner_insert = explain_query->getExplainedQuery()->as<ASTInsertQuery>())
+        {
+            auto inner_insert_settings = extractSettingsFromSetQuery(inner_insert->settings_ast);
+            for (const auto & select_setting : inner_insert_settings)
+                settings.insertSetting(select_setting.name, select_setting.value);
+        }
+        return settings;
+    }
+    // todo: hongzhigao1, other feat: ASTCreatePreparedStatementQuery, ASTExecutePreparedStatementQuery
+    // else if (const auto * prepare_query = ast->as<ASTCreatePreparedStatementQuery>())
+    // {
+    //     SettingsChanges settings;
+
+    //     if (const auto * inner_select_union = prepare_query->getQuery()->as<ASTSelectWithUnionQuery>())
+    //     {
+    //         auto inner_select_union_settings = extractSettingsFromSelectWithUnion(*inner_select_union);
+    //         settings.merge(inner_select_union_settings);
+    //     }
+    //     else if (const auto * inner_insert = prepare_query->getQuery()->as<ASTInsertQuery>())
+    //     {
+    //         auto inner_insert_settings = extractSettingsFromSetQuery(inner_insert->settings_ast);
+    //         settings.merge(inner_insert_settings);
+    //     }
+    //     return settings;
+    // }
+    // else if (const auto * execute_query = ast->as<ASTExecutePreparedStatementQuery>())
+    // {
+    //     // Settings of EXECUTE PREPARED STATEMENT should include settings of corresponding CREATE PREPARED STATEMENT
+    //     auto * prepared_stat_manager = settings_context->getPreparedStatementManager();
+    //     if (!prepared_stat_manager)
+    //         throw Exception("Prepared statement cache is not initialized", ErrorCodes::LOGICAL_ERROR);
+
+    //     auto settings = prepared_stat_manager->getSettings(execute_query->getName());
+    //     auto execute_settings = extractSettingsFromSetQuery(execute_query->settings_ast);
+    //     settings.merge(execute_settings);
+    //     return settings;
+    // }
+    else if (const auto * insert_query = ast->as<ASTInsertQuery>())
+    {
+        return extractSettingsFromSetQuery(insert_query->settings_ast);
+    }
+    else if (const auto * query_with_output = dynamic_cast<const ASTQueryWithOutput *>(ast.get()))
+    {
+        return extractSettingsFromSetQuery(query_with_output->settings_ast);
+    }
+
+    return {};
+}
 
 }
 
@@ -858,7 +960,7 @@ QueryPipeline InterpreterExplainQueryUseOptimizer::explainMetaData()
         functions_array.push_back(func_name);
 
     // get settings
-    SettingsChanges settings_changes = InterpreterSetQuery::extractSettingsFromQuery(query, contxt);
+    SettingsChanges settings_changes = extractSettingsFromQuery(query);
 
     auto key_column = ColumnString::create();
     auto value_column = ColumnString::create();
@@ -870,7 +972,7 @@ QueryPipeline InterpreterExplainQueryUseOptimizer::explainMetaData()
         {
             offest_size++;
             key_column->insert(setting.name);
-            value_column->insert(setting.value.toString());
+            value_column->insert(setting.value.get<String>());
         }
     }
     settings_offset_column->insert(offest_size);
