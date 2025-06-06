@@ -1123,11 +1123,13 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     SelectQueryOptions options;
 
     stage_watch.restart();
-    auto interpreter = std::make_shared<InterpreterSelectQuery>(query_info.query, settings_ext.context, options);
-    interpreter->execute();
-    auto backup_input_order_info = query_info.input_order_info;
-    query_info = interpreter->getQueryInfo();
-    query_info = fillQueryInfo(settings_ext.context);
+
+    fillQueryInfoV2(settings_ext.context);
+    auto local_limits = getLimitsForStorage(settings_ext.context->getSettingsRef(), options);
+    auto leaf_limits = SizeLimits(settings_ext.context->getSettingsRef().max_rows_to_read_leaf, settings_ext.context->getSettingsRef().max_bytes_to_read_leaf, settings_ext.context->getSettingsRef().read_overflow_mode_leaf);
+    auto current_storage_limit = StorageLimits{.local_limits=local_limits, .leaf_limits=leaf_limits};
+    StorageLimitsList current_storage_limits{current_storage_limit};
+    query_info.storage_limits = std::make_shared<StorageLimitsList>(current_storage_limits);
 
     LOG_DEBUG(log, "init pipeline stage run time: make up query info, {} ms", stage_watch.elapsedMilliseconds());
 
