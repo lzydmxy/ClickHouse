@@ -52,7 +52,7 @@ private:
         auto prev_size = buf.size();
         auto ret = buf.resize(size);
         if(ret < 0)
-            throw Exception(ErrorCodes::CANNOT_CREATE_IO_BUFFER, "Cannot resize butil::IOBuf to {}", initial_size);
+            throw Exception(ErrorCodes::CANNOT_CREATE_IO_BUFFER, "Cannot resize butil::IOBuf to {}", size);
         auto block_num = buf.backing_block_num();
         if(block_num != 1)
             throw Exception(ErrorCodes::CANNOT_CREATE_IO_BUFFER, "Invalid block number {} in butil::IOBuf", block_num);
