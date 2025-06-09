@@ -478,7 +478,7 @@ ActionsDAGPtr QueryPlanStepHelper::createFilterExpressionActions(ContextPtr cont
 ActionsDAGPtr QueryPlanStepHelper::createExpressionActions(
     ContextPtr context, const NamesAndTypesList & source, const NamesWithAliases & output, const ASTPtr & ast, bool add_project)
 {
-    PreparedSetsPtr prepared_sets;
+    PreparedSetsPtr prepared_sets = std::make_shared<PreparedSets>();
     auto settings = context->getSettingsRef();
     SizeLimits size_limits_for_set(settings.max_rows_in_set, settings.max_bytes_in_set, settings.set_overflow_mode);
     auto actions = std::make_shared<ActionsDAG>(source);
