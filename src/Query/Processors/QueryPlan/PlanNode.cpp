@@ -24,7 +24,7 @@ PlanNodePtr PlanNodeBase::getNodeById(PlanNodeId node_id) const
 
 #define PLAN_NODE_DEF(TYPE) template class PlanNode<TYPE>;
 APPLY_PROTOBUF_STEP_TYPES(PLAN_NODE_DEF)
-// PLAN_NODE_DEF(Any)
+PLAN_NODE_DEF(AnyStepExt)
 #undef PLAN_NODE_DEF
 
 }

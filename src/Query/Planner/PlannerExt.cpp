@@ -723,6 +723,16 @@ void QueryPlannerVisitor::planJoinOn(ASTTableJoin & table_join, PlanBuilder & le
     left_builder.withScope(joined_scope, joined_field_symbols);
     right_builder.withScope(joined_scope, joined_field_symbols);
 
+    if (auto * or_func = table_join.on_expression->as<ASTFunction>(); or_func && or_func->name == "or")
+    {
+        // todo: lizhuoyu5 impl or in on expression
+        // for (auto & disjunct : or_func->arguments->children)
+        // {
+        //     table_join->addDisjunct();
+        // }
+        throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not impl or in on expression.");
+    }
+
     // 2. prepare join keys
     auto [left_keys, right_keys, key_ids_null_safe] = prepareJoinOnKeys(table_join, left_builder, right_builder);
 

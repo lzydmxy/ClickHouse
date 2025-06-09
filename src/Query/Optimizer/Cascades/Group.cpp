@@ -291,7 +291,7 @@ void Group::deleteAllExpression()
 PlanNodePtr Group::createLeafNode(ContextMutablePtr context) const
 {
     auto leaf_step = std::make_shared<AnyStepExt>(getStep()->getOutputStream(), id);
-    return PlanNode<AnyStepExt>::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(leaf_step));
+    return AnyStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(leaf_step));
 }
 
 

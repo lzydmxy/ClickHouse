@@ -3,6 +3,7 @@
 #include <Core/Types.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Optimizer/CardinalityEstimate/PlanNodeStatisticsEstimate.h>
+#include <Query/Processors/QueryPlan/AnyStepExt.h>
 
 namespace DB
 {
@@ -68,8 +69,7 @@ public:
         plan_node = std::dynamic_pointer_cast<PlanNodeBase>(std::make_shared<PlanNode<TYPE>>(id_, std::move(spec_step), children_)); \
     }
         APPLY_PROTOBUF_STEP_TYPES(CREATE_PLAN_NODE)
-        // CREATE_PLAN_NODE(Any)
-        // CREATE_PLAN_NODE(MultiJoin)
+        CREATE_PLAN_NODE(AnyStepExt)
 #undef CREATE_PLAN_NODE
         if (!plan_node)
             throw Exception(ErrorCodes::LOGICAL_ERROR, "Failed to create PlanNode: unsupported step type {}",
@@ -171,7 +171,7 @@ private:
     using TYPE##Node = PlanNode<TYPE>;
 
     APPLY_PROTOBUF_STEP_TYPES(PLAN_NODE_DEF)
-    // PLAN_NODE_DEF(Any)
+    PLAN_NODE_DEF(AnyStepExt)
     // PLAN_NODE_DEF(MultiJoin)
 #undef PLAN_NODE_DEF
 

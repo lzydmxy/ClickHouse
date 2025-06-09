@@ -66,18 +66,27 @@ JoinPtr JoinStepExt::makeJoin(
 
     auto using_ast = std::make_shared<ASTExpressionList>();
     ASTs on_ast_terms;
-    for (size_t index = 0; index < left_keys.size(); ++index)
+
+    if (has_using)
     {
-        ASTPtr left = std::make_shared<ASTIdentifier>(left_keys[index]);
-        ASTPtr right = std::make_shared<ASTIdentifier>(right_keys[index]);
-        if (has_using)
+        table_join->addDisjunct();
+        for (size_t index = 0; index < left_keys.size(); ++index)
         {
+            ASTPtr left = std::make_shared<ASTIdentifier>(left_keys[index]);
+            ASTPtr right = std::make_shared<ASTIdentifier>(right_keys[index]);
             table_join->renames[left_keys[index]] = right_keys[index];
             table_join->addUsingKey(left);
             using_ast->children.emplace_back(left);
         }
-        else
+    }
+    else
+    {
+        table_join->addDisjunct();
+        for (size_t index = 0; index < left_keys.size(); ++index)
         {
+            ASTPtr left = std::make_shared<ASTIdentifier>(left_keys[index]);
+            ASTPtr right = std::make_shared<ASTIdentifier>(right_keys[index]);
+
             bool null_safe = getKeyIdNullSafe(index);
             table_join->addOnKeys(left, right, null_safe);
             const String fn = null_safe ? "bitEquals" : "equals";
@@ -294,9 +303,26 @@ bool JoinStepExt::getKeyIdNullSafe(size_t key_index) const
     return key_ids_null_safe.at(key_index);
 }
 
+void JoinStepExt::updateOutputStream()
+{
+    LOG_TRACE(getLogger("JoinStepExt"), "Never update output_stream when setInputStreams, we will set it later.");
+}
+
 void JoinStepExt::setOutputStream(DataStream output_stream_)
 {
     output_stream = std::move(output_stream_);
+}
+
+void JoinStepExt::describeActions(FormatSettings & settings) const
+{
+    if (join)
+        JoinStep::describeActions(settings);
+}
+
+void JoinStepExt::describeActions(JSONBuilder::JSONMap & map) const
+{
+    if (join)
+        JoinStep::describeActions(map);
 }
 
 QueryPipelineBuilderPtr JoinStepExt::updatePipeline(QueryPipelineBuilders pipelines, const BuildQueryPipelineSettings & settings)

@@ -175,6 +175,11 @@ public:
     void setOutputStream(DataStream output_stream_);
     // TODO(gouguilin): protobuf serde
 
+    void describeActions(JSONBuilder::JSONMap & map) const override;
+    void describeActions(FormatSettings & settings) const override;
+
+    void updateOutputStream() override;
+
     const LinkedHashMap<String, RuntimeFilter> & getRuntimeFilterBuilders() const { return runtime_filter_builders; }
     RuntimeFilterBuilderPtr createRuntimeFilterBuilder(ContextPtr context) const;
 

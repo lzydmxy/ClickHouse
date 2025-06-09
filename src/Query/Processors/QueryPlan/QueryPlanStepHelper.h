@@ -169,7 +169,8 @@ inline String toString(QueryPlanStepType type)
 #define ENUM_QUERY_PLAN_STEP_TYPE(ITEM) \
     case QueryPlanStepType::ITEM: \
         return #ITEM;
-        APPLY_ALL_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE)
+    APPLY_ALL_STEP_TYPES(ENUM_QUERY_PLAN_STEP_TYPE)
+    ENUM_QUERY_PLAN_STEP_TYPE(AnyStepExt)
 #undef ENUM_QUERY_PLAN_STEP_TYPE
         default:
             return "UNDEFINED";
@@ -185,6 +186,7 @@ inline String toString(QueryPlanStepType type)
 inline QueryPlanStepType getQueryPlanStepType(const QueryPlanStepPtr & query_plan_step)
 {
     APPLY_ALL_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE)
+    CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE(AnyStepExt)
     return QueryPlanStepType::UNDEFINED;
 }
 #undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE
@@ -199,6 +201,7 @@ inline QueryPlanStepType getQueryPlanStepType(const IQueryPlanStep & query_plan_
 {
     const std::type_info & typeInfo = typeid(query_plan_step);
     APPLY_ALL_STEP_TYPES(CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF)
+    CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF(AnyStepExt)
     return QueryPlanStepType::UNDEFINED;
 }
 #undef CHECK_AND_RETURN_QUERY_PLAN_STEP_TYPE_REF
