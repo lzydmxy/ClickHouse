@@ -305,6 +305,7 @@ bool JoinStepExt::getKeyIdNullSafe(size_t key_index) const
 
 void JoinStepExt::updateOutputStream()
 {
+    /// todo: lizhuoyu5, Temporary workaround needing improvement, more details http://xingyun.jd.com/codingRoot/EasyOLAP/ClickHouse_new/merges/320
     LOG_TRACE(getLogger("JoinStepExt"), "Never update output_stream when setInputStreams, we will set it later.");
 }
 
