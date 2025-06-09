@@ -79,7 +79,7 @@ JoinPtr JoinStepExt::makeJoin(
             using_ast->children.emplace_back(left);
         }
     }
-    else
+    else if (!left_keys.empty())
     {
         table_join->addDisjunct();
         for (size_t index = 0; index < left_keys.size(); ++index)
