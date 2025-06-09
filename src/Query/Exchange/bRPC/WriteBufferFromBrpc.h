@@ -20,20 +20,17 @@ public:
         resizeBufferBlock(initial_size);
     }
 
-    ~WriteBufferFromBrpc() override { finish(); }
+    ~WriteBufferFromBrpc() override { finalize(); }
 
     void nextImpl() override
     {
-        if (is_finished)
+        if (finalized)
             throw Exception(ErrorCodes::CANNOT_WRITE_AFTER_END_OF_BUFFER, "WriteBufferFromBrpc is finished");
         resizeBufferBlock(buf.size() * size_multiplier);
     }
 
-    void finish()
+    void finalizeImpl() override
     {
-        if (is_finished)
-            return;
-        is_finished = true;
         buf.resize(buf.size() - available());
         /// Prevent further writes.
         set(nullptr, 0);
@@ -43,7 +40,7 @@ public:
 
     auto & getFinishedBuf()
     {
-        finish();
+        finalize();
         return buf;
     }
 private:
@@ -68,7 +65,6 @@ private:
     static constexpr size_t initial_size = 32;
     static constexpr size_t size_multiplier = 2;
     butil::IOBuf buf;
-    bool is_finished = false;
 };
 
 }
