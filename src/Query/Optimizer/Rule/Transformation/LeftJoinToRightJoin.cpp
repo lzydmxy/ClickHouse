@@ -36,7 +36,7 @@ TransformResult LeftJoinToRightJoin::transformImpl(PlanNodePtr node, const Captu
         step.getRequireRightKeys(),
         step.getAsofInequality(),
         step.getDistributionType(),
-        JoinAlgorithm::AUTO,
+        JoinAlgorithm::DEFAULT,
         false,
         step.isOrdered(),
         step.isSimpleReordered(),

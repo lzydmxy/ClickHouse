@@ -56,7 +56,7 @@ public:
         std::optional<std::vector<bool>> require_right_keys_ = std::nullopt,
         ASOFJoinInequality asof_inequality_ = ASOFJoinInequality::GreaterOrEquals,
         DistributionType distribution_type_ = DistributionType::UNKNOWN,
-        JoinAlgorithm join_algorithm = JoinAlgorithm::AUTO,
+        JoinAlgorithm join_algorithm = JoinAlgorithm::DEFAULT,
         bool is_magic_ = false,
         bool is_ordered_ = false,
         bool simple_reordered_ = false,
@@ -223,7 +223,7 @@ protected:
     ASOFJoinInequality asof_inequality;
 
     DistributionType distribution_type = DistributionType::UNKNOWN;
-    JoinAlgorithm join_algorithm = JoinAlgorithm::AUTO;
+    JoinAlgorithm join_algorithm = JoinAlgorithm::DEFAULT;
     bool is_magic;
     bool is_ordered;
     bool simple_reordered;

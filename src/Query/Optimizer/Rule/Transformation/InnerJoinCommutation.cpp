@@ -41,7 +41,7 @@ PlanNodePtr InnerJoinCommutation::swap(JoinStepExtNode & node, RuleContext & rul
         step.getRequireRightKeys(),
         ASOFJoinInequality::GreaterOrEquals,
         DistributionType::UNKNOWN,
-        JoinAlgorithm::AUTO,
+        JoinAlgorithm::DEFAULT,
         false,
         step.isOrdered(),
         step.isSimpleReordered(),

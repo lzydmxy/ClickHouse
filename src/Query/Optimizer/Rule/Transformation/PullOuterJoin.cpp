@@ -119,7 +119,7 @@ static std::optional<PlanNodePtr> createNewJoin(
         left_join->getRequireRightKeys(),
         left_join->getAsofInequality(),
         DistributionType::UNKNOWN,
-        JoinAlgorithm::AUTO,
+        JoinAlgorithm::DEFAULT,
         false,
         left_join->isOrdered(),
         left_join->isSimpleReordered(),
