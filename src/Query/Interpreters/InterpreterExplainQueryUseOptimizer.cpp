@@ -114,7 +114,9 @@ SettingsChanges extractSettingsFromSelectWithUnion(const ASTSelectWithUnionQuery
     return settings;
 }
 
-SettingsChanges extractSettingsFromQuery(const ASTPtr & ast)
+}
+
+SettingsChanges InterpreterExplainQueryUseOptimizer::extractSettingsFromQuery(const ASTPtr & ast)
 {
     if (!ast)
         return {};
@@ -127,7 +129,7 @@ SettingsChanges extractSettingsFromQuery(const ASTPtr & ast)
     {
         return extractSettingsFromSelectWithUnion(*select_with_union_query);
     }
-    else if (const auto * explain_query = ast->as<ASTExplainQuery>())
+    else if (const auto * explain_query = ast->as<ASTExplainQueryExt>())
     {
         auto settings = extractSettingsFromSetQuery(explain_query->settings_ast);
 
@@ -184,8 +186,6 @@ SettingsChanges extractSettingsFromQuery(const ASTPtr & ast)
     }
 
     return {};
-}
-
 }
 
 BlockIO InterpreterExplainQueryUseOptimizer::execute()

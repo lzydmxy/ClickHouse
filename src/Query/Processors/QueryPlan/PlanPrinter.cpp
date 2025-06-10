@@ -21,12 +21,11 @@
 #include <Poco/JSON/Object.h>
 #include <Query/Processors/IQueryPlanStepExt.h>
 #include <Query/Processors/QueryPlan/LineageInfo.h>
+#include <Query/Interpreters/InterpreterExplainQueryUseOptimizer.h>
 
 #include <utility>
 #include <vector>
-#include <stdint.h>
-
-#include "Query/Interpreters/InterpreterExplainQueryExt.h"
+#include <cstdint>
 
 namespace DB
 {
@@ -1943,7 +1942,7 @@ String PlanPrinter::jsonMetaData(
 
     // get settings
     Poco::JSON::Object::Ptr query_used_settings = new Poco::JSON::Object(true);
-    SettingsChanges settings_changes = InterpreterExplainQueryExt::extractSettingsFromQuery(query, context);
+    SettingsChanges settings_changes = InterpreterExplainQueryUseOptimizer::extractSettingsFromQuery(query);
     for (const auto & setting : settings_changes)
         query_used_settings->set(setting.name, setting.value.dump());
     metadata_json->set("UsedSettings", query_used_settings);

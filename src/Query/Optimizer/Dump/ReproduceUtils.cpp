@@ -1,6 +1,6 @@
 #include <Query/Optimizer/Dump/ReproduceUtils.h>
 #include <Query/Analyzer/Analysis.h>
-#include <Query/Interpreters/InterpreterExplainQueryExt.h>
+#include <Query/Interpreters/InterpreterExplainQueryUseOptimizer.h>
 #include <Processors/Executors/PullingAsyncPipelineExecutor.h>
 #include <IO/ReadBufferFromString.h>
 #include <IO/WriteBufferFromString.h>
@@ -58,9 +58,9 @@ void executeDDL(ConstASTPtr query, ContextMutablePtr query_context)
 std::string obtainExplainString(const std::string & select_query, ContextMutablePtr query_context)
 {
     ASTPtr ast = parse(select_query, query_context);
-    auto explain_query = std::make_shared<ASTExplainQueryExt>(ASTExplainQueryExt::QueryPlan, ASTExplainQuery::QueryPlan);
+    auto explain_query = std::make_shared<ASTExplainQueryExt>(ASTExplainQueryExt::QueryPlan);
     explain_query->setExplainedQuery(ast);
-    InterpreterExplainQueryExt interpreter(explain_query, query_context);
+    InterpreterExplainQueryUseOptimizer interpreter(explain_query, query_context);
     //todo: liyang453, other feat: need getInputStream() in BlockIO
     //auto explain_result = interpreter.execute().getInputStream();
     //Block explain_block = explain_result->read();

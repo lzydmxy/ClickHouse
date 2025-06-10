@@ -28,6 +28,9 @@ public:
 
     static void fillColumn(IColumn & column, const std::string & str);
 
+    /// To extract SETTINGS clauses from query
+    static SettingsChanges extractSettingsFromQuery(const ASTPtr & ast);
+
 private:
     ASTPtr query;
     LoggerPtr log;
