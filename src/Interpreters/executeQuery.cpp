@@ -73,6 +73,8 @@
 #include <Processors/Formats/IOutputFormat.h>
 #include <Processors/Executors/CompletedPipelineExecutor.h>
 #include <Processors/Sources/WaitForAsyncInsertSource.h>
+
+#include <Query/Common/OptimizerSettings.h>
 #include <Query/Parsers/ParserQueryExt.h>
 #include <Query/Parsers/ASTReplaceVisitor.h>
 #include <Query/Interpreters/InterpreterSelectQueryUseOptimizer.h>
@@ -731,6 +733,7 @@ static std::tuple<ASTPtr, BlockIO> executeQueryImpl(
     assert(internal || CurrentThread::get().getQueryContext()->getCurrentQueryId() == CurrentThread::getQueryId());
 
     const Settings & settings = context->getSettingsRef();
+    const OptimizerSettings & optimizer_settings = context->getOptimizerContext()->getSettingsRef();
 
     size_t max_query_size = settings.max_query_size;
     /// Don't limit the size of internal queries or distributed subquery.
@@ -758,7 +761,7 @@ static std::tuple<ASTPtr, BlockIO> executeQueryImpl(
         }
         else
         {
-            ParserQuery parser(end, settings.allow_settings_after_format_in_insert);
+            ParserQuery parser(end, settings.allow_settings_after_format_in_insert, optimizer_settings.enable_optimizer);
             /// TODO: parser should fail early when max_query_size limit is reached.
             ast = parseQuery(parser, begin, end, "", max_query_size, settings.max_parser_depth, settings.max_parser_backtracks);
             // DB::ASTReplaceVisitor::replace(ast);

@@ -34,6 +34,7 @@
 #include <Common/Exception.h>
 #include <Common/assert_cast.h>
 
+#include <Query/Parsers/ParserExplainQueryExt.h>
 
 namespace DB
 {
@@ -65,13 +66,15 @@ bool ParserQueryWithOutput::parseImpl(Pos & pos, ASTPtr & node, Expected & expec
     ParserShowCreateAccessEntityQuery show_create_access_entity_p;
     ParserShowGrantsQuery show_grants_p;
     ParserShowPrivilegesQuery show_privileges_p;
+    ParserExplainQueryExt explain_ext_p(end, allow_settings_after_format_in_insert, enable_optimizer);
     ParserExplainQuery explain_p(end, allow_settings_after_format_in_insert);
     ParserBackupQuery backup_p;
 
     ASTPtr query;
 
     bool parsed =
-           explain_p.parse(pos, query, expected)
+           explain_ext_p.parse(pos, query, expected)
+        || explain_p.parse(pos, query, expected)
         || select_p.parse(pos, query, expected)
         || show_create_access_entity_p.parse(pos, query, expected) /// should be before `show_tables_p`
         || show_tables_p.parse(pos, query, expected)

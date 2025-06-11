@@ -16,6 +16,9 @@ namespace DB
 
 bool ParserExplainQueryExt::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
 {
+    if (!enable_optimizer)
+        return false;
+
     ASTExplainQueryExt::ExplainKindExt kind;
 
     ParserKeyword s_ast(Keyword::AST);

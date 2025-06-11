@@ -223,16 +223,17 @@ InterpreterFactory::InterpreterPtr InterpreterFactory::get(ASTPtr & query, Conte
     {
         interpreter_name = "InterpreterDescribeCacheQuery";
     }
+    else if (query->as<ASTExplainQueryExt>())
+    {
+        interpreter_name = "InterpreterExplainQueryUseOptimizer";
+    }
     else if (query->as<ASTExplainQuery>())
     {
         const auto kind = query->as<ASTExplainQuery>()->getKind();
         if (kind == ASTExplainQuery::ParsedAST || kind == ASTExplainQuery::AnalyzedSyntax)
             context->setSetting("allow_experimental_analyzer", false);
 
-        if (context->getOptimizerContext()->getSettingsRef().enable_optimizer && query->as<ASTExplainQueryExt>())
-            interpreter_name = "InterpreterExplainQueryUseOptimizer";
-        else
-            interpreter_name = "InterpreterExplainQuery";
+        interpreter_name = "InterpreterExplainQuery";
     }
     else if (query->as<ASTShowProcesslistQuery>())
     {

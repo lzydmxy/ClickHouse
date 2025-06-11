@@ -67,7 +67,7 @@ bool ParserQueryWithOutputExt::parseImpl(Pos & pos, ASTPtr & node, Expected & ex
     ParserShowCreateAccessEntityQuery show_create_access_entity_p;
     ParserShowGrantsQuery show_grants_p;
     ParserShowPrivilegesQuery show_privileges_p;
-    ParserExplainQueryExt explain_p(end, allow_settings_after_format_in_insert);
+    ParserExplainQueryExt explain_p(end, allow_settings_after_format_in_insert, true);
     ParserBackupQuery backup_p;
     ParserCreateStatsQueryExt create_stats_p;
     ParserShowStatsQueryExt show_stats_p;
