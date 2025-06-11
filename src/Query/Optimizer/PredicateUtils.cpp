@@ -359,7 +359,7 @@ bool PredicateUtils::isTruePredicate(const T & predicate)
 {
     if (const auto * literal = predicate->template as<const ASTLiteral>())
     {
-        if (literal->getColumnName() == "1")
+        if (literal->getColumnName() == "true")
         {
             return true;
         }
@@ -372,7 +372,7 @@ bool PredicateUtils::isFalsePredicate(const T & predicate)
 {
     if (const auto * literal = predicate->template as<const ASTLiteral>())
     {
-        if (literal->value.isNull() || literal->getColumnName() == "0")
+        if (literal->value.isNull() || literal->getColumnName() == "false")
         {
             return true;
         }
