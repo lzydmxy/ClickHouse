@@ -1,9 +1,8 @@
 #include "FieldHelper.h"
 #include <Core/Field.h>
-#include <Common/FieldVisitorWriteBinary.h>
+#include <Query/Core/FieldHelper.h>
 #include <IO/WriteHelpers.h>
 #include <IO/ReadHelpers.h>
-#include <Query/Common/FieldVisitorReadBinary.h>
 #include <Query/Protos/plan_node.pb.h>
 #include <IO/ReadBufferFromString.h>
 
@@ -14,14 +13,14 @@ void writeFieldBinary(const Field & field, WriteBuffer & buf)
 {
     auto type = field.getType();
     writeBinary(static_cast<UInt8>(type), buf);
-    Field::dispatch([&buf](const auto & value) { FieldVisitorWriteBinary()(value, buf); }, field);
+    FieldHelper::writeFieldBinaryBlobImpl(field, type, buf);
 }
 
 void readFieldBinary(Field & field, ReadBuffer & buf)
 {
     UInt8 read_type = 0;
     readBinary(read_type, buf);
-    field = getBinaryValue(read_type, buf);
+    FieldHelper::readFieldBinaryBlobImpl(field, static_cast<Field::Types::Which>(read_type), buf);
 }
 
 void FieldToProto(const Field & field, Protos::Field & proto)
