@@ -23,7 +23,6 @@ public:
 
     JoiningTransformExt(
         const Block & input_header,
-        const Block & output_header,
         JoinPtr join_,
         size_t max_block_size_,
         bool on_totals_ = false,

@@ -1,7 +1,6 @@
 #include "QueryPipelineBuilderHelper.h"
 
 #include <Core/SortDescription.h>
-#include <Core/UUID.h>
 #include <IO/WriteHelpers.h>
 #include <Interpreters/ConcurrentHashJoin.h>
 #include <Interpreters/Context.h>
@@ -11,29 +10,16 @@
 #include <Processors/ConcatProcessor.h>
 #include <Processors/DelayedPortsProcessor.h>
 #include <Processors/Executors/PipelineExecutor.h>
-#include <Processors/Formats/IOutputFormat.h>
-#include <Processors/LimitTransform.h>
 #include <Processors/QueryPlan/ExpressionStep.h>
 #include <Processors/QueryPlan/QueryPlan.h>
-#include <Processors/ResizeProcessor.h>
-#include <Processors/RowsBeforeLimitCounter.h>
-#include <Processors/Sources/RemoteSource.h>
-#include <Processors/Sources/SourceFromSingleChunk.h>
 #include <Processors/Transforms/CreatingSetsTransform.h>
-#include <Processors/Transforms/ExpressionTransform.h>
-#include <Processors/Transforms/ExtremesTransform.h>
 #include <Processors/Transforms/JoiningTransform.h>
 #include <Processors/Transforms/MergeJoinTransform.h>
 #include <Processors/Transforms/MergingAggregatedMemoryEfficientTransform.h>
-#include <Processors/Transforms/PartialSortingTransform.h>
-#include <Processors/Transforms/PasteJoinTransform.h>
-#include <Processors/Transforms/TotalsHavingTransform.h>
 #include <Query/Processors/Transforms/JoiningTransformExt.h>
-#include <QueryPipeline/narrowPipe.h>
 #include <QueryPipeline/Pipe.h>
 #include <QueryPipeline/QueryPipeline.h>
-#include <Common/CurrentThread.h>
-#include <Common/iota.h>
+
 #include <Common/typeid_cast.h>
 
 #include <sys/eventfd.h>
@@ -50,7 +36,6 @@ std::unique_ptr<QueryPipelineBuilder> QueryPipelineBuilderHelper::joinPipelinesW
     std::unique_ptr<QueryPipelineBuilder> left,
     std::unique_ptr<QueryPipelineBuilder> right,
     JoinPtr join,
-    const Block & output_header,
     size_t max_block_size,
     size_t max_streams,
     bool keep_left_read_in_order,
@@ -182,16 +167,16 @@ std::unique_ptr<QueryPipelineBuilder> QueryPipelineBuilderHelper::joinPipelinesW
 
     for (size_t i = 0; i < num_streams; ++i)
     {
-        auto joining = std::make_shared<JoiningTransformExt>(left_header, output_header, join, max_block_size, false, default_totals, join_parallel_left_right, finish_counter, num_streams, i, finish_pipe);
+        auto joining = std::make_shared<JoiningTransformExt>(left_header, join, max_block_size, false, default_totals, join_parallel_left_right, finish_counter, num_streams, i, finish_pipe);
         connect(**lit, joining->getInputs().front());
         connect(**rit, joining->getInputs().back());
         if (delayed_root)
         {
             // Process delayed joined blocks when all JoiningTransform are finished.
             auto delayed = std::make_shared<DelayedJoinedBlocksWorkerTransform>(
-                output_header,
-                [left_header, output_header, max_block_size, join]()
-                { return join->getNonJoinedBlocks(left_header, output_header, max_block_size); });
+                joined_header,
+                [left_header, joined_header, max_block_size, join]()
+                { return join->getNonJoinedBlocks(left_header, joined_header, max_block_size); });
             if (delayed->getInputs().size() != 1 || delayed->getOutputs().size() != 1)
                 throw Exception(ErrorCodes::LOGICAL_ERROR, "DelayedJoinedBlocksWorkerTransform should have one input and one output");
 
@@ -244,7 +229,7 @@ std::unique_ptr<QueryPipelineBuilder> QueryPipelineBuilderHelper::joinPipelinesW
 
     if (left->hasTotals())
     {
-        auto joining = std::make_shared<JoiningTransformExt>(left_header, output_header, join, max_block_size, true, default_totals);
+        auto joining = std::make_shared<JoiningTransformExt>(left_header, join, max_block_size, true, default_totals);
         connect(*left->pipe.totals_port, joining->getInputs().front());
         connect(**rit, joining->getInputs().back());
         left->pipe.totals_port = &joining->getOutputs().front();

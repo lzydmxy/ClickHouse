@@ -30,6 +30,7 @@
 #include <Query/Optimizer/Rule/Rules.h>
 #include <Query/Optimizer/ShortCircuitPlanner.h>
 #include <Query/Planner/GraphvizPrinter.h>
+#include <Query/Processors/QueryPlan/PlanPrinter.h>
 // #include <QueryPlan/Hints/HintsPropagator.h>
 // #include <QueryPlan/Hints/ImplementJoinAlgorithmHints.h>
 // #include <QueryPlan/Hints/ImplementJoinOperationHints.h>
@@ -537,6 +538,7 @@ void PlanOptimizer::optimize(QueryPlanExt & plan, ContextMutablePtr context)
         }
     }
 
+    LOG_DEBUG(getLogger("PlanOptimizer"), "Logical plan before check: \n{}", PlanPrinter::textLogicalPlan(plan, context));
     // Check final plan to satisfy with :
     // 1 Symbol exist check
     total_watch.restart();

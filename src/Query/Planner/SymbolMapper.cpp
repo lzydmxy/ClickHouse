@@ -365,6 +365,34 @@ AggregatorExt::Params SymbolMapper::map(const AggregatorExt::Params & params)
         params.enable_lc_group_by_opt};
 }
 
+Aggregator::Params SymbolMapper::map(const Aggregator::Params & params)
+{
+    auto keys = map(params.keys);
+    std::unordered_set<String> distinct_keys;
+
+    return Aggregator::Params{
+        keys,
+        map(params.aggregates),
+        params.overflow_row,
+        params.max_rows_to_group_by,
+        params.group_by_overflow_mode,
+        params.group_by_two_level_threshold,
+        params.group_by_two_level_threshold_bytes,
+        params.max_bytes_before_external_group_by,
+        params.empty_result_for_aggregation_by_empty_set,
+        params.tmp_data_scope,
+        params.max_threads,
+        params.min_free_disk_space,
+        params.compile_aggregate_expressions,
+        params.min_count_to_compile_aggregate_expression,
+        params.max_block_size,
+        params.enable_prefetch,
+        params.only_merge,
+        params.optimize_group_by_constant_keys,
+        params.min_hit_rate_to_use_consecutive_keys_optimization,
+        params.stats_collecting_params};
+}
+
 AggregatingTransformParamsExtPtr SymbolMapper::map(const AggregatingTransformParamsExtPtr & param)
 {
     if (param->aggregator_ext_list_ptr && param->aggregator_ext_list_ptr->size() > 1)
@@ -479,7 +507,7 @@ std::shared_ptr<ExceptStepExt> SymbolMapper::map(const ExceptStepExt & except)
 std::shared_ptr<ExchangeStepExt> SymbolMapper::map(const ExchangeStepExt & exchange)
 {
     return std::make_shared<ExchangeStepExt>(
-        map(exchange.getInputStreams()), exchange.getExchangeMode(), exchange.getSchema(), exchange.needKeepOrder());
+        map(exchange.getInputStreams()), exchange.getExchangeMode(), map(exchange.getSchema()), exchange.needKeepOrder());
 }
 
 std::shared_ptr<FillingStep> SymbolMapper::map(const FillingStep & filling)
@@ -587,7 +615,7 @@ std::shared_ptr<MergingAggregatedStepExt> SymbolMapper::map(const MergingAggrega
         map(merging_agg.getGroupingSetsParamsList()),
         map(merging_agg.getGroupings()),
         merging_agg.isFinal(),
-        agg_params,
+        map(merging_agg.getParams()),
         merging_agg.isMemoryEfficientAggregation(),
         merging_agg.getMaxThreads(),
         merging_agg.getMemoryEfficientMergeThreads(),

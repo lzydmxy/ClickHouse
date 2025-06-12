@@ -85,6 +85,7 @@ public:
     WindowDescription map(const WindowDescription & desc);
     SortColumnDescription map(const SortColumnDescription & desc);
     AggregatorExt::Params map(const AggregatorExt::Params & params);
+    Aggregator::Params map(const Aggregator::Params & params);
     AggregatingTransformParamsExtPtr map(const AggregatingTransformParamsExtPtr & param);
     ArrayJoinActionPtr map(const ArrayJoinActionPtr & array_join_action);
     GroupingDescription map(const GroupingDescription & desc);

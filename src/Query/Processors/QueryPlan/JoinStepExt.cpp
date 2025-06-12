@@ -408,7 +408,6 @@ QueryPipelineBuilderPtr JoinStepExt::updatePipeline(QueryPipelineBuilders pipeli
         std::move(pipelines[0]),
         std::move(pipelines[1]),
         join,
-        output_stream->header,
         max_block_size,
         max_streams,
         keep_left_read_in_order,

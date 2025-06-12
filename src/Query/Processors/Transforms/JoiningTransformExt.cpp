@@ -15,7 +15,6 @@ extern const int CANNOT_READ_FROM_SOCKET;
 
 JoiningTransformExt::JoiningTransformExt(
     const Block & input_header,
-    const Block & output_header,
     JoinPtr join_,
     size_t max_block_size_,
     bool on_totals_,
@@ -25,7 +24,7 @@ JoiningTransformExt::JoiningTransformExt(
     size_t total_size_,
     size_t index_,
     FinishPipePtr finish_pipe_)
-    : JoiningTransform(input_header, output_header, join_, max_block_size_, on_totals_, default_totals_, finish_counter_)
+    : JoiningTransform(input_header, JoiningTransform::transformHeader(input_header, join_), join_, max_block_size_, on_totals_, default_totals_, finish_counter_)
     , total_size(total_size_)
     , index(index_)
     , finish_pipe(std::move(finish_pipe_))
