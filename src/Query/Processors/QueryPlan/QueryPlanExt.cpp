@@ -206,7 +206,7 @@ QueryPipelineBuilderPtr QueryPlanExt::buildQueryPipeline(
     const QueryPlanOptimizationSettings & /*optimization_settings*/, const BuildQueryPipelineSettings & build_pipeline_settings)
 {
     checkInitialized();
-    // optimize(optimization_settings); // added by wujianchao, disable ClickHouse RBO rules
+    // optimize(optimization_settings); // disable ClickHouse RBO rules
 
     struct Frame
     {

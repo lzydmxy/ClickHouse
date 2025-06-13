@@ -1178,6 +1178,12 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
 
     ExecutePlan execute_plan;
     stage_watch.restart();
+    /// todo wujianchao, support projection selection
+    // if (use_optimizer_projection_selection)
+    //     execute_plan
+    //         = TableScanExecutor(*this, *merge_tree_storage, build_context.context).buildExecutePlan(build_context.distributed_settings);
+    // else if (use_projection_index)
+    //     execute_plan = TableScanExecutorWithIndex(*this, build_context.context).buildExecutePlan(build_context.distributed_settings);
     LOG_DEBUG(log, "init pipeline stage run time: projection match, {} ms", stage_watch.elapsedMilliseconds());
 
     size_t max_streams = settings_ext.context->getSettingsRef().max_threads;
