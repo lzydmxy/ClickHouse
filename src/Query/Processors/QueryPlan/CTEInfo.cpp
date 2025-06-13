@@ -27,7 +27,7 @@ public:
 
     Void visitCTERefStepExtNode(CTERefStepExtNode & node, std::unordered_map<CTEId, UInt64> & reference_counts) override
     {
-        const auto * cte_step = dynamic_cast<const CTERefStepExtNode *>(node.getStep().get());
+        const auto * cte_step = dynamic_cast<const CTERefStepExt *>(node.getStep().get());
         auto cte_id = cte_step->getId();
         ++reference_counts[cte_id];
         cte_helper.accept(cte_id, *this, reference_counts);
