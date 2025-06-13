@@ -46,12 +46,12 @@ public:
 
 
     QueryPipelineBuilderPtr buildQueryPipeline(
-        const QueryPlanOptimizationSettings & optimization_settings, const BuildQueryPipelineSettings & build_pipeline_settings);
+        const QueryPlanOptimizationSettings & optimization_settings, const BuildQueryPipelineSettings & build_pipeline_settings, bool need_ck_optimizations = false);
 
     /// add step_id for processors
     static void updatePipelineStepInfo(QueryPipelineBuilderPtr & pipeline_ptr, QueryPlanStepPtr & step, size_t step_id);
     /// If initialized, build pipeline and convert to pipe. Otherwise, return empty pipe.
-    Pipe convertToPipe(const QueryPlanOptimizationSettings & optimization_settings, const BuildQueryPipelineSettings & build_pipeline_settings);
+    Pipe convertToPipe(const QueryPlanOptimizationSettings & optimization_settings, const BuildQueryPipelineSettings & build_pipeline_settings, bool need_ck_optimizations);
 
     void explainPipeline(WriteBuffer & buffer, const ExplainPipelineOptions & options) const;
     void explainPipelineWithOptimizer(WriteBuffer & buffer, const ExplainPipelineOptions & options) const;

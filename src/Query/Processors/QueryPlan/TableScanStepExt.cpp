@@ -1,21 +1,22 @@
 
 #include <Interpreters/convertFieldToType.h>
-#include <Query/Processors/QueryPlan/TableScanStepExt.h>
+#include <Interpreters/evaluateConstantExpression.h>
+#include <Interpreters/misc.h>
+#include <Planner/Utils.h>
+#include <Processors/QueryPlan/Optimizations/QueryPlanOptimizationSettings.h>
+#include <Query/Common/NameToTypeExt.h>
+#include <Query/Optimizer/PredicateUtils.h>
+#include <Query/Optimizer/SymbolTransformMap.h>
+#include <Query/Optimizer/SymbolsExtractor.h>
 #include <Query/Processors/IQueryPlanStepExt.h>
+#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 #include <Query/Processors/QueryPlan/ExecutePlanElement.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
+#include <Query/Processors/QueryPlan/TableScanStepExt.h>
+#include <Query/ProtosHelper/PlanSerDerHelper.h>
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <Query/ProtosHelper/RPCHelpers.h>
-#include <Query/Optimizer/SymbolTransformMap.h>
-#include <Query/ProtosHelper/PlanSerDerHelper.h>
-#include <Interpreters/evaluateConstantExpression.h>
-#include <Planner/Utils.h>
-#include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
-#include <Query/Optimizer/PredicateUtils.h>
-#include <Interpreters/misc.h>
-#include <Query/Optimizer/SymbolsExtractor.h>
-#include <Query/Common/NameToTypeExt.h>
-#include <Processors/QueryPlan/Optimizations/QueryPlanOptimizationSettings.h>
+#include <Storages/StorageView.h>
 
 namespace DB
 {
@@ -1210,9 +1211,39 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             max_block_size,
             max_streams);
 
+        /// enable primary key condition (mark pruning)
+        if (auto * source_with_filter_step = dynamic_cast<SourceStepWithFilter *>(storage_plan.getRoot()->step.get()))
+        {
+            if (auto * select_query = query_info.query->as<ASTSelectQuery>())
+            {
+                auto required_columns = getRequiredColumns();
+                auto block = storage_snapshot->getSampleBlockForColumns(required_columns);
+                if (auto prewhere = select_query->prewhere())
+                {
+                    auto prewhere_action = QueryPlanStepHelper::createFilterExpressionActions(settings_ext.context, prewhere, block);
+                    source_with_filter_step->addFilter(prewhere_action, prewhere->getColumnName());
+                }
+                if (auto where = select_query->where())
+                {
+                    auto where_action = QueryPlanStepHelper::createFilterExpressionActions(settings_ext.context, where, block);
+                    source_with_filter_step->addFilter(where_action, where->getColumnName());
+                }
+            }
+            source_with_filter_step->applyFilters();
+        }
+
+        /// todo wujianchao we should
+        bool need_ck_optimizations = false;
+        if (auto * storage_view = dynamic_cast<StorageView *>(storage.get()))
+        {
+            // Now StorageView is still planned by ClickHouse Planner, so we should enable ClickHouse optimizations;
+            need_ck_optimizations = true;
+        }
+
         auto pipe = storage_plan.convertToPipe(
-        QueryPlanOptimizationSettings::fromContext(BuildQueryPipelineSettingsExt::cast(build_context).context),
-        BuildQueryPipelineSettings::fromContext(BuildQueryPipelineSettingsExt::cast(build_context).context));
+            QueryPlanOptimizationSettings::fromContext(BuildQueryPipelineSettingsExt::cast(build_context).context),
+            BuildQueryPipelineSettings::fromContext(BuildQueryPipelineSettingsExt::cast(build_context).context),
+            need_ck_optimizations);
 
         {
             for (auto & node : nodes)
