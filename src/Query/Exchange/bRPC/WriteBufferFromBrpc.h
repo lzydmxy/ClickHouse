@@ -54,7 +54,7 @@ private:
         if(block_num != 1)
             throw Exception(ErrorCodes::CANNOT_CREATE_IO_BUFFER, "Invalid block number {} in butil::IOBuf", block_num);
         auto block_view = buf.backing_block(block_num - 1);
-        set(const_cast<Position>(block_view.data() + offset()), block_view.size() - prev_size);
+        set(const_cast<Position>(block_view.data() + prev_size), block_view.size() - prev_size);
 #ifndef NDEBUG
         // auto curr_size = buf.size();
         // LOG_TRACE(getLogger("WriteBufferFromBrpc"), "WriteBufferFromBrpc initial_size {} multiplier {} block_num {}, resize {} to {} total {}, new block size {}",
