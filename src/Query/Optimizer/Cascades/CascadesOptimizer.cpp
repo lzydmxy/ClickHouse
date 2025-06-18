@@ -19,6 +19,7 @@
 #include <Query/Optimizer/Rule/Transformation/SemiJoinPushDown.h>
 #include <Query/Processors/QueryPlan/AnyStepExt.h>
 #include <Query/Processors/QueryPlan/CTERefStepExt.h>
+#include <Query/Processors/QueryPlan/PlanPrinter.h>
 #include <Query/Planner/GraphvizPrinter.h>
 #include <Query/Processors/IQueryPlanStepExt.h>
 #include <Query/Processors/QueryPlan/MultiJoinStepExt.h>
@@ -49,6 +50,7 @@ static bool hasCBOType(const std::set<QueryPlanStepType> & typs)
 
 bool CascadesOptimizer::rewrite(QueryPlanExt & plan, ContextMutablePtr context) const
 {
+    LOG_DEBUG(getLogger("CascadesOptimizer"), "Logical plan before CascadesOptimizer: \n{}", PlanPrinter::textLogicalPlan(plan, context));
     int id = context->getOptimizerContext()->getRuleId();
     CascadesContext cascades_context{
         context,

@@ -432,7 +432,7 @@ void OptimizeInput::execute()
             if (vaild)
             {
                 Property output_prop = PropertyDeriver::deriveProperty(
-                    group_expr->getStep(), actual_input_props, context->getRequiredProp(), context->getOptimizerContext().getContext());
+                    group_expr->getStep(), actual_input_props, context->getRequiredProp(), context->getOptimizerContext().getContext(), context->getOptimizerContext().getWorkerSize());
                 enforcePropertyAndUpdateWinner(
                     context, group_expr, std::move(output_prop), cur_total_cost, input_props, cte_common_ancestor, cte_actual_props);
             }
@@ -457,7 +457,7 @@ void OptimizeInput::initInputProperties()
 {
     // initialize input properties with default required property.
     auto required_properties = PropertyDeterminer::determineRequiredProperty(
-        group_expr->getStep(), context->getRequiredProp(), *context->getOptimizerContext().getContext());
+        group_expr->getStep(), context->getRequiredProp(), *context->getOptimizerContext().getContext(), context->getOptimizerContext().getWorkerSize());
     initPropertiesForCTE(required_properties);
     input_properties = std::move(required_properties);
 }

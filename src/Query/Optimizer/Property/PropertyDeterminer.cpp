@@ -13,11 +13,23 @@
 
 namespace DB
 {
-PropertySets PropertyDeterminer::determineRequiredProperty(QueryPlanStepPtr step, const Property & property, Context & context)
+PropertySets PropertyDeterminer::determineRequiredProperty(QueryPlanStepPtr step, const Property & property, Context & context, int worker_size)
 {
     DeterminerContext ctx{property, context};
-    DeterminerVisitor visitor{};
-    PropertySets input_properties = VisitorUtil::accept(step, visitor, ctx);
+    PropertySets input_properties;
+    if (worker_size == 1)
+    {
+        Property single_partition{Partitioning{Partitioning::Handle::SINGLE}};
+        PropertySet sets;
+        for (size_t i = 0; i < step->getInputStreams().size(); i++)
+            sets.push_back(single_partition);
+        input_properties.push_back(std::move(sets));
+    }
+    else
+    {
+        DeterminerVisitor visitor{};
+        input_properties = VisitorUtil::accept(step, visitor, ctx);
+    }
     if (!property.getCTEDescriptions().empty() || !property.getTableLayout().empty())
     {
         for (auto & property_set : input_properties)
@@ -424,7 +436,6 @@ PropertySets DeterminerVisitor::visitSortingStepExt(const SortingStepExt &, Dete
     return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
-// // todo lizhuoyu5, add SortingStep
 PropertySets DeterminerVisitor::visitMergeSortingStepExt(const MergeSortingStepExt &, DeterminerContext &)
 {
     return {{Property{Partitioning{Partitioning::Handle::SINGLE}}}};

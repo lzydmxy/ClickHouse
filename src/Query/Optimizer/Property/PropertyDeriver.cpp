@@ -24,24 +24,24 @@ namespace ErrorCodes
     extern const int OPTIMIZER_NONSUPPORT;
 }
 
-Property PropertyDeriver::deriveProperty(QueryPlanStepPtr step, ContextMutablePtr & context, const Property & require)
+Property PropertyDeriver::deriveProperty(QueryPlanStepPtr step, ContextMutablePtr & context, const Property & require, int worker_size)
 {
     PropertySet property_set;
-    return deriveProperty(step, property_set, require, context);
+    return deriveProperty(step, property_set, require, context, worker_size);
 }
 
-Property PropertyDeriver::deriveProperty(PlanNodePtr node, ContextMutablePtr & context, CTEInfo & cte_info, bool ignore_null)
+Property PropertyDeriver::deriveProperty(PlanNodePtr node, ContextMutablePtr & context, CTEInfo & cte_info, bool ignore_null, int worker_size)
 {
-    PlanDeriverVisitor visitor{cte_info, ignore_null};
+    PlanDeriverVisitor visitor{cte_info, ignore_null, worker_size};
     return VisitorUtil::accept(node, visitor, context);
 }
 
 Property
-PropertyDeriver::deriveProperty(QueryPlanStepPtr step, Property & input_property, const Property & require, ContextMutablePtr & context)
+PropertyDeriver::deriveProperty(QueryPlanStepPtr step, Property & input_property, const Property & require, ContextMutablePtr & context, int worker_size)
 {
     PropertySet input_properties = std::vector<Property>();
     input_properties.emplace_back(input_property);
-    auto result = deriveProperty(step, input_properties, require, context);
+    auto result = deriveProperty(step, input_properties, require, context, worker_size);
     if (getQueryPlanStepType(step) != QueryPlanStepType::ExchangeStepExt)
     {
         if (result.getNodePartitioning().getComponent() == Partitioning::Component::ANY)
@@ -54,9 +54,9 @@ PropertyDeriver::deriveProperty(QueryPlanStepPtr step, Property & input_property
 }
 
 Property PropertyDeriver::deriveProperty(
-    QueryPlanStepPtr step, PropertySet & input_properties, const Property & require, ContextMutablePtr & context)
+    QueryPlanStepPtr step, PropertySet & input_properties, const Property & require, ContextMutablePtr & context, int worker_size)
 {
-    DeriverContext deriver_context{input_properties, require, context};
+    DeriverContext deriver_context{input_properties, require, context, false, worker_size};
     DeriverVisitor visitor{};
     auto result = VisitorUtil::accept(step, visitor, deriver_context);
     if (getQueryPlanStepType(step) != QueryPlanStepType::ExchangeStepExt)
@@ -70,7 +70,7 @@ Property PropertyDeriver::deriveProperty(
     return result;
 }
 
-Property PropertyDeriver::deriveStorageProperty(const StoragePtr & storage, const Property & required, ContextMutablePtr & context)
+Property PropertyDeriver::deriveStorageProperty(const StoragePtr & storage, const Property & required, ContextMutablePtr & context, int worker_size)
 {
     if (storage->getStorageID().getDatabaseName() == "system" || storage->getStorageID().getDatabaseName() == "_table_function")
     {
@@ -95,12 +95,13 @@ Property PropertyDeriver::deriveStorageProperty(const StoragePtr & storage, cons
     if (use_reverse_sorting)
         sorting = sorting.toReverseOrder();
 
-    ASTPtr ast;
+    if (worker_size == 1)
+        return Property{Partitioning(Partitioning::Handle::SINGLE), Partitioning(Partitioning::Handle::ARBITRARY), sorting};
     return Property{Partitioning(Partitioning::Handle::UNKNOWN), Partitioning(Partitioning::Handle::UNKNOWN), sorting};
 }
 
 Property PropertyDeriver::deriveStoragePropertyWhatIfMode(
-    const StoragePtr & storage, ContextMutablePtr & context, const Property & required_property)
+    const StoragePtr & storage, ContextMutablePtr & context, const Property & required_property, int worker_size)
 {
     Property actual_storage_property = deriveStorageProperty(storage, required_property, context);
 
@@ -546,12 +547,11 @@ Property DeriverVisitor::visitTableScanStepExt(const TableScanStepExt & step, De
 
     if (!context.getRequire().getTableLayout().empty())
     {
-        prop = PropertyDeriver::deriveStoragePropertyWhatIfMode(step.getStorage(), context.getContext(), context.getRequire());
+        prop = PropertyDeriver::deriveStoragePropertyWhatIfMode(step.getStorage(), context.getContext(), context.getRequire(), context.workerSize());
     }
     else
     {
-        prop = PropertyDeriver::deriveStorageProperty(step.getStorage(), context.getRequire(), context.getContext());
-
+        prop = PropertyDeriver::deriveStorageProperty(step.getStorage(), context.getRequire(), context.getContext(), context.workerSize());
     }
 
     auto result = prop.translate(step.getColumnToAliasMap(), true);
@@ -700,7 +700,7 @@ Property PlanDeriverVisitor::visitPlanNode(PlanNodeBase & node, ContextMutablePt
         input_properties.emplace_back(VisitorUtil::accept(child, *this, context));
     }
 
-    DeriverContext deriver_context{input_properties, require, context, ignore_null};
+    DeriverContext deriver_context{input_properties, require, context, ignore_null, worker_size};
     DeriverVisitor visitor{};
     auto result = VisitorUtil::accept(node.getStep(), visitor, deriver_context);
     if (getQueryPlanStepType(node.getStep()) != QueryPlanStepType::ExchangeStepExt)

@@ -11,7 +11,7 @@ namespace DB
 class PropertyDeterminer
 {
 public:
-    static PropertySets determineRequiredProperty(QueryPlanStepPtr step, const Property & property, Context & context);
+    static PropertySets determineRequiredProperty(QueryPlanStepPtr step, const Property & property, Context & context, int worker_size = -1 /*-1 means not known*/);
 };
 
 class DeterminerContext
