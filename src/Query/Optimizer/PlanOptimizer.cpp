@@ -572,6 +572,6 @@ void PlanOptimizer::optimize(QueryPlanExt & plan, ContextMutablePtr context, con
     }
 
     UInt64 elapsed = total_watch.elapsedMilliseconds();
-    LOG_DEBUG(getLogger("PlanOptimizer"), "Total optimizer time: {}", std::to_string(elapsed));
+    LOG_INFO(getLogger("PlanOptimizer"), "Total optimizer time: {}", std::to_string(elapsed));
 }
 }
