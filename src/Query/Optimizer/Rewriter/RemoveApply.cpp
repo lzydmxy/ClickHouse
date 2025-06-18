@@ -2343,7 +2343,7 @@ TransformResult UnnestingWithWindow::transformImpl(PlanNodePtr filter_node, cons
     auto new_filter_step = std::make_shared<FilterStepExt>(left_node->getCurrentDataStream(), new_filter_ast);
     auto new_filter_node = PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), new_filter_step, {left_node});
 
-    auto window_step = std::make_shared<WindowStep>(new_filter_node->getCurrentDataStream(), desc, std::vector<WindowFunctionDescription>{}, false);
+    auto window_step = std::make_shared<WindowStep>(new_filter_node->getCurrentDataStream(), desc, desc.window_functions, false);
     auto window_node = PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), window_step, {new_filter_node});
 
     if (proj_step)

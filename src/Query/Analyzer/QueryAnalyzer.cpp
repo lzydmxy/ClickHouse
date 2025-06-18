@@ -2,18 +2,14 @@
 
 #include <Core/Joins.h>
 #include <Access/ContextAccess.h>
-#include <Access/ContextAccess.h>
-#include <DataTypes/DataTypeArray.h>
 #include <DataTypes/DataTypeArray.h>
 #include <DataTypes/DataTypeLowCardinality.h>
 #include <DataTypes/DataTypeNothing.h>
 #include <DataTypes/DataTypeNullable.h>
 #include <DataTypes/DataTypeString.h>
 #include <DataTypes/DataTypeTuple.h>
-#include <DataTypes/DataTypeTuple.h>
 #include <DataTypes/DataTypesNumber.h>
 #include <DataTypes/NestedUtils.h>
-#include <DataTypes/getLeastSupertype.h>
 #include <Interpreters/ArrayJoinAction.h>
 #include <Interpreters/ArrayJoinedColumnsVisitor.h>
 #include <Interpreters/QueryAliasesVisitor.h>
@@ -27,7 +23,6 @@
 #include <Parsers/ASTExplainQuery.h>
 #include <Parsers/ASTQualifiedAsterisk.h>
 #include <Parsers/ASTTablesInSelectQuery.h>
-#include <Parsers/formatAST.h>
 #include <Parsers/formatAST.h>
 #include <Parsers/queryToString.h>
 #include <Query/Analyzer/ExprAnalyzer.h>
@@ -47,10 +42,10 @@
 #include <Storages/StorageMergeTree.h>
 #include <Storages/StorageReplicatedMergeTree.h>
 #include <Storages/StorageDistributed.h>
-#include <Storages/StorageDistributed.h>
 #include <Storages/StorageMaterializedView.h>
 #include <Storages/StorageMemory.h>
 #include <Query/Common/getLeastSupertypeExt.h>
+#include <Query/Interpreters/QueryAliasesVisitorExt.h>
 
 #include <sstream>
 #include <unordered_map>
@@ -184,7 +179,7 @@ private:
     // todo: zhangwanyun1, do not support Hint now
     // void countLeadingHint(const IAST & ast);
     // todo: zhangwanyun1, do not support ansi semantic now
-    // void rewriteSelectInANSIMode(ASTSelectQuery & select_query, const Aliases & aliases, ScopePtr source_scope);
+    void rewriteSelectInANSIMode(ASTSelectQuery & select_query, Aliases & aliases, ScopePtr source_scope);
     void normalizeAliases(ASTPtr & expr, ASTPtr & aliases_expr);
     void normalizeAliases(ASTPtr & expr, Aliases & aliases, const NameSet & source_columns_set);
 };
@@ -245,17 +240,15 @@ Void QueryAnalyzerVisitor::visitASTSelectQuery(ASTPtr & node, const Void &)
     // Collect query aliases for aliases rewritting, for ANSI only.
     // since aliases rewritting for CLICKHOUSE is done by QueryRewriter
     Aliases query_aliases;
-    // todo: zhangwanyun1, now do not support other dialect, so use_ansi_semantic is false
-    // if (use_ansi_semantic)
-    //     QueryAliasesAllowAmbiguousNoSubqueriesVisitor(query_aliases).visit(node);
+    if (use_ansi_semantic)
+        QueryAliasesAllowAmbiguousNoSubqueriesVisitor(query_aliases).visit(node);
 
     if (select_query.tables())
         source_scope = analyzeFrom(select_query.refTables()->as<ASTTablesInSelectQuery &>(), select_query, query_aliases);
     else
         source_scope = analyzeWithoutFrom(select_query);
 
-    // todo: zhangwanyun1, do not support ansi semantic now
-    // rewriteSelectInANSIMode(select_query, query_aliases, source_scope);
+    rewriteSelectInANSIMode(select_query, query_aliases, source_scope);
     analyzeWindow(select_query);
     analyzeWhere(select_query, source_scope);
     // analyze SELECT first since SELECT item may be referred in GROUP BY/ORDER BY
@@ -2062,6 +2055,65 @@ UInt64 QueryAnalyzerVisitor::analyzeUIntConstExpression(const ASTPtr & expressio
 //             ++analysis.hint_analysis.leading_hint_count;
 //     }
 // }
+
+void QueryAnalyzerVisitor::rewriteSelectInANSIMode(ASTSelectQuery & select_query, Aliases & aliases, ScopePtr source_scope)
+{
+    if (use_ansi_semantic)
+    {
+        NameSet source_columns_set, source_columns_set_without_ambiguous;
+        for (const auto & field : source_scope->getFields())
+        {
+            const auto & name = field.name;
+            if (source_columns_set.count(name))
+                source_columns_set_without_ambiguous.erase(name);
+            else
+                source_columns_set_without_ambiguous.emplace(name);
+
+            source_columns_set.emplace(name);
+        }
+        if (context->getOptimizerContext()->getSettingsRef().prefer_alias_if_column_name_is_ambiguous)
+            source_columns_set = std::move(source_columns_set_without_ambiguous);
+
+        QueryNormalizer::Data normalizer_prefer_source_data(
+            aliases,
+            source_columns_set,
+            false, /* ignore_alias */
+            context->getSettingsRef(),
+            true /* allow_self_aliases */);
+        QueryNormalizer normalizer_prefer_source(normalizer_prefer_source_data);
+
+        QueryNormalizer::Data normalizer_prefer_alias_data(
+            aliases,
+            source_columns_set,
+            false, /* ignore_alias */
+            context->getSettingsRef(),
+            true /* allow_self_aliases */);
+        normalizer_prefer_alias_data.settings.prefer_column_name_to_alias = false;
+        QueryNormalizer normalizer_prefer_alias(normalizer_prefer_alias_data);
+
+        auto select_id = select_query.getTreeHash(false);
+        LOG_DEBUG(logger, "ANSI alias process, select id {}, before query: {}", toString(select_id), select_query.formatForLogging());
+        LOG_TRACE(logger, "ANSI alias process, select id {}, before ast: {}", toString(select_id), select_query.dumpTree());
+
+        if (select_query.select())
+            normalizer_prefer_source.visit(select_query.refSelect());
+        if (select_query.where())
+            normalizer_prefer_source.visit(select_query.refWhere());
+        if (select_query.groupBy())
+            normalizer_prefer_source.visit(select_query.refGroupBy());
+        if (select_query.having())
+        {
+            normalizer_prefer_source.visit(select_query.refHaving());
+        }
+        if (select_query.window())
+            normalizer_prefer_source.visit(select_query.refWindow());
+        if (select_query.orderBy())
+            normalizer_prefer_alias.visit(select_query.refOrderBy());
+
+        LOG_DEBUG(logger, "ANSI alias process, select id {}, after query: {}", toString(select_id), select_query.formatForLogging());
+        LOG_TRACE(logger, "ANSI alias process, select id {}, after ast: {}", toString(select_id), select_query.dumpTree());
+    }
+}
 
 void QueryAnalyzerVisitor::normalizeAliases(ASTPtr & expr, ASTPtr & aliases_expr)
 {

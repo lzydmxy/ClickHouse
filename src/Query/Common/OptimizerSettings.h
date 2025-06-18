@@ -499,7 +499,8 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_reads_from_query_cache, true, "Enable reading results of SELECT queries from the query cache", 0) \
     M(UInt64, spill_buffer_bytes_before_external_group_by, 10485760, "Agg memory buffer threshold when the spill trigger condition is reached, default 10Mb", 0) \
     M(Bool, enable_lc_group_by_opt, false, "Whether enable single lowcardinality column group by optimize", 0) \
-    M(DialectType, dialect_type, DialectType::CLICKHOUSE, "Dialect type, e.g. CLICKHOUSE, ANSI, MYSQL", 0) \
+    M(DialectType, dialect_type, DialectType::ANSI, "Dialect type, e.g. CLICKHOUSE, ANSI, MYSQL", 0) \
+    M(Bool, prefer_alias_if_column_name_is_ambiguous, false, "If source columns are ambiguous, prefer to use alias, for MySQL compatibility", 0) \
     M(Bool, only_full_group_by, true, "If the ONLY_FULL_GROUP_BY is enabled (which it is by default), rejects queries for which the select list, HAVING condition, or ORDER BY list refer to nonaggregated columns that are neither named in the GROUP BY clause nor are functionally dependent on them.", 0) \
     M(Bool, enable_final_sample, false, "Sample from result rows if it is true", 0) \
     M(Bool, enable_ab_index_optimization, true, "Optimize ab version by reading Bitmap", 0)\

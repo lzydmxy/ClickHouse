@@ -541,6 +541,35 @@ namespace
             MarkTupleLiteralsAsLegacyVisitor(data).visit(query);
         }
     }
+
+    struct MarkTableIdentifiersRecursively
+    {
+        using TypeToVisit = ASTSelectQuery;
+
+        void visit(ASTSelectQuery &, ASTPtr & ast)
+        {
+            Aliases aliases;
+            /// Mark table ASTIdentifiers with not a column marker
+            MarkTableIdentifiersVisitor::Data identifiers_data{aliases};
+            MarkTableIdentifiersVisitor(identifiers_data).visit(ast);
+        }
+    };
+
+    using MarkTableIdentifiersRecursivelyMatcher = OneTypeMatcher<MarkTableIdentifiersRecursively>;
+    using MarkTableIdentifiersRecursivelyVisitor = InDepthNodeVisitor<MarkTableIdentifiersRecursivelyMatcher, true>;
+    void markTableIdentifiers(ASTPtr & query)
+    {
+        MarkTableIdentifiersRecursivelyVisitor::Data data;
+        MarkTableIdentifiersRecursivelyVisitor(data).visit(query);
+    }
+
+    void implementFunctions(ASTPtr & query, ContextMutablePtr context, int & graphviz_index)
+    {
+        ImplementFunction data{context};
+        ImplementFunctionVisitor(data).visit(query);
+        GraphvizPrinter::printAST(query, context, std::to_string(graphviz_index++) + "-AST-implement-functions");
+    }
+
 }
 
 ASTPtr QueryRewriter::rewrite(ASTPtr query, ContextMutablePtr context, bool enable_materialized_view)
@@ -553,37 +582,56 @@ ASTPtr QueryRewriter::rewrite(ASTPtr query, ContextMutablePtr context, bool enab
 
     // todo: zhangwanyun1, if support dialect_type, then add other codes
 
-    applyWithAlias(query, context, graphviz_index);
-    rewriteFusionMerge(query, context, graphviz_index);
-    expandCte(query, context, graphviz_index);
-    expandView(query, context, graphviz_index);
-    normalizeUnion(query, context);
-    simpleFunctions(query, context);
+    if (context->getOptimizerContext()->getSettingsRef().dialect_type != DialectType::CLICKHOUSE)
+    {
+        /// Statement rewriting
+        rewriteFusionMerge(query, context, graphviz_index);
+        expandCte(query, context, graphviz_index);
+        expandView(query, context, graphviz_index);
+        normalizeUnion(query, context); // queries in union may not be normalized, hence normalize them here
+        simpleFunctions(query, context);
 
-    markTupleLiteralsAsLegacy(query, context);
+        /// Expression rewriting
+        markTupleLiteralsAsLegacy(query, context);
+        markTableIdentifiers(query);
+        rewriteInTableExpression(query);
+        normalizeFunctions(query, context, graphviz_index);
+        implementFunctions(query, context, graphviz_index);
+    }
+    else
+    {
+        applyWithAlias(query, context, graphviz_index);
+        rewriteFusionMerge(query, context, graphviz_index);
+        expandCte(query, context, graphviz_index);
+        expandView(query, context, graphviz_index);
+        normalizeUnion(query, context);
+        simpleFunctions(query, context);
 
-    // select query level rewriter, top down rewrite each subquery.
-    std::function<void(ASTPtr &)> rewrite_query = [&](ASTPtr & ast) {
-        SelectQueryRewriteContext rewrite_context;
-        if (ast->as<ASTSelectQuery>())
-        {
-            rewriteSelectQuery(ast, rewrite_context, context, graphviz_index);
-            GraphvizPrinter::printAST(ast, context, toString(graphviz_index++) + "-AST");
-        }
+        markTupleLiteralsAsLegacy(query, context);
 
-        // top down rewrite
-        for (ASTPtr item : ast->children)
-            rewrite_query(item);
+        // select query level rewriter, top down rewrite each subquery.
+        std::function<void(ASTPtr &)> rewrite_query = [&](ASTPtr & ast) {
+            SelectQueryRewriteContext rewrite_context;
+            if (ast->as<ASTSelectQuery>())
+            {
+                rewriteSelectQuery(ast, rewrite_context, context, graphviz_index);
+                GraphvizPrinter::printAST(ast, context, toString(graphviz_index++) + "-AST");
+            }
 
-        // do some bottom-up rewrite
-        if (ast->as<ASTSelectQuery>())
-        {
-            postRewriteSelectQuery(ast, rewrite_context, context, graphviz_index);
-            GraphvizPrinter::printAST(ast, context, toString(graphviz_index++) + "-AST-post");
-        }
-    };
+            // top down rewrite
+            for (ASTPtr item : ast->children)
+                rewrite_query(item);
 
-    rewrite_query(query);
+            // do some bottom-up rewrite
+            if (ast->as<ASTSelectQuery>())
+            {
+                postRewriteSelectQuery(ast, rewrite_context, context, graphviz_index);
+                GraphvizPrinter::printAST(ast, context, toString(graphviz_index++) + "-AST-post");
+            }
+        };
+
+        rewrite_query(query);
+    }
 
 
     // if (query->as<ASTExplainQuery>())
