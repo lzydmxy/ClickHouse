@@ -44,7 +44,8 @@ public:
     }
     bool hasPreparedParam() const
     {
-        return limit || offset;
+        // todo: zhangwanyun1, other feat, support prepared param
+        return false;
     }
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
     bool isAlwaysReadTillEnd() const { return always_read_till_end; }
