@@ -162,7 +162,7 @@ std::optional<PlanSegmentExecutor::ExecutionResult> PlanSegmentExecutor::execute
         query_log_element->type = QueryLogElementType::QUERY_FINISH;
         const auto finish_time = std::chrono::system_clock::now();
         query_log_element->event_time = timeInSeconds(finish_time);
-        query_log_element->event_time_microseconds = timeInMicroseconds(finish_time);;
+        query_log_element->event_time_microseconds = timeInMicroseconds(finish_time);
 
         return convertSuccessPlanSegmentStatusToResult(
             context, plan_segment_instance->info, final_progress, sender_metrics, plan_segment_outputs, segment_profile);

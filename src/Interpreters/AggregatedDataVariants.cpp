@@ -1,5 +1,6 @@
 #include <Interpreters/AggregatedDataVariants.h>
 #include <Interpreters/Aggregator.h>
+#include <Query/Interpreters/AggregatorExt.h>
 #include <Poco/Logger.h>
 #include <Common/logger_useful.h>
 
@@ -198,6 +199,8 @@ void AggregatedDataVariants::convertToTwoLevel()
 {
     if (aggregator)
         LOG_TRACE(aggregator->log, "Converting aggregation data to two-level.");
+    if (aggregator_ext)
+        LOG_TRACE(aggregator_ext->log, "Converting aggregation data to two-level.");
 
     switch (type)
     {
