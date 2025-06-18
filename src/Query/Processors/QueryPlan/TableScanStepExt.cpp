@@ -1212,24 +1212,27 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             max_streams);
 
         /// enable primary key condition (mark pruning)
-        if (auto * source_with_filter_step = dynamic_cast<SourceStepWithFilter *>(storage_plan.getRoot()->step.get()))
+        if (storage_plan.getRoot())
         {
-            if (auto * select_query = query_info.query->as<ASTSelectQuery>())
+            if (auto * source_with_filter_step = dynamic_cast<SourceStepWithFilter *>(storage_plan.getRoot()->step.get()))
             {
-                auto required_columns = getRequiredColumns();
-                auto block = storage_snapshot->getSampleBlockForColumns(required_columns);
-                if (auto prewhere = select_query->prewhere())
+                if (auto * select_query = query_info.query->as<ASTSelectQuery>())
                 {
-                    auto prewhere_action = QueryPlanStepHelper::createFilterExpressionActions(settings_ext.context, prewhere, block);
-                    source_with_filter_step->addFilter(prewhere_action, prewhere->getColumnName());
+                    auto required_columns = getRequiredColumns();
+                    auto block = storage_snapshot->getSampleBlockForColumns(required_columns);
+                    if (auto prewhere = select_query->prewhere())
+                    {
+                        auto prewhere_action = QueryPlanStepHelper::createFilterExpressionActions(settings_ext.context, prewhere, block);
+                        source_with_filter_step->addFilter(prewhere_action, prewhere->getColumnName());
+                    }
+                    if (auto where = select_query->where())
+                    {
+                        auto where_action = QueryPlanStepHelper::createFilterExpressionActions(settings_ext.context, where, block);
+                        source_with_filter_step->addFilter(where_action, where->getColumnName());
+                    }
                 }
-                if (auto where = select_query->where())
-                {
-                    auto where_action = QueryPlanStepHelper::createFilterExpressionActions(settings_ext.context, where, block);
-                    source_with_filter_step->addFilter(where_action, where->getColumnName());
-                }
+                source_with_filter_step->applyFilters();
             }
-            source_with_filter_step->applyFilters();
         }
 
         /// todo wujianchao we should
