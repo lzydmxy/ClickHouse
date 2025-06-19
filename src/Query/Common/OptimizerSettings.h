@@ -223,7 +223,6 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_redundant_sort_removal, true, "Whether enable ignore redundant sort in subquery", 0) \
     M(Bool, enable_remove_unused_cte, true, "Whether enable remove unused cte", 0) \
     M(Bool, enable_filter_window_to_partition_topn, true, "Filter window to partition topn", 0) \
-    M(Bool, query_plan_filter_push_down, true, "Allow to push down filter by predicate query plan step", 0) \
     M(Bool, enable_partition_filter_push_down, true, "Allow to push down partition filter to query info", 0) \
     M(Bool, external_enable_partition_filter_push_down, true, "Allow to push down partition filter to query info for external table. Consider to merge into enable_partition_filter_push_down when mergetree bug is fixed", 0) \
     M(Bool, enable_optimizer_early_prewhere_push_down, false, "Allow to push down prewhere in the optimizer phase", 0) \
