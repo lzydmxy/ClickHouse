@@ -17,7 +17,7 @@ PropertySets PropertyDeterminer::determineRequiredProperty(QueryPlanStepPtr step
 {
     DeterminerContext ctx{property, context};
     PropertySets input_properties;
-    if (worker_size == 1)
+    if (worker_size == 1 && !context.getOptimizerContext()->getSettingsRef().disable_single_server_optimization)
     {
         Property single_partition{Partitioning{Partitioning::Handle::SINGLE}};
         PropertySet sets;

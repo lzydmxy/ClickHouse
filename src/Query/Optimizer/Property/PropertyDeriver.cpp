@@ -95,7 +95,7 @@ Property PropertyDeriver::deriveStorageProperty(const StoragePtr & storage, cons
     if (use_reverse_sorting)
         sorting = sorting.toReverseOrder();
 
-    if (worker_size == 1)
+    if (worker_size == 1 && !context->getOptimizerContext()->getSettingsRef().disable_single_server_optimization)
         return Property{Partitioning(Partitioning::Handle::SINGLE), Partitioning(Partitioning::Handle::ARBITRARY), sorting};
     return Property{Partitioning(Partitioning::Handle::UNKNOWN), Partitioning(Partitioning::Handle::UNKNOWN), sorting};
 }
@@ -103,7 +103,7 @@ Property PropertyDeriver::deriveStorageProperty(const StoragePtr & storage, cons
 Property PropertyDeriver::deriveStoragePropertyWhatIfMode(
     const StoragePtr & storage, ContextMutablePtr & context, const Property & required_property, int worker_size)
 {
-    Property actual_storage_property = deriveStorageProperty(storage, required_property, context);
+    Property actual_storage_property = deriveStorageProperty(storage, required_property, context, worker_size);
 
     const auto & table_layout = required_property.getTableLayout();
 

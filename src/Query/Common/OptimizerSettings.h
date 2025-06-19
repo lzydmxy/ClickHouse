@@ -173,6 +173,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, grace_hash_join_left_side_parallel, 1, "Initial number of grace hash join left side parallel", 0) \
     M(Bool, join_using_null_safe, 0, "Force null safe equal comparison for USING keys except the last key of ASOF join", 0) \
     /** Debug settings */ \
+    M(Bool, disable_single_server_optimization, false, "Whether disable optimization for single server cluster, you can disable it when debugging distributed query plan in a single server cluster", 0) \
     M(Bool, log_segment_profiles, false, "Log profile of each segment info including runtime and planning information.", 0) \
     M(Bool, report_segment_profiles, false, "Report plan segment profile to coordinator.", 0) \
     /** */ \
