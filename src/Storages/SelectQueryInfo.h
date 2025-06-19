@@ -152,6 +152,8 @@ struct SelectQueryInfo
 
     ASTPtr query;
     ASTPtr view_query; /// Optimized VIEW query
+    // todo wujianchao5 support partition pruning
+    // ASTPtr partition_filter; /// partition filter
 
     /// Query tree
     QueryTreeNodePtr query_tree;
