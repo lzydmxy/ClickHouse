@@ -113,6 +113,8 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, memory_catalog_worker_size, 8, "Memory catalog work size for unittest", 0) \
     M(UInt64, plan_optimizer_timeout, 600000, "Max running time of a plan rewriter optimizer in ms", 0) \
     M(Bool, enable_active_prewhere, false, "Whether to actively generate prewhere by statistics", 0) \
+    M(Float, max_active_prewhere_selectivity, 0.3f, "Max Selectivity of actively generated prewheres", 0) \
+    M(UInt64, max_active_prewhere_size, 3, "Max Size of to actively generated prewheres", 0) \
     M(Bool, log_normalized_query_plan_hash, 0, "Log json format query plan to the system query_log table.", 0) \
     M(Bool, log_query_exchange, false, "Log query exchange metric.", 0) \
     /** Coordinator settings*/ \
@@ -221,6 +223,10 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_redundant_sort_removal, true, "Whether enable ignore redundant sort in subquery", 0) \
     M(Bool, enable_remove_unused_cte, true, "Whether enable remove unused cte", 0) \
     M(Bool, enable_filter_window_to_partition_topn, true, "Filter window to partition topn", 0) \
+    M(Bool, query_plan_filter_push_down, true, "Allow to push down filter by predicate query plan step", 0) \
+    M(Bool, enable_partition_filter_push_down, true, "Allow to push down partition filter to query info", 0) \
+    M(Bool, external_enable_partition_filter_push_down, true, "Allow to push down partition filter to query info for external table. Consider to merge into enable_partition_filter_push_down when mergetree bug is fixed", 0) \
+    M(Bool, enable_optimizer_early_prewhere_push_down, false, "Allow to push down prewhere in the optimizer phase", 0) \
     M(Bool, enable_optimizer_support_window, true, "Optimizer support window", 0) \
     M(Bool, enable_filter_window_to_sorting_limit, true, "Filter window to sorting limit", 0) \
     M(Bool, optimizer_projection_support, false, "Use projection in optimizer mode", 0) \

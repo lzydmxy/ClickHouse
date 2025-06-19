@@ -521,6 +521,13 @@ void serializeASTImpl(const IAST & ast, WriteBuffer & buf)
         for (auto & mode : casted->set_of_modes)
             serializeEnum(mode, buf);
     }
+    else if (const auto * casted = ast.as<ASTSubquery>())
+    {
+        writeBinary(casted->alias, buf);
+        writeBinary(casted->prefer_alias_to_column_name, buf);
+        writeBinary(casted->cte_name, buf);
+        serializeASTs(casted->children, buf);
+    }
     // todo wujianchao add more types
     else
         throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not implement serialize of {}", toString(getAstType(ast)));
@@ -958,6 +965,16 @@ ASTPtr deserializeASTImpl(ASTType type, ReadBuffer & buf)
                 deserializeEnum(mode, buf);
                 ast->set_of_modes.insert(mode);
             }
+            return ast;
+        }
+        case ASTType::ASTSubquery:
+        {
+            auto ast = std::make_shared<ASTSubquery>();
+            readBinary(ast->alias, buf);
+            readBinary(ast->prefer_alias_to_column_name, buf);
+
+            readBinary(ast->cte_name, buf);
+            ast->children = deserializeASTs(buf);
             return ast;
         }
 

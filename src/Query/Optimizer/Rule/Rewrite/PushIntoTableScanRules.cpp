@@ -9,7 +9,10 @@
 #include <Query/Processors/QueryPlan/LimitStepExt.h>
 #include <Query/Planner/SymbolMapper.h>
 #include <Query/Processors/QueryPlan/TableScanStepExt.h>
-//#include <Storages/MergeTree/Index/BitmapIndexHelper.h>
+#include <Query/Optimizer/SelectQueryInfoHelper.h>
+#include <Query/Interpreters/PartitionPredicateVisitor.h>
+#include <Storages/MergeTree/MergeTreeData.h>
+#include <Storages/MergeTree/MergeTreeWhereOptimizer.h>
 #include <Parsers/ASTSelectQuery.h>
 #include <Storages/StorageDistributed.h>
 
@@ -77,6 +80,185 @@ TransformResult PushStorageFilter::transformImpl(PlanNodePtr node, const Capture
     return PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), std::move(new_filter_step), PlanNodes{table_scan}, node->getStatistics());
 }
 
+
+ASTPtr applyFilter(ASTPtr query_filter, SelectQueryInfo & query_info, ContextPtr, PlanNodeStatisticsPtr)
+{
+    // only set query.where()
+    if (!query_info.query)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not set");
+
+    auto * select_query = query_info.query->as<ASTSelectQuery>();
+    if (!select_query)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not a ASTSelectQuery");
+
+    if (!PredicateUtils::isTruePredicate(query_filter))
+    {
+        if (auto where = select_query->where())
+            select_query->setExpression(ASTSelectQuery::Expression::WHERE, PredicateUtils::combineConjuncts(ASTs{query_filter, where}));
+        else
+            select_query->setExpression(ASTSelectQuery::Expression::WHERE, ASTPtr{query_filter});
+    }
+
+    return query_filter;
+}
+
+ASTPtr applyFilter(
+    TableScanStepExt & table_step, ASTPtr query_filter, ContextPtr query_context, PlanNodeStatisticsPtr storage_statistics)
+{
+    auto & query_info = table_step.getQueryInfo();
+    auto storage = std::dynamic_pointer_cast<MergeTreeData>(table_step.getStorage());
+
+    if (!storage)
+    {
+        // only set query.where()
+        if (!query_info.query)
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not set");
+
+        auto * select_query = query_info.query->as<ASTSelectQuery>();
+        if (!select_query)
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not a ASTSelectQuery");
+
+        if (!PredicateUtils::isTruePredicate(query_filter))
+        {
+            if (auto where = select_query->where())
+                select_query->setExpression(ASTSelectQuery::Expression::WHERE, PredicateUtils::combineConjuncts(ASTs{query_filter, where}));
+            else
+                select_query->setExpression(ASTSelectQuery::Expression::WHERE, ASTPtr{query_filter});
+        }
+
+        return query_filter;
+    }
+
+    const auto & settings = query_context->getOptimizerContext()->getSettingsRef();
+
+    if (!query_info.query)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not set");
+
+    auto * select_query = query_info.query->as<ASTSelectQuery>();
+    if (!select_query)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Query info query is not a ASTSelectQuery");
+
+    ASTs conjuncts = PredicateUtils::extractConjuncts(query_filter);
+
+    // todo wujianchao5 support partition pruning
+
+    // Set partition_filter
+    // this should be done before setting query.where() to avoid partition filters being chosen as prewhere
+    // if (settings.enable_partition_filter_push_down)
+    // {
+    //     ASTs push_predicates;
+    //     ASTs remain_predicates;
+    //
+    //     Names partition_key_names = storage->getInMemoryMetadataPtr()->getPartitionKey().column_names;
+    //     Names virtual_key_names = storage->getInMemoryMetadataPtr()->getSampleBlockWithVirtuals(storage->getVirtualsList()).getNames();
+    //     partition_key_names.insert(partition_key_names.end(), virtual_key_names.begin(), virtual_key_names.end());
+    //     auto iter = std::stable_partition(conjuncts.begin(), conjuncts.end(), [&](const auto & predicate) {
+    //         PartitionPredicateVisitor::Data visitor_data{
+    //             query_context, storage, predicate};
+    //         PartitionPredicateVisitor(visitor_data).visit(predicate);
+    //         return visitor_data.getMatch();
+    //     });
+    //
+    //     push_predicates.insert(push_predicates.end(), conjuncts.begin(), iter);
+    //     remain_predicates.insert(remain_predicates.end(), iter, conjuncts.end());
+    //
+    //     ASTPtr new_partition_filter;
+    //
+    //     if (query_info.partition_filter)
+    //     {
+    //         push_predicates.push_back(query_info.partition_filter);
+    //         new_partition_filter = PredicateUtils::combineConjuncts(push_predicates);
+    //     }
+    //     else
+    //     {
+    //         new_partition_filter = PredicateUtils::combineConjuncts<false>(push_predicates);
+    //     }
+    //
+    //     if (!PredicateUtils::isTruePredicate(new_partition_filter))
+    //         query_info.partition_filter = std::move(new_partition_filter);
+    //
+    //     conjuncts.swap(remain_predicates);
+    // }
+
+    /// Set query.where()
+    applyFilter(PredicateUtils::combineConjuncts(conjuncts), query_info, query_context, storage_statistics);
+
+    /// Set query.prewhere(), strategy 1: by selectivity
+    if (select_query->where() && !select_query->prewhere() && storage->supportsPrewhere() && settings.enable_active_prewhere && storage_statistics)
+    {
+        auto full_conjuncts = PredicateUtils::extractConjuncts(select_query->getExpression(ASTSelectQuery::Expression::WHERE, true));
+        std::vector<ASTPtr> pre_conjuncts;
+        std::vector<ASTPtr> where_conjuncts;
+
+        IdentifierNameSet used_columns;
+        select_query->getExpression(ASTSelectQuery::Expression::WHERE, true)->collectIdentifierNames(used_columns);
+        const auto & columns_desc = storage->getInMemoryMetadataPtr()->getColumns();
+        NamesAndTypes names_and_types;
+        for (const auto & col_name : used_columns)
+            names_and_types.emplace_back(columns_desc.getPhysical(col_name));
+
+        for (const auto & conjunct : full_conjuncts)
+        {
+            double selectivity = FilterEstimator::estimateFilterSelectivity(storage_statistics, conjunct, names_and_types, query_context);
+            LOG_DEBUG(
+                ::getLogger("OptimizerActivePrewhere"),
+                "conjunct = {}, selectivity = {}", serializeAST(*conjunct), std::to_string(selectivity));
+
+            if (selectivity <= settings.max_active_prewhere_selectivity
+                && pre_conjuncts.size() < settings.max_active_prewhere_size)
+                pre_conjuncts.push_back(conjunct);
+            else
+                where_conjuncts.push_back(conjunct);
+        }
+
+        if (!pre_conjuncts.empty())
+            select_query->setExpression(ASTSelectQuery::Expression::PREWHERE, PredicateUtils::combineConjuncts(pre_conjuncts));
+
+        if (!where_conjuncts.empty())
+            select_query->setExpression(ASTSelectQuery::Expression::WHERE, PredicateUtils::combineConjuncts(where_conjuncts));
+        else
+            select_query->setExpression(ASTSelectQuery::Expression::WHERE, nullptr);
+    }
+
+    /// Set query.prewhere(), strategy 2: by IO cost
+    if (select_query->where() && !select_query->prewhere() && storage->supportsPrewhere() && settings.enable_optimizer_early_prewhere_push_down)
+    {
+        /// PREWHERE optimization: transfer some condition from WHERE to PREWHERE if enabled and viable
+        if (const auto & column_size = storage->getColumnSizes(); !column_size.empty())
+        {
+            /// Extract column compressed sizes.
+            std::unordered_map<std::string, UInt64> column_compressed_sizes;
+            for (const auto & [name, sizes] : column_size)
+                column_compressed_sizes[name] = sizes.data_compressed;
+
+            auto current_info = buildSelectQueryInfoForQuery(query_info.query, query_context);
+
+            auto column_sizes = storage->getColumnSizes();
+            if (!column_sizes.empty())
+            {
+                /// Extract column compressed sizes
+                std::unordered_map<std::string, UInt64> column_compressed_sizes;
+                for (const auto & [name, sizes] : column_sizes)
+                    column_compressed_sizes[name] = sizes.data_compressed;
+
+                MergeTreeWhereOptimizer{
+                    column_compressed_sizes,
+                    table_step.getMetadataSnapshot(),
+                    storage->getConditionEstimatorByPredicate(table_step.getQueryInfo(), table_step.getStorageSnapshot(), query_context),
+                    current_info.syntax_analyzer_result->requiredSourceColumns(),
+                    storage->supportedPrewhereColumns(),
+                    ::getLogger("OptimizerEarlyPrewherePushdown")};
+            }
+        }
+    }
+
+    /// remove prewhere from query plan
+    if (auto prewhere = select_query->prewhere())
+        PredicateUtils::subtract(conjuncts, PredicateUtils::extractConjuncts(prewhere));
+
+    return PredicateUtils::combineConjuncts(conjuncts);
+}
+
 ASTPtr PushStorageFilter::pushStorageFilter(TableScanStepExt & table_step, ASTPtr query_filter, PlanNodeStatisticsPtr storage_statistics, ContextMutablePtr context)
 {
     std::unordered_map<String, String> column_to_alias;
@@ -114,9 +296,8 @@ ASTPtr PushStorageFilter::pushStorageFilter(TableScanStepExt & table_step, ASTPt
     }
 
     // push filter into storage
-    // todo: liyang453, storage: need applyFilter in storage
-    //if (!PredicateUtils::isTruePredicate(push_filter))
-    //    push_filter = table_step.getStorage()->applyFilter(push_filter, table_step.getQueryInfo(), context, storage_statistics);
+    if (!PredicateUtils::isTruePredicate(push_filter))
+        push_filter = applyFilter(table_step, push_filter, context, storage_statistics);
 
     // construnct the remaing filter
     auto mapper = SymbolMapper::simpleMapper(column_to_alias);

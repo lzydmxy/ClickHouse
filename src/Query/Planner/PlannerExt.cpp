@@ -999,12 +999,6 @@ QueryPlannerVisitor::planReadFromStorage(IAST & table_ast, ScopePtr table_scope,
         generated_query->setExpression(ASTSelectQuery::Expression::PREWHERE, symbol_mapper.map(rewritten_prewhere));
     }
 
-    if (auto rewritten_where = origin_query.where())
-    {
-        /// todo wujianchao, need normalize where?
-        generated_query->setExpression(ASTSelectQuery::Expression::WHERE, rewritten_where->clone());
-    }
-
     /*
     if (origin_query.implicitWhere())
         generated_query->setExpression(ASTSelectQuery::Expression::IMPLICITWHERE, origin_query.implicitWhere()->clone());
