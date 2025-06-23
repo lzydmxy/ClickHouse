@@ -2117,7 +2117,10 @@ void Context::applySettingChangeWithLock(const SettingChange & change, const std
 {
     try
     {
-        setSettingWithLock(change.name, change.value, lock);
+        if (settings.enable_optimizer && OptimizerSettings::hasBuiltin(change.name))
+            getOptimizerContext()->setSetting(change.name, change.value);
+        else
+            setSettingWithLock(change.name, change.value, lock);
         contextSanityCheckWithLock(*this, settings, lock);
     }
     catch (Exception & e)

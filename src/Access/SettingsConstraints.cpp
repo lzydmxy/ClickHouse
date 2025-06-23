@@ -12,6 +12,8 @@
 #include <Poco/Util/AbstractConfiguration.h>
 #include <boost/range/algorithm_ext/erase.hpp>
 
+#include <Query/Common/OptimizerSettings.h>
+
 namespace DB
 {
 namespace ErrorCodes
@@ -264,7 +266,8 @@ bool SettingsConstraints::checkImpl(const Settings & current_settings,
     {
         try
         {
-            access_control->checkSettingNameIsAllowed(setting_name);
+            if(!OptimizerSettings::hasBuiltin(setting_name))
+                access_control->checkSettingNameIsAllowed(setting_name);
         }
         catch (Exception & e)
         {
@@ -278,13 +281,15 @@ bool SettingsConstraints::checkImpl(const Settings & current_settings,
             throw;
         }
     }
-    else if (!access_control->isSettingNameAllowed(setting_name))
+    else if (!OptimizerSettings::hasBuiltin(setting_name) && !access_control->isSettingNameAllowed(setting_name))
         return false;
 
     Field new_value;
-    if (!getNewValueToCheck(current_settings, change, new_value, reaction == THROW_ON_VIOLATION))
+    // todo: hongzhigao1, is new in optimizer_settings?
+    if (!OptimizerSettings::hasBuiltin(setting_name) && !getNewValueToCheck(current_settings, change, new_value, reaction == THROW_ON_VIOLATION))
         return false;
 
+    // todo: hongzhigao1, add corresponding constraints in checker for optimizer_settings
     return getChecker(current_settings, setting_name).check(change, new_value, reaction, source);
 }
 

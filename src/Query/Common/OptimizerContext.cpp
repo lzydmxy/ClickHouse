@@ -272,18 +272,13 @@ void OptimizerContext::clearOptimizerProfile()
 
 void OptimizerContext::setSetting(std::string_view name, const String & value)
 {
-    // todo: hongzhigao1, lock and set
-    // std::lock_guard lock(mutex);
-    // setSettingWithLock(name, value, lock);
+    std::lock_guard lock(mutex);
     optimizer_settings.set(name, value);
 }
 
 void OptimizerContext::setSetting(std::string_view name, const Field & value)
 {
-    // todo: hongzhigao1, lock and set
-    // std::lock_guard lock(mutex);
-    // setSettingWithLock(name, value, lock);
-    // contextSanityCheckWithLock(*this, settings, lock);
+    std::lock_guard lock(mutex);
     optimizer_settings.set(name, value);
 }
 

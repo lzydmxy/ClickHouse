@@ -188,6 +188,7 @@ protected:
     std::shared_ptr<QueryStatistics::StatisticsMemoryStore> stats_memory_store = nullptr;
 
 private:
+    mutable ContextSharedMutex mutex;
     OptimizerSettings optimizer_settings;
     UInt32 query_max_execution_time;
     TimePoint query_expiration_timestamp;
