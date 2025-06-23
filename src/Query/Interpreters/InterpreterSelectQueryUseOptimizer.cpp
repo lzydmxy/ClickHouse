@@ -258,7 +258,7 @@ std::optional<std::set<StorageID>> InterpreterSelectQueryUseOptimizer::getUsedSt
 
 void InterpreterSelectQueryUseOptimizer::setUnsupportedSettings(ContextMutablePtr & context)
 {
-    if (!context->getOptimizerContext()->getSettingsRef().enable_optimizer)
+    if (!context->getSettingsRef().enable_optimizer)
         return;
 
     SettingsChanges setting_changes;

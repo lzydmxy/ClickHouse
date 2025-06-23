@@ -68,7 +68,6 @@ IMPLEMENT_SETTING_ENUM(MaterializedViewConsistencyCheckMethod, ErrorCodes::BAD_A
 // config & settings examples
 // conf/config.xml
 // <optimizer>
-//     <enable_optimizer>1</enable_optimizer>
 //     <rpc_port>8106</rpc_port>
 // </optimizer>
 void OptimizerSettings::loadFromConfig(const String & config_elem, const Poco::Util::AbstractConfiguration & config)

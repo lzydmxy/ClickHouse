@@ -115,7 +115,7 @@ bool TableFunctionViewIfPermitted::isPermitted(const ContextPtr & context, const
 
     try
     {
-        if (context->getOptimizerContext() && context->getOptimizerContext()->getSettingsRef().enable_optimizer)
+        if (context->getSettingsRef().enable_optimizer)
         {
             sample_block = InterpreterSelectQueryUseOptimizer::getSampleBlock(create.children[0], context);
         }

@@ -2123,12 +2123,10 @@ try
         startup_watch.stop();
         ProfileEvents::increment(ProfileEvents::ServerStartupMilliseconds, startup_watch.elapsedMilliseconds());
 
-        const char * enable_optimizer_name = "optimizer.enable_optimizer";
-        const char * rpc_port_name = "optimizer.rpc_port";
-
         std::vector<std::unique_ptr<BrpcServerHolder>> rpc_server_holders;
-        if (config().has(enable_optimizer_name) && config().getBool(enable_optimizer_name))
+        if (global_context->getSettingsRef().enable_optimizer)
         {
+            const char * rpc_port_name = "optimizer.rpc_port";
             if (config().has(rpc_port_name))
             {
                 global_context->initializeOptimizerContext();
@@ -2155,7 +2153,7 @@ try
                 LOG_WARNING(log, "Without the configuration item of optimizer.rpc_port, the RPC server cannot be started");
         }
         else
-            LOG_WARNING(log, "Without the configuration item or the value is false of optimizer.enable_optimizer, the RPC server cannot be started");
+            LOG_WARNING(log, "Without the configuration item or the value is false of enable_optimizer, the RPC server cannot be started");
 
         try
         {

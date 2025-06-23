@@ -310,7 +310,7 @@ QueryPipeline InterpreterExplainQueryUseOptimizer::executeImpl()
         return explainMetaData();
     }
     else if (
-        getContext()->getOptimizerContext()->getSettingsRef().enable_optimizer
+        getContext()->getSettingsRef().enable_optimizer
         && QueryUseOptimizerChecker::check(
             query, getContext(), !getContext()->getOptimizerContext()->getSettingsRef().enable_optimizer_fallback))
     {

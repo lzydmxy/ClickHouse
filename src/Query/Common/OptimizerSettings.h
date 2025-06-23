@@ -91,7 +91,6 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
   */
 #define LIST_OF_OPTIMIZER_SETTINGS(M, ALIAS) \
     /** Query optimizer relative settings*/ \
-    M(Bool, enable_optimizer, true, "Whether enable jd query optimizer", 0) \
     M(Bool, enable_legacy_optimizer, false, "Whether enable query optimizer", 0) \
     M(Bool, enable_optimizer_fallback, false, "Whether enable query optimizer fallback to clickhouse origin when failed", 0) \
     M(UInt64, exchange_buffer_send_threshold_in_bytes, 1000000, "The minimum bytes when exchange will flush send buffer ", 0) \
