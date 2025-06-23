@@ -2323,16 +2323,16 @@ RelationPlan QueryPlannerVisitor::planSetOperation(ASTs & selects, SelectUnionMo
             set_operation_step = std::make_shared<UnionStepExt>(input_streams, output_stream);
             break;
         case SelectUnionMode::INTERSECT_ALL:
-            set_operation_step = std::make_shared<IntersectOrExceptStep>(input_streams, IntersectOrExceptStep::Operator::INTERSECT_ALL, false);
+            set_operation_step = std::make_shared<IntersectStepExt>(input_streams, output_stream, false);
             break;
         case SelectUnionMode::INTERSECT_DISTINCT:
-            set_operation_step = std::make_shared<IntersectOrExceptStep>(input_streams, IntersectOrExceptStep::Operator::INTERSECT_DISTINCT, true);
+            set_operation_step = std::make_shared<IntersectStepExt>(input_streams, output_stream, true);
             break;
         case SelectUnionMode::EXCEPT_ALL:
-            set_operation_step = std::make_shared<IntersectOrExceptStep>(input_streams, IntersectOrExceptStep::Operator::EXCEPT_ALL, false);
+            set_operation_step = std::make_shared<ExceptStepExt>(input_streams, output_stream, false);
             break;
         case SelectUnionMode::EXCEPT_DISTINCT:
-            set_operation_step = std::make_shared<IntersectOrExceptStep>(input_streams, IntersectOrExceptStep::Operator::EXCEPT_DISTINCT, true);
+            set_operation_step = std::make_shared<ExceptStepExt>(input_streams, output_stream, true);
             break;
         default:
             throw Exception(ErrorCodes::PLAN_BUILD_ERROR, "Unsupported union mode: {}", union_mode);
