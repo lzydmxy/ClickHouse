@@ -328,7 +328,7 @@ void SegmentScheduler::checkQueryCpuTime(const String & query_id)
     {
         auto & settings = final_segment_context->getOptimizerContext()->getSettingsRef();
         max_cpu_seconds = settings.max_distributed_query_cpu_seconds;
-        overflow_mode = settings.timeout_overflow_mode;
+        overflow_mode = final_segment_context->getSettingsRef().timeout_overflow_mode;
     }
 
     if (max_cpu_seconds <= 0)

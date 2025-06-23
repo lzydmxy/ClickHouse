@@ -1191,7 +1191,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
     if (max_block_size < settings_ext.context->getSettingsRef().max_block_size)
         max_streams = 1; // single block single stream.
 
-    auto max_streams_to_max_threads_ratio = optimizerSettings.max_streams_to_max_threads_ratio;
+    auto max_streams_to_max_threads_ratio = settings_ext.context->getSettingsRef().max_streams_to_max_threads_ratio;
     if (max_streams > 1 && !storage->isRemote())
         max_streams = size_t(max_streams * max_streams_to_max_threads_ratio);
 
