@@ -68,11 +68,24 @@ enum ServiceType
     tso
 };
 
+struct OptimizerContextSharedData
+{
+    bool complex_query_active{false};
+
+    QueryExchangeLogPtr query_exchange_log;
+    SegmentSchedulerPtr segment_scheduler;
+    PlanSegmentProcessListPtr plan_segment_process_list;
+    PlanCacheManagerPtr plan_cache_manager;
+};
+
 class OptimizerContextData
 {
 protected:
     OptimizerContextData();
     OptimizerContextData(const OptimizerContextData &);
+
+    // ? todo: hongzhigao1, use raw pointer instead or not
+    std::shared_ptr<OptimizerContextSharedData> shared;
 
     Int16 rpc_port;
     OptimizerSettings optimizer_settings;
@@ -110,7 +123,7 @@ protected:
     int sub_query_id = 0;
 };
 
-class OptimizerContext: public OptimizerContextData, public std::enable_shared_from_this<OptimizerContext>
+class OptimizerContext: public OptimizerContextData
 {
 public:
     OptimizerContext();
@@ -237,14 +250,6 @@ private:
     String query_plan;
 
 	UInt64 txt_id{0};
-
-    // Context Shared Part
-    bool complex_query_active{false};
-
-    QueryExchangeLogPtr query_exchange_log;
-    SegmentSchedulerPtr segment_scheduler;
-    PlanSegmentProcessListPtr plan_segment_process_list;
-    PlanCacheManagerPtr plan_cache_manager;
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;

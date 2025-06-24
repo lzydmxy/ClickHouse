@@ -28,23 +28,12 @@ OptimizerContextData::OptimizerContextData() = default;
 OptimizerContextData::OptimizerContextData(const OptimizerContextData &) = default;
 
 OptimizerContext::OptimizerContext() = default;
-OptimizerContext::OptimizerContext(const OptimizerContext & rhs)
-    : OptimizerContextData(rhs), std::enable_shared_from_this<OptimizerContext>(rhs)
-{
-    std::lock_guard lock(rhs.mutex);
-
-    query_plan = rhs.query_plan;
-    txt_id = rhs.txt_id;
-    complex_query_active = rhs.complex_query_active;
-
-    query_exchange_log = rhs.query_exchange_log;
-    segment_scheduler = rhs.segment_scheduler;
-    plan_segment_process_list = rhs.plan_segment_process_list;
-    // plan_cache_manager = rhs.plan_cache_manager;
-}
+OptimizerContext::OptimizerContext(const OptimizerContext & rhs) : OptimizerContextData(rhs) {}
 
 OptimizerContext::OptimizerContext(const Settings & settings_, const Poco::Util::AbstractConfiguration & config)
 {
+    shared = std::make_shared<OptimizerContextSharedData>();
+
     optimizer_settings.loadFromConfig("optimizer", config);
     if (settings_.max_execution_time.totalSeconds() != 0)
         query_max_execution_time = std::min(settings_.max_execution_time.totalSeconds() * UInt64(1000), UInt64(UINT32_MAX));
@@ -53,8 +42,7 @@ OptimizerContext::OptimizerContext(const Settings & settings_, const Poco::Util:
     else
         query_max_execution_time = 300 * 1000; // default 300 seconds
     initQueryExpirationTimeStamp();
-    plan_segment_process_list = std::make_shared<PlanSegmentProcessList>();
-    segment_scheduler = std::make_shared<SegmentScheduler>();
+    setPlanSegmentProcessList(std::make_shared<PlanSegmentProcessList>());
 }
 
 void OptimizerContext::setQueryMaxExecutionTime(UInt32 milli_second)
@@ -120,12 +108,12 @@ PlanSegmentProcessListEntryPtr OptimizerContext::getPlanSegmentProcessListEntry(
 
 void OptimizerContext::setPlanSegmentProcessList(PlanSegmentProcessListPtr segment_process_list_)
 {
-    plan_segment_process_list = segment_process_list_;
+    shared->plan_segment_process_list = segment_process_list_;
 }
 
 PlanSegmentProcessListPtr OptimizerContext::getPlanSegmentProcessList() const
 {
-    return plan_segment_process_list;
+    return shared->plan_segment_process_list;
 }
 
 void OptimizerContext::setProcessListEntry(ProcessListEntryPtr process_list_entry_)
@@ -180,7 +168,7 @@ bool OptimizerContext::isExplainQuery() const
 
 QueryExchangeLogPtr OptimizerContext::getQueryExchangeLog()
 {
-    return query_exchange_log;
+    return shared->query_exchange_log;
 }
 
 void OptimizerContext::logOptimizerProfile(LoggerPtr log, String prefix, String name, UInt64 time, bool is_rule)
@@ -196,14 +184,14 @@ void OptimizerContext::setPlanCacheManager(std::unique_ptr<PlanCacheManager> && 
 {
     //todo: zhangdongdong92, other feat: need a part shared lock
     //auto lock = getLock(); // checked
-    plan_cache_manager = std::move(manager);
+    shared->plan_cache_manager = std::move(manager);
 }
 
 PlanCacheManager* OptimizerContext::getPlanCacheManager()
 {
     //todo: zhangdongdong92, other feat: need a part shared lock
     //auto lock = getLock(); // checked
-    return plan_cache_manager ? plan_cache_manager.get() : nullptr;
+    return shared->plan_cache_manager ? shared->plan_cache_manager.get() : nullptr;
 }
 
 HostWithPorts OptimizerContext::getHostWithPorts() const
@@ -235,7 +223,10 @@ std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> OptimizerCon
 
 SegmentSchedulerPtr OptimizerContext::getSegmentScheduler() const
 {
-    return segment_scheduler;
+    // todo: hongzhigao1, other feat: need a shared->mutex
+    if (!shared->segment_scheduler)
+        shared->segment_scheduler = std::make_shared<SegmentScheduler>();
+    return shared->segment_scheduler;
 }
 
 StatisticsMemoryStorePtr OptimizerContext::getStatisticsMemoryStore()
@@ -252,12 +243,12 @@ StatisticsMemoryStorePtr OptimizerContext::getStatisticsMemoryStore()
 
 void OptimizerContext::setComplexQueryActive(bool complex_query_active_)
 {
-    complex_query_active = complex_query_active_;
+    shared->complex_query_active = complex_query_active_;
 }
 
 bool OptimizerContext::getComplexQueryActive()
 {
-    return complex_query_active;
+    return shared->complex_query_active;
 }
 
 String OptimizerContext::getOptimizerProfile(bool print_rule)
