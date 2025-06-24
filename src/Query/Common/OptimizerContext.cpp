@@ -10,7 +10,6 @@
 #include <IO/S3/Credentials.h>
 #include <Interpreters/Context.h>
 #include <Query/Common/OptimizerSettings.h>
-#include <Query/Executor/PlanSegmentInstance.h>
 #include <Query/Executor/SegmentScheduler.h>
 #include <Query/Executor/PlanSegmentProcessList.h>
 #include <Query/Statistics/StringHash.h>
@@ -25,13 +24,6 @@ extern const int BAD_ARGUMENTS;
 
 }
 
-class OptimizerContextData
-{
-public:
-    OptimizerContextData(){}
-    PlanSegmentInstanceID plan_segment_instance_id;
-};
-
 OptimizerContext::OptimizerContext(const Settings & settings_, const Poco::Util::AbstractConfiguration & config)
 {
     optimizer_settings.loadFromConfig("optimizer", config);
@@ -42,7 +34,6 @@ OptimizerContext::OptimizerContext(const Settings & settings_, const Poco::Util:
     else
         query_max_execution_time = 300 * 1000; // default 300 seconds
     initQueryExpirationTimeStamp();
-    data = std::make_shared<OptimizerContextData>();
     plan_segment_process_list = std::make_shared<PlanSegmentProcessList>();
     segment_scheduler = std::make_shared<SegmentScheduler>();
 }
@@ -68,14 +59,14 @@ void OptimizerContext::initQueryExpirationTimeStamp()
     query_expiration_timestamp = std::chrono::system_clock::now() + std::chrono::milliseconds(query_max_execution_time);
 }
 
-void OptimizerContext::initExceptionHandler()
+void OptimizerContext::initPlanSegmentExceptionHandler()
 {
-    exception_handler = std::make_shared<ExceptionHandler>();
+    plan_segment_exception_handler = std::make_shared<ExceptionHandler>();
 }
 
-ExceptionHandlerPtr OptimizerContext::getExceptionHandler() const
+ExceptionHandlerPtr OptimizerContext::getPlanSegmentExceptionHandler() const
 {
-    return exception_handler;
+    return plan_segment_exception_handler;
 }
 
 void OptimizerContext::setCoordinatorAddress(const AddressInfoPtr address)
@@ -150,12 +141,12 @@ std::function<void()> OptimizerContext::getSendTCPProgress() const
 
 void OptimizerContext::setPlanSegmentInstanceID(const PlanSegmentInstanceID & instance_id)
 {
-    data->plan_segment_instance_id = instance_id;
+    plan_segment_instance_id = instance_id;
 }
 
 PlanSegmentInstanceID OptimizerContext::getPlanSegmentInstanceID()
 {
-    return data->plan_segment_instance_id;
+    return plan_segment_instance_id;
 }
 
 void OptimizerContext::setIsExplainQuery(const bool & is_explain_query_)

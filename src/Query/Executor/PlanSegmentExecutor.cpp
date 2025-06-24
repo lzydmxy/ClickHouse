@@ -156,7 +156,7 @@ std::optional<PlanSegmentExecutor::ExecutionResult> PlanSegmentExecutor::execute
     try
     {
         /// Remove normalized_query_plan_hash code, see normalized_query_hash
-        context->getOptimizerContext()->initExceptionHandler();
+        context->getOptimizerContext()->initPlanSegmentExceptionHandler();
         doExecute();
 
         query_log_element->type = QueryLogElementType::QUERY_FINISH;
@@ -193,7 +193,7 @@ std::optional<PlanSegmentExecutor::ExecutionResult> PlanSegmentExecutor::execute
                     plan_segment->getQueryId(), plan_segment->getPlanSegmentId(), exception_code));
         }
         /// exception_handler will report failure plan segment status before release
-        auto exception_handler = context->getOptimizerContext()->getExceptionHandler();
+        auto exception_handler = context->getOptimizerContext()->getPlanSegmentExceptionHandler();
         if (exception_handler && exception_handler->setException(std::current_exception()))
             return convertFailurePlanSegmentStatusToResult(context, plan_segment_instance->info, exception_code, exception_message,
                 std::move(final_progress), sender_metrics, plan_segment_outputs);

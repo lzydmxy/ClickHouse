@@ -4,6 +4,7 @@
 #include <Query/Common/QueryCommon.h>
 #include <Query/Common/ExceptionHandler.h>
 #include <Query/Common/OptimizerSettings.h>
+#include <Query/Executor/PlanSegmentInstance.h>
 #include <Query/Processors/QueryPlan/PlanNodeIdAllocator.h>
 #include <Query/Planner/SymbolAllocator.h>
 #include <Query/Optimizer/OptimizerMetrics.h>
@@ -48,6 +49,7 @@ class SegmentScheduler;
 using SegmentSchedulerPtr = std::shared_ptr<SegmentScheduler>;
 
 class PlanCacheManager;
+using PlanCacheManagerPtr = std::unique_ptr<PlanCacheManager>;
 
 struct Settings;
 struct PlanSegmentInstanceID;
@@ -66,7 +68,46 @@ enum ServiceType
     tso
 };
 
-class OptimizerContext
+class OptimizerContextData
+{
+protected:
+    Int16 rpc_port;
+    OptimizerSettings optimizer_settings;
+
+    std::function<void()> send_tcp_progress{nullptr};
+
+    QueryStatusPtr query_process_element = nullptr; /// For tracking total resource usage for query.
+    ProcessListEntryPtr process_list_entry;
+
+    PlanNodeIdAllocatorPtr id_allocator = nullptr;
+    std::shared_ptr<SymbolAllocator> symbol_allocator = nullptr;
+    std::shared_ptr<QueryStatistics::StatisticsMemoryStore> stats_memory_store = nullptr;
+    std::shared_ptr<OptimizerMetrics> optimizer_metrics = nullptr;
+    ExcludedRulesMap exclude_rules_map;
+
+    // make sure a context not be passed to ExprAnalyzer::analyze concurrently
+    mutable std::unordered_set<std::string> nondeterministic_functions_within_query_scope;
+    mutable std::unordered_set<std::string> nondeterministic_functions_out_of_query_scope;
+
+    std::shared_ptr<OptimizerProfile> optimizer_profile = nullptr;
+
+    PlanSegmentProcessListEntryPtr segment_process_list_entry;
+
+    UInt32 query_max_execution_time;
+    TimePoint query_expiration_timestamp;
+
+    AddressInfoPtr coordinator_address;
+    PlanSegmentInstanceID plan_segment_instance_id;
+    ExceptionHandlerPtr plan_segment_exception_handler = nullptr;
+
+    bool is_explain_query = false;
+    int step_id = 2000;
+    int rule_id = 3000;
+    String graphviz_sub_query_path;
+    int sub_query_id = 0;
+};
+
+class OptimizerContext: public OptimizerContextData, public std::enable_shared_from_this<OptimizerContext>
 {
 public:
     OptimizerContext(const Settings & settings_, const Poco::Util::AbstractConfiguration & config);
@@ -80,8 +121,8 @@ public:
     TimePoint getQueryExpirationTimeStamp() const;
     void initQueryExpirationTimeStamp();
 
-    void initExceptionHandler();
-    ExceptionHandlerPtr getExceptionHandler() const;
+    void initPlanSegmentExceptionHandler();
+    ExceptionHandlerPtr getPlanSegmentExceptionHandler() const;
 
     void setCoordinatorAddress(const AddressInfoPtr address);
     AddressInfoPtr getCoordinatorAddress() const;
@@ -184,44 +225,21 @@ public:
     /// Set settings by name.
     void setSetting(std::string_view name, const String & value);
     void setSetting(std::string_view name, const Field & value);
-protected:
-    std::shared_ptr<QueryStatistics::StatisticsMemoryStore> stats_memory_store = nullptr;
 
 private:
+    /// OptimizerContextData mutex
     mutable ContextSharedMutex mutex;
-    OptimizerSettings optimizer_settings;
-    UInt32 query_max_execution_time;
-    TimePoint query_expiration_timestamp;
-    AddressInfoPtr coordinator_address;
-    UInt16 rpc_port;
-    std::shared_ptr<OptimizerContextData> data;
-    ExceptionHandlerPtr exception_handler;
-    PlanSegmentProcessListEntryPtr segment_process_list_entry;
-    PlanSegmentProcessListPtr plan_segment_process_list;
-    ProcessListEntryPtr process_list_entry;
-    QueryStatusPtr query_process_element;
-    std::function<void()> send_tcp_progress{nullptr};
-    bool is_explain_query{false};
-    bool complex_query_active{false};
-    QueryExchangeLogPtr query_exchange_log;
-	UInt64 txt_id{0};
-    // make sure a context not be passed to ExprAnalyzer::analyze concurrently
-    mutable std::unordered_set<std::string> nondeterministic_functions_within_query_scope;
-    mutable std::unordered_set<std::string> nondeterministic_functions_out_of_query_scope;
-    PlanNodeIdAllocatorPtr id_allocator = nullptr;
     String query_plan;
-    std::shared_ptr<SymbolAllocator> symbol_allocator = nullptr;
-    std::shared_ptr<OptimizerMetrics> optimizer_metrics = nullptr;
-    std::unique_ptr<PlanCacheManager> plan_cache_manager = nullptr;
-    std::shared_ptr<SegmentScheduler> segment_scheduler = nullptr;
-    std::shared_ptr<OptimizerProfile> optimizer_profile = nullptr;
 
-    int sub_query_id = 0;
-    int step_id = 2000;
-    int rule_id = 3000;
-    String graphviz_sub_query_path;
+	UInt64 txt_id{0};
 
-    ExcludedRulesMap exclude_rules_map;
+    // Context Shared Part
+    bool complex_query_active{false};
+
+    QueryExchangeLogPtr query_exchange_log;
+    SegmentSchedulerPtr segment_scheduler;
+    PlanSegmentProcessListPtr plan_segment_process_list;
+    PlanCacheManagerPtr plan_cache_manager;
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;
