@@ -851,6 +851,8 @@ ContextMutablePtr Context::createCopy(const ContextPtr & other)
     SharedLockGuard lock(other->mutex);
     auto new_context = std::shared_ptr<Context>(new Context(*other));
     new_context->query_access_info = std::make_shared<QueryAccessInfo>(*other->query_access_info);
+    if (other->optimizer_context)
+        new_context->optimizer_context = std::make_shared<OptimizerContext>(*other->optimizer_context);
     return new_context;
 }
 

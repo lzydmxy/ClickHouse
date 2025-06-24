@@ -71,6 +71,9 @@ enum ServiceType
 class OptimizerContextData
 {
 protected:
+    OptimizerContextData();
+    OptimizerContextData(const OptimizerContextData &);
+
     Int16 rpc_port;
     OptimizerSettings optimizer_settings;
 
@@ -110,6 +113,8 @@ protected:
 class OptimizerContext: public OptimizerContextData, public std::enable_shared_from_this<OptimizerContext>
 {
 public:
+    OptimizerContext();
+    OptimizerContext(const OptimizerContext & rhs);
     OptimizerContext(const Settings & settings_, const Poco::Util::AbstractConfiguration & config);
 
     const OptimizerSettings & getSettingsRef() const { return optimizer_settings; }

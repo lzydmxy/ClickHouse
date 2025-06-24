@@ -24,6 +24,25 @@ extern const int BAD_ARGUMENTS;
 
 }
 
+OptimizerContextData::OptimizerContextData() = default;
+OptimizerContextData::OptimizerContextData(const OptimizerContextData &) = default;
+
+OptimizerContext::OptimizerContext() = default;
+OptimizerContext::OptimizerContext(const OptimizerContext & rhs)
+    : OptimizerContextData(rhs), std::enable_shared_from_this<OptimizerContext>(rhs)
+{
+    std::lock_guard lock(rhs.mutex);
+
+    query_plan = rhs.query_plan;
+    txt_id = rhs.txt_id;
+    complex_query_active = rhs.complex_query_active;
+
+    query_exchange_log = rhs.query_exchange_log;
+    segment_scheduler = rhs.segment_scheduler;
+    plan_segment_process_list = rhs.plan_segment_process_list;
+    // plan_cache_manager = rhs.plan_cache_manager;
+}
+
 OptimizerContext::OptimizerContext(const Settings & settings_, const Poco::Util::AbstractConfiguration & config)
 {
     optimizer_settings.loadFromConfig("optimizer", config);
