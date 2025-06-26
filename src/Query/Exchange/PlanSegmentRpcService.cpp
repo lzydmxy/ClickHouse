@@ -10,6 +10,7 @@
 #include <Access/User.h>
 #include <Query/Common/QueryCommon.h>
 #include <Query/Common/OptimizerContext.h>
+#include <Query/Common/OptimizerSettings.h>
 #include <Query/ProtosHelper/AddressInfo.h>
 #include <Query/ProtosHelper/ProgressHelper.h>
 #include <Query/Executor/ProfileLogHub.h>
@@ -205,12 +206,19 @@ void PlanSegmentRpcService::prepareCommonParams(
         /// apply settings changed
         ReadBufferFromBrpc settings_read_buf(*settings_io_buf);
         Settings settings;
+        OptimizerSettings optimizer_settings;
         const size_t MIN_MINOR_VERSION_ENABLE_STRINGS_WITH_FLAGS = 4;
         if (query_common->brpc_minor_revision() >= MIN_MINOR_VERSION_ENABLE_STRINGS_WITH_FLAGS)
             settings.read(settings_read_buf, SettingsWriteFormat::STRINGS_WITH_FLAGS);
         else
             settings.read(settings_read_buf, SettingsWriteFormat::BINARY);
+        if (query_common->brpc_minor_revision() >= MIN_MINOR_VERSION_ENABLE_STRINGS_WITH_FLAGS)
+            optimizer_settings.read(settings_read_buf, SettingsWriteFormat::STRINGS_WITH_FLAGS);
+        else
+            optimizer_settings.read(settings_read_buf, SettingsWriteFormat::BINARY);
         auto changes = settings.changes();
+        auto optimizer_changes = optimizer_settings.changes();
+        changes.insert(changes.end(), optimizer_changes.begin(), optimizer_changes.end());
         settings_changes = std::make_shared<SettingsChanges>(changes);
     }
 }
