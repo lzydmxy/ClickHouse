@@ -1463,17 +1463,16 @@ void QueryPlannerVisitor::planWindow(PlanBuilder & builder, ASTSelectQuery & sel
                         || (settings.max_threads != 1 && window_description.partition_by.size() != before_description.partition_by.size());
         }
 
+        // todo: lizhuoyu5, Adding a SortStep during the planner phase may cause side effects.
+        // todo: Perhaps we should add the SortedTransform in the WindowStep::transformPipeline stage instead.
         if (need_sort)
         {
-            SortingStep::Settings sort_settings(*context);
-
-            auto sorting_step = std::make_unique<SortingStep>(
+            auto sorting_step = std::make_unique<SortingStepExt>(
                 builder.getCurrentDataStream(),
                 window_description.full_sort_description,
-                window_description.partition_by,
                 0 /*limit*/,
-                sort_settings,
-                settings.optimize_sorting_by_input_stream_properties);
+                SortingStepExt::Stage::FULL
+                );
             sorting_step->setStepDescription("Sorting for window '" + window_description.window_name + "'");
             builder.addStep(std::move(sorting_step));
         }
