@@ -11,6 +11,7 @@
 #include <Query/Processors/QueryPlan/PlanCache.h>
 #include <Query/Optimizer/OptimizerProfile.h>
 #include <Query/Statistics/StatisticsMemoryStore.h>
+#include <Interpreters/Cluster.h>
 
 namespace DB
 {
@@ -244,10 +245,20 @@ public:
     void setSetting(std::string_view name, const String & value);
     void setSetting(std::string_view name, const Field & value);
 
+    ClusterPtr getCluster() const { return cluster; }
+    void setCluster(const ClusterPtr & cluster_) {cluster = cluster_; }
+
+    size_t getWorkerSize() const;
+    String getClusterName() const;
+
+protected:
+    std::shared_ptr<QueryStatistics::StatisticsMemoryStore> stats_memory_store = nullptr;
+
 private:
     /// OptimizerContextData mutex
     mutable ContextSharedMutex mutex;
     String query_plan;
+    ClusterPtr cluster;
 
 	UInt64 txt_id{0};
 };

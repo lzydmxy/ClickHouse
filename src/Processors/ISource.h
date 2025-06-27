@@ -12,6 +12,7 @@ namespace DB
 class ISource : public IProcessor
 {
 private:
+    friend class ExchangeSourceExt;
     std::mutex read_progress_mutex;
     ReadProgressCounters read_progress;
     std::atomic_bool read_progress_was_set = false;

@@ -55,7 +55,7 @@ bool CascadesOptimizer::rewrite(QueryPlanExt & plan, ContextMutablePtr context) 
     CascadesContext cascades_context{
         context,
         plan.getCTEInfo(),
-        WorkerSizeFinder::find(plan, *context),
+        context->getOptimizerContext()->getWorkerSize(),
         PlanPattern::maxJoinSize(plan, context),
         enable_cbo && hasCBOType(PlanPattern::extractStepTypes(plan))};
 

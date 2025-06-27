@@ -204,7 +204,7 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_
                 stream_id, rect_code, data_key, retry_count, overcrowded_retry);
         }
         // stream finished
-        else if (rect_code == -1)
+        else if (rect_code == -1)  // TODO wujiancaho rect_code will never be -1
         {
             int stream_finished_code = 0;
             auto rc = BrpcProxy::getInstance().StreamFinishedCode(stream_id, stream_finished_code);

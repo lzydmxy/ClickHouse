@@ -432,6 +432,7 @@ std::pair<String, size_t> PlanSegmentVisitor::findClusterAndParallelSize(QueryPl
             break;
         case Partitioning::Handle::BUCKET_TABLE:
         case Partitioning::Handle::FIXED_HASH: {
+            /// TODO wujianchao now we limit the non-leaf fragments parallel size
             /// if all input are not table type, parallel size should respect distributed_max_parallel_size setting
             size_t max_parallel_size = plan_segment_context.context->getOptimizerContext()->getSettingsRef().distributed_max_parallel_size;
             if (!input_has_table && !split_context.inputs.empty() && split_context.scalable)
@@ -441,18 +442,10 @@ std::pair<String, size_t> PlanSegmentVisitor::findClusterAndParallelSize(QueryPl
                 {
                     if (max_parallel_size > 0 && max_parallel_size < ret)
                         ret = max_parallel_size;
-                    // In bsp mode, we ignore the number of health node.
-                    if (plan_segment_context.context->getOptimizerContext()->getSettingsRef().bsp_mode && max_parallel_size > ret)
-                        ret = max_parallel_size;
                     return {plan_segment_context.cluster_name, ret};
                 }
             }
-            /// Respect distributed_max_parallel_size in bsp mode.
-            if (plan_segment_context.context->getOptimizerContext()->getSettingsRef().bsp_mode && max_parallel_size > 0
-                && max_parallel_size > plan_segment_context.shard_number)
-                return {plan_segment_context.cluster_name, max_parallel_size};
-            else
-                return {plan_segment_context.cluster_name, plan_segment_context.shard_number};
+            return {plan_segment_context.cluster_name, plan_segment_context.shard_number};
         }
         default:
             break;
@@ -495,12 +488,13 @@ std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitReadNoth
 
 std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitReadStorageRowCountStepExtNode(QueryPlanExt::Node *, const Context &)
 {
-    return {{Partitioning::Handle::COORDINATOR}};
+    return {{Partitioning::Handle::FIXED_HASH}};
 }
 
 std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitTableScanStepExtNode(QueryPlanExt::Node * node, const Context &)
 {
-    return {{Partitioning::Handle::COORDINATOR}};
+    // TODO wujianchao any table who does not support distributed reading?
+    return {{Partitioning::Handle::FIXED_HASH}};
 }
 
 std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitRemoteExchangeSourceStepExtNode(QueryPlanExt::Node * node, const Context &)

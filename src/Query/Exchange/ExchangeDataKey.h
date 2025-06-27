@@ -13,8 +13,7 @@ namespace DB
 struct ExchangeDataKey
 {
     explicit ExchangeDataKey(
-        //UInt64 query_unique_id_, UInt64 exchange_id_, UInt64 partition_id_, UInt64 parallel_index_ = std::numeric_limits<UInt64>::max())
-        UInt64 query_unique_id_, UInt64 exchange_id_, UInt64 partition_id_, UInt64 parallel_index_ = 0)
+        UInt64 query_unique_id_, UInt64 exchange_id_, UInt64 partition_id_, UInt64 parallel_index_ = std::numeric_limits<UInt64>::max())
         : query_unique_id(query_unique_id_), exchange_id(exchange_id_), partition_id(partition_id_), parallel_index(parallel_index_)
     {
     }

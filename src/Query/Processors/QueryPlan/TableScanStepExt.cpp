@@ -1976,7 +1976,10 @@ StreamLocalLimits getLimitsForStorage(const Settings & settings, const SelectQue
 
 void TableScanStepExt::toProto(Protos::TableScanStepExt & proto, bool for_hash_equals) const
 {
-    ProtosSerDerHelper::toProto(storage_id, *proto.mutable_storage_id());
+    auto storage_id_without_uuid = storage_id;
+    // we should clear uuid to avoid table does not exist exception in another node.
+    storage_id_without_uuid.uuid = UUIDHelpers::Nil;
+    ProtosSerDerHelper::toProto(storage_id_without_uuid, *proto.mutable_storage_id());
     for (auto & [name, c_alias] : column_alias)
     {
         auto proto_element = proto.add_column_alias();

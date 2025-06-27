@@ -152,6 +152,4 @@ message HostWithPorts {
     uint32 rpc_port = 3;
     uint32 tcp_port = 4;
     uint32 http_port = 5;
-    uint32 exchange_port = 6;
-    uint32 exchange_status_port = 7;
 }

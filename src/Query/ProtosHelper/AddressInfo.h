@@ -20,16 +20,15 @@ class AddressInfo
 {
 public:
     AddressInfo() = default;
-    AddressInfo(const Cluster::Address & address_);
-    AddressInfo(const String & host_name_, UInt16 port_, const String & user_, const String & password_);
     AddressInfo(const String & host_name_, UInt16 port_, const String & user_, const String & password_, UInt16 exchange_port_);
     AddressInfo(const RAddressInfo & proto_);
 
     AddressInfoPtr getAddressInfoPtr() const
     {
-        return std::make_shared<AddressInfo>(this->getHostName(), this->getPort(), this->getUser(), this->getPassword());
+        return std::make_shared<AddressInfo>(this->getHostName(), this->getPort(), this->getUser(), this->getPassword(), this->getExchangePort());
     }
 
+    static AddressInfo create(const Cluster::Address & cluster_address, UInt16 exchange_port_);
     void serialize(WriteBuffer &) const;
     void deserialize(ReadBuffer &);
     void toProto(RAddressInfo & proto) const;
@@ -74,9 +73,9 @@ private:
 };
 
 /// Get local RPC address with host and port
-AddressInfo getLocalAddress(ContextPtr & context);
+AddressInfo getLocalAddress(const ContextPtr & context);
 /// Get local RPC address with host and port
-AddressInfoPtr getLocalAddressPtr(ContextPtr & context);
+AddressInfoPtr getLocalAddressPtr(const ContextPtr & context);
 
 AddressInfoPtr getRemoteAddress(HostWithPorts host_with_ports, ContextPtr & query_context);
 

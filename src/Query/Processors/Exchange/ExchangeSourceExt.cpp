@@ -119,6 +119,36 @@ std::optional<Chunk> ExchangeSourceExt::tryGenerate()
     }
 }
 
+void ExchangeSourceExt::work()
+{
+    try
+    {
+        read_progress_was_set = false;
+
+        if (auto chunk = tryGenerate())
+        {
+            current_chunk.chunk = std::move(*chunk);
+            if (current_chunk.chunk || current_chunk.chunk.getChunkInfo())
+            {
+                has_input = true;
+                if (auto_progress && !read_progress_was_set)
+                    progress(current_chunk.chunk.getNumRows(), current_chunk.chunk.bytes());// TODO wujianchao chunk is always empty
+            }
+        }
+        else
+            finished = true;
+
+        if (isCancelled())
+            finished = true;
+    }
+    catch (...)
+    {
+        finished = true;
+        got_exception = true;
+        throw;
+    }
+}
+
 void ExchangeSourceExt::onCancel()
 {
     LOG_TRACE(logger, "{} onCancel", getName());

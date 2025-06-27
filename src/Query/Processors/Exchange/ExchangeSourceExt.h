@@ -42,6 +42,7 @@ public:
 
 protected:
     std::optional<Chunk> tryGenerate() override;
+    void work() override;
     void onCancel() override;
 
 private:

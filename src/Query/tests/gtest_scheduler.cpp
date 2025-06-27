@@ -71,8 +71,8 @@ SchedulerTestContext createSchedulerTestContext(size_t parallel_size, const std:
     prepareQueryCommonBuf(result.dag_graph_ptr->query_common_buf, *(result.segments[0]), context);
 
     result.cluster_nodes.all_workers
-        = {WorkerNode(AddressInfo("10.10.10.10", 9010, "", ""), NodeType::Remote),
-           WorkerNode(AddressInfo("10.10.10.11", 9010, "", ""), NodeType::Remote)};
+        = {WorkerNode(AddressInfo("10.10.10.10", 9010, "", "", 9011), NodeType::Remote),
+           WorkerNode(AddressInfo("10.10.10.11", 9010, "", "", 9011), NodeType::Remote)};
     result.cluster_nodes.rank_worker_ids = {1, 2};
     result.cluster_nodes.all_hosts = {HostWithPorts{"10.10.10.10", 9010}, HostWithPorts{"10.10.10.11", 9010}};
     result.cluster_nodes.cluster_name = "cluster1";

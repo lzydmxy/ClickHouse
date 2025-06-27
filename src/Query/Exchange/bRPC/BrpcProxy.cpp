@@ -94,6 +94,7 @@ int BrpcProxy::StreamFinish(StreamId stream_id, int32_t &actual_fin_code, int32_
         // TODO: Write expected_fin_code to stream
         // Stream *s = (Stream *) ptr->conn();
         // s->SendStreamFin(expected_fin_code);
+
     }
     actual_fin_code = expected_fin_code;
 

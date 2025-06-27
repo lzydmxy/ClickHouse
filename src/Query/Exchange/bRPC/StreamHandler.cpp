@@ -116,7 +116,7 @@ void StreamHandler::on_closed(brpc::StreamId stream_id)
         else
         {
             LOG_DEBUG(log, "on_closed stream {}, receiver {}", stream_id, receiver_ptr->getName());
-            auto status = receiver_ptr->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "Try close receiver grafully");
+            auto status = receiver_ptr->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "Try close receiver gracefully");
             if (status.is_modified_by_operator && status.code == BroadcastStatusCode::ALL_SENDERS_DONE)
             {
                 // Push an empty as finish to close receiver gracefully
@@ -132,6 +132,7 @@ void StreamHandler::on_closed(brpc::StreamId stream_id)
 
 void StreamHandler::on_failed(brpc::StreamId id, int32_t error_code, const std::string& error_text)
 {
+    chassert(error_code > 0);
     try
     {
         BrpcRemoteBroadcastReceiverShardPtr receiver_ptr = receiver.lock();
@@ -144,7 +145,7 @@ void StreamHandler::on_failed(brpc::StreamId id, int32_t error_code, const std::
             ///Only care about finish status which need close receiver immediately
             LOG_INFO(log, "on_failed stream {}, receiver {}, code {}", id, receiver_ptr->getName(), error_code);
             if (error_code > 0)
-                receiver_ptr->finish(static_cast<BroadcastStatusCode>(error_code), "StreamHandler::on_finished called:" + error_text);
+                receiver_ptr->finish(static_cast<BroadcastStatusCode>(error_code), "StreamHandler::on_failed called:" + error_text);
             else
                 receiver_ptr->setSendDoneFlag();
         }

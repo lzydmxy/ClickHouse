@@ -1,7 +1,6 @@
 #include <IO/ReadHelpers.h>
 #include <IO/WriteBufferFromString.h>
 #include <IO/Operators.h>
-#include <Common/Exception.h>
 #include <Common/parseAddress.h>
 #include <Interpreters/Context.h>
 #include <Query/ProtosHelper/HostWithPorts.h>
@@ -13,22 +12,14 @@ namespace ErrorCodes
     extern const int BAD_ARGUMENTS;
 }
 
-HostWithPorts::HostWithPorts(const Cluster::Address & address, UInt16 rpc_port_, UInt16 http_port_)
-    : HostWithPorts(address.host_name, rpc_port_, address.port, http_port_)
-{
-}
-
-HostWithPorts::HostWithPorts(const std::string & host_, UInt16 rpc_port_, UInt16 tcp_port_, UInt16 http_port_, std::string id_
-    , UInt16 exchange_port_, UInt16 exchange_status_port_)
-    : host{removeBracketsIfIpv6(host_)},
-        id{std::move(id_)},
-        rpc_port{rpc_port_},
-        tcp_port{tcp_port_},
-        http_port{http_port_},
-        exchange_port{rpc_port_},
-        exchange_status_port{rpc_port_}
-{
-}
+    HostWithPorts::HostWithPorts(const std::string & host_, UInt16 rpc_port_, UInt16 tcp_port_, UInt16 http_port_, std::string id_)
+        : host{removeBracketsIfIpv6(host_)}
+        , rpc_port{rpc_port_}
+        , tcp_port{tcp_port_}
+        , http_port{http_port_}
+        , id{std::move(id_)}
+    {
+    }
 
 std::string HostWithPorts::toDebugString() const
 {
@@ -43,12 +34,6 @@ std::string HostWithPorts::toDebugString() const
         wb << " rpc/" << rpc_port;
     if (tcp_port != 0)
         wb << " tcp/" << tcp_port;
-    if (exchange_port != 0)
-        wb << " exc/" << exchange_port;
-    if (exchange_status_port != 0)
-        wb << " exs/" << exchange_status_port;
-    if (real_id)
-        wb << " real_id/" << *real_id;
     wb << '}';
 
     return wb.str();
@@ -130,21 +115,17 @@ HostWithPorts HostWithPorts::createHostWithPorts(const RHostWithPorts & hp)
         uint16_t(hp.rpc_port()),
         uint16_t(hp.tcp_port()),
         uint16_t(hp.http_port()),
-        hp.hostname(),
-        uint16_t(hp.exchange_port()),
-        uint16_t(hp.exchange_status_port())
+        hp.hostname()
     };
 }
 
 void HostWithPorts::fillHostWithPorts(const HostWithPorts & hp, RHostWithPorts & pb_hp)
 {
-    pb_hp.set_hostname(hp.id);
     pb_hp.set_host(hp.getHost());
     pb_hp.set_rpc_port(hp.rpc_port);
     pb_hp.set_tcp_port(hp.tcp_port);
     pb_hp.set_http_port(hp.http_port);
-    pb_hp.set_exchange_port(hp.exchange_port);
-    pb_hp.set_exchange_status_port(hp.exchange_status_port);
+    pb_hp.set_hostname(hp.id);
 }
 
 }

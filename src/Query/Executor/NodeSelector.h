@@ -72,12 +72,6 @@ struct SourceTaskPayloadOnWorker
 struct WorkerNode
 {
     WorkerNode() = default;
-    explicit WorkerNode(const Cluster::Address & address_, NodeType type_ = NodeType::Remote, String id_ = "")
-        : address(address_), type(type_), id(id_)
-    {
-        if (id == "")
-            id = address.toShortString();
-    }
     explicit WorkerNode(const AddressInfo & address_, NodeType type_ = NodeType::Remote, String id_ = "")
         : address(address_), type(type_), id(id_)
     {

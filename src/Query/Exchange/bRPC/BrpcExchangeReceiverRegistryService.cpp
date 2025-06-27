@@ -43,11 +43,10 @@ void BrpcExchangeReceiverRegistryService::registry(
         if (sender_proxy && sender_stream_id != brpc::INVALID_STREAM_ID)
             registerSenderToProxy(nullptr, sender_proxy, query_id, sender_stream_id, {}, key, coordinator_addr, false);
     });
-
     /// this done_guard guarantee to call done->Run() in any situation
     brpc::ClosureGuard done_guard(done);
     auto accept_timeout_ms = request->wait_timeout_ms();
-    LOG_TRACE(getLogger("Service"), "registry key {} query {}", key->toString(), query_id);
+    LOG_TRACE(getLogger("BrpcExchangeReceiverRegistryService"), "registry key {} query {}", key->toString(), query_id);
     acceptStream(cntl, accept_timeout_ms, sender_proxy, request->query_id(), sender_stream_id);
 }
 

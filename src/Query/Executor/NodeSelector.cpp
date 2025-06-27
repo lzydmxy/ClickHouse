@@ -9,13 +9,10 @@
 #include <vector>
 #include <Common/Exception.h>
 #include <Interpreters/Context_fwd.h>
-//#include <Storages/MergeTree/IMergeTreeDataPart_fwd.h>
 #include <Query/Common/OptimizerContext.h>
 #include <Query/ProtosHelper/QueryProto.h>
 #include <Query/ProtosHelper/ExchangeMode.h>
 #include <Query/ProtosHelper/SourceTask.h>
-// #include <QueryPlan/ExchangeStep.h>
-// #include <QueryPlan/TableScanStep.h>
 
 namespace DB
 {
@@ -27,7 +24,7 @@ namespace ErrorCodes
 
 bool isLocal(PlanSegment * plan_segment_ptr)
 {
-    return plan_segment_ptr->getParallelSize() == 0 || plan_segment_ptr->getClusterName().empty();
+    return plan_segment_ptr->getParallelSize() == 1 || plan_segment_ptr->getClusterName().empty();
 }
 
 inline size_t getRandomIndex(const size_t & max)
@@ -38,10 +35,11 @@ inline size_t getRandomIndex(const size_t & max)
     return dis(gen);
 }
 
-ClusterNodes::ClusterNodes(const std::string cluster_name_, ContextPtr & query_context) : cluster_name(cluster_name_)
+ClusterNodes::ClusterNodes(String cluster_name_, ContextPtr & query_context) : cluster_name(cluster_name_)
 {
-    cluster = query_context->getCluster(cluster_name);
-    auto rpc_port = static_cast<UInt16>(query_context->getConfigRef().getUInt("rpc_port", 0));
+    cluster = query_context->tryGetCluster(cluster_name);
+    auto rpc_port = static_cast<UInt16>(query_context->getConfigRef().getUInt("optimizer.rpc_port", 0));
+    auto tcp_port = static_cast<UInt16>(query_context->getConfigRef().getUInt("tcp_port", 0));
     auto http_port = static_cast<UInt16>(query_context->getConfigRef().getUInt("http_port", 0));
     switch(query_context->getOptimizerContext()->getSettingsRef().scheduler_mode)
     {
@@ -59,34 +57,53 @@ ClusterNodes::ClusterNodes(const std::string cluster_name_, ContextPtr & query_c
             selectUtilizationWorkers();
             break;
     }
-    const auto shards_addresses = cluster->getShardsAddresses();
-    const auto shards = cluster->getShardsInfo();
-    for (const auto index : rank_worker_ids)
+    if (cluster == nullptr) //  query only contains local table
     {
-        const Cluster::Address * selected_address = NULL;
-        NodeType node_type = NodeType::Local;
-        for(const auto & replica : shards_addresses[index])
+        auto localhost = getLocalAddress(query_context);
+        all_workers.emplace_back(WorkerNode{localhost, NodeType::Local});
+        all_hosts.emplace_back(HostWithPorts{localhost.getHostName(), rpc_port, tcp_port, http_port});
+    }
+    else
+    {
+        const auto shards_addresses = cluster->getShardsAddresses();
+        const auto shards = cluster->getShardsInfo();
+        for (const auto index : rank_worker_ids)
         {
-            if(replica.is_local)
+            const Cluster::Address * selected_address = NULL;
+            NodeType node_type = NodeType::Local;
+            for(const auto & replica : shards_addresses[index])
             {
-                selected_address = &replica;
-                break;
+                if(replica.is_local)
+                {
+                    selected_address = &replica;
+                    break;
+                }
+            }
+            if (selected_address == NULL)
+            {
+                size_t replica_index = getRandomIndex(shards_addresses[index].size() - 1);
+                selected_address = &shards_addresses[index][replica_index];
+                node_type = NodeType::Remote;
+            }
+            if (node_type == NodeType::Local)
+            {
+                all_workers.emplace_back(WorkerNode{AddressInfo::create(*selected_address, rpc_port), node_type});
+                all_hosts.emplace_back(HostWithPorts{selected_address->host_name, rpc_port, selected_address->port, http_port});
+            }
+            else
+            {
+                /// TODO wujianchao fix it, we need add rpc_port to cluster
+                all_workers.emplace_back(WorkerNode{AddressInfo::create(*selected_address, 3101), node_type});
+                all_hosts.emplace_back(HostWithPorts{selected_address->host_name, rpc_port, selected_address->port, 3223});
             }
         }
-        if (selected_address == NULL)
-        {
-            size_t replica_index = getRandomIndex(shards_addresses[index].size() - 1);
-            selected_address = &shards_addresses[index][replica_index];
-            node_type = NodeType::Remote;
-        }
-        all_workers.emplace_back(WorkerNode{*selected_address, node_type});
-        all_hosts.emplace_back(HostWithPorts{*selected_address, rpc_port, http_port});
     }
 }
 
 void ClusterNodes::selectRandomWorkers()
 {
-    rank_worker_ids.resize(cluster->getShardsInfo().size(), 0);
+    size_t shard_size = cluster ? cluster->getShardCount() : 1;
+    rank_worker_ids.resize(shard_size, 0);
     std::iota(rank_worker_ids.begin(), rank_worker_ids.end(), 0);
     thread_local std::random_device rd;
     std::shuffle(rank_worker_ids.begin(), rank_worker_ids.end(), rd);
@@ -94,10 +111,10 @@ void ClusterNodes::selectRandomWorkers()
 
 void ClusterNodes::selectOrderWorkers(bool first)
 {
-    rank_worker_ids.resize(cluster->getShardsInfo().size(), 0);
+    size_t shard_size = cluster ? cluster->getShardCount() : 1;
+    rank_worker_ids.resize(shard_size, 0);
     if (!first)
     {
-        const auto shard_size = cluster->getShardsInfo().size();
         const auto seed = getRandomIndex(shard_size);
         std::iota(rank_worker_ids.begin(), rank_worker_ids.end(), seed);
         for (size_t idx = 0; idx < rank_worker_ids.size(); idx++)
@@ -144,13 +161,13 @@ void NodeSelector::setSources(
         if (auto it = dag_graph_ptr->id_to_segment.find(input_plan_segment_id); it != dag_graph_ptr->id_to_segment.end())
         {
             auto mode = plan_segment_input->getExchangeMode();
-            // if data is write to local, so no need to shuffle data
+            // if data is written to local, so no need to shuffle data
             if (isLocalExchange(mode))
             {
                 if (enable_local_input)
                 {
                     LOG_TRACE(log, "Local plan segment input, id:{}", input_plan_segment_id);
-                    std::shared_ptr<AddressInfo> local_addr = std::make_shared<AddressInfo>("localhost", 0, "", "");
+                    auto local_addr = getLocalAddressPtr(query_context);
                     result->source_addresses[exchange_id].emplace_back(local_addr);
                     for (UInt32 parallel_id = 0; parallel_id < result->worker_nodes.size(); parallel_id++)
                     {
@@ -261,7 +278,7 @@ std::map<PlanSegmentInstanceID, std::vector<UInt32>> NodeSelector::splitReadPart
     auto & plan_segment = *dag_graph_ptr->id_to_segment[segment_id];
     if (optimizer_context->getSettingsRef().enable_disk_shuffle_partition_coalescing && !dag_graph_ptr->leaf_segments.contains(segment_id)
         && !dag_graph_ptr->table_scan_or_value_segments.contains(segment_id) && !plan_segment.hasLocalInput()
-        && !plan_segment.hasLocalOutput())
+        && !plan_segment.hasLocalOutput()) // TODO wujianchao remove it
     {
         /// each partition's size
         std::vector<size_t> normal_partitions;
@@ -522,109 +539,11 @@ bool hasBucketScan(const PlanSegment & plan_segment)
     return has_bucket_scan;
 }
 
-NodeSelectorResult SourceNodeSelector::select(PlanSegment * plan_segment_ptr, ContextPtr query_context, DAGGraph * dag_graph_ptr)
+NodeSelectorResult SourceNodeSelector::select(PlanSegment * plan_segment_ptr, ContextPtr, DAGGraph *)
 {
-    checkClusterInfo(plan_segment_ptr);
-    bool need_stable_schedule = needStableSchedule(plan_segment_ptr);
+    chassert(plan_segment_ptr->getParallelSize() == cluster_nodes.all_workers.size());
     NodeSelectorResult result;
-    // The one worker excluded is server itself.
-    const auto worker_number = cluster_nodes.all_workers.empty() ? 0 : cluster_nodes.all_workers.size() - 1;
-    if (plan_segment_ptr->getParallelSize() > worker_number && need_stable_schedule)
-    {
-        throw Exception(ErrorCodes::BAD_QUERY_PARAMETER,
-            "Logical error: distributed_max_parallel_size({}) of table scan can not be greater than worker number({})",
-            plan_segment_ptr->getParallelSize(),
-            worker_number);
-    }
-
-    // If parallelism is greater than the worker number, we split the parts according to the input size.
-    if (plan_segment_ptr->getParallelSize() > worker_number)
-    {
-        // initialize payload_per_worker with empty payload, so that empty table will select nodes correcly
-        std::unordered_map<AddressInfo, SourceTaskPayloadOnWorker, AddressInfo::Hash> payload_on_workers;
-        for (const auto & worker : cluster_nodes.all_workers)
-        {
-            if (worker.type == NodeType::Remote)
-                payload_on_workers[worker.address] = SourceTaskPayloadOnWorker{.worker_id = worker.id};
-        }
-        size_t rows_count = 0;
-        bool is_bucket_valid = true;
-        Int64 min_num_of_buckets = getMinNumOfBuckets(plan_segment_ptr->getPlanSegmentInputs());
-        if (min_num_of_buckets == kInvalidBucketNumber)
-            is_bucket_valid = false;
-
-        is_bucket_valid = is_bucket_valid && hasBucketScan(*plan_segment_ptr);
-        
-        //TODO: One node no all metadata of shard!
-        //const auto & source_task_payload_map = query_context->getCnchServerResource()->getSourceTaskPayload();
-        std::unordered_map<UUID, std::unordered_map<AddressInfo, SourceTaskPayload, AddressInfo::Hash>> source_task_payload_map;
-        for (const auto & plan_segment_input : plan_segment_ptr->getPlanSegmentInputs())
-        {
-            auto storage_id = plan_segment_input->getStorageID();
-            if (storage_id && storage_id->hasUUID())
-            {
-                auto iter = source_task_payload_map.find(storage_id->uuid);
-                if (iter != source_task_payload_map.end())
-                {
-                    for (const auto & [addr, p] : iter->second)
-                    {
-                        rows_count += p.rows;
-                        auto & worker_payload = payload_on_workers[addr];
-                        worker_payload.rows += p.rows;
-                        worker_payload.part_num += 1;
-                        if (is_bucket_valid)
-                        {
-                            for (auto bucket : p.buckets)
-                            {
-                                auto key = bucket % min_num_of_buckets;
-                                worker_payload.bucket_groups[key].insert(bucket);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if (is_bucket_valid)
-            divideSourceTaskByBucket(payload_on_workers, rows_count, plan_segment_ptr->getParallelSize(), result);
-        else
-            divideSourceTaskByPart(payload_on_workers, rows_count, plan_segment_ptr->getParallelSize(), result);
-    }
-    else
-    {
-        auto local_address = getLocalAddress(query_context);
-        if (dag_graph_ptr->source_pruner
-            && dag_graph_ptr->source_pruner->plan_segment_workers_map.contains(plan_segment_ptr->getPlanSegmentId()))
-        {
-            selectPrunedWorkers(dag_graph_ptr, plan_segment_ptr, result, local_address);
-        }
-        else
-        {
-            if (need_stable_schedule)
-            {
-                LOG_TRACE(log, "use stable schedule for segment:{} with {} nodes", plan_segment_ptr->getPlanSegmentId(), worker_number);
-                if (plan_segment_ptr->getParallelSize() != worker_number)
-                    throw Exception(
-                        ErrorCodes::LOGICAL_ERROR,
-                        " Source plan segment parallel size {} is not equal to worker number {}.",
-                        plan_segment_ptr->getParallelSize(),
-                        worker_number);
-                for (size_t parallel_index = 0; parallel_index < worker_number; parallel_index++)
-                {
-                    result.worker_nodes.emplace_back(cluster_nodes.all_workers[parallel_index]);
-                }
-            }
-            else
-            {
-                for (size_t parallel_index = 0; parallel_index < plan_segment_ptr->getParallelSize(); parallel_index++)
-                {
-                    if (parallel_index > plan_segment_ptr->getParallelSize())
-                        break;
-                    result.worker_nodes.emplace_back(cluster_nodes.all_workers[cluster_nodes.rank_worker_ids[parallel_index]]);
-                }
-            }
-        }
-    }
+    result.worker_nodes = cluster_nodes.all_workers;
     return result;
 }
 
@@ -690,10 +609,8 @@ NodeSelectorResult LocalityNodeSelector::select(PlanSegment * plan_segment_ptr, 
         return result;
     }
 
-    for (size_t i = 0; i < plan_segment_ptr->getParallelSize(); i++)
-    {
-        result.worker_nodes.emplace_back(WorkerNode{});
-    }
+    chassert(plan_segment_ptr->getParallelSize() == cluster_nodes.all_workers.size());
+    result.worker_nodes = cluster_nodes.all_workers;
     return result;
 }
 
@@ -734,7 +651,7 @@ NodeSelectorResult NodeSelector::select(PlanSegment * plan_segment_ptr, bool has
         setSources(plan_segment_ptr, &result, read_partitions);
     }
 
-    // set prallel size to 1 for those local output
+    // set prallel size to 1 for those local output // TODO wujianchao remove it
     for (auto & plan_segment_output : plan_segment_ptr->getPlanSegmentOutputs())
     {
         auto plan_segment_output_id = plan_segment_output->getPlanSegmentId();
@@ -749,7 +666,7 @@ NodeSelectorResult NodeSelector::select(PlanSegment * plan_segment_ptr, bool has
             plan_segment_output->setParallelSize(1);
         }
     }
-    LOG_TRACE(log, "Select node for plansegment {} result {}", segment_id, result.toString());
+    LOG_TRACE(log, "Select node for plan segment {} result {}", segment_id, result.toString());
     return result;
 }
 

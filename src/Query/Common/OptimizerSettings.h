@@ -134,7 +134,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, exchange_enable_force_keep_order, false, "Force exchange keep data order", 0) \
     M(Bool, exchange_enable_keep_order_parallel_shuffle, false, "Whether enable parallel shuffle when exchange need keep order", 0) \
     M(UInt64, disk_shuffle_advisory_partition_size, 104857600, "Disk shuffle files's advisory partition size(including all files in a partition), used by partition coalescing", 0) \
-    M(Bool, enable_disk_shuffle_partition_coalescing, true, "If enabled, sheduler will try to coalesce overly-small partitions, thus avoid small plan segments and I/O waste", 0) \
+    M(Bool, enable_disk_shuffle_partition_coalescing, false, "If enabled, sheduler will try to coalesce overly-small partitions, thus avoid small plan segments and I/O waste", 0) \
     M(Bool, enable_batch_send_plan_segment, true, "Whether enable combined sending plan segments to reduce rpc calls", 0) \
     M(UInt64, exchange_remote_receiver_queue_size, 10, "Queue size for remote exchange receiver",0) \
     M(UInt64, exchange_stream_max_buf_size, 20971520, "Default 20M, -1 means no limit", 0) \
@@ -492,7 +492,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, ignore_array_join_check_in_join_on_condition, false, "Ignore array-join function check in join on condition", 0) \
     M(Bool, bsp_mode, false, "If enabled, query will execute in bsp mode", 0) \
     M(String, exchange_shuffle_method_name, "cityHash64", "Shuffle method name used in exchange", 0) \
-    M(UInt64, distributed_max_parallel_size, false, "Max distributed execution parallel size", 0) \
+    M(UInt64, distributed_max_parallel_size, 1000, "Max distributed execution parallel size", 0) \
     M(Bool, log_optimizer_run_time, false, "Whether Log optimizer runtime", 0) \
     M(Bool, log_query_plan, 0, "Log json format query plan to the system query_log table.", 0) \
     M(LogExplainAnalyzeType, log_explain_analyze_type, LogExplainAnalyzeType::NONE, "Log explain analyze result. Type: NONE|QUERY_PIPELINE|AGGREGATED_QUERY_PIPELINE.", 0) \

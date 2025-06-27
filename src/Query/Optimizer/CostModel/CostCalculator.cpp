@@ -18,7 +18,7 @@ PlanNodeCost CostCalculator::calculatePlanCost(QueryPlanExt & plan, const Contex
     PlanCostMap plan_cost_map;
     if (!plan.getPlanNode()->getStatistics())
         return {};
-    size_t worker_size = WorkerSizeFinder::find(plan, context);
+    size_t worker_size = context.getOptimizerContext()->getWorkerSize();
     auto cte_ref_counts = plan.getCTEInfo().collectCTEReferenceCounts(plan.getPlanNode());
     PlanCostVisitor visitor{CostModel{context}, worker_size, plan.getCTEInfo(), cte_ref_counts};
     return VisitorUtil::accept(plan.getPlanNode(), visitor, plan_cost_map).cost;
@@ -29,7 +29,7 @@ PlanCostMap CostCalculator::calculate(QueryPlanExt & plan, const Context & conte
     PlanCostMap plan_cost_map;
     if (!plan.getPlanNode()->getStatistics())
         return plan_cost_map;
-    size_t worker_size = WorkerSizeFinder::find(plan, context);
+    size_t worker_size = context.getOptimizerContext()->getWorkerSize();
     auto cte_ref_counts = plan.getCTEInfo().collectCTEReferenceCounts(plan.getPlanNode());
     PlanCostVisitor visitor{CostModel{context}, worker_size, plan.getCTEInfo(), cte_ref_counts};
     VisitorUtil::accept(plan.getPlanNode(), visitor, plan_cost_map);

@@ -597,8 +597,7 @@ SegmentScheduler::scheduleV2(const String & query_id, ContextPtr query_context, 
     PlanSegmentExecutionInfo execution_info;
     try
     {
-        //TODO: lizhuoyu, need cluster name, maybe we need a config about it
-        auto cluster_name = query_context->getClusters().begin()->first;
+        auto cluster_name = query_context->getOptimizerContext()->getClusterName();
         auto scheduler = std::make_shared<MPPScheduler>(
             query_id,
             cluster_name,

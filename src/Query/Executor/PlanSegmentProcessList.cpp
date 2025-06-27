@@ -151,6 +151,7 @@ void PlanSegmentProcessList::insertProcessList(
         entry = std::move(context_process_list_entry);
     else
     {
+        /// TODO wujianchao handle it
         ParserSelectQuery parser;
         String default_query = "SELECT 1";
         auto default_ast = parseQuery(parser, default_query, 0, 0, 0);

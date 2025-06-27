@@ -251,12 +251,13 @@ BroadcastStatus BrpcRemoteBroadcastReceiver::finish(BroadcastStatusCode status_c
     int actual_status_code = BroadcastStatusCode::RUNNING;
 
     BroadcastStatusCode new_fin_code = status_code;
-    if (status_code < 0)
-    {
-        // if send_done_flag has never been set, sender should have some unkown errors.
-        if (!send_done_flag.test(std::memory_order_acquire))
-            new_fin_code = BroadcastStatusCode::SEND_UNKNOWN_ERROR;
-    }
+    // TODO wujianchao sender should send finish
+    // if (status_code < 0)
+    // {
+    //     // if send_done_flag has never been set, sender should have some unkown errors.
+    //     if (!send_done_flag.test(std::memory_order_acquire))
+    //         new_fin_code = BroadcastStatusCode::SEND_UNKNOWN_ERROR;
+    // }
 
     if (finish_status_code.compare_exchange_strong(current_fin_code, new_fin_code, std::memory_order_relaxed, std::memory_order_relaxed))
     {

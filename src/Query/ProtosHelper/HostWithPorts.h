@@ -162,19 +162,14 @@ class HostWithPorts
 {
 public:
     HostWithPorts() = default;
-    HostWithPorts(const Cluster::Address & address, UInt16 rpc_port_, UInt16 http_port_);
-    HostWithPorts(const std::string & host_, UInt16 rpc_port_ = 0, UInt16 tcp_port_ = 0, UInt16 http_port_ = 0, std::string id_ = {}
-        , [[maybe_unused]] UInt16 exchange_port_ = 0, [[maybe_unused]] UInt16 exchange_status_port_ = 0);
+    HostWithPorts(const std::string & host_, UInt16 rpc_port_ = 0, UInt16 tcp_port_ = 0, UInt16 http_port_ = 0, std::string id_ = {});
 
     std::string host;
-    std::string id;
     UInt16 rpc_port{0};
     UInt16 tcp_port{0};
     UInt16 http_port{0};
-    UInt16 exchange_port{0};
-    UInt16 exchange_status_port{0};
-    std::optional<String> real_id;
-public:
+    std::string id;
+
     static HostWithPorts createHostWithPorts(const RHostWithPorts & hp);
     static void fillHostWithPorts(const HostWithPorts & hp, RHostWithPorts & pb_hp);
 
@@ -184,7 +179,6 @@ public:
     std::string getTCPAddress() const { return fmt::format("{}:{}", addBracketsIfIpv6(host), std::to_string(tcp_port)); }
     std::string getHTTPAddress() const { return fmt::format("{}:{}", addBracketsIfIpv6(host), std::to_string(http_port)); }
     std::string getExchangeAddress() const { return getRPCAddress(); }
-    std::string getExchangeStatusAddress() const { return getRPCAddress(); }
 
     bool operator<(const HostWithPorts & rhs) const { return id < rhs.getId(); }
     const std::string & getHost() const { return host; }
@@ -194,7 +188,6 @@ public:
     std::string toDebugString() const;
     void replaceId(const String & id_) { id = id_; }
     String getId() const { return id; }
-    void setRealId(const String & id_) { real_id = id_; }
 
     static HostWithPorts fromRPCAddress(const std::string & s);
 
@@ -213,8 +206,7 @@ public:
         bool operator()(const HostWithPorts & lhs, const HostWithPorts & rhs) const
         {
             return lhs.id == rhs.id && isSameHost(lhs.host, rhs.host) && lhs.rpc_port == rhs.rpc_port && lhs.tcp_port == rhs.tcp_port
-                && lhs.http_port == rhs.http_port && lhs.exchange_port == rhs.exchange_port
-                && lhs.exchange_status_port == rhs.exchange_status_port;
+                && lhs.http_port == rhs.http_port;
         }
     };
 

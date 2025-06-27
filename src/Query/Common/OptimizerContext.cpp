@@ -283,4 +283,13 @@ void OptimizerContext::setSetting(std::string_view name, const Field & value)
     optimizer_settings.set(name, value);
 }
 
+size_t OptimizerContext::getWorkerSize() const
+{
+    return cluster == nullptr ? 1 : cluster->getShardCount();
+}
+String OptimizerContext::getClusterName() const
+{
+    return cluster == nullptr ? "" : cluster->getName();
+}
+
 }

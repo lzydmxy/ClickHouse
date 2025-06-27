@@ -197,7 +197,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
                 //todo: zhangwanyun, other feat: if bsp_mode is required, then add other codes
                 data_key = std::make_shared<ExchangeDataKey>(current_tx_id, exchange_id, partition_id);
 
-                bool is_local_exchange = ExchangeUtils::isLocalExchange(read_address_info, source_address);
+                bool is_local_exchange = ExchangeUtils::isLocalExchange(read_address_info, source_address); // TOOD wujianchao read_address_info is hostname source_address is localhost
 
                 LOG_TRACE(logger, "Initialize pipeline input index {}, exchange data key {}, is local exchange {} for receiver," \
                     "read address {}, write address {}, collector is null {}",
@@ -235,8 +235,6 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
                 = MultiPathReceiverOptions{.enable_block_compress = enable_block_compress, .enable_metrics = enable_metrics};
             auto multi_path_receiver = std::make_shared<MultiPathReceiver>(
                 collector, std::move(receivers), exchange_header, receiver_name, std::move(multi_path_options), context);
-
-            source_header = exchange_header;
 
             // LOG_DEBUG(logger, "Create multi receiver name {}, source_header columns {}, struct {}",
             //     multi_path_receiver->getName(), source_header.columns(), source_header.dumpStructure());
@@ -283,13 +281,12 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
 
     pipeline.init(std::move(pipe));
 
-    // TODO: Support block compress
-    // if (!keep_order)
-    // {
-    //     pipeline.resize(optimizer_context->getSettingsRef().exchange_source_pipeline_threads);
-    //     pipeline.addSimpleTransform([enable_compress = optimizer_context->getSettingsRef().exchange_enable_block_compress, header = exchange_header](
-    //                                     const Block &) { return std::make_shared<DeserializeBufTransform>(header, enable_compress); });
-    // }
+    if (!keep_order)
+    {
+        pipeline.resize(optimizer_context->getSettingsRef().exchange_source_pipeline_threads);
+        pipeline.addSimpleTransform([enable_compress = optimizer_context->getSettingsRef().exchange_enable_block_compress, header = exchange_header](
+                                        const Block &) { return std::make_shared<DeserializeBufTransform>(header, enable_compress); });
+    }
 
     auto prev_pipe_threads = pipeline.getNumThreads();
 

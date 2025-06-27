@@ -102,7 +102,6 @@ public:
         , unit_test(unit_test_)
         , log(getLogger("Scheduler"))
     {
-        cluster_nodes.all_workers.emplace_back(local_address, NodeType::Local, "");
         auto query_expiration_ts = query_context->getOptimizerContext()->getQueryExpirationTimeStamp();
         query_expiration_ms = timeInMilliseconds(query_expiration_ts);
     }

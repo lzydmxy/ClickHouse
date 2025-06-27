@@ -9,18 +9,18 @@
 namespace DB
 {
 
-AddressInfo getLocalAddress(ContextPtr & context)
+AddressInfo getLocalAddress(const ContextPtr & context)
 {
     return *(getLocalAddressPtr(context).get());
 }
 
-AddressInfoPtr getLocalAddressPtr(ContextPtr & context)
+AddressInfoPtr getLocalAddressPtr(const ContextPtr & context)
 {
     const auto & host = getFQDNOrHostName();
     auto tcp_port = context->getTCPPort();
     auto rpc_port = context->getGlobalContext()->getOptimizerContext()->getRPCPort();
     const ClientInfo & info = context->getClientInfo();
-    return std::make_shared<AddressInfo>(host, tcp_port, info.current_user, "", rpc_port);
+    return std::make_shared<AddressInfo>(host, tcp_port, info.current_user, "", rpc_port); // TODO wujianchao add password
 }
 
 // AddressInfo getRemoteAddress(HostWithPorts host_with_ports, ContextPtr & query_context)
@@ -47,16 +47,6 @@ AddressInfoPtr getLocalAddressPtr(ContextPtr & context)
 
 // }
 
-AddressInfo::AddressInfo(const Cluster::Address & address_)
-    : host_name(address_.host_name), port(address_.port), user(address_.user), password(address_.password)
-{
-
-}
-
-AddressInfo::AddressInfo(const String &host_name_, UInt16 port_, const String &user_, const String &password_)
-    : host_name(host_name_), port(port_), user(user_), password(password_)
-{
-}
 
 AddressInfo::AddressInfo(const String &host_name_, UInt16 port_, const String &user_, const String &password_, 
     UInt16 exchange_port_)
@@ -69,6 +59,11 @@ AddressInfo::AddressInfo(const RAddressInfo & proto)
 {
     user = proto.user();
     password = proto.password();
+}
+
+AddressInfo AddressInfo::create(const Cluster::Address & cluster_address, UInt16 exchange_port_)
+{
+    return AddressInfo{cluster_address.host_name, cluster_address.port, cluster_address.user, cluster_address.password, exchange_port_};
 }
 
 void AddressInfo::serialize(WriteBuffer &buf) const

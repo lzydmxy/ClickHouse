@@ -128,16 +128,9 @@ struct ClusterInfoContext
     PlanSegmentTreeUniqPtr & plan_segment_tree;
 };
 
-class ClusterInfoFinder : public PlanNodeVisitor<std::optional<PlanSegmentContext>, ClusterInfoContext>
+struct ClusterInfoFinder
 {
-public:
     static PlanSegmentContext find(QueryPlanExt & plan, ClusterInfoContext & cluster_info_context);
-    explicit ClusterInfoFinder(CTEInfo & cte_info_) : cte_helper(cte_info_) { }
-    std::optional<PlanSegmentContext> visitPlanNode(PlanNodeBase & node, ClusterInfoContext & cluster_info_context);
-    std::optional<PlanSegmentContext> visitTableScanNode(TableScanStepExtNode & node, ClusterInfoContext & cluster_info_context);
-    std::optional<PlanSegmentContext> visitCTERefNode(CTERefStepExtNode & node, ClusterInfoContext & cluster_info_context);
-private:
-    SimpleCTEVisitHelper<std::optional<PlanSegmentContext>> cte_helper;
 };
 
 class ExplainAnalyzeVisitor : public NodeVisitor<void, PlanSegmentTree::Nodes>

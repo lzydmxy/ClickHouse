@@ -8,6 +8,7 @@
 #include <Query/Planner/PlannerExt.h>
 #include <Query/Analyzer/QueryAnalyzer.h>
 #include <Query/Processors/QueryPlan/FinalSampleStepExt.h>
+#include <Query/Interpreters/ReplaceDistributedTableNameVisitor.h>
 #include <Query/Planner/GraphvizPrinter.h>
 #include <Interpreters/InterpreterFactory.h>
 #include <Storages/StorageDistributed.h>
@@ -105,6 +106,15 @@ QueryPlanExtPtr InterpreterSelectQueryUseOptimizer::getQueryPlan(bool skip_optim
     RemoveSettings remove_settings_data;
     RemoveSettingsVisitor(remove_settings_data).visit(query_ptr);
 
+    // replace distributed table to local table and parsing cluster info
+    ReplaceDistributedTableNameVisitor visitor(context);
+    visitor.visit(query_ptr);
+
+    /// set cluser
+    chassert(visitor.clusters.size() < 2);
+    if (!visitor.clusters.empty())
+        context->getOptimizerContext()->setCluster(visitor.clusters.back());
+
     if (!query_plan || context->getOptimizerContext()->getSettingsRef().iterative_optimizer_timeout == 999999)
     {
         buildQueryPlan(query_plan, analysis, skip_optimize);
@@ -182,7 +192,7 @@ BlockIO InterpreterSelectQueryUseOptimizer::execute()
                 context->getCurrentQueryId(),
                 plan_segment_num,
                 max_plan_segment_num);
-
+    // TODO wujianchao replace test_cluster with plan_segment_tree_ptr.cluster
     auto coodinator = std::make_shared<QueryMPPCoordinator>("test_cluster", std::move(plan_segment_tree_ptr), context, QueryMPPOptions());
     BlockIO res = coodinator->execute();
     return res;
@@ -369,69 +379,16 @@ QueryPlanExt::Node * PlanNodeToNodeVisitor::visitPlanNode(PlanNodeBase & node, V
     return plan.getLastNode();
 }
 
-PlanSegmentContext ClusterInfoFinder::find(QueryPlanExt & plan, ClusterInfoContext & cluster_info_context)
+PlanSegmentContext ClusterInfoFinder::find(QueryPlanExt &, ClusterInfoContext & cluster_info_context)
 {
-    ClusterInfoFinder visitor{plan.getCTEInfo()};
-
-    // default schedule to worker cluster
-    std::optional<PlanSegmentContext> result = VisitorUtil::accept(plan.getPlanNode(), visitor, cluster_info_context);
-    if (result.has_value())
-    {
-        return result.value();
-    }
-
-    // if query is a constant query, like, select 1, schedule to server (coordinator)
     PlanSegmentContext plan_segment_context{
         .context = cluster_info_context.context,
         .query_plan = cluster_info_context.query_plan,
         .query_id = cluster_info_context.context->getCurrentQueryId(),
-        .shard_number = 1,
-        .cluster_name = "",
+        .shard_number = cluster_info_context.context->getOptimizerContext()->getWorkerSize(),
+        .cluster_name = cluster_info_context.context->getOptimizerContext()->getClusterName(),
         .plan_segment_tree = cluster_info_context.plan_segment_tree.get()};
     return plan_segment_context;
-}
-
-std::optional<PlanSegmentContext> ClusterInfoFinder::visitPlanNode(PlanNodeBase & node, ClusterInfoContext & cluster_info_context)
-{
-    for (const auto & child : node.getChildren())
-    {
-        auto result = VisitorUtil::accept(child, *this, cluster_info_context);
-        if (result.has_value())
-            return result;
-    }
-    return std::nullopt;
-}
-
-std::optional<PlanSegmentContext> ClusterInfoFinder::visitTableScanNode(TableScanStepExtNode & node, ClusterInfoContext & cluster_info_context)
-{
-    
-    auto source_step = node.getStep();
-    const auto * table = dynamic_cast<StorageDistributed *>(source_step->getStorage().get());
-    if (table)
-    {
-        PlanSegmentContext plan_segment_context{
-            .context = cluster_info_context.context,
-            .query_plan = cluster_info_context.query_plan,
-            .query_id = cluster_info_context.context->getCurrentQueryId(),
-            .shard_number = table->getShardCount(),
-            .cluster_name = table->getClusterName(),
-            .plan_segment_tree = cluster_info_context.plan_segment_tree.get()};
-
-        return plan_segment_context;
-    }
-    return std::nullopt;
-}
-
-std::optional<PlanSegmentContext> ClusterInfoFinder::visitCTERefNode(CTERefStepExtNode & node, ClusterInfoContext & cluster_info_context)
-{
-    if (const auto * cte = dynamic_cast<const CTERefStepExt *>(node.getStep().get()))
-    {
-        return cte_helper.accept(cte->getId(), *this, cluster_info_context);
-    }
-    else
-    {
-        return std::nullopt;
-    }
 }
 
 void ExplainAnalyzeVisitor::visitExplainAnalyzeNode(QueryPlanExt::Node * node, PlanSegmentTree::Nodes & nodes)
