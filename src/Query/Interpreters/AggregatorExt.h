@@ -44,6 +44,7 @@ ENUM_TO_PROTO_CONVERTER(
       */
     (ANY, 2));
 
+/// TODO: lizhuoyu, should use Aggregator to replace AggregatorExt in order to be compatible with some optimizations and adjustments to aggregation in the new version.
 class AggregatorExt final
 {
 public:

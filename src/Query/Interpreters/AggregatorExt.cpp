@@ -502,6 +502,45 @@ void AggregatorExt::chooseAggregationMethodByOption(
 
     if (has_nullable_key)
     {
+        /// Optimization for one key
+        if (key_size == 1 && !has_low_cardinality)
+        {
+            if (types_removed_nullable[0]->isValueRepresentedByNumber())
+            {
+                size_t size_of_field = types_removed_nullable[0]->getSizeOfValueInMemory();
+                if (size_of_field == 1)
+                {
+                    method_chosen = AggregatedDataVariants::Type::nullable_key8;
+                    return;
+                }
+                if (size_of_field == 2)
+                {
+                    method_chosen = AggregatedDataVariants::Type::nullable_key16;
+                    return;
+                }
+
+                if (size_of_field == 4)
+                {
+                    method_chosen = AggregatedDataVariants::Type::nullable_key32;
+                    return;
+                }
+                if (size_of_field == 8)
+                {
+                    method_chosen = AggregatedDataVariants::Type::nullable_key64;
+                    return;
+                }
+            }
+            if (isFixedString(types_removed_nullable[0]))
+            {
+                method_chosen = AggregatedDataVariants::Type::nullable_key_fixed_string;
+                return;
+            }
+            if (isString(types_removed_nullable[0]))
+            {
+                method_chosen = AggregatedDataVariants::Type::nullable_key_string;
+                return;
+            }
+        }
         if (key_size == num_fixed_contiguous_keys && !has_low_cardinality)
         {
             /// Pack if possible all the keys along with information about which key values are nulls
