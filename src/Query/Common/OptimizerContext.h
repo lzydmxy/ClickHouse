@@ -251,9 +251,6 @@ public:
     size_t getWorkerSize() const;
     String getClusterName() const;
 
-protected:
-    std::shared_ptr<QueryStatistics::StatisticsMemoryStore> stats_memory_store = nullptr;
-
 private:
     /// OptimizerContextData mutex
     mutable ContextSharedMutex mutex;
