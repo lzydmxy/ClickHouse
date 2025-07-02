@@ -35,6 +35,7 @@
 #include <base/getFQDNOrHostName.h>
 #include <base/scope_guard.h>
 #include <Server/HTTP/HTTPResponse.h>
+#include <Query/Common/OptimizerContext.h>
 
 #include "config.h"
 
@@ -574,7 +575,7 @@ void HTTPHandler::processQuery(
     }
 
     auto context = session->makeQueryContext();
-    context->initializeOptimizerContext();
+    context->getOptimizerContext()->initQueryExpirationTimeStamp();
 
     /// This parameter is used to tune the behavior of output formats (such as Native) for compatibility.
     if (params.has("client_protocol_version"))

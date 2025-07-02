@@ -49,6 +49,7 @@
 #include <Processors/Executors/PushingAsyncPipelineExecutor.h>
 #include <Processors/Executors/CompletedPipelineExecutor.h>
 #include <Processors/Sinks/SinkToStorage.h>
+#include <Query/Common/OptimizerContext.h>
 
 #if USE_SSL
 #   include <Poco/Net/SecureStreamSocket.h>
@@ -464,6 +465,7 @@ void TCPHandler::runImpl()
             });
 
             customizeContext(query_context);
+            query_context->getOptimizerContext()->initQueryExpirationTimeStamp();
 
             /// This callback is needed for requesting read tasks inside pipeline for distributed processing
             query_context->setReadTaskCallback([this]() -> String
