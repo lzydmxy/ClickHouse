@@ -28,7 +28,7 @@ public:
         return std::make_shared<AddressInfo>(this->getHostName(), this->getPort(), this->getUser(), this->getPassword(), this->getExchangePort());
     }
 
-    static AddressInfo create(const Cluster::Address & cluster_address, UInt16 exchange_port_);
+    static AddressInfo create(const Cluster::Address & cluster_address);
     void serialize(WriteBuffer &) const;
     void deserialize(ReadBuffer &);
     void toProto(RAddressInfo & proto) const;

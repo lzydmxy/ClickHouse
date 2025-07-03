@@ -113,6 +113,9 @@ Cluster::Address::Address(
     secure = ConfigHelper::getBool(config, config_prefix + ".secure", false, /* empty_as */true) ? Protocol::Secure::Enable : Protocol::Secure::Disable;
     priority = Priority{config.getInt(config_prefix + ".priority", 1)};
 
+    auto default_rpc_port = config.getInt("optimizer.rpc_port", 0);
+    rpc_port = static_cast<UInt16>(config.getInt(config_prefix + ".rpc_port", default_rpc_port));
+
     const char * port_type = secure == Protocol::Secure::Enable ? "tcp_port_secure" : "tcp_port";
     auto default_port = config.getInt(port_type, 0);
 

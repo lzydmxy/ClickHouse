@@ -61,9 +61,9 @@ AddressInfo::AddressInfo(const RAddressInfo & proto)
     password = proto.password();
 }
 
-AddressInfo AddressInfo::create(const Cluster::Address & cluster_address, UInt16 exchange_port_)
+AddressInfo AddressInfo::create(const Cluster::Address & cluster_address)
 {
-    return AddressInfo{cluster_address.host_name, cluster_address.port, cluster_address.user, cluster_address.password, exchange_port_};
+    return AddressInfo{cluster_address.host_name, cluster_address.port, cluster_address.user, cluster_address.password, cluster_address.rpc_port};
 }
 
 void AddressInfo::serialize(WriteBuffer &buf) const

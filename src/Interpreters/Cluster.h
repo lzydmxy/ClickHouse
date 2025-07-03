@@ -112,6 +112,7 @@ public:
         String database_shard_name;
         String database_replica_name;
         UInt16 port{0};
+        UInt16 rpc_port{0};
         String user;
         String password;
         String quota_key;

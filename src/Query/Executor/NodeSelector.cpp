@@ -87,14 +87,13 @@ ClusterNodes::ClusterNodes(String cluster_name_, ContextPtr & query_context) : c
             }
             if (node_type == NodeType::Local)
             {
-                all_workers.emplace_back(WorkerNode{AddressInfo::create(*selected_address, rpc_port), node_type});
+                all_workers.emplace_back(WorkerNode{AddressInfo::create(*selected_address), node_type});
                 all_hosts.emplace_back(HostWithPorts{selected_address->host_name, rpc_port, selected_address->port, http_port});
             }
             else
             {
-                /// TODO wujianchao fix it, we need add rpc_port to cluster
-                all_workers.emplace_back(WorkerNode{AddressInfo::create(*selected_address, 3101), node_type});
-                all_hosts.emplace_back(HostWithPorts{selected_address->host_name, rpc_port, selected_address->port, 3223});
+                all_workers.emplace_back(WorkerNode{AddressInfo::create(*selected_address), node_type});
+                all_hosts.emplace_back(HostWithPorts{selected_address->host_name, rpc_port, selected_address->port, http_port});
             }
         }
     }

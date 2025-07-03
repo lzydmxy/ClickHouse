@@ -2124,36 +2124,35 @@ try
         ProfileEvents::increment(ProfileEvents::ServerStartupMilliseconds, startup_watch.elapsedMilliseconds());
 
         std::vector<std::unique_ptr<BrpcServerHolder>> rpc_server_holders;
-        if (global_context->getSettingsRef().enable_optimizer)
+        const char * rpc_port_name = "optimizer.rpc_port";
+        if (config().has(rpc_port_name))
         {
-            const char * rpc_port_name = "optimizer.rpc_port";
-            if (config().has(rpc_port_name))
+            global_context->initializeOptimizerContext();
+            global_context->getOptimizerContext()->setComplexQueryActive(true);
+            auto rpc_port = config().getInt(rpc_port_name);
+            LOG_DEBUG(log, "Start RPC server with port {}.", rpc_port);
+            global_context->getOptimizerContext()->setRPCPort(rpc_port);
+            for (auto & host : listen_hosts)
             {
-                global_context->initializeOptimizerContext();
-                global_context->getOptimizerContext()->setComplexQueryActive(true);
-                auto rpc_port = config().getInt(rpc_port_name);
-                LOG_DEBUG(log, "Start RPC server with port {}.", rpc_port);
-                global_context->getOptimizerContext()->setRPCPort(rpc_port);
-                for (auto & host : listen_hosts)
-                {
-                    std::string brpc_host_port = createHostPortString(host, rpc_port);
-                    rpc_server_holders.emplace_back(std::make_unique<BrpcServerHolder>(brpc_host_port, global_context, listen_try));
-                }
-                bool service_available = false;
-                for (auto& holder : rpc_server_holders)
-                {
-                    service_available |= holder->available();
-                }
-                if (!service_available)
-                {
-                    throw Exception(ErrorCodes::BRPC_EXCEPTION, "Failed to start rpc server in all listen_hosts.");
-                }
+                std::string brpc_host_port = createHostPortString(host, rpc_port);
+                rpc_server_holders.emplace_back(std::make_unique<BrpcServerHolder>(brpc_host_port, global_context, listen_try));
             }
-            else
-                LOG_WARNING(log, "Without the configuration item of optimizer.rpc_port, the RPC server cannot be started");
+            bool service_available = false;
+            for (auto& holder : rpc_server_holders)
+            {
+                service_available |= holder->available();
+            }
+            if (!service_available)
+            {
+                throw Exception(ErrorCodes::BRPC_EXCEPTION, "Failed to start rpc server in all listen_hosts.");
+            }
         }
         else
-            LOG_WARNING(log, "Without the configuration item or the value is false of enable_optimizer, the RPC server cannot be started");
+        {
+            LOG_WARNING(log, "Without the configuration item of optimizer.rpc_port when enable_optimizer is true, the RPC server cannot be started");
+            throw Exception(ErrorCodes::NO_ELEMENTS_IN_CONFIG, "No brpc servers started (add valid 'optimizer.rpc_port' "
+                            "to configuration file, or set enable_optimizer to false.)");
+        }
 
         try
         {
