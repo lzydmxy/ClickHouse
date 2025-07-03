@@ -157,9 +157,9 @@ void BroadcastSenderProxy::waitBecomeRealSender(UInt32 timeout_ms)
         return;
     if (!wait_become_real.wait_for(
             lock, std::chrono::milliseconds(timeout_ms), [this] { return this->real_sender.operator bool() || closed; }))
-        throw Exception(ErrorCodes::EXCHANGE_DATA_TRANS_EXCEPTION, "Wait become real sender timeout for {}", *data_key);
+        throw Exception(ErrorCodes::EXCHANGE_DATA_TRANS_EXCEPTION, "Wait become real sender timeout for {}, timeout {}", *data_key, timeout_ms);
     else if (closed)
-        throw Exception(ErrorCodes::EXCHANGE_DATA_TRANS_EXCEPTION, "Interrput waitBecomeRealSender for {}", *data_key);
+        throw Exception(ErrorCodes::EXCHANGE_DATA_TRANS_EXCEPTION, "Interrput waitBecomeRealSender for {}, timeout {}", *data_key, timeout_ms);
 }
 
 BroadcastSenderType BroadcastSenderProxy::getType()
