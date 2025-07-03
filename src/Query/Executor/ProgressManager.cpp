@@ -72,8 +72,7 @@ void ProgressManager::onFinalProgress(UInt32 segment_id, UInt32 parallel_index, 
         instance_id.segment_id,
         instance_id.parallel_index,
         // TODO: Add ProgressValues toString
-        //progress_.getValues().toString());
-        "");
+        ProgressHelper::toString(progress_.getValues()));
 }
 
 Progress ProgressManager::getFinalProgressDiff(PlanSegmentInstanceID instance_id) const

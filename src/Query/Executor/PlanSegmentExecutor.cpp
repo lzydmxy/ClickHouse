@@ -40,6 +40,7 @@
 #include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
 #include <Query/Processors/IQueryPlanStepExt.h>
 #include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsHelper.h>
+#include <Query/ProtosHelper/ProgressHelper.h>
 
 namespace ProfileEvents
 {
@@ -151,6 +152,9 @@ PlanSegmentExecutor::~PlanSegmentExecutor() noexcept
 
 std::optional<PlanSegmentExecutor::ExecutionResult> PlanSegmentExecutor::execute()
 {
+    if (context->getSettingsRef().send_logs_level != LogsLevel::none && context->getOptimizerContext()->getLogsQueue())
+        CurrentThread::attachInternalTextLogsQueue(context->getOptimizerContext()->getLogsQueue(), context->getSettingsRef().send_logs_level);
+
     LOG_DEBUG(logger, "Execute planSegment:[\n{}\n]", plan_segment->toString());
 
     try
@@ -209,10 +213,10 @@ BlockIO PlanSegmentExecutor::lazyExecute(bool /*add_output_processors*/)
     if (!CurrentThread::get().getQueryContext() || CurrentThread::get().getQueryContext().get() != context.get())
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Context not match");
 
-    // auto plan_segment_process_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(context, plan_segment->getPlanSegmentId());
-    // optimizer_context->getPlanSegmentProcessList()->insertProcessList(plan_segment_process_entry, plan_segment->getPlanSegmentId(), context);
+    auto plan_segment_process_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(context, plan_segment->getPlanSegmentId());
+    optimizer_context->getPlanSegmentProcessList()->insertProcessList(plan_segment_process_entry, plan_segment->getPlanSegmentId(), context);
     // set entry before buildPipeline to control memory usage of exchange queue
-    // optimizer_context->setPlanSegmentProcessListEntry(plan_segment_process_entry);
+    optimizer_context->setPlanSegmentProcessListEntry(plan_segment_process_entry);
     res.pipeline = buildPipeline();
     return res;
 }
@@ -318,13 +322,10 @@ void PlanSegmentExecutor::doExecute()
             collectSegmentQueryRuntimeMetric(process_plan_segment_entry->getQueryStatus().get());
     });
 
-    auto optimizer_context = context->getOptimizerContext();
-
     optimizer_context->getPlanSegmentProcessList()->insertProcessList(process_plan_segment_entry, plan_segment->getPlanSegmentId(), context);
     optimizer_context->setPlanSegmentProcessListEntry(process_plan_segment_entry);
     auto query_status = process_plan_segment_entry->getQueryStatus();
-    optimizer_context->setProcessListElement(query_status);
-
+    context->setProcessListElement(query_status);
     BroadcastSenderPtrs senders;
     auto pipeline = buildPipeline(senders);
 
@@ -389,7 +390,7 @@ void PlanSegmentExecutor::doExecute()
     {
         auto status = sender->finish(BroadcastStatusCode::ALL_SENDERS_DONE, "Upstream pipeline finished");
         /// bsp mode will fsync data in finish, so we need to check if exception is thrown here.
-        if (status.code != BroadcastStatusCode::ALL_SENDERS_DONE)
+        if (context->getOptimizerContext()->getSettingsRef().bsp_mode && status.code != BroadcastStatusCode::ALL_SENDERS_DONE)
             throw Exception(ErrorCodes::BSP_WRITE_DATA_FAILED, "Write data into disk failed in bsp mode, code {}, error message: {}",
                 status.code, status.message);
     }
@@ -920,8 +921,7 @@ void PlanSegmentExecutor::sendProgress()
         request->set_query_id(plan_segment->getQueryId());
         request->set_segment_id(plan_segment->getPlanSegmentId());
         request->set_parallel_id(plan_segment_instance->info.parallel_id);
-        //TODO: Need progress to proto
-        //*request->mutable_progress() = progress.fetchAndResetPiecewiseAtomically().toProto();
+        *request->mutable_progress() = ProgressHelper::progressToProto(progress.fetchAndResetPiecewiseAtomically());
         cntl->set_timeout_ms(20000);
 
         std::function<String()> construct_err_msg = [request = request]() -> String {

@@ -152,10 +152,11 @@ void PlanSegmentProcessList::insertProcessList(
     else
     {
         /// TODO wujianchao handle it
+        Stopwatch start_watch{CLOCK_MONOTONIC};
         ParserSelectQuery parser;
         String default_query = "SELECT 1";
         auto default_ast = parseQuery(parser, default_query, 0, 0, 0);
-        entry = query_context->getProcessList().insert(default_query, default_ast.get(), query_context, force);
+        entry = query_context->getProcessList().insert(default_query, default_ast.get(), query_context, start_watch.getStart());
     }
 
     plan_segment_process_entry->setQueryStatus(entry->getQueryStatus());
@@ -323,7 +324,7 @@ PlanSegmentProcessListEntry::PlanSegmentProcessListEntry(
 
 PlanSegmentProcessListEntry::~PlanSegmentProcessListEntry()
 {
-    // parent.remove(initial_query_id, segment_id);
+    parent.remove(initial_query_id, segment_id);
 }
 
 void PlanSegmentProcessListEntry::prepareQueryScope(ContextMutablePtr query_context)

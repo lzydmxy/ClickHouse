@@ -407,6 +407,7 @@ void TCPHandler::runImpl()
                 state.logs_queue->max_priority = Poco::Logger::parseLevel(client_logs_level.toString());
                 state.logs_queue->setSourceRegexp(query_context->getSettingsRef().send_logs_source_regexp);
                 CurrentThread::attachInternalTextLogsQueue(state.logs_queue, client_logs_level);
+                query_context->getGlobalContext()->getOptimizerContext()->setLogsQueue(state.logs_queue);
             }
             if (client_tcp_protocol_version >= DBMS_MIN_PROTOCOL_VERSION_WITH_INCREMENTAL_PROFILE_EVENTS)
             {

@@ -251,6 +251,10 @@ public:
     size_t getWorkerSize() const;
     String getClusterName() const;
 
+
+    InternalTextLogsQueuePtr getLogsQueue() { return logs_queue; }
+    void setLogsQueue(InternalTextLogsQueuePtr queue_) { logs_queue = queue_; }
+
 private:
     /// OptimizerContextData mutex
     mutable ContextSharedMutex mutex;
@@ -258,6 +262,7 @@ private:
     ClusterPtr cluster;
 
 	UInt64 txt_id{0};
+    InternalTextLogsQueuePtr logs_queue;
 };
 
 using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;

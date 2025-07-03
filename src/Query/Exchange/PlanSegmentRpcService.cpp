@@ -314,7 +314,7 @@ void PlanSegmentRpcService::innerExecutePlanSegment(
         query_context = createQueryContext(context, query_common, remote_side_port, {segment_id, execution_info.parallel_id});
 
     initQueryContext(query_context, query_common, settings_changes, *execution_info.execution_address);
-
+    query_context->getOptimizerContext()->setLogsQueue(optimizer_context->getLogsQueue());
     ThreadFromGlobalPool async_thread([query_common = std::move(query_common),
                                        settings_changes = std::move(settings_changes),
                                        segment_id = segment_id,
