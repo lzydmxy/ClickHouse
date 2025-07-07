@@ -490,7 +490,7 @@ bool DDLWorker::tryExecuteQuery(DDLTaskBase & task, const ZooKeeperPtr & zookeep
         }
 
         query_context->setInitialQueryId(task.entry.initial_query_id);
-
+        query_context->initializeOptimizerContext();
         if (!task.is_initial_query)
             query_scope.emplace(query_context);
 
