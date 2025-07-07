@@ -197,7 +197,9 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
                 //todo: zhangwanyun, other feat: if bsp_mode is required, then add other codes
                 data_key = std::make_shared<ExchangeDataKey>(current_tx_id, exchange_id, partition_id);
 
-                bool is_local_exchange = ExchangeUtils::isLocalExchange(read_address_info, source_address); // TOOD wujianchao read_address_info is hostname source_address is localhost
+                // TODO wujianchao support local exchange optimization
+                // bool is_local_exchange = ExchangeUtils::isLocalExchange(read_address_info, source_address); // TODO wujianchao read_address_info is hostname source_address is localhost
+                bool is_local_exchange = false;
 
                 LOG_TRACE(logger, "Initialize pipeline input index {}, exchange data key {}, is local exchange {} for receiver," \
                     "read address {}, write address {}, collector is null {}",
