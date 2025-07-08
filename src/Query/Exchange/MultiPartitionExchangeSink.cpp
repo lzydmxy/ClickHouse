@@ -59,10 +59,11 @@ void MultiPartitionExchangeSink::consume(Chunk chunk)
 
     const auto & chunk_info = chunk.getChunkInfo();
 
-    //TODO: Need expand ChunkInfoEx
-    // bool chunk_info_matched
-    //     = ((current_chunk_info && chunk_info && *current_chunk_info == *chunk_info) || (!current_chunk_info && !chunk_info));
-    bool chunk_info_matched = true;
+    LOG_TRACE(logger, "MultiPartitionExchangeSink consume {} rows", chunk.getNumRows());
+
+    bool chunk_info_matched
+        = ((current_chunk_info && chunk_info && *current_chunk_info == *chunk_info) || (!current_chunk_info && !chunk_info));
+
     if (!chunk_info_matched)
     {
         for (size_t i = 0; i < partition_num; ++i)
@@ -72,25 +73,21 @@ void MultiPartitionExchangeSink::consume(Chunk chunk)
         current_chunk_info = chunk_info;
     }
 
-    IColumn::Selector partition_selector;
-    RepartitionTransform::PartitionStartPoints partition_start_points;
-    std::tie(partition_selector, partition_start_points) = RepartitionTransform::doRepartition(
+    IColumn::Selector partition_selector = RepartitionTransform::doRepartition(
         partition_num, chunk, header, repartition_keys, repartition_func, *repartition_result_type_ptr);
 
-    const auto &  columns = chunk.getColumns();
-    for (size_t i = 0; i < column_num; i++)
+    const auto & columns = chunk.getColumns();
+    for (size_t col_idx = 0; col_idx < column_num; col_idx++)
     {
-        auto materialized_column = columns[i]->convertToFullColumnIfConst();
-        auto columns = materialized_column->scatter(partition_num, partition_selector);
-         for (size_t j = 0; j < partition_num; ++j)
+         auto materialized_columns = columns[col_idx]->scatter(partition_num, partition_selector);
+         for (size_t partition_idx = 0; partition_idx < partition_num; ++ partition_idx)
          {
-            // size_t from = partition_start_points[j];
-            // size_t length = partition_start_points[j + 1] - from;
-            // if (length == 0)
-            //     continue; // no data for this partition continue;
-            // buffered_senders[j].appendSelective(i, *materialized_column, partition_selector, from, length);
-            buffered_senders[j].appendSelective(i, *columns[j]);
-        }
+             if (col_idx == 0)
+                 LOG_TRACE(logger, "MultiPartitionExchangeSink repartition to {}, partition index {}, size {}", partition_num, partition_idx, materialized_columns[partition_idx]->size());
+             if (materialized_columns[partition_idx]->size() == 0)
+                 continue;
+             buffered_senders[partition_idx].append(col_idx, std::move(materialized_columns[partition_idx]));
+         }
     }
 
     bool has_active_sender = false;
@@ -107,6 +104,8 @@ void MultiPartitionExchangeSink::consume(Chunk chunk)
 void MultiPartitionExchangeSink::onFinish()
 {
     LOG_TRACE(logger, "MultiPartitionExchangeSink on finish");
+    for(size_t i = 0; i < partition_num ; ++i)
+        buffered_senders[i].flush(true, current_chunk_info);
     IExchangeSink::onFinish();
 }
 

@@ -5,6 +5,7 @@
 #include <Common/typeid_cast.h>
 #include <Columns/ColumnLowCardinality.h>
 #include <DataTypes/DataTypeLowCardinality.h>
+#include <DataTypes/DataTypeAggregateFunction.h>
 #include <Query/Exchange/ChunkInfo.h>
 
 namespace DB
@@ -25,7 +26,7 @@ static void writeData(const IDataType & type, const ColumnPtr & column, WriteBuf
     /** If there are columns-constants - then we materialize them.
       * (Since the data type does not know how to serialize / deserialize constants.)
       */
-    ColumnPtr full_column = column->convertToFullColumnIfConst();
+    ColumnPtr full_column = column->convertToFullColumnIfConst()->decompress();
 
     ISerialization::SerializeBinaryBulkSettings settings;
     settings.getter = [&ostr](ISerialization::SubstreamPath) -> WriteBuffer * { return &ostr; };
@@ -91,12 +92,21 @@ void NativeChunkOutputStream::write(const Chunk & chunk)
 
     for (size_t i = 0; i < columns; ++i)
     {
-        DataTypePtr data_type = header.getDataTypes().at(i);
-        ColumnPtr column_ptr = chunk.getColumns()[i];
+        // DataTypePtr data_type = header.getDataTypes().at(i);
+        // ColumnPtr column_ptr = chunk.getColumns()[i];
+        //
+        // /// Name/Type, we don't need write name/type here.
+        // /// Data
+        // if (rows) /// Zero items of data is always represented as zero number of bytes.
+        //     writeData(*data_type, column_ptr, ostr, 0, 0);
 
-        /// Name/Type, we don't need write name/type here.
+        DataTypePtr data_type = header.getDataTypes().at(i);
+        auto column_ptr = chunk.getColumns()[i];
+
+        column_ptr = recursiveRemoveSparse(column_ptr);
+
         /// Data
-        if (rows) /// Zero items of data is always represented as zero number of bytes.
+        if (rows)    /// Zero items of data is always represented as zero number of bytes.
             writeData(*data_type, column_ptr, ostr, 0, 0);
     }
 }

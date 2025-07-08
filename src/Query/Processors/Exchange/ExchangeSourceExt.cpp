@@ -87,7 +87,6 @@ std::optional<Chunk> ExchangeSourceExt::tryGenerate()
         return std::nullopt;
 
     RecvDataPacket packet = receiver->recv(options.exchange_timeout_ts);
-    LOG_TRACE(logger, "[rico] {} receive ", getName());
 
     if (std::holds_alternative<Chunk>(packet))
     {

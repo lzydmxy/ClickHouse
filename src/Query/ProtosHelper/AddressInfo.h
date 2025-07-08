@@ -20,7 +20,7 @@ class AddressInfo
 {
 public:
     AddressInfo() = default;
-    AddressInfo(const String & host_name_, UInt16 port_, const String & user_, const String & password_, UInt16 exchange_port_);
+    AddressInfo(const String & host_name_, UInt16 port_, const String & user_, const String & password_, UInt16 exchange_port_ = 0);
     AddressInfo(const RAddressInfo & proto_);
 
     AddressInfoPtr getAddressInfoPtr() const

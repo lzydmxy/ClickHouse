@@ -42,13 +42,11 @@ void SinglePartitionExchangeSink::consume(Chunk chunk)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Chunk should have RepartitionChunkInfo .");
 
     const auto & chunk_info = repartition_info->origin_chunk_info;
-    // bool chunk_info_matched
-    //     = ((current_chunk_info && chunk_info && *current_chunk_info == *chunk_info) || (!current_chunk_info && !chunk_info));
-    //TODO: Need expand ChunkInfoEx
+    bool chunk_info_matched
+        = ((current_chunk_info && chunk_info && *current_chunk_info == *chunk_info) || (!current_chunk_info && !chunk_info));
     LOG_TRACE(logger, "SinglePartitionExchangeSink consume, was_on_start_called {}, was_on_finish_called {}, is_finished {}, has_input {}",
         was_on_start_called, was_on_finish_called, is_finished.load(std::memory_order_relaxed), has_input);
 
-    bool chunk_info_matched = true;
     if (!chunk_info_matched)
     {
         buffered_sender.flush(true, current_chunk_info);
@@ -57,24 +55,15 @@ void SinglePartitionExchangeSink::consume(Chunk chunk)
 
     const IColumn::Selector & partition_selector = repartition_info->selector;
 
-    // size_t from = repartition_info->start_points[partition_id];
-    // size_t length = repartition_info->start_points[partition_id + 1] - from;
-    // if (length == 0)
-    // {
-    //     LOG_TRACE(logger, "SinglePartitionExchangeSink length == 0");
-    //     return;
-    // }
-
     const auto & columns = chunk.getColumns();
     LOG_TRACE(logger, "SinglePartitionExchangeSink append column {}", column_num);
     for (size_t i = 0; i < column_num; i++)
     {
         auto materialized_column = columns[i]->convertToFullColumnIfConst();
         auto columns = materialized_column->scatter(1, partition_selector);
-        //buffered_sender.appendSelective(i, *columns[i]->convertToFullColumnIfConst(), partition_selector, from, length);
-        //the columns.size() == 1 in single partition
+
         for(size_t j = 0; j < columns.size(); j++)
-            buffered_sender.appendSelective(i, *columns[j]);
+            buffered_sender.append(i, std::move(columns[j]));
     }
     auto status = buffered_sender.flush(false, current_chunk_info);
     LOG_TRACE(logger, "SinglePartitionExchangeSink status.code {}", toString(status.code));
@@ -85,7 +74,7 @@ void SinglePartitionExchangeSink::consume(Chunk chunk)
 void SinglePartitionExchangeSink::onFinish()
 {
     LOG_TRACE(logger, "SinglePartitionExchangeSink on finish");
-    // buffered_sender.flush(true, current_chunk_info);
+    buffered_sender.flush(true, current_chunk_info);
     IExchangeSink::onFinish();
 }
 

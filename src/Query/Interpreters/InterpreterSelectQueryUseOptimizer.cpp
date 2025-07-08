@@ -113,7 +113,10 @@ QueryPlanExtPtr InterpreterSelectQueryUseOptimizer::getQueryPlan(bool skip_optim
     /// set cluser
     chassert(visitor.clusters.size() < 2);
     if (!visitor.clusters.empty())
+    {
         context->getOptimizerContext()->setCluster(visitor.clusters.back());
+        LOG_INFO(log, "Set cluster {}", context->getOptimizerContext()->getCluster()->getName());
+    }
 
     if (!query_plan || context->getOptimizerContext()->getSettingsRef().iterative_optimizer_timeout == 999999)
     {

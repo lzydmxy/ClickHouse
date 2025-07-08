@@ -98,6 +98,7 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendImpl(Chunk chunk)
     Stopwatch s;
     WriteBufferFromBrpc out;
     serializeChunkToIoBuffer(std::move(chunk), out);
+
     const auto & buf = out.getFinishedBuf();
     if (enable_sender_metrics)
     {
@@ -136,6 +137,7 @@ void BrpcRemoteBroadcastSender::serializeChunkToIoBuffer(Chunk chunk, WriteBuffe
         NativeChunkOutputStream chunk_out(compressed_out, header);
         chunk_out.write(chunk);
         compressed_out.next();
+        LOG_INFO(log, "serializeChunkToIoBuffer {}, compressed size {}, uncompressed size {}", getName(), compressed_out.getCompressedBytes(), compressed_out.getUncompressedBytes());
     }
     else
     {

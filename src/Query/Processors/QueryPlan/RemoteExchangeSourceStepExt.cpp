@@ -277,10 +277,6 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
         pipe.addExtremesSource(std::move(extremes_source));
 
     LOG_TRACE(logger, "Initialize pipeline pipe processors size {}", pipe.getProcessors().size());
-
-    for (const auto & processor : pipe.getProcessors())
-        processors.emplace_back(processor);
-
     pipeline.init(std::move(pipe));
 
     if (!keep_order)
@@ -295,6 +291,8 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
     pipeline.setMaxThreads(source_num);
 
     LOG_DEBUG(logger, "Initialize pipeline, total source_num {}, pipeline threads {}, prev {}", source_num, pipeline.getNumThreads(), prev_pipe_threads);
+    for (const auto & processor : pipeline.getProcessors())
+        processors.emplace_back(processor);
 }
 
 BroadcastReceiverPtr RemoteExchangeSourceStepExt::createReceiver(

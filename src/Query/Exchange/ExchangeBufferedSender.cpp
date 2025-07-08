@@ -52,14 +52,9 @@ void ExchangeBufferedSender::resetBuffer()
     partition_buffer = header.cloneEmptyColumns();
 }
 
-void ExchangeBufferedSender::appendSelective(
-    size_t column_idx, const IColumn & source, const IColumn::Selector & selector,
-    size_t from, size_t length)
+void ExchangeBufferedSender::append(
+    size_t column_idx, MutableColumnPtr target)
 {
-    //partition_buffer[column_idx]->insertRangeSelective(source, selector, from, length);
-    LOG_TRACE(logger, "Column index {}, from {}, length {}", column_idx, from, length);
-    auto target = std::move(partition_buffer[column_idx]);
-    ColumnSelector::instance().insertRangeSelective(target, source, selector, from, length);
     partition_buffer[column_idx] = std::move(target);
 }
 

@@ -12,7 +12,7 @@ class ExchangeBufferedSender
 {
 public:
     ExchangeBufferedSender(const Block & header, BroadcastSenderPtr sender_, UInt64 threshold_in_bytes, UInt64 threshold_in_row_num);
-    void appendSelective(size_t column_idx, const IColumn & source, const IColumn::Selector & selector, size_t from, size_t length);
+    void append(size_t column_idx, MutableColumnPtr target);
     void appendSelective(size_t column_idx, const IColumn & source);
     BroadcastStatus sendThrough(Chunk chunk);
     BroadcastStatus flush(bool force, const ChunkInfoPtr & chunk_info);

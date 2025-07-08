@@ -25,6 +25,12 @@ public:
     bool is_overflows = false;
     Int32 bucket_num = -1;
     UInt64 chunk_num = 0; // chunk number in order of generation, used during memory bound merging to restore chunks order
+
+    virtual bool isEqual(const ChunkInfo & rhs) const override
+    {
+        const auto & other = static_cast<const AggregatedChunkInfo &>(rhs);
+        return is_overflows == other.is_overflows && bucket_num == other.bucket_num;
+    }
 };
 
 using AggregatorList = std::list<Aggregator>;

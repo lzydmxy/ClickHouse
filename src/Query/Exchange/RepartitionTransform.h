@@ -21,12 +21,11 @@ public:
 
     struct RepartitionChunkInfo : public ChunkInfo
     {
-        RepartitionChunkInfo(IColumn::Selector selector_, PartitionStartPoints start_points_, ChunkInfoPtr origin_chunk_info_)
-            : selector(std::move(selector_)), start_points(std::move(start_points_)), origin_chunk_info(std::move(origin_chunk_info_))
+        RepartitionChunkInfo(IColumn::Selector selector_, ChunkInfoPtr origin_chunk_info_)
+            : selector(std::move(selector_)), origin_chunk_info(std::move(origin_chunk_info_))
         {
         }
         IColumn::Selector selector;
-        PartitionStartPoints start_points;
         ChunkInfoPtr origin_chunk_info;
     };
 
@@ -40,7 +39,7 @@ public:
     static const DataTypePtr REPARTITION_FUNC_RESULT_TYPE;
     static const DataTypePtr REPARTITION_FUNC_NULLABLE_RESULT_TYPE;
 
-    static std::pair<IColumn::Selector, PartitionStartPoints> doRepartition(
+    static IColumn::Selector doRepartition(
         size_t partition_num,
         const Chunk & chunk,
         const Block & header,
