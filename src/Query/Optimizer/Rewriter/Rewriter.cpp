@@ -19,7 +19,8 @@ void Rewriter::rewritePlan(QueryPlanExt & plan, ContextMutablePtr context) const
 
     auto duration = watch.elapsedMilliseconds();
 
-    LOG_DEBUG(log, "Optimizer rule {} run time: {} ms", name(), duration);
+    if (duration > 1)
+        LOG_DEBUG(log, "Optimizer rule {} run time: {} ms which is larget than 1ms", name(), duration);
 
     if (duration >= optimizer_context->getSettingsRef().plan_optimizer_rule_warning_time)
         LOG_WARNING(log,

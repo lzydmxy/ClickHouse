@@ -488,7 +488,7 @@ std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitReadNoth
 
 std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitReadStorageRowCountStepExtNode(QueryPlanExt::Node *, const Context &)
 {
-    return {{Partitioning::Handle::FIXED_HASH}};
+    return {{Partitioning::Handle::SINGLE}};
 }
 
 std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitTableScanStepExtNode(QueryPlanExt::Node * node, const Context &)
