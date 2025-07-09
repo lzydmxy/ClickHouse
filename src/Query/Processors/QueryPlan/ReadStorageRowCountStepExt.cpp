@@ -139,7 +139,12 @@ void ReadStorageRowCountStepExt::toProto(Protos::ReadStorageRowCountStepExt & pr
     proto.set_num_rows(num_rows);
     proto.set_is_final_agg(is_final_agg);
     if (storage_id)
-        ProtosSerDerHelper::toProto(storage_id, *proto.mutable_storage_id());
+    {
+        auto storage_id_without_uuid = storage_id;
+        // we should clear uuid to avoid table does not exist exception in another node.
+        storage_id_without_uuid.uuid = UUIDHelpers::Nil;
+        ProtosSerDerHelper::toProto(storage_id_without_uuid, *proto.mutable_storage_id());
+    }
 }
 
 std::shared_ptr<ReadStorageRowCountStepExt> ReadStorageRowCountStepExt::fromProto(const Protos::ReadStorageRowCountStepExt & proto, ContextPtr context)
