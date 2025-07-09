@@ -62,7 +62,9 @@ private:
             initial_size, size, block_view.size(), buf.backing_block_num(), buf.size());
 #endif
     }
-    static constexpr size_t initial_size = 32; //Default 10K
+    static constexpr size_t initial_size = 32;
+    // FIXME Redesign WriteBufferFromBrpc by adding a private member for a contiguous buffer. Write all data to this contiguous buffer first, flush the
+    //       accumulated results to the butil::IOBuf buf in finalize(), more details http://xingyun.jd.com/codingRoot/EasyOLAP/ClickHouse_new/merges/358.
     butil::IOBuf buf;
 };
 
