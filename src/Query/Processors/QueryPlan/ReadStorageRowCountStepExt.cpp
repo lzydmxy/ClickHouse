@@ -1,15 +1,16 @@
-#include <Query/Processors/QueryPlan/ReadStorageRowCountStepExt.h>
-#include <Interpreters/DatabaseCatalog.h>
-#include <Interpreters/Context.h>
-#include <Parsers/ASTSelectQuery.h>
-#include <Interpreters/InterpreterSelectQuery.h>
-#include <Parsers/ASTFunction.h>
 #include <AggregateFunctions/AggregateFunctionCount.h>
 #include <Columns/ColumnAggregateFunction.h>
+#include <Interpreters/Context.h>
+#include <Interpreters/DatabaseCatalog.h>
+#include <Interpreters/InterpreterSelectQuery.h>
+#include <Parsers/ASTFunction.h>
+#include <Parsers/ASTSelectQuery.h>
 #include <Processors/Sources/SourceFromSingleChunk.h>
 #include <Query/Interpreters/InterpreterSelectQueryUseOptimizer.h>
 #include <Query/Interpreters/executeSubQuery.h>
+#include <Query/Processors/QueryPlan/ReadStorageRowCountStepExt.h>
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
+#include <arrow/type_fwd.h>
 
 namespace DB
 {
@@ -19,8 +20,21 @@ namespace ErrorCodes
     extern const int INCORRECT_RESULT_OF_SCALAR_SUBQUERY;
 }
 
+Block getOutPutHeader(const Block & output_header, bool is_final_agg, AggregateDescription agg_desc)
+{
+    auto func = agg_desc.function;
+    if (is_final_agg)
+        return output_header;
+
+    /// TODO wujianchao alias in output_header
+    Block header;
+    auto column = ColumnAggregateFunction::create(func);
+    header.insert({std::move(column), std::make_shared<DataTypeAggregateFunction>(func, func->getArgumentTypes(), agg_desc.parameters), agg_desc.column_name});
+    return header;
+}
+
 ReadStorageRowCountStepExt::ReadStorageRowCountStepExt(Block output_header, ASTPtr query_, AggregateDescription agg_desc_, bool is_final_agg_, StorageID storage_id_, ContextPtr context_)
-    : ISourceStep(DataStream{.header = output_header})
+    : ISourceStep(DataStream{.header = getOutPutHeader(output_header, is_final_agg_, agg_desc_)})
     , query(query_)
     , agg_desc(agg_desc_)
     , is_final_agg(is_final_agg_)
@@ -51,7 +65,7 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
             temp_query_info.syntax_analyzer_result = interpreter->syntax_analyzer_result;
             temp_query_info.prepared_sets = interpreter->getQueryAnalyzer()->getPreparedSets();
             //todo: liyang453, other feat: need to implement get ActionsDAGPtr from SelectQueryInfo
-            //rows_cnt = storage->totalRowsByPartitionPredicate(temp_query_info, context);
+            // rows_cnt = storage->totalRowsByPartitionPredicate(temp_query_info, context);
         }
 
         if (!rows_cnt)
@@ -91,12 +105,16 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
 
     const auto & func = agg_desc.function;
     const AggregateFunctionCount & agg_count = static_cast<const AggregateFunctionCount &>(*func);
-    Block output_header;
+
+    Block output_header = output_stream->header.cloneWithoutColumns();
+    chassert(output_header.columns() == 1);
+    chassert(output_header.getByPosition(0).name == agg_desc.column_name);
+
     if (is_final_agg)
     {
         auto count_column = ColumnVector<UInt64>::create();
         count_column->insertValue(num_rows);
-        output_header.insert({count_column->getPtr(), std::make_shared<DataTypeUInt64>(), agg_desc.column_name});
+        output_header.getByPosition(0).column = count_column->getPtr();
     }
     else
     {
@@ -110,7 +128,7 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
         auto column = ColumnAggregateFunction::create(func);
         column->insertFrom(place);
 
-        output_header.insert({std::move(column), std::make_shared<DataTypeAggregateFunction>(func, func->getArgumentTypes(), agg_desc.parameters), agg_desc.column_name});
+        output_header.getByPosition(0).column = column->getPtr();
     }
 
     auto pipe = Pipe(std::make_shared<SourceFromSingleChunk>(output_header));

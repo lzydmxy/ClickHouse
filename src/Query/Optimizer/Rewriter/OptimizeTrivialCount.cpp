@@ -128,12 +128,40 @@ PlanNodePtr TrivialCountVisitor::visitAggregatingStepExtNode(AggregatingStepExtN
     auto read_row_count= std::make_shared<ReadStorageRowCountStepExt>(node.getCurrentDataStream().header,
                                                                     select_query.clone(),
                                                                     agg_step.getParams().aggregates[0],
-                                                                    agg_step.isFinal(),
+                                                                    false,
                                                                     storage->getStorageID(),
                                                                     context);
-    read_row_count->setNumRows(num_rows.value());                                                            
+    read_row_count->setNumRows(num_rows.value());
+
     auto new_child_node= PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(read_row_count), {});
-    return new_child_node->shared_from_this();
+
+    const auto & agg_params = agg_step.getParams();
+    Aggregator::Params new_params(
+        agg_step.getKeys(),
+        agg_params.aggregates,
+        agg_params.overflow_row,
+        agg_params.max_threads,
+        agg_params.max_block_size,
+        agg_params.min_hit_rate_to_use_consecutive_keys_optimization);
+
+    QueryPlanStepPtr new_agg = std::make_shared<MergingAggregatedStepExt>(
+        new_child_node->getStep()->getOutputStream(),
+        agg_step.getKeys(),
+        agg_step.getGroupingSetsParams(),
+        agg_step.getGroupings(),
+        agg_step.isFinal(),
+        new_params,
+        false,
+        context->getSettingsRef().max_threads,
+        context->getSettingsRef().aggregation_memory_efficient_merge_threads,
+        agg_step.getMaxBlockSize(),
+        context->getSettingsRef().aggregation_in_order_max_block_bytes,
+        SortDescription{},
+        context->getSettingsRef().enable_memory_bound_merging_of_aggregation_results);
+
+    auto new_agg_node= PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(new_agg), {new_child_node});
+
+    return new_agg_node->shared_from_this();
 }
 
 NameSet TrivialCountVisitor::getRequiredColumns(ASTs & filters)
