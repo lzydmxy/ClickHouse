@@ -569,8 +569,7 @@ Property DeriverVisitor::visitReadNothingStep(const ReadNothingStep &, DeriverCo
 
 Property DeriverVisitor::visitReadStorageRowCountStepExt(const ReadStorageRowCountStepExt &, DeriverContext &)
 {
-    auto prop = Partitioning(Partitioning::Handle::SINGLE);
-    prop.setComponent(Partitioning::Component::COORDINATOR);
+    auto prop = Partitioning(Partitioning::Handle::FIXED_ARBITRARY);
     return Property{prop, Partitioning(Partitioning::Handle::ARBITRARY)};
 }
 

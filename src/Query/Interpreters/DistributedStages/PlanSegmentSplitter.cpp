@@ -432,7 +432,7 @@ std::pair<String, size_t> PlanSegmentVisitor::findClusterAndParallelSize(QueryPl
             break;
         case Partitioning::Handle::BUCKET_TABLE:
         case Partitioning::Handle::FIXED_HASH: {
-            /// TODO wujianchao now we limit the non-leaf fragments parallel size
+            /// TODO wujianchao now we limit the non-leaf fragments parallel size, we should not limit
             /// if all input are not table type, parallel size should respect distributed_max_parallel_size setting
             size_t max_parallel_size = plan_segment_context.context->getOptimizerContext()->getSettingsRef().distributed_max_parallel_size;
             if (!input_has_table && !split_context.inputs.empty() && split_context.scalable)
@@ -488,7 +488,7 @@ std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitReadNoth
 
 std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitReadStorageRowCountStepExtNode(QueryPlanExt::Node *, const Context &)
 {
-    return {{Partitioning::Handle::SINGLE}};
+    return {{Partitioning::Handle::FIXED_HASH}};
 }
 
 std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitTableScanStepExtNode(QueryPlanExt::Node * node, const Context &)
