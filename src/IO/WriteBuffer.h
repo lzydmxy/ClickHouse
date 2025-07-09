@@ -142,6 +142,8 @@ public:
         next();
     }
 
+    virtual bool isContiguous() { return true; }
+
 protected:
     WriteBuffer(Position ptr, size_t size) : BufferBase(ptr, size, 0) {}
 

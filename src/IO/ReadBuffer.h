@@ -248,6 +248,8 @@ public:
 
     virtual void setReadUntilEnd() {}
 
+    virtual bool isContiguous() { return true; }
+
 protected:
     /// The number of bytes to ignore from the initial position of `working_buffer`
     /// buffer. Apparently this is an additional out-parameter for nextImpl(),

@@ -44,9 +44,8 @@ TEST(RepartitionTransformTest, doRepartitionTest)
     arguments.push_back(header.getByPosition(1));
     arguments.push_back(header.getByPosition(2));
     auto func = createRepartitionFunction(getContext().context, arguments);
-    auto res_pair = RepartitionTransform::doRepartition(
+    IColumn::Selector && selector = RepartitionTransform::doRepartition(
         partition_num, chunk, header, ColumnNumbers{1, 2}, func, RepartitionTransform::REPARTITION_FUNC_RESULT_TYPE);
-    auto & selector = res_pair.first;
     auto repartition_number = getPartitionNumber(selector);
     LOG_TRACE(getLogger("RepartitionTransformTest"), "Selector rows {}, re partition number {}, partition number {}", selector.size(), repartition_number, partition_num);
     ASSERT_TRUE(selector.size() == rows);
@@ -73,9 +72,8 @@ TEST(RepartitionTransformTest, doRepartitionNullableTest)
     arguments.push_back(header.getByPosition(1));
     arguments.push_back(header.getByPosition(2));
     auto func = createRepartitionFunction(getContext().context, arguments);
-    auto res_pair = RepartitionTransform::doRepartition(
+    auto selector  = RepartitionTransform::doRepartition(
         partition_num, chunk, header, ColumnNumbers{1, 2}, func, RepartitionTransform::REPARTITION_FUNC_RESULT_TYPE);
-    auto & selector = res_pair.first;
     auto repartition_number = getPartitionNumber(selector);
     LOG_TRACE(getLogger("RepartitionTransformTest"), "Selector rows {}, re partition number {}, partition number {}", selector.size(), repartition_number, partition_num);
     ASSERT_TRUE(selector.size() == rows);

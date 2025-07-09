@@ -29,6 +29,11 @@ public:
         resizeBufferBlock(0);
     }
 
+    // butil::IOBuf is a non-contiguous buffer, whereas buffer-related functionality in ClickHouse
+    // is implemented with the assumption of contiguous buffers. We add this property mainly to
+    // ensure the checksum is correctly calculated when writing compressed data.
+    bool isContiguous() override { return false; }
+
     void finalizeImpl() override
     {
         buf.resize(buf.size() - available());
@@ -53,11 +58,11 @@ private:
             throw Exception(ErrorCodes::CANNOT_CREATE_IO_BUFFER, "Cannot resize butil::IOBuf to {}" ,size);
         set(const_cast<Position>(block_view.data()), block_view.size());
 #ifndef NDEBUG
-        LOG_TRACE(getLogger("WriteBufferFromBrpc"), "WriteBufferFromBrpc initial_size {}, expand size {}, block view size {}, buff size {}",
-            initial_size, size, block_view.size(), buf.size());
+        LOG_TRACE(getLogger("WriteBufferFromBrpc"), "WriteBufferFromBrpc initial_size {}, expand size {}, block view size {}, block num {}, buff size {}",
+            initial_size, size, block_view.size(), buf.backing_block_num(), buf.size());
 #endif
     }
-    static constexpr size_t initial_size = 10240; //Default 10K
+    static constexpr size_t initial_size = 32; //Default 10K
     butil::IOBuf buf;
 };
 

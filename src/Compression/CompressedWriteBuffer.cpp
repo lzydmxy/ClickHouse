@@ -31,7 +31,7 @@ void CompressedWriteBuffer::nextImpl()
       * If output buffer does not have necessary capacity. Compress data into a temporary buffer.
       * Then we can write checksum and copy the temporary buffer into the output buffer.
       */
-    if (out.available() >= compressed_reserve_size + sizeof(CityHash_v1_0_2::uint128))
+    if (out.available() >= compressed_reserve_size + sizeof(CityHash_v1_0_2::uint128) && out.isContiguous())
     {
         char * out_compressed_ptr = out.position() + sizeof(CityHash_v1_0_2::uint128);
         UInt32 compressed_size = codec->compress(working_buffer.begin(), decompressed_size, out_compressed_ptr);

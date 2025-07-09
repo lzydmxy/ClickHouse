@@ -94,8 +94,8 @@ TEST(HostWithPortsTest, HostWithPortHash)
     constexpr uint16_t rpc_port = 9000;
     constexpr uint16_t tcp_port = 9001;
     constexpr uint16_t http_port = 9002;
-    constexpr uint16_t exchange_port = 9003;
-    constexpr uint16_t exchange_status_port = 9004;
+    // constexpr uint16_t exchange_port = 9003;
+    // constexpr uint16_t exchange_status_port = 9004;
     std::hash<DB::HostWithPorts> hasher;
 
     HostWithPorts hp0 {"::1", rpc_port, tcp_port, http_port, ""};

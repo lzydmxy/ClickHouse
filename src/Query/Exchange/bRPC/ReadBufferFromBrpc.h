@@ -18,6 +18,11 @@ public:
         return true;
     }
 
+    // butil::IOBuf is a non-contiguous buffer, whereas buffer-related functionality in ClickHouse
+    // is implemented with the assumption of contiguous buffers. We add this property mainly to
+    // ensure the checksum is correctly calculated when writing compressed data.
+    bool isContiguous() override { return false; }
+
 private:
     const butil::IOBuf & buf;
     int64_t processed = -1;
