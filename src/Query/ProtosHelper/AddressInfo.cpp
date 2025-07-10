@@ -18,7 +18,7 @@ AddressInfoPtr getLocalAddressPtr(const ContextPtr & context)
 {
     const auto & host = getFQDNOrHostName();
     auto tcp_port = context->getTCPPort();
-    auto rpc_port = context->getGlobalContext()->getOptimizerContext()->getRPCPort();
+    auto rpc_port = context->getOptimizerContext()->getRPCPort();
     const ClientInfo & info = context->getClientInfo();
     return std::make_shared<AddressInfo>(host, tcp_port, info.current_user, "", rpc_port); // TODO wujianchao add password
 }

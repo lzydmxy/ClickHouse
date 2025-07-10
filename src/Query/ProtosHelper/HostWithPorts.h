@@ -167,7 +167,7 @@ public:
     std::string host;
     UInt16 rpc_port{0};
     UInt16 tcp_port{0};
-    UInt16 http_port{0};
+    UInt16 http_port{0};// TODO wujianchao remove
     std::string id;
 
     static HostWithPorts createHostWithPorts(const RHostWithPorts & hp);
