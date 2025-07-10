@@ -96,9 +96,7 @@ public:
     std::vector<size_t> rank_worker_ids;
     std::vector<WorkerNode> all_workers;
     HostWithPortsVec all_hosts;
-    void selectRandomWorkers();
-    void selectOrderWorkers(bool first=true);
-    void selectUtilizationWorkers();
+    void initWorkersIndex();
 };
 
 struct NodeSelectorResult;

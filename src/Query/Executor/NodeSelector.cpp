@@ -12,7 +12,6 @@
 #include <Query/Common/OptimizerContext.h>
 #include <Query/ProtosHelper/QueryProto.h>
 #include <Query/ProtosHelper/ExchangeMode.h>
-#include <Query/ProtosHelper/SourceTask.h>
 
 namespace DB
 {
@@ -41,94 +40,66 @@ ClusterNodes::ClusterNodes(String cluster_name_, ContextPtr & query_context) : c
     auto rpc_port = static_cast<UInt16>(query_context->getConfigRef().getUInt("optimizer.rpc_port", 0));
     auto tcp_port = static_cast<UInt16>(query_context->getConfigRef().getUInt("tcp_port", 0));
     auto http_port = static_cast<UInt16>(query_context->getConfigRef().getUInt("http_port", 0));
-    switch(query_context->getOptimizerContext()->getSettingsRef().scheduler_mode)
-    {
-        case SchedulerMode::RANDOM:
-            selectRandomWorkers();
-            break;
-        case SchedulerMode::FIRST_ORDER:
-            selectOrderWorkers();
-            break;
-        case SchedulerMode::RANDOM_ORDER:
-            selectOrderWorkers(false);
-            break;
-        case SchedulerMode::CPU_RANK:
-        case SchedulerMode::MEMORY_RANK:
-            selectUtilizationWorkers();
-            break;
-    }
+
+    initWorkersIndex();
+
     if (cluster == nullptr) //  query only contains local table
     {
         auto localhost = getLocalAddress(query_context);
         all_workers.emplace_back(WorkerNode{localhost, NodeType::Local});
         all_hosts.emplace_back(HostWithPorts{localhost.getHostName(), rpc_port, tcp_port, http_port});
+        return;
     }
-    else
+
+    const auto shards_addresses = cluster->getShardsAddresses();
+    const auto shards = cluster->getShardsInfo();
+    for (const auto index : rank_worker_ids)
     {
-        const auto shards_addresses = cluster->getShardsAddresses();
-        const auto shards = cluster->getShardsInfo();
-        for (const auto index : rank_worker_ids)
+        const Cluster::Address * selected_address = NULL;
+        NodeType node_type = NodeType::Local;
+        for(const auto & replica : shards_addresses[index])
         {
-            const Cluster::Address * selected_address = NULL;
-            NodeType node_type = NodeType::Local;
-            for(const auto & replica : shards_addresses[index])
+            if(replica.is_local)
             {
-                if(replica.is_local)
-                {
-                    selected_address = &replica;
+                selected_address = &replica;
+                break;
+            }
+        }
+        if (selected_address == NULL)
+        {
+            size_t replica_index;
+            //  TODO wujianchao implement other schedule mode
+            switch(query_context->getOptimizerContext()->getSettingsRef().scheduler_mode)
+            {
+                case SchedulerMode::RANDOM:
+                case SchedulerMode::FIRST_ORDER:
+                case SchedulerMode::RANDOM_ORDER:
+                case SchedulerMode::CPU_RANK:
+                case SchedulerMode::MEMORY_RANK:
+                    replica_index = getRandomIndex(shards_addresses[index].size() - 1);
                     break;
-                }
             }
-            if (selected_address == NULL)
-            {
-                size_t replica_index = getRandomIndex(shards_addresses[index].size() - 1);
-                selected_address = &shards_addresses[index][replica_index];
-                node_type = NodeType::Remote;
-            }
-            if (node_type == NodeType::Local)
-            {
-                all_workers.emplace_back(WorkerNode{AddressInfo::create(*selected_address), node_type});
-                all_hosts.emplace_back(HostWithPorts{selected_address->host_name, rpc_port, selected_address->port, http_port});
-            }
-            else
-            {
-                all_workers.emplace_back(WorkerNode{AddressInfo::create(*selected_address), node_type});
-                all_hosts.emplace_back(HostWithPorts{selected_address->host_name, rpc_port, selected_address->port, http_port});
-            }
+            selected_address = &shards_addresses[index][replica_index];
+            node_type = NodeType::Remote;
+        }
+        if (node_type == NodeType::Local)
+        {
+            all_workers.emplace_back(WorkerNode{AddressInfo::create(*selected_address), node_type});
+            all_hosts.emplace_back(HostWithPorts{selected_address->host_name, rpc_port, selected_address->port, http_port});
+        }
+        else
+        {
+            all_workers.emplace_back(WorkerNode{AddressInfo::create(*selected_address), node_type});
+            all_hosts.emplace_back(HostWithPorts{selected_address->host_name, rpc_port, selected_address->port, http_port});
         }
     }
 }
 
-void ClusterNodes::selectRandomWorkers()
+void ClusterNodes::initWorkersIndex()
 {
     size_t shard_size = cluster ? cluster->getShardCount() : 1;
     rank_worker_ids.resize(shard_size, 0);
     std::iota(rank_worker_ids.begin(), rank_worker_ids.end(), 0);
-    thread_local std::random_device rd;
-    std::shuffle(rank_worker_ids.begin(), rank_worker_ids.end(), rd);
-}
-
-void ClusterNodes::selectOrderWorkers(bool first)
-{
-    size_t shard_size = cluster ? cluster->getShardCount() : 1;
-    rank_worker_ids.resize(shard_size, 0);
-    if (!first)
-    {
-        const auto seed = getRandomIndex(shard_size);
-        std::iota(rank_worker_ids.begin(), rank_worker_ids.end(), seed);
-        for (size_t idx = 0; idx < rank_worker_ids.size(); idx++)
-        {
-            if(rank_worker_ids[idx] >= shard_size)
-                rank_worker_ids[idx] -= shard_size;
-        }
-    }
-    else
-        std::iota(rank_worker_ids.begin(), rank_worker_ids.end(), 0);
-}
-
-void ClusterNodes::selectUtilizationWorkers()
-{
-   selectRandomWorkers();
 }
 
 void NodeSelector::setSources(
