@@ -85,12 +85,12 @@ ClusterNodes::ClusterNodes(String cluster_name_, ContextPtr & query_context) : c
         if (node_type == NodeType::Local)
         {
             all_workers.emplace_back(WorkerNode{AddressInfo::create(*selected_address), node_type});
-            all_hosts.emplace_back(HostWithPorts{selected_address->host_name, rpc_port, selected_address->port, http_port});
+            all_hosts.emplace_back(HostWithPorts{selected_address->host_name, selected_address->rpc_port, selected_address->port, http_port});
         }
         else
         {
             all_workers.emplace_back(WorkerNode{AddressInfo::create(*selected_address), node_type});
-            all_hosts.emplace_back(HostWithPorts{selected_address->host_name, rpc_port, selected_address->port, http_port});
+            all_hosts.emplace_back(HostWithPorts{selected_address->host_name, selected_address->rpc_port, selected_address->port, http_port});
         }
     }
 }
