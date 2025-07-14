@@ -195,9 +195,9 @@ BlockIO InterpreterSelectQueryUseOptimizer::execute()
                 context->getCurrentQueryId(),
                 plan_segment_num,
                 max_plan_segment_num);
-    // TODO wujianchao replace test_cluster with plan_segment_tree_ptr.cluster
-    auto coodinator = std::make_shared<QueryMPPCoordinator>("test_cluster", std::move(plan_segment_tree_ptr), context, QueryMPPOptions());
-    BlockIO res = coodinator->execute();
+    const auto coordinator = std::make_shared<QueryMPPCoordinator>(
+        context->getOptimizerContext()->getClusterName(), std::move(plan_segment_tree_ptr), context, QueryMPPOptions());
+    BlockIO res = coordinator->execute();
     return res;
 }
 
