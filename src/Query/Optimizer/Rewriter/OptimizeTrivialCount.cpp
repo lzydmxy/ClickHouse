@@ -96,14 +96,7 @@ PlanNodePtr TrivialCountVisitor::visitAggregatingStepExtNode(AggregatingStepExtN
     select_query.select()->children.reserve(1);
     select_query.select()->children.emplace_back(count_func);
 
-    // try to get the num_rows in storage, if failed，do not optimize.
-    std::optional<UInt64> num_rows{};
-    if (filters.empty())
-    {
-        // if filters is empty，Get row count directly
-        num_rows = storage->totalRows(context->getSettingsRef());
-    }
-    else
+    if (!filters.empty())
     {
         // if filters is not empty，build query with filters and prewhere, then 'Interpreter' the query and get the query_info
 
@@ -117,13 +110,7 @@ PlanNodePtr TrivialCountVisitor::visitAggregatingStepExtNode(AggregatingStepExtN
             where_function = count_context.filters[0];
         if (where_function)
             select_query.setExpression(ASTSelectQuery::Expression::WHERE, std::move(where_function));
-
-        auto interpreter = std::make_shared<InterpreterSelectQuery>(select_query.clone(), context, SelectQueryOptions());
-        num_rows = interpreter->getTrivialCount(context->getSettingsRef().max_parallel_replicas);
     }
-
-    if (!num_rows)
-        return visitPlanNode(node, v);
 
     auto read_row_count= std::make_shared<ReadStorageRowCountStepExt>(node.getCurrentDataStream().header,
                                                                     select_query.clone(),
@@ -131,7 +118,6 @@ PlanNodePtr TrivialCountVisitor::visitAggregatingStepExtNode(AggregatingStepExtN
                                                                     false,
                                                                     storage->getStorageID(),
                                                                     context);
-    read_row_count->setNumRows(num_rows.value());
 
     auto new_child_node= PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(read_row_count), {});
 
