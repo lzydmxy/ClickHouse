@@ -11,6 +11,8 @@
 #include <Query/Processors/QueryPlan/ReadStorageRowCountStepExt.h>
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <arrow/type_fwd.h>
+#include <Storages/VirtualColumnUtils.h>
+#include <Interpreters/ActionsDAG.h>
 
 namespace DB
 {
@@ -20,6 +22,8 @@ namespace ErrorCodes
     extern const int INCORRECT_RESULT_OF_SCALAR_SUBQUERY;
 }
 
+namespace
+{
 Block getOutPutHeader(const Block & output_header, bool is_final_agg, AggregateDescription agg_desc)
 {
     auto func = agg_desc.function;
@@ -31,6 +35,31 @@ Block getOutPutHeader(const Block & output_header, bool is_final_agg, AggregateD
     auto column = ColumnAggregateFunction::create(func);
     header.insert({std::move(column), std::make_shared<DataTypeAggregateFunction>(func, func->getArgumentTypes(), agg_desc.parameters), agg_desc.column_name});
     return header;
+}
+
+[[maybe_unused]] ActionsDAGPtr getActionsDagByPredicate(const ASTPtr & predicate, const ContextPtr & context, const StoragePtr & storage)
+{
+    auto actions = std::make_shared<ActionsDAG>(storage->getInMemoryMetadataPtr()->getSampleBlock().getColumnsWithTypeAndName());
+    PreparedSetsPtr prepared_sets;
+    const NamesAndTypesList source_columns;
+    const NamesAndTypesList aggregation_keys;
+    const ColumnNumbersList grouping_set_keys;
+
+    ActionsVisitor::Data visitor_data(
+        context,
+        SizeLimits{},
+        1,
+        source_columns,
+        std::move(actions),
+        prepared_sets,
+        true,
+        true,
+        false,
+        { aggregation_keys, grouping_set_keys, GroupByKind::NONE });
+    ActionsVisitor(visitor_data).visit(predicate);
+    return visitor_data.getActions();
+}
+
 }
 
 ReadStorageRowCountStepExt::ReadStorageRowCountStepExt(Block output_header, ASTPtr query_, AggregateDescription agg_desc_, bool is_final_agg_, StorageID storage_id_, ContextPtr context_)
@@ -59,13 +88,26 @@ void ReadStorageRowCountStepExt::initializePipeline(QueryPipelineBuilder & pipel
         }
         else // It's possible to optimize count() given only partition predicates
         {
-            auto interpreter = std::make_shared<InterpreterSelectQuery>(query->clone(), context, SelectQueryOptions());
-            SelectQueryInfo temp_query_info;
-            temp_query_info.query = interpreter->getQuery();
-            temp_query_info.syntax_analyzer_result = interpreter->syntax_analyzer_result;
-            temp_query_info.prepared_sets = interpreter->getQueryAnalyzer()->getPreparedSets();
-            //todo: liyang453, other feat: need to implement get ActionsDAGPtr from SelectQueryInfo
-            // rows_cnt = storage->totalRowsByPartitionPredicate(temp_query_info, context);
+            // convert where and prewhere to ActionsDag
+            // ActionsDAG::NodeRawConstPtrs action_nodes;
+            // ActionsDAGPtr prewhere_actions_dag;
+            // ActionsDAGPtr where_actions_dag;
+            // if (select_query.where())
+            // {
+            //     where_actions_dag = getActionsDagByPredicate(select_query.where(), context, storage);
+            //     for (const auto & node :where_actions_dag->getNodes())
+            //         action_nodes.push_back(&node); // TODO wujianchao only add where_column node
+            // }
+            // if (select_query.prewhere())
+            // {
+            //     prewhere_actions_dag = getActionsDagByPredicate(select_query.where(), context, storage);
+            //     for (const auto & node :prewhere_actions_dag->getNodes())
+            //         action_nodes.push_back(&node); // TODO wujianchao only add prewhere_column node
+            // }
+            // auto filter_actions_dag = ActionsDAG::buildFilterActionsDAG(action_nodes);
+
+            auto interpreter = std::make_shared<InterpreterSelectQuery>(select_query.clone(), context, SelectQueryOptions());
+            rows_cnt = interpreter->getTrivialCount(context->getSettingsRef().max_parallel_replicas);
         }
 
         if (!rows_cnt)
