@@ -80,7 +80,7 @@ private:
     Progress progress;
     Progress final_progress;
     PlanSegmentProfilePtr segment_profile;
-    InternalTextLogsQueuePtr logs_queue;  // for distributed query
+    InternalTextLogsQueuePtr non_initial_node_logs_queue;  // used for distributed query
 
     Processors buildRepartitionExchangeSink(BroadcastSenderPtrs & senders, bool keep_order, size_t output_index, const Block &header, OutputPortRawPtrs &ports);
 

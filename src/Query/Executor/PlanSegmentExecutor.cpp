@@ -157,17 +157,22 @@ std::optional<PlanSegmentExecutor::ExecutionResult> PlanSegmentExecutor::execute
     auto send_logs_level = context->getSettingsRef().send_logs_level;
     if (send_logs_level != LogsLevel::none)
     {
-        if (context->getOptimizerContext()->getLogsQueue())
-            CurrentThread::attachInternalTextLogsQueue(context->getOptimizerContext()->getLogsQueue(), send_logs_level);
-
         auto current_address = getLocalAddress(context);
         auto coordinator_address = plan_segment->getCoordinatorAddress();
+
         if (current_address != coordinator_address)
         {
-            logs_queue = std::make_shared<InternalTextLogsQueue>();
-            logs_queue->max_priority = Poco::Logger::parseLevel(send_logs_level.toString());
-            logs_queue->setSourceRegexp(context->getSettingsRef().send_logs_source_regexp);
-            CurrentThread::attachInternalTextLogsQueue(logs_queue, send_logs_level);
+            // for non-initial node, init a log queue to collect logs due to there is no log queue in optimizer_context, then send logs to initial node
+            non_initial_node_logs_queue = std::make_shared<InternalTextLogsQueue>();
+            non_initial_node_logs_queue->max_priority = Poco::Logger::parseLevel(send_logs_level.toString());
+            non_initial_node_logs_queue->setSourceRegexp(context->getSettingsRef().send_logs_source_regexp);
+            CurrentThread::attachInternalTextLogsQueue(non_initial_node_logs_queue, send_logs_level);
+        }
+        else
+        {
+            // for initial node, use the log queue which has been hold in optimizer_context
+            if (optimizer_context->getLogsQueue())
+                CurrentThread::attachInternalTextLogsQueue(optimizer_context->getLogsQueue(), send_logs_level);
         }
     }
 
@@ -963,7 +968,7 @@ void PlanSegmentExecutor::sendLogs()
 {
     try
     {
-        if (!logs_queue)
+        if (!non_initial_node_logs_queue)
             return;
 
         MutableColumns logs_columns;
@@ -971,7 +976,7 @@ void PlanSegmentExecutor::sendLogs()
         size_t rows = 0;
 
         // Collect logs from queue (similar to TCPHandler::sendLogs)
-        for (; logs_queue->tryPop(curr_logs_columns); ++rows)
+        for (; non_initial_node_logs_queue->tryPop(curr_logs_columns); ++rows)
         {
             if (rows == 0)
             {
