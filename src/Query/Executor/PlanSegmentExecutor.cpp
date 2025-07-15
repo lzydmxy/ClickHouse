@@ -41,6 +41,8 @@
 #include <Query/Processors/IQueryPlanStepExt.h>
 #include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsHelper.h>
 #include <Query/ProtosHelper/ProgressHelper.h>
+#include <Interpreters/InternalTextLogsQueue.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 
 namespace ProfileEvents
 {
@@ -152,8 +154,22 @@ PlanSegmentExecutor::~PlanSegmentExecutor() noexcept
 
 std::optional<PlanSegmentExecutor::ExecutionResult> PlanSegmentExecutor::execute()
 {
-    if (context->getSettingsRef().send_logs_level != LogsLevel::none && context->getOptimizerContext()->getLogsQueue())
-        CurrentThread::attachInternalTextLogsQueue(context->getOptimizerContext()->getLogsQueue(), context->getSettingsRef().send_logs_level);
+    auto send_logs_level = context->getSettingsRef().send_logs_level;
+    if (send_logs_level != LogsLevel::none)
+    {
+        if (context->getOptimizerContext()->getLogsQueue())
+            CurrentThread::attachInternalTextLogsQueue(context->getOptimizerContext()->getLogsQueue(), send_logs_level);
+
+        auto current_address = getLocalAddress(context);
+        auto coordinator_address = plan_segment->getCoordinatorAddress();
+        if (current_address != coordinator_address)
+        {
+            logs_queue = std::make_shared<InternalTextLogsQueue>();
+            logs_queue->max_priority = Poco::Logger::parseLevel(send_logs_level.toString());
+            logs_queue->setSourceRegexp(context->getSettingsRef().send_logs_source_regexp);
+            CurrentThread::attachInternalTextLogsQueue(logs_queue, send_logs_level);
+        }
+    }
 
     LOG_DEBUG(logger, "Execute planSegment:[\n{}\n]", plan_segment->toString());
 
@@ -167,6 +183,8 @@ std::optional<PlanSegmentExecutor::ExecutionResult> PlanSegmentExecutor::execute
         const auto finish_time = std::chrono::system_clock::now();
         query_log_element->event_time = timeInSeconds(finish_time);
         query_log_element->event_time_microseconds = timeInMicroseconds(finish_time);
+
+        sendLogs();
 
         return convertSuccessPlanSegmentStatusToResult(
             context, plan_segment_instance->info, final_progress, sender_metrics, plan_segment_outputs, segment_profile);
@@ -939,6 +957,77 @@ void PlanSegmentExecutor::sendProgress()
     {
         tryLogCurrentException(__PRETTY_FUNCTION__);
     }
+}
+
+void PlanSegmentExecutor::sendLogs()
+{
+    try
+    {
+        if (!logs_queue)
+            return;
+
+        MutableColumns logs_columns;
+        MutableColumns curr_logs_columns;
+        size_t rows = 0;
+
+        // Collect logs from queue (similar to TCPHandler::sendLogs)
+        for (; logs_queue->tryPop(curr_logs_columns); ++rows)
+        {
+            if (rows == 0)
+            {
+                logs_columns = std::move(curr_logs_columns);
+            }
+            else
+            {
+                for (size_t j = 0; j < logs_columns.size(); ++j)
+                    logs_columns[j]->insertRangeFrom(*curr_logs_columns[j], 0, curr_logs_columns[j]->size());
+            }
+        }
+        if (rows > 0)
+        {
+            Block block = InternalTextLogsQueue::getSampleBlock();
+            block.setColumns(std::move(logs_columns));
+
+            LOG_DEBUG(logger, "Collected {} log entries from queue, sending to coordinator: {}", block.rows(), plan_segment->getCoordinatorAddress().getHostName());
+            // Create RPC request
+            std::shared_ptr<RpcClient> rpc_client = RpcChannelPool::getInstance().getClient(
+                extractExchangeHostPort(plan_segment->getCoordinatorAddress()),
+                BrpcChannelPoolOptions::DEFAULT_CONFIG_KEY);
+
+            RPlanSegmentServiceStub manager(&rpc_client->getChannel());
+            brpc::Controller * cntl = new brpc::Controller;
+            RSendLogsRequest * request = new RSendLogsRequest;
+            RSendLogsResponse * response = new RSendLogsResponse;
+
+            request->set_query_id(plan_segment->getQueryId());
+            auto current_address = getLocalAddress(context);
+            request->set_worker_address(extractExchangeHostPort(current_address));
+
+            // Convert Block to protobuf format
+            ProtosSerDerHelper::toProto(block, *request);
+            cntl->set_timeout_ms(optimizer_context->getSettingsRef().send_plan_segment_timeout_ms.totalMilliseconds());
+
+            std::function<String()> construct_err_msg = [request = request]() -> String {
+                return fmt::format(
+                    "Failed to send logs to coordinator {} for query {}", request->worker_address(), request->query_id());
+            };
+
+            manager.sendLogs(
+                cntl,
+                request,
+                response,
+                brpc::NewCallback(RPCHelpers::onAsyncCallDoneAssertController, request, response, cntl, logger, construct_err_msg));
+        }
+        else
+        {
+            LOG_DEBUG(logger, "No logs to send for query: {}", plan_segment->getQueryId());
+        }
+    }
+    catch (...)
+    {
+        tryLogCurrentException(__PRETTY_FUNCTION__);
+    }
+
 }
 
 }

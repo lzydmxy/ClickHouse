@@ -140,6 +140,12 @@ public:
         const RCancelQueryRequest * request,
         RCancelQueryResponse * response,
         ::google::protobuf::Closure * done) override;
+    /// send logs (executor -> coordinator)
+    void sendLogs(
+        ::google::protobuf::RpcController * /*controller*/,
+        const RSendLogsRequest * request,
+        RSendLogsResponse * response,
+        ::google::protobuf::Closure * done) override;
 private:
     void prepareCommonParams(
         UInt32 major_revision,

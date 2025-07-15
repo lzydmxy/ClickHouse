@@ -4,6 +4,7 @@
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
 #include <Query/Core/FieldHelper.h>
 #include <Query/ProtosHelper/RPCHelpers.h>
+#include <Interpreters/InternalTextLogsQueue.h>
 
 namespace DB
 {
@@ -462,6 +463,66 @@ void ProtosSerDerHelper::fillFromProto(SelectQueryInfo & select_query_info, cons
     //select_query_info.partition_filter = deserializeASTFromProto(proto.partition_filter());
     select_query_info.input_order_info = proto.has_input_order_info() ? fillFromProto(proto.input_order_info()) : nullptr;
     //select_query_info.cache_info.fillFromProto(proto.cache_info());
+}
+
+void ProtosSerDerHelper::toProto(const Block & log_block, Protos::SendLogsRequest & request)
+{
+    if (log_block.rows() == 0)
+        return;
+
+    // Verify block structure matches expected log format
+    const auto & sample_block = InternalTextLogsQueue::getSampleBlock();
+    if (!blocksHaveEqualStructure(sample_block, log_block))
+    {
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Log block structure doesn't match expected format");
+    }
+
+    const auto & columns = log_block.getColumns();
+    size_t rows = log_block.rows();
+
+    // Extract column data
+    const auto & event_time_col = columns[0];           // event_time (DateTime)
+    const auto & event_time_us_col = columns[1];        // event_time_microseconds (UInt32)
+    const auto & host_name_col = columns[2];            // host_name (String)
+    const auto & query_id_col = columns[3];             // query_id (String)
+    const auto & thread_id_col = columns[4];            // thread_id (UInt64)
+    const auto & priority_col = columns[5];             // priority (Int8)
+    const auto & source_col = columns[6];               // source (String)
+    const auto & text_col = columns[7];                 // text (String)
+
+    // Convert each row to protobuf LogEntry
+    for (size_t i = 0; i < rows; ++i)
+    {
+        auto * log_entry = request.add_logs();
+
+        log_entry->set_event_time(event_time_col->getUInt(i));
+        log_entry->set_event_time_microseconds(event_time_us_col->getUInt(i));
+        log_entry->set_host_name(host_name_col->getDataAt(i).toString());
+        log_entry->set_query_id(query_id_col->getDataAt(i).toString());
+        log_entry->set_thread_id(thread_id_col->getUInt(i));
+        log_entry->set_priority(static_cast<int32_t>(priority_col->getInt(i)));
+        log_entry->set_source(source_col->getDataAt(i).toString());
+        log_entry->set_text(text_col->getDataAt(i).toString());
+    }
+}
+
+void ProtosSerDerHelper::fillFromProto(Block & log_block, const Protos::SendLogsRequest & request)
+{
+    MutableColumns log_columns = log_block.cloneEmptyColumns();
+
+    for (const auto & log_entry : request.logs())
+    {
+        log_columns[0]->insert(log_entry.event_time());
+        log_columns[1]->insert(log_entry.event_time_microseconds());
+        log_columns[2]->insert(log_entry.host_name());
+        log_columns[3]->insert(log_entry.query_id());
+        log_columns[4]->insert(log_entry.thread_id());
+        log_columns[5]->insert(static_cast<Int8>(log_entry.priority()));
+        log_columns[6]->insert(log_entry.source());
+        log_columns[7]->insert(log_entry.text());
+    }
+
+    log_block.setColumns(std::move(log_columns));
 }
 
 }

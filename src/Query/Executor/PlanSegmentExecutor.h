@@ -80,6 +80,7 @@ private:
     Progress progress;
     Progress final_progress;
     PlanSegmentProfilePtr segment_profile;
+    InternalTextLogsQueuePtr logs_queue;  // for distributed query
 
     Processors buildRepartitionExchangeSink(BroadcastSenderPtrs & senders, bool keep_order, size_t output_index, const Block &header, OutputPortRawPtrs &ports);
 
@@ -90,6 +91,7 @@ private:
     void collectSegmentQueryRuntimeMetric(const QueryStatus * query_status);
     void prepareSegmentInfo() const;
     void sendProgress();
+    void sendLogs();
 };
 
 }

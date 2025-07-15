@@ -18,6 +18,7 @@ class DataStream;
 class NameAndTypePair;
 class SortColumnDescription;
 class FillColumnDescription;
+class SendLogsRequest;
 }
 
 class ProtosSerDerHelper
@@ -89,6 +90,10 @@ public:
 
     static void toProto(const SelectQueryInfo & select_query_info, Protos::SelectQueryInfo & proto);
     static void fillFromProto(SelectQueryInfo & select_query_info, const Protos::SelectQueryInfo & proto);
+
+    static void toProto(const Block & log_block, Protos::SendLogsRequest & request);
+    static void fillFromProto(Block & log_block, const Protos::SendLogsRequest & request);
+
 };
 
 }

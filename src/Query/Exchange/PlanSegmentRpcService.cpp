@@ -19,6 +19,8 @@
 #include <Query/Executor/PlanSegmentReport.h>
 #include <Query/Executor/executePlanSegment.h>
 #include <Query/Exchange/bRPC/ReadBufferFromBrpc.h>
+#include <Interpreters/InternalTextLogsQueue.h>
+#include <Query/ProtosHelper/ProtosSerDerHelper.h>
 
 namespace DB
 {
@@ -604,6 +606,40 @@ void PlanSegmentRpcService::reportProcessorsProfile(
         auto error_msg = getCurrentExceptionMessage(true);
         controller->SetFailed(error_msg);
         LOG_ERROR(log, "batchReportProcessorProfileMetrics failed: {}", error_msg);
+    }
+}
+
+void PlanSegmentRpcService::sendLogs(
+    ::google::protobuf::RpcController * controller,
+    const RSendLogsRequest * request,
+    RSendLogsResponse * response,
+    ::google::protobuf::Closure * done)
+{
+    brpc::ClosureGuard done_guard(done);
+    brpc::Controller * cntl = static_cast<brpc::Controller *>(controller);
+
+    try
+    {
+        LOG_DEBUG(log, "Received logs from worker: {}, query_id: {}, log count: {},", request->worker_address(), request->query_id(), request->logs_size());
+
+        // Add logs to the internal logs queue
+        if (auto log_queue = optimizer_context->getLogsQueue())
+        {
+            // Convert protobuf logs to Block format
+            Block log_block = InternalTextLogsQueue::getSampleBlock();
+            ProtosSerDerHelper::fillFromProto(log_block, *request);
+            log_queue->pushBlock(std::move(log_block));
+        }
+        else
+        {
+            LOG_WARNING(log, "No logs queue available to store received logs");
+        }
+    }
+    catch (...)
+    {
+        auto error_msg = getCurrentExceptionMessage(true);
+        cntl->SetFailed(error_msg);
+        LOG_ERROR(log, "sendLogs failed: {}", error_msg);
     }
 }
 

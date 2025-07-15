@@ -255,6 +255,30 @@ message ProcessorProfileResponse {
     string message = 2;
 }
 
+
+// Log related messages
+message LogEntry {
+    uint64 event_time = 1;
+    uint32 event_time_microseconds = 2;
+    string host_name = 3;
+    string query_id = 4;
+    uint64 thread_id = 5;
+    int32 priority = 6;
+    string source = 7;
+    string text = 8;
+}
+
+message SendLogsRequest {
+    string query_id = 1;
+    repeated LogEntry logs = 2;
+    string worker_address = 3;
+}
+
+message SendLogsResponse {
+    int32 status_code = 1;
+    string message = 2;
+}
+
 /*
 * The RPC service for query plan segment and process execution
 */
@@ -267,4 +291,5 @@ service PlanSegmentService {
     rpc reportProcessorProfile(ProcessorProfileRequest) returns (ProcessorProfileResponse);
     rpc reportProcessorsProfile(ProcessorsProfileRequest) returns (ProcessorProfileResponse);
     rpc cancelQuery(CancelQueryRequest) returns (CancelQueryResponse);
+    rpc sendLogs(SendLogsRequest) returns (SendLogsResponse);
 };

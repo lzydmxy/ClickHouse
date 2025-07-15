@@ -52,6 +52,9 @@ using RPlanSegmentStatusResponse = Protos::PlanSegmentStatusResponse;
 using RPlanSegmentProfileRequest = Protos::PlanSegmentProfileRequest;
 using RPlanSegmentProfileResponse = Protos::PlanSegmentProfileResponse;
 
+using RSendLogsRequest = Protos::SendLogsRequest;
+using RSendLogsResponse = Protos::SendLogsResponse;
+
 using RAST = Protos::AST;
 using RDataType = Protos::DataType;
 using RNameAndTypePair = Protos::NameAndTypePair;

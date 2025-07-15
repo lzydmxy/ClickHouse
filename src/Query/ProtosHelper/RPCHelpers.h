@@ -65,7 +65,21 @@ namespace RPCHelpers
 
     template <typename Req, typename Resp>
     void onAsyncCallDoneAssertController(Req * request, Resp * response, brpc::Controller * cntl, LoggerPtr logger,
-        std::function<String()> construct_err_msg);
+        std::function<String()> construct_err_msg)
+    {
+        // request will be use in construct_err_msg
+        std::unique_ptr<Req> request_guard(request);
+        try
+        {
+            std::unique_ptr<Resp> response_guard(response);
+            std::unique_ptr<brpc::Controller> cntl_guard(cntl);
+            RPCHelpers::assertController(*cntl);
+        }
+        catch (...)
+        {
+            tryLogCurrentException(logger, construct_err_msg());
+        }
+    }
 
     void onAsyncCallDoneAssertControllerProgress(RProgressRequest * request, RProgressResponse * response,
             brpc::Controller * cntl, LoggerPtr logger, std::function<String()> construct_err_msg);
