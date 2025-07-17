@@ -6,9 +6,9 @@ using namespace Tools;
 int main(int argc, char ** argv)
 {
     std::cout << "Begin run exchange test" << std::endl;
-    if (argc < 8)
+    if (argc < 9)
     {
-        std::cout << "Parameters : mode[all/client/server] log_level[trace|debug|information] ip port query_num thread_num chunk_num" << std::endl;
+        std::cout << "Parameters : mode[all/client/server] log_level[trace|debug|information] ip port query_num thread_num exchange_bytes(KB) chunk_bytes(KB)" << std::endl;
         return 0;
     }
     ClientParam param;
@@ -18,7 +18,9 @@ int main(int argc, char ** argv)
     param.port = argv[4];
     param.query_num = atoi(argv[5]);
     param.thread_num = atoi(argv[6]);
-    param.chunk_num = atoi(argv[7]);
+    param.exchange_bytes = atoi(argv[7]);
+    param.chunk_bytes = atoi(argv[8]);
+    param.compute();
     ExchangeRemoteClient client{param, log_level};
     RunMode mode{RunMode::ALL};
     if (strcmp(md, "all") == 0)

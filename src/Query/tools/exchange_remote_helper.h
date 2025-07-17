@@ -11,9 +11,6 @@ namespace Tools
 using namespace std;
 using namespace std::chrono;
 
-// static int SERVER_PORT = 9105;
-// static std::string SERVER_HOST = "0.0.0.0:9105";
-
 struct ContextHolder
 {
     DB::SharedContextHolder shared_context;
@@ -50,27 +47,51 @@ public:
     static void tearDown()
     {
         server->RunUntilAskedToQuit();
-        //server->Stop(1000);
     }
 };
 
-// QPS: send_count / (end_time - start_time)
-// Throughput: send_bytes / (end_time - start_time)
-// Latency: (send_time - start_time) / (send_count / thread_num)
+class Timer
+{
+public:
+    time_point<high_resolution_clock> start_time;
+    Timer()
+    {
+        start_time = std::chrono::high_resolution_clock::now();
+    }
+    uint64_t end()
+    {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start_time).count();
+    }
+    uint64_t endMicro()
+    {
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start_time).count();
+        start_time = std::chrono::high_resolution_clock::now();
+        return duration;
+    }
+};
+
 class PerformanceData
 {
 public:
     int thread_num;
-    std::atomic<uint64_t> query_count;
-    std::atomic<uint64_t> chunk_count;
-    std::atomic<uint64_t> chunk_bytes;
-    time_point<high_resolution_clock> start_time;
-    time_point<high_resolution_clock> end_time;
-    void start();
-    void end();
-    void addQueryCount();
-    void addChunkCount(int & one_chunk_bytes);
-    uint32_t duration_ms();
+    int one_query_bytes;
+    std::atomic<uint64_t> query_count{0};
+    std::atomic<uint64_t> chunk_count{0};
+    std::atomic<uint64_t> total_bytes{0};
+    std::atomic<uint64_t> min_mic{3600000}; //Max 1 hour
+    std::atomic<uint64_t> max_mic{0};
+    std::atomic<uint64_t> total_init_mic{0};
+    std::atomic<uint64_t> total_register_mic{0};
+    std::atomic<uint64_t> total_executor_mic{0};
+    std::atomic<uint64_t> total_receive_mic{0};
+    std::atomic<uint64_t> total_query_mic{0};
+    std::atomic<uint64_t> total_ms{0};
+    std::mutex queue_mtx;
+    std::priority_queue<uint64_t> queue;
+    void setTotalDuration(uint64_t total_duration);
+    void addQueryDuration(uint64_t duration, uint64_t init_mic, uint64_t register_mic, uint64_t executor_mic, uint64_t receive_mic);
+    void addQueryStepDuration(std::vector<uint64_t> & duration_vec);
+    void addChunkCount(uint64_t one_chunk_bytes);
     void output();
 };
 
@@ -78,12 +99,14 @@ struct ClientParam
 {
     int thread_num;                             // Thread/Query number of client
     int query_num;                              // query number of one thread
+    int exchange_bytes;                         // Exchange data bytes of query
+    int chunk_bytes;                            // Send byte count of one chunk, default 64KB
     int chunk_num;                              // Chunk number of one thread
-    int chunk_bytes{DB::DEFAULT_BLOCK_SIZE};    // Send byte count of one chunk
-    int column_num{100};                        // Column number
+    int column_num{100};                        // Column number, 100 bytes at one row
     int row_num;                                // Row number of one chunk
     std::string server{"0.0.0.0"};              // Server host for brpc service
     std::string port{"9105"};                   // Server port for brpc service
+    void compute();
     void output();
 };
 
@@ -110,7 +133,6 @@ public:
     }
 private:
     ClientParam param;
-    //std::shared_ptr<DB::ExchangeDataKey> data_key;
     uint64_t send_query_id{0};
     uint64_t receive_query_id{0};
     void sender_thread(int trd_idx, uint64_t query_id);
