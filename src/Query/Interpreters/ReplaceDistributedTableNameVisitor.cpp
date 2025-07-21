@@ -165,29 +165,31 @@ ReplaceDistributedTableNameVisitor::enter(ASTFunction & table_function, ASTPtr &
 
 void ReplaceDistributedTableNameVisitor::enter(ASTTableIdentifier & table_ident, ScopePtr & scope)
 {
-    if (!table_ident.getDatabase())
-        table_ident.resetTable(context->getCurrentDatabase(), table_ident.shortName());
+    StorageID storage_id(context->resolveDatabase(table_ident.getDatabaseName()), table_ident.shortName());
+    auto table_id = context->resolveStorageID(storage_id);
+    auto table = DatabaseCatalog::instance().tryGetTable(table_id, context);
 
-    StoragePtr table = DatabaseCatalog::instance().getTable(table_ident.getTableId(), context);
+    if (!table)
+        // temporary table for cte and so on
+        return;
 
     if (auto * distributed_table = dynamic_cast<StorageDistributed *>(table.get()))
     {
         /// 1. Initialize scope
-
         /// For example self join
-        auto found = scope->tables_map.find(table_ident.getTableId());
+        auto found = scope->tables_map.find(table_id);
         if (found != scope->tables_map.end())
         {
             table_ident.resetTable(found->second.getDatabaseName(), found->second.getTableName());
             return;
         }
 
-        scope->tables.push_back(table_ident.getTableId());
+        scope->tables.push_back(table_id);
         auto database_name = distributed_table->getRemoteDatabaseName();
         auto table_name = distributed_table->getRemoteTableName();
 
         auto local_table_ident = std::make_shared<ASTTableIdentifier>(database_name, table_name);
-        scope->tables_map.emplace(table_ident.getTableId(), local_table_ident->getTableId());
+        scope->tables_map.emplace(table_id, local_table_ident->getTableId());
 
         /// 2. Replace distributed table to local table.
         auto local_table = local_table_ident->getTableId();
