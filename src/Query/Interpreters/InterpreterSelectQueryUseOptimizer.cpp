@@ -111,10 +111,12 @@ QueryPlanExtPtr InterpreterSelectQueryUseOptimizer::getQueryPlan(bool skip_optim
     visitor.visit(query_ptr);
 
     /// set cluser
-    chassert(visitor.clusters.size() < 2);
+    if (visitor.clusters.size() > 1)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "More than one cluster found, only support tables in the same cluster");
+
     if (!visitor.clusters.empty())
     {
-        context->getOptimizerContext()->setCluster(visitor.clusters.back());
+        context->getOptimizerContext()->setCluster(*visitor.clusters.begin());
         LOG_INFO(log, "Set cluster {}", context->getOptimizerContext()->getCluster()->getName());
     }
 

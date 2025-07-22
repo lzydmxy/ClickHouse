@@ -142,7 +142,7 @@ ReplaceDistributedTableNameVisitor::enter(ASTFunction & table_function, ASTPtr &
     auto local_table = local_table_ident->getTableId();
 
     storages.emplace_back(local_table);
-    clusters.emplace_back(storage_distributed->getCluster());
+    clusters.insert(storage_distributed->getCluster());
 
     // TODO wujianchao support sharding key
     // if (auto sharding_key = storage_distributed->getShardingKey())
@@ -204,7 +204,7 @@ void ReplaceDistributedTableNameVisitor::enter(ASTTableIdentifier & table_ident,
         if (std::find(storages.begin(), storages.end(), local_table) == storages.end())
         {
             storages.emplace_back(local_table);
-            clusters.emplace_back(distributed_table->getCluster());
+            clusters.insert(distributed_table->getCluster());
 
             // TODO wujianchao support sharding key
             // if (auto sharding_key = distributed_table->getShardingKey())
