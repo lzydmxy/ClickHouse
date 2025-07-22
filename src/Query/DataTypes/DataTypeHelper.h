@@ -161,8 +161,8 @@ inline bool isCompilableType(const DataTypePtr & data_type)
 
 struct DataTypeRange
 {
-    double min;
-    double max;
+    Field min;
+    Field max;
 };
 
 template <typename T>
