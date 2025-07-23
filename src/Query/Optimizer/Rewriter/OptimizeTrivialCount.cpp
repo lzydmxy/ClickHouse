@@ -132,7 +132,6 @@ PlanNodePtr TrivialCountVisitor::visitAggregatingStepExtNode(AggregatingStepExtN
 
     QueryPlanStepPtr new_agg = std::make_shared<MergingAggregatedStepExt>(
         new_child_node->getStep()->getOutputStream(),
-        agg_step.getKeys(),
         agg_step.getGroupingSetsParams(),
         agg_step.getGroupings(),
         agg_step.isFinal(),

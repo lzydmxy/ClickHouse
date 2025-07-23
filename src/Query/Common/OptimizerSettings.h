@@ -116,6 +116,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, max_active_prewhere_size, 3, "Max Size of to actively generated prewheres", 0) \
     M(Bool, log_normalized_query_plan_hash, 0, "Log json format query plan to the system query_log table.", 0) \
     M(Bool, log_query_exchange, false, "Log query exchange metric.", 0) \
+    M(Bool, log_plan_after_each_rewriter, false, "log query plan after each rewriter rewrite plan", 0) \
     /** Coordinator settings*/ \
     M(SchedulerMode, scheduler_mode, SchedulerMode::RANDOM, "scheduler shard mode: random/first_order/random_order/cpu_rank/memory_rank", 0) \
     M(UInt64, operator_profile_receive_timeout, 3000, "Max waiting time for operator profile in ms", 0) \

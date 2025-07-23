@@ -611,7 +611,6 @@ std::shared_ptr<MergingAggregatedStepExt> SymbolMapper::map(const MergingAggrega
 
     return std::make_shared<MergingAggregatedStepExt>(
         map(merging_agg.getInputStreams()[0]),
-        distinct(map(merging_agg.getKeys())),
         map(merging_agg.getGroupingSetsParamsList()),
         map(merging_agg.getGroupings()),
         merging_agg.isFinal(),

@@ -504,8 +504,8 @@ QueryPipeline PlanSegmentExecutor::buildPipeline(BroadcastSenderPtrs & senders)
             size_t partition_id = i;
             auto data_key = std::make_shared<ExchangeDataKey>(query_tx_id, exchange_id, partition_id);
 
-            LOG_TRACE(logger, "output index {}, query_tx_id {}, exchange id {}, partition_id {}",
-                output_index, query_tx_id, exchange_id, partition_id);
+            LOG_TRACE(logger, "output index {}, query_tx_id {}, exchange id {}, partition_id {}, output {}",
+                output_index, query_tx_id, exchange_id, partition_id, cur_plan_segment_output->toString());
 
             BroadcastSenderPtr sender;
             auto proxy = sender_registry.getOrCreate(data_key, sender_options);

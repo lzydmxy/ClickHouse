@@ -1003,6 +1003,27 @@ String PlanPrinter::TextPrinter::printSuffix(PlanNodeBase & plan)
             out << " <--"
                 << " segment[" << exchange_to_segment.at(plan.getId()) << "]";
     }
+
+    out << "InputStreams size " << plan.getStep()->getInputStreams().size() << ": [ ";
+    for (const auto & input_streams : plan.getStep()->getInputStreams())
+    {
+        out << "[";
+        for (const auto & name: input_streams.header.getNames())
+        {
+            out << name << ", ";
+        }
+        out << "], ";
+    }
+    out << "] ";
+
+    out << "OutputStream: [ ";
+
+    for (const auto & name: plan.getStep()->getOutputStream().header.getNames())
+    {
+        out << name << ", ";
+    }
+
+    out << "] ";
     return out.str();
 }
 

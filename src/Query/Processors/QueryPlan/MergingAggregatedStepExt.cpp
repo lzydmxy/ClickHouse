@@ -12,7 +12,6 @@ namespace DB
 
 MergingAggregatedStepExt::MergingAggregatedStepExt(
     const DataStream & input_stream_,
-    Names keys_,
     GroupingSetsParamsExtList grouping_sets_params_,
     GroupingDescriptions groupings_,
     bool final_,
@@ -27,12 +26,14 @@ MergingAggregatedStepExt::MergingAggregatedStepExt(
     : MergingAggregatedStep(input_stream_, params_, final_, memory_efficient_aggregation_, max_threads_
         , memory_efficient_merge_threads_, (!final_ && memory_efficient_aggregation_), max_block_size_,
         memory_bound_merging_max_block_bytes_, group_by_sort_description_, memory_bound_merging_of_aggregation_results_enabled_)
-    , keys(std::move(keys_))
     , grouping_sets_params(std::move(grouping_sets_params_))
     , groupings(std::move(groupings_))
 {
+    for (const auto & grouping: groupings)
+        output_stream->header.insert({std::make_shared<DataTypeUInt64>(), grouping.output_name});
+
     NameSet output_names;
-    for (const auto & key : keys)
+    for (const auto & key : params.keys)
         if (!output_names.emplace(key).second)
             throw Exception(ErrorCodes::LOGICAL_ERROR, "duplicate group by key: {}", key);
 
@@ -61,27 +62,9 @@ void MergingAggregatedStepExt::transformPipeline(QueryPipelineBuilder & pipeline
         pipeline.resize(1);
     }
 
-    const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(build_settings);
-    const auto & settings = settings_ext.context->getSettingsRef();
-
     std::shared_ptr<AggregatingTransformParams> transform_params = nullptr;
 
-    // optimizer use MergingAggregateStep in by-name style, regenerate aggregator params of by-position style
-    if (!keys.empty())
-    {
-        ColumnNumbers key_positions;
-        const auto & header = pipeline.getHeader();
-        for (const auto & key : keys)
-            key_positions.emplace_back(header.getPositionByName(key));
-
-        transform_params = std::make_shared<AggregatingTransformParams>(pipeline.getHeader(),
-            Aggregator::Params(keys, params.aggregates, params.overflow_row, settings.max_threads, settings.max_block_size, settings.min_hit_rate_to_use_consecutive_keys_optimization) , final);
-    }
-    else
-    {
-        transform_params = std::make_shared<AggregatingTransformParams>(pipeline.getHeader(), std::move(params), final);
-    }
-
+    transform_params = std::make_shared<AggregatingTransformParams>(pipeline.getHeader(), std::move(params), final);
 
     // @FIXME: grouping sets + two-level aggregation is incompatible with memory efficient merge
     // see also: https://meego.feishu.cn/clickhousech/story/detail/14744099
@@ -105,22 +88,20 @@ void MergingAggregatedStepExt::transformPipeline(QueryPipelineBuilder & pipeline
         pipeline.addMergingAggregatedMemoryEfficientTransform(transform_params, num_merge_threads);
     }
 
-    computeGroupingFunctions(pipeline, groupings, keys, grouping_sets_params, build_settings);
+    computeGroupingFunctions(pipeline, groupings, params.keys, grouping_sets_params, build_settings);
 
     pipeline.resize(should_produce_results_in_order_of_bucket_number ? 1 : max_threads);
 }
 
 std::shared_ptr<IQueryPlanStep> MergingAggregatedStepExt::copy(ContextPtr) const
 {
-    return std::make_shared<MergingAggregatedStepExt>(input_streams[0], keys, grouping_sets_params, groupings, final, params, memory_efficient_aggregation, max_threads,
+    return std::make_shared<MergingAggregatedStepExt>(input_streams[0], grouping_sets_params, groupings, final, params, memory_efficient_aggregation, max_threads,
         memory_efficient_merge_threads, max_block_size, memory_bound_merging_max_block_bytes, group_by_sort_description, memory_bound_merging_of_aggregation_results_enabled);
 }
 
 void MergingAggregatedStepExt::toProto(Protos::MergingAggregatedStepExt & proto, bool) const
 {
     ProtosSerDerHelper::serializeToProtoBase(*this, *proto.mutable_query_plan_base());
-    for (const auto & element : keys)
-        proto.add_keys(element);
     for (const auto & element : grouping_sets_params)
         element.toProto(*proto.add_grouping_sets_params());
     for (const auto & element : groupings)
@@ -146,9 +127,6 @@ std::shared_ptr<MergingAggregatedStepExt> MergingAggregatedStepExt::fromProto(co
 {
     auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto.query_plan_base());
 
-    Names keys;
-    for (const auto & element : proto.keys())
-        keys.emplace_back(element);
     GroupingSetsParamsExtList grouping_sets_params;
     for (const auto & proto_element : proto.grouping_sets_params())
     {
@@ -176,7 +154,7 @@ std::shared_ptr<MergingAggregatedStepExt> MergingAggregatedStepExt::fromProto(co
 
 
     auto step = std::make_shared<MergingAggregatedStepExt>(
-        base_input_stream, std::move(keys), std::move(grouping_sets_params), std::move(groupings), proto.final(),
+        base_input_stream, std::move(grouping_sets_params), std::move(groupings), proto.final(),
         std::move(params),proto.memory_efficient_aggregation(), proto.max_threads(),
         proto.memory_efficient_merge_threads(), proto.max_block_size(), proto.memory_bound_merging_max_block_bytes(),
         std::move(group_by_sort_description), proto.memory_bound_merging_of_aggregation_results_enabled());

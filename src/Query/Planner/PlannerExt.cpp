@@ -1316,7 +1316,6 @@ void QueryPlannerVisitor::planAggregate(PlanBuilder & builder, ASTSelectQuery & 
 
         QueryPlanStepPtr merge_agg = std::make_shared<MergingAggregatedStepExt>(
             builder.getCurrentDataStream(),
-            keys_for_all_group,
             select_query.group_by_with_grouping_sets || grouping_sets_params.size() > 1 ? grouping_sets_params : GroupingSetsParamsExtList{},
             grouping_operations_descs,
             false,

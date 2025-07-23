@@ -292,18 +292,12 @@ PlanNodePtr UnifyNullableVisitor::visitMergingAggregatedStepExtNodeImpl(MergingA
     }
 
     const auto & agg_params = step.getParams();
-    ColumnNumbers key_positions;
-    auto rewritten_header = child->getStep()->getOutputStream();
-    for (const auto & key : step.getKeys())
-        key_positions.emplace_back(rewritten_header.header.getPositionByName(key));
 
     Aggregator::Params new_agg_params{
-        step.getKeys(), agg_params.aggregates, agg_params.overflow_row, agg_params.max_threads, agg_params.max_block_size, agg_params.min_hit_rate_to_use_consecutive_keys_optimization};
-
+        step.getKeys(), descs_set_nullable, agg_params.overflow_row, agg_params.max_threads, agg_params.max_block_size, agg_params.min_hit_rate_to_use_consecutive_keys_optimization};
 
     auto merge_agg_step_set_null = std::make_shared<MergingAggregatedStepExt>(
-        rewritten_header,
-        step.getKeys(),
+        child->getStep()->getOutputStream(),
         step.getGroupingSetsParamsList(),
         step.getGroupings(),
         step.isFinal(),

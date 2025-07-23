@@ -781,7 +781,6 @@ TEST_F(ProtobufTest, MergingAggregatedStepExt)
         auto memory_efficient_merge_threads = eng() % 1000;
         auto s = std::make_shared<MergingAggregatedStepExt>(
             base_input_stream,
-            keys,
             grouping_sets_params,
             groupings,
             final,

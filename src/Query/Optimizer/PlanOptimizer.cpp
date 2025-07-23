@@ -561,7 +561,8 @@ void PlanOptimizer::optimize(QueryPlanExt & plan, ContextMutablePtr context, con
     {
         context->getOptimizerContext()->incRuleId();
         rewriter->rewritePlan(plan, context);
-        // LOG_DEBUG(getLogger("PlanOptimizer"), "Logical plan after {} optimize: \n{}", rewriter->name(), PlanPrinter::textLogicalPlan(plan, context));
+        if (context->getOptimizerContext()->getSettingsRef().log_plan_after_each_rewriter)
+            LOG_DEBUG(getLogger("PlanOptimizer"), "Logical plan after {} optimize: \n{}", rewriter->name(), PlanPrinter::textLogicalPlan(plan, context));
 
         UInt64 elapsed = total_watch.elapsedMilliseconds();
 

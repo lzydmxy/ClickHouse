@@ -1180,15 +1180,10 @@ PlanNodePtr ColumnPruningVisitor::visitMergingAggregatedStepExtNode(MergingAggre
 
     ColumnPruningContext child_column_pruning_context{.name_set = child_require};
     auto rewritten_child = VisitorUtil::accept(node.getChildren()[0], *this, child_column_pruning_context);
-    const auto & rewritten_child_header = rewritten_child->getCurrentDataStream().header;
-    ColumnNumbers key_positions;
-    for (const auto & key : step->getKeys())
-        key_positions.emplace_back(rewritten_child_header.getPositionByName(key));
     const auto & aggregator_params = step->getParams();
 
     auto rewritten_merge_step = std::make_shared<MergingAggregatedStepExt>(
         rewritten_child->getCurrentDataStream(),
-        step->getKeys(),
         step->getGroupingSetsParamsList(),
         step->getGroupings(),
         step->isFinal(),

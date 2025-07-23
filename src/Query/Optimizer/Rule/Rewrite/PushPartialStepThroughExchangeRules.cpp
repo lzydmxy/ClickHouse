@@ -241,7 +241,7 @@ TransformResult split(const PlanNodePtr & node, RuleContext & context)
 
     const auto & agg_params = step->getParams();
     Aggregator::Params new_params(
-        step->getKeys(),
+        std::move(keys),
         agg_params.aggregates,
         agg_params.overflow_row,
         agg_params.max_threads,
@@ -250,7 +250,6 @@ TransformResult split(const PlanNodePtr & node, RuleContext & context)
 
     QueryPlanStepPtr final_agg = std::make_shared<MergingAggregatedStepExt>(
         partial_agg_node->getStep()->getOutputStream(),
-        std::move(keys),
         step->getGroupingSetsParams(),
         step->getGroupings(),
         step->isFinal(),

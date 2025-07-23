@@ -10,12 +10,15 @@
 
 namespace DB
 {
-class  MergingAggregatedStepExt : public MergingAggregatedStep
+
+// FIXME: MergingAggregatedStepExt might be better off inheriting directly from ITransformingStep instead of MergingAggregatedStep.
+// Inheriting from MergingAggregatedStep could lead to some errors, because some functionalities of the community versions of
+// MergingAggregatedStep and MergingAggregatedStepExt overlap and conflict with each other.
+class MergingAggregatedStepExt : public MergingAggregatedStep
 {
 public:
     MergingAggregatedStepExt(
         const DataStream & input_stream_,
-        Names keys_,
         GroupingSetsParamsExtList grouping_sets_params_,
         GroupingDescriptions groupings_,
         bool final_,
@@ -33,7 +36,7 @@ public:
 
     void transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &) override;
 
-    const Names & getKeys() const { return keys; }
+    const Names & getKeys() const { return params.keys; }
     const AggregateDescriptions & getAggregates() const { return params.aggregates; }
     const GroupingDescriptions & getGroupings() const { return groupings; }
     const GroupingSetsParamsExtList & getGroupingSetsParamsList() const { return grouping_sets_params; }
@@ -58,7 +61,6 @@ public:
     void toProto(Protos::MergingAggregatedStepExt & proto, bool for_hash_equals = false) const;
     static std::shared_ptr<MergingAggregatedStepExt> fromProto(const Protos::MergingAggregatedStepExt & proto, ContextPtr context);
 private:
-    Names keys;
     GroupingSetsParamsExtList grouping_sets_params;
     GroupingDescriptions groupings;
 };
