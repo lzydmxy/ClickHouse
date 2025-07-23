@@ -12,13 +12,6 @@ namespace ErrorCodes
 extern const int LOGICAL_ERROR;
 }
 
-struct ChunksToMerge : public ChunkInfo
-{
-    std::unique_ptr<Chunks> chunks;
-    Int32 bucket_num = -1;
-    bool is_overflows = false;
-};
-
 GroupingAggregatedTransformExt::GroupingAggregatedTransformExt(
     const Block & header_, size_t num_inputs_, AggregatingTransformParamsExtPtr params_)
     : IProcessor(InputPorts(num_inputs_, header_), {Block()})
@@ -60,7 +53,7 @@ void GroupingAggregatedTransformExt::pushData(Chunks chunks, Int32 bucket, bool 
 {
     auto & output = outputs.front();
 
-    auto info = std::make_shared<ChunksToMerge>();
+    auto info = std::make_shared<ChunksToMergeExt>();
     info->bucket_num = bucket;
     info->is_overflows = is_overflows;
     info->chunks = std::make_unique<Chunks>(std::move(chunks));
@@ -310,7 +303,7 @@ MergingAggregatedBucketTransformExt::MergingAggregatedBucketTransformExt(Aggrega
 void MergingAggregatedBucketTransformExt::transform(Chunk & chunk)
 {
     const auto & info = chunk.getChunkInfo();
-    const auto * chunks_to_merge = typeid_cast<const ChunksToMerge *>(info.get());
+    const auto * chunks_to_merge = typeid_cast<const ChunksToMergeExt *>(info.get());
 
     if (!chunks_to_merge)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "MergingAggregatedSimpleTransform chunk must have ChunkInfo with type ChunksToMerge.");

@@ -37,12 +37,12 @@ const AggregatedChunkInfo * getInfoFromChunk(const Chunk & chunk)
 }
 
 /// Reads chunks from file in native format. Provide chunks with aggregation info.
-class SourceFromNativeStream : public ISource
+class SourceFromNativeStreamExt : public ISource
 {
 public:
-    explicit SourceFromNativeStream(TemporaryFileStream * tmp_stream_) : ISource(tmp_stream_->getHeader()), tmp_stream(tmp_stream_) { }
+    explicit SourceFromNativeStreamExt(TemporaryFileStream * tmp_stream_) : ISource(tmp_stream_->getHeader()), tmp_stream(tmp_stream_) { }
 
-    String getName() const override { return "SourceFromNativeStream"; }
+    String getName() const override { return "SourceFromNativeStreamExt"; }
 
     Chunk generate() override
     {
@@ -625,7 +625,7 @@ void AggregatingTransformExt::initGenerate()
         {
             const auto & tmp_data = aggregator.getTemporaryData();
             for (auto * tmp_stream : tmp_data.getStreams())
-                pipes.emplace_back(Pipe(std::make_unique<SourceFromNativeStream>(tmp_stream)));
+                pipes.emplace_back(Pipe(std::make_unique<SourceFromNativeStreamExt>(tmp_stream)));
 
             num_streams += tmp_data.getStreams().size();
             compressed_size += tmp_data.getStat().compressed_size;
