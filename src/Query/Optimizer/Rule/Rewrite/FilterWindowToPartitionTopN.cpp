@@ -78,9 +78,7 @@ TransformResult FilterWindowToPartitionTopN::transformImpl(PlanNodePtr node, con
                             auto new_exchange_node = PlanNodeBase::createPlanNode(
                                 context.context->getOptimizerContext()->nextNodeId(), std::move(new_exchange_step), {before_exchange_sort_node});
 
-                            //todo: liyang453, other feat: need copy in window_step
-                            //QueryPlanStepPtr new_window = window_step.copy(context.context);
-                            QueryPlanStepPtr new_window;
+                            QueryPlanStepPtr new_window = QueryPlanStepHelper::copyQueryPlanStep(window_node->getStep(), context.context);
                             auto new_window_node
                                 = PlanNodeBase::createPlanNode(context.context->getOptimizerContext()->nextNodeId(), std::move(new_window), {new_exchange_node});
 
