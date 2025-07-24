@@ -613,7 +613,8 @@ std::vector<size_t> ParallelSizeChecker::visitReadNothingStepNode(QueryPlanExt::
 std::vector<size_t> ParallelSizeChecker::visitTableScanStepExtNode(QueryPlanExt::Node * node, const Context & context)
 {
     auto * source_step = dynamic_cast<TableScanStepExt *>(node->step.get());
-    // hack for unittest
+    if (source_step->getStorage()->isMergeTree())
+        return {shard_number};
     if (context.getOptimizerContext()->getSettingsRef().enable_memory_catalog)
         if (auto memory_tree = dynamic_pointer_cast<StorageMemory>(source_step->getStorage()))
             return {shard_number};
@@ -623,7 +624,7 @@ std::vector<size_t> ParallelSizeChecker::visitTableScanStepExtNode(QueryPlanExt:
 
 std::vector<size_t> ParallelSizeChecker::visitReadStorageRowCountStepExtNode(QueryPlanExt::Node *, const Context &)
 {
-    return {1};
+    return {shard_number};
 }
 
 std::vector<size_t> ParallelSizeChecker::visitRemoteExchangeSourceStepExtNode(QueryPlanExt::Node * node, const Context &)
