@@ -252,10 +252,13 @@ void ReplaceDistributedTableNameVisitor::enter(ASTIdentifier & ident, ScopePtr &
         {
             if (auto local_table = scope->getLocalTable({*distributed_db_name, distributed_table_name}))
             {
+                auto alias = ident.tryGetAlias();
                 if (local_table->database_name == distributed_db_name && part_num == 2)
                     ident = ASTIdentifier({local_table->table_name, ident.shortName()});
                 else
                     ident = ASTIdentifier({local_table->database_name, local_table->table_name, ident.shortName()});
+                if (!alias.empty())
+                    ident.setAlias(alias);
             }
         }
     }
