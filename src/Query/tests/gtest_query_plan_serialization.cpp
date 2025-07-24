@@ -263,7 +263,7 @@ QueryPlanStepPtr createMergingAggregatedStepExt()
     Aggregator::Params params = createAggregatorParams();
     SortDescription desc = createSortDescription();
     return std::make_unique<MergingAggregatedStepExt>(
-        stream, keys, grouping_sets_params, groupings, false, params, false, 0, 0, 0, 0, desc, false);
+        stream, grouping_sets_params, groupings, false, params, false, 0, 0, 0, 0, desc, false);
 }
 
 // todo: hongzhigao1, other feat: if migrate CubeStep or not

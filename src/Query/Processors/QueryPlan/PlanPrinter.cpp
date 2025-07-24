@@ -1004,7 +1004,7 @@ String PlanPrinter::TextPrinter::printSuffix(PlanNodeBase & plan)
                 << " segment[" << exchange_to_segment.at(plan.getId()) << "]";
     }
 
-    out << "InputStreams size " << plan.getStep()->getInputStreams().size() << ": [ ";
+    out << " InputStreams size " << plan.getStep()->getInputStreams().size() << ": [ ";
     for (const auto & input_streams : plan.getStep()->getInputStreams())
     {
         out << "[";
