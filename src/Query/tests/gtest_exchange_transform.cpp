@@ -103,8 +103,8 @@ TEST(RepartitionTransformTest, doRepartitionOnlyNullTest)
     arguments.push_back(header.getByPosition(1));
     arguments.push_back(header.getByPosition(2));
     auto func = createRepartitionFunction(getContext().context, arguments);
-    EXPECT_NO_THROW(RepartitionTransform::doRepartition(
-        partition_num, chunk, header, ColumnNumbers{1, 2}, func, RepartitionTransform::REPARTITION_FUNC_RESULT_TYPE));
+    EXPECT_THROW(RepartitionTransform::doRepartition(
+        partition_num, chunk, header, ColumnNumbers{1, 2}, func, RepartitionTransform::REPARTITION_FUNC_RESULT_TYPE), DB::Exception);
     EXPECT_NO_THROW(RepartitionTransform::doRepartition(
         partition_num, chunk, header, ColumnNumbers{1, 2}, func, RepartitionTransform::REPARTITION_FUNC_NULLABLE_RESULT_TYPE));
 }
