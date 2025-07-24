@@ -9,24 +9,21 @@
 
 namespace DB::ErrorCodes
 {
-extern const int LOGIGAL_ERROR;
+extern const int LOGICAL_ERROR;
 }
 
 namespace DB::QueryStatistics
 {
 CatalogAdaptorPtr createCatalogAdaptorMemory(ContextPtr context);
-CatalogAdaptorPtr createCatalogAdaptorCnch(ContextPtr)
-{
-    // todo lizhuoyu, maybe we should remove it
-    return nullptr;
-};
 CatalogAdaptorPtr createCatalogAdaptor(ContextPtr context)
 {
     if (context->getOptimizerContext()->getSettingsRef().enable_memory_catalog)
     {
         return createCatalogAdaptorMemory(context);
     }
-    return createCatalogAdaptorCnch(context);
+    throw Exception(
+        ErrorCodes::LOGICAL_ERROR,
+        "CatalogAdaptor is not supported right now, please refer to configuration 'enable_memory_catalog'");
 }
 
 

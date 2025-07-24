@@ -7,7 +7,6 @@
 #include <Parsers/ExpressionListParsers.h>
 #include <Parsers/IParserBase.h>
 #include <Parsers/parseDatabaseAndTableName.h>
-#include "parseDatabaseAndTableName.h"
 
 namespace DB
 {
@@ -62,10 +61,10 @@ protected:
             query->any_database = false;
             query->any_table = true;
         }
-        //else if (!parseDatabaseAndTableNameOrAsterisks(pos, expected, query->database, query->any_database, query->table, query->any_table))
-        //{
-        //    return false;
-        //}
+        else if (!parseDatabaseAndTableNameOrAsterisks(pos, expected, query->database, query->any_database, query->table, query->any_table))
+        {
+            return false;
+        }
 
         if (!query->any_table)
         {

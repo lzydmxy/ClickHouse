@@ -28,6 +28,8 @@
 #include <Parsers/Access/ParserGrantQuery.h>
 #include <Parsers/Access/ParserMoveAccessEntityQuery.h>
 #include <Parsers/Access/ParserSetRoleQuery.h>
+#include <Query/Parsers/ParserAutoStatsQueryExt.h>
+#include <Query/Parsers/ParserStatsQueryExt.h>
 
 
 namespace DB
@@ -60,6 +62,10 @@ bool ParserQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
     ParserExternalDDLQuery external_ddl_p;
     ParserTransactionControl transaction_control_p;
     ParserDeleteQuery delete_p;
+    ParserCreateStatsQueryExt create_stats_p;
+    ParserDropStatsQueryExt drop_stats_p;
+    ParserShowStatsQueryExt show_stats_p;
+    ParserAutoStatsQueryExt auto_stats_p;
 
     bool res = query_with_output_p.parse(pos, node, expected)
         || insert_p.parse(pos, node, expected)
@@ -84,7 +90,11 @@ bool ParserQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
         || grant_p.parse(pos, node, expected)
         || external_ddl_p.parse(pos, node, expected)
         || transaction_control_p.parse(pos, node, expected)
-        || delete_p.parse(pos, node, expected);
+        || delete_p.parse(pos, node, expected)
+        || create_stats_p.parse(pos, node, expected)
+        || drop_stats_p.parse(pos, node, expected)
+        || show_stats_p.parse(pos, node, expected)
+        || auto_stats_p.parse(pos, node, expected);
 
     return res;
 }

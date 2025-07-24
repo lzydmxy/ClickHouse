@@ -102,7 +102,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, adaptive_type_cast, true, "Performs type cast operations adaptively, according to the value", 0) \
     M(Bool, parse_literal_as_decimal, false, "Parse numeric literal as decimal instead of float", 0) \
     M(Int64, final_order_by_all_direction, 0, "Sorting the most 'end' result for select query, default 0 means no sorting, > 1 for ASC, < -1 for DESC", 0) \
-    M(Bool, enable_memory_catalog, false, "Enable memory catalog for unittest", 0) \
+    M(Bool, enable_memory_catalog, true, "Enable memory catalog for unittest", 0) \
     M(Bool, print_graphviz, false, "Whether print graphviz", 0) \
     M(String, graphviz_path, "/tmp/plan/", "The path of graphviz plan", 0) \
     M(Bool, print_graphviz_ast, false, "Whether print graphviz", 0) \

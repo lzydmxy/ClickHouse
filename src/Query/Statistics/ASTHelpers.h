@@ -5,6 +5,7 @@
 #include <Query/Statistics/StatsTableIdentifier.h>
 
 #include <optional>
+#include <Parsers/ASTQueryWithTableAndOutput.h>
 
 namespace DB::QueryStatistics
 {
@@ -23,13 +24,15 @@ namespace DB::QueryStatistics
     template <typename QueryType>
     StatisticsScope scopeFromAST(ContextPtr context, const QueryType * query)
     {
+        auto * query_with_table = dynamic_cast<const ASTQueryWithTableAndOutput*>(query);
+        chassert(query_with_table != nullptr);
         if (query->any_database)
             return StatisticsScope{};
-        auto database = context->resolveDatabase(query->database);
+        auto database = context->resolveDatabase(query_with_table->getDatabase());
         if (query->any_table)
             return StatisticsScope{database, std::nullopt};
         auto table = query->table;
-        return StatisticsScope{database, table};
+        return StatisticsScope{database, query_with_table->getTable()};
     }
 
     template <typename QueryType>

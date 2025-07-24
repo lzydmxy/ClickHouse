@@ -54,6 +54,8 @@
 #include <Interpreters/InterpreterSelectQueryAnalyzer.h>
 #include <Interpreters/InterpreterSelectWithUnionQuery.h>
 #include <Query/Interpreters/InterpreterSelectQueryUseOptimizer.h>
+#include <Query/Interpreters/InterpreterCreateStatsQuery.h>
+#include <Query/Parsers/ASTStatsQueryExt.h>
 #include <Interpreters/InterpreterWatchQuery.h>
 #include <Interpreters/OpenTelemetrySpanLog.h>
 
@@ -226,6 +228,10 @@ InterpreterFactory::InterpreterPtr InterpreterFactory::get(ASTPtr & query, Conte
     else if (query->as<ASTExplainQueryExt>())
     {
         interpreter_name = "InterpreterExplainQueryUseOptimizer";
+    }
+    else if (query->as<ASTCreateStatsQueryExt>())
+    {
+        interpreter_name = "InterpreterCreateStatsQuery";
     }
     else if (query->as<ASTExplainQuery>())
     {

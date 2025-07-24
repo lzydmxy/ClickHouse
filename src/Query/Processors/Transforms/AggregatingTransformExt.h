@@ -11,8 +11,6 @@ namespace Protos
 class AggregatingTransformParamsExt;
 }
 
-class IBlockInputStream;
-using BlockInputStreamPtr = std::shared_ptr<IBlockInputStream>;
 using AggregatorExtList = std::list<AggregatorExt>;
 using AggregatorExtListPtr = std::shared_ptr<AggregatorExtList>;
 
