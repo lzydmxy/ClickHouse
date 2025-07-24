@@ -8,7 +8,7 @@
 #include <Parsers/ExpressionListParsers.h>
 #include <Parsers/IParserBase.h>
 #include <Parsers/ParserSetQuery.h>
-#include <Query/Parsers/parseDatabaseAndTableName.h>
+#include <Query/Parsers/parseDatabaseAndTableNameExt.h>
 
 namespace DB
 {
@@ -67,10 +67,9 @@ private:
             bool all_db = s_all_databases.ignore(pos, expected);
             if (!all_db)
             {
-                //todo: zhangdongdong92, other feat: fix parseDatabaseAndTableNameOrAsterisks params database type
-                // if (!parseDatabaseAndTableNameOrAsterisks(
-                //         pos, expected, query->database, query->any_database, query->table, query->any_table))
-                //     return false;
+                if (!parseDatabaseAndTableNameOrAsterisksExt(
+                        pos, expected, query->database, query->any_database, query->table, query->any_table))
+                    return false;
                 return true;
             }
             else

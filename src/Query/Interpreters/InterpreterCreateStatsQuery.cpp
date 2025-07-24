@@ -268,10 +268,10 @@ BlockIO InterpreterCreateStatsQuery::execute()
     }
 
     using SyncMode = ASTCreateStatsQueryExt::SyncMode;
-    auto use_sync_mode
+    auto use_async_mode
         = query->sync_mode == SyncMode::Default ? context->getOptimizerContext()->getSettingsRef().statistics_enable_async : query->sync_mode == SyncMode::Async;
 
-    if (use_sync_mode)
+    if (use_async_mode)
     {
         // TODO wujianchao implement create stats async
         // submitAsyncTasks(context, std::move(valid_targets));

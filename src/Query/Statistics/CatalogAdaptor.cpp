@@ -1,6 +1,7 @@
 #include <Query/Statistics/CatalogAdaptor.h>
 
 #include <DataTypes/DataTypeMap.h>
+#include <Storages/StorageDistributed.h>
 #include <Query/Common/MapHelpers.h>
 #include <Query/Common/OptimizerContext.h>
 #include <Query/Storages/StorageHelper.h>
@@ -31,15 +32,15 @@ using TableOptions = CatalogAdaptor::TableOptions;
 
 namespace
 {
-    const auto unsupported = TableOptions{false, false};
-    // const auto full_supported = TableOptions{true, true};
-    const auto only_manual = TableOptions{true, false};
+    constexpr auto unsupported = TableOptions{false, false};
+    constexpr auto full_supported = TableOptions{true, true};
+    constexpr auto only_manual = TableOptions{true, false};
 }
 
 bool CatalogAdaptor::isDatabaseCollectable(const String & database_name)
 {
-    static const std::set<String> reject_dbs = {"system", "cnch_system", "admin"};
-    return !reject_dbs.count(database_name);
+    static const std::set<String> reject_dbs = {"system"};
+    return !reject_dbs.contains(database_name);
 }
 
 TableOptions CatalogAdaptor::getTableOptionsForStorage(IStorage & storage)
@@ -47,6 +48,12 @@ TableOptions CatalogAdaptor::getTableOptionsForStorage(IStorage & storage)
     if (!isDatabaseCollectable(storage.getStorageID().getDatabaseName()))
     {
         return unsupported;
+    }
+
+    if (typeid_cast<StorageDistributed *>(&storage))
+    {
+        // TODO wujianchao the local table should be limited to MergeTree
+        return full_supported;
     }
 
     auto engine = storage.getName();
@@ -91,6 +98,7 @@ TableOptions CatalogAdaptor::getTableOptions(const StatsTableIdentifier & table)
 
 std::optional<UInt64> CatalogAdaptor::queryRowCount(const StatsTableIdentifier & table_id)
 {
+    // TODO wujianchao implement it
     return std::nullopt;
 }
 

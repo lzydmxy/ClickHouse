@@ -99,8 +99,17 @@ protected:
             assert(!any_database);
             assert(!any_table);
 
-            //s.ostr << (s.hilite ? hilite_identifier : "") << (database ? backQuoteIfNeed(database) + "." : "")
-            //       << backQuoteIfNeed(table) << (s.hilite ? hilite_none : "");
+            s.ostr << (s.hilite ? hilite_identifier : "");
+            if (database)
+            {
+                database->format(s);
+                s.ostr << ".";
+            }
+            if (table)
+            {
+                table->format(s);
+            }
+            s.ostr << (s.hilite ? hilite_none : "");
 
             if (!columns.empty())
             {
