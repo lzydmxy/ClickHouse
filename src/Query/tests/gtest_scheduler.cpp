@@ -1,5 +1,7 @@
 #include <chrono>
 #include <Core/Types.h>
+#include <DataTypes/DataTypeFactory.h>
+#include <Processors/QueryPlan/ReadNothingStep.h>
 #include <Query/ProtosHelper/HostWithPorts.h>
 #include <Query/ProtosHelper/AddressInfo.h>
 #include <Query/ProtosHelper/SourceTask.h>
@@ -15,10 +17,32 @@
 #include <gtest/gtest.h>
 #include <Common/tests/gtest_global_context.h>
 
+
 using namespace DB;
 
 namespace UnitTest
 {
+
+QueryPlanExt createEmptyPlan()
+{
+    ColumnWithTypeAndName column;
+    column.name = "RES";
+
+    DataTypePtr type = DataTypeFactory::instance().get("UInt8");
+    column.column = type->createColumnConst(1, Field(1));
+    column.type = type;
+
+    ColumnsWithTypeAndName columns;
+    columns.push_back(column);
+    Block block = Block(columns);
+
+    QueryPlanExt plan;
+
+    auto step = std::make_unique<ReadNothingStep>(block);
+    plan.addStep(std::move(step));
+
+    return plan;
+}
 
 struct SchedulerTestContext
 {
@@ -43,6 +67,8 @@ SchedulerTestContext createSchedulerTestContext(size_t parallel_size, const std:
 
     result.segments[0]->setParallelSize(parallel_size);
     result.segments[1]->setParallelSize(parallel_size);
+    result.segments[0]->setQueryPlan(createEmptyPlan());
+    result.segments[1]->setQueryPlan(createEmptyPlan());
     // result.segments[2]->setParallelSize(parallel_size);
     Block header;
     std::vector<PlanSegmentInputPtr> segment_inputs
@@ -83,7 +109,7 @@ SchedulerTestContext createSchedulerTestContext(size_t parallel_size, const std:
 
 TEST(SchedulerTest, MPPSchedule)
 {
-    size_t parallel_size = 4;
+    size_t parallel_size = 2;
     std::unordered_map<std::string, Field> settings{{"bsp_mode", 0}
         , {"distributed_max_parallel_size", parallel_size}};
 
