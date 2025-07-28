@@ -18,6 +18,7 @@
 #include <Query/Exchange/DataTrans/IBroadcastReceiver.h>
 #include <Query/Exchange/DataTrans/IBroadcastSender.h>
 #include <Query/Exchange/DataTrans/LocalBroadcastChannel.h>
+#include <Query/Exchange/bRPC/BrpcApplication.h>
 #include <Query/Exchange/ExchangeDataKey.h>
 #include <Query/Processors/IQueryPlanStepExt.h>
 #include <Query/Processors/QueryPlan/QueryPlanExt.h>
@@ -66,6 +67,33 @@ inline void setQueryDuration(DB::ContextMutablePtr context = nullptr)
 class PlanSegmentExecutorTest : public testing::Test
 {
 protected:
+    static brpc::Server server;
+    static BrpcExchangeReceiverRegistryService service_impl;
+    static void startBrpcServer()
+    {
+        if (server.AddService(&service_impl, brpc::SERVER_DOESNT_OWN_SERVICE) != 0)
+        {
+            LOG(ERROR) << "Fail to add service";
+            return;
+        }
+        LOG(INFO) << "Add service success";
+
+        // Start the server.
+        brpc::ServerOptions options;
+        options.idle_timeout_sec = -1;
+        if (server.Start(0, &options) != 0)
+        {
+            LOG(ERROR) << "Fail to start Server";
+            return;
+        }
+        LOG(INFO) << "Start Server";
+    }
+    static void SetUpTestCase()
+    {
+        Poco::AutoPtr<Poco::Util::MapConfiguration> map_config = new Poco::Util::MapConfiguration;
+        BrpcApplication::getInstance().initialize(*map_config);
+        startBrpcServer();
+    }
     virtual void SetUp()
     {
         //early initialization for concurrent
@@ -77,6 +105,9 @@ protected:
     {
     }
 };
+
+brpc::Server PlanSegmentExecutorTest::server;
+BrpcExchangeReceiverRegistryService PlanSegmentExecutorTest::service_impl(73400320);
 
 TEST_F(PlanSegmentExecutorTest, ExecuteTest)
 {
@@ -103,20 +134,22 @@ TEST_F(PlanSegmentExecutorTest, ExecuteTest)
 
     optimizer_context->setTransactionID(query_tx_id);
     optimizer_context->setPlanSegmentInstanceID({1,0});
-
-    auto coordinator_address = std::make_shared<AddressInfo>("localhost", 8888, "test", "123456");
-    auto local_address = std::make_shared<AddressInfo>("localhost", 0, "test", "123456");
+    auto rpc_port = server.listen_address().port;
+    optimizer_context->setRPCPort(rpc_port);
+    auto coordinator_address = std::make_shared<AddressInfo>("localhost", 8888, "test", "123456", optimizer_context->getRPCPort());
+    auto local_address = std::make_shared<AddressInfo>("localhost", 0, "test", "123456", optimizer_context->getRPCPort());
 
     auto coordinator_address_str = extractExchangeHostPort(*coordinator_address);
     LocalChannelOptions options{10, exchange_options.exchange_timeout_ts, false};
 
+    auto query_unique_id = optimizer_context->getTransactionID(query_id);
     LOG_TRACE(log, "Create source");
-    auto source_key = std::make_shared<ExchangeDataKey>(query_tx_id, 1, 0, 0);
+    auto source_key = std::make_shared<ExchangeDataKey>(query_unique_id, 1, 0);
     BroadcastSenderProxyPtr source_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(source_key);
     source_sender->accept(context, header);
 
     LOG_TRACE(log, "Create sink");
-    auto sink_key = std::make_shared<ExchangeDataKey>(query_tx_id, 2, 0, 0);
+    auto sink_key = std::make_shared<ExchangeDataKey>(query_unique_id, 2, 0);
     BroadcastSenderProxyPtr sink_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(sink_key);
     auto sink_channel = std::make_shared<LocalBroadcastChannel>(sink_key, options, LocalBroadcastChannel::generateNameForTest(100));
     sink_sender->becomeRealSender(sink_channel);
@@ -234,18 +267,19 @@ TEST_F(PlanSegmentExecutorTest, ExecuteAsyncTest)
 
     optimizer_context->setTransactionID(query_tx_id);
     optimizer_context->setPlanSegmentInstanceID({1, 0});
-
-    auto coordinator_address = std::make_shared<AddressInfo>("localhost", 8888, "test", "123456");
+    auto rpc_port = server.listen_address().port;
+    optimizer_context->setRPCPort(rpc_port);
+    auto coordinator_address = std::make_shared<AddressInfo>("localhost", 8888, "test", "123456", optimizer_context->getRPCPort());
     auto coordinator_address_str = extractExchangeHostPort(*coordinator_address);
-    auto local_address = std::make_shared<AddressInfo>("localhost", 0, "test", "123456");
+    auto local_address = std::make_shared<AddressInfo>("localhost", 0, "test", "123456", optimizer_context->getRPCPort());
 
     LocalChannelOptions options{10, exchange_options.exchange_timeout_ts, false};
-
-    auto source_key = std::make_shared<ExchangeDataKey>(query_tx_id, 1, 0);
+    auto query_unique_id = optimizer_context->getTransactionID(query_id);
+    auto source_key = std::make_shared<ExchangeDataKey>(query_unique_id, 1, 0);
     BroadcastSenderProxyPtr source_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(source_key);
     source_sender->accept(context, header);
 
-    auto sink_key = std::make_shared<ExchangeDataKey>(query_tx_id, 2, 0);
+    auto sink_key = std::make_shared<ExchangeDataKey>(query_unique_id, 2, 0);
     BroadcastSenderProxyPtr sink_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(sink_key);
     auto sink_channel = std::make_shared<LocalBroadcastChannel>(sink_key, options, LocalBroadcastChannel::generateNameForTest(1));
     sink_sender->becomeRealSender(sink_channel);
@@ -358,8 +392,8 @@ TEST_F(PlanSegmentExecutorTest, ExecuteAsyncTest)
 
 TEST_F(PlanSegmentExecutorTest, ExecuteCancelTest)
 {
-    const String query_id = "q123";
-    const UInt64 query_tx_id = 123;
+    const String query_id = "q1234";
+    const UInt64 query_tx_id = 1234;
     auto log = getLogger("PlanSegmentExecutorTest");
 
     std::unordered_map<std::string, Field> settings;
@@ -378,18 +412,20 @@ TEST_F(PlanSegmentExecutorTest, ExecuteCancelTest)
 
     optimizer_context->setTransactionID(query_tx_id);
     optimizer_context->setPlanSegmentInstanceID({1, 0});
-
-    auto coordinator_address = std::make_shared<AddressInfo>("localhost", 8888, "test", "123456");
-    auto local_address = std::make_shared<AddressInfo>("localhost", 0, "test", "123456");
+    auto rpc_port = server.listen_address().port;
+    optimizer_context->setRPCPort(rpc_port);
+    auto query_unique_id = optimizer_context->getTransactionID(query_id);
+    auto coordinator_address = std::make_shared<AddressInfo>("localhost", 8888, "test", "123456", optimizer_context->getRPCPort());
+    auto local_address = std::make_shared<AddressInfo>("localhost", 0, "test", "123456", optimizer_context->getRPCPort());
 
     auto coordinator_address_str = extractExchangeHostPort(*coordinator_address);
     LocalChannelOptions options{10, exchange_options.exchange_timeout_ts, false};
 
-    auto source_key = std::make_shared<ExchangeDataKey>(query_tx_id, 1, 0);
+    auto source_key = std::make_shared<ExchangeDataKey>(query_unique_id, 1, 0);
     BroadcastSenderProxyPtr source_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(source_key);
     source_sender->accept(context, header);
 
-    auto sink_key = std::make_shared<ExchangeDataKey>(query_tx_id, 2, 0);
+    auto sink_key = std::make_shared<ExchangeDataKey>(query_unique_id, 2, 0);
     BroadcastSenderProxyPtr sink_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(sink_key);
     auto sink_channel = std::make_shared<LocalBroadcastChannel>(sink_key, options, LocalBroadcastChannel::generateNameForTest(100));
     sink_sender->becomeRealSender(sink_channel);
@@ -504,7 +540,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteCancelTest)
     LOG_TRACE(log, "*****ExecuteCancelTest finish plansegment execute");
 }
 
-void planExecutor(String query_id, size_t query_tx_id, AddressInfoPtr coordinator_address, bool send_data)
+void planExecutor(String query_id, size_t query_tx_id, AddressInfoPtr coordinator_address, bool send_data, int rpc_port)
 {
     auto log = getLogger("PlanSegmentExecutorTest");
     // query_id = "q123";
@@ -512,12 +548,13 @@ void planExecutor(String query_id, size_t query_tx_id, AddressInfoPtr coordinato
     // coordinator_address = std::make_shared<AddressInfo>("localhost", 8888, "test", "123456");
     LOG_TRACE(log, "*****Plan executor query id {}, query tx id {}, send data {}, coordinator address {}",
         query_id, query_tx_id, send_data, coordinator_address->toShortString());
-    auto local_address = std::make_shared<AddressInfo>("localhost", 0, "test", "123456");
+    auto local_address = std::make_shared<AddressInfo>("localhost", 0, "test", "123456", rpc_port);
 
     std::unordered_map<std::string, Field> settings;
     auto context = createQueryContext(query_id, settings);
     auto optimizer_context = context->getOptimizerContext();
     optimizer_context->setProcessListEntry(nullptr);
+    optimizer_context->setRPCPort(rpc_port);
 
     const size_t rows = 10;
     Block block = createUInt64Block(rows, 3, 88);
@@ -538,11 +575,12 @@ void planExecutor(String query_id, size_t query_tx_id, AddressInfoPtr coordinato
     auto coordinator_address_str = extractExchangeHostPort(*coordinator_address);
     LocalChannelOptions options{10, exchange_options.exchange_timeout_ts, false};
 
-    auto source_key = std::make_shared<ExchangeDataKey>(query_tx_id, 1, 0, 0);
+    auto query_unique_id = optimizer_context->getTransactionID(query_id);
+    auto source_key = std::make_shared<ExchangeDataKey>(query_unique_id, 1, 0);
     BroadcastSenderProxyPtr source_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(source_key);
     source_sender->accept(context, header);
 
-    auto sink_key = std::make_shared<ExchangeDataKey>(query_tx_id, 2, 0, 0);
+    auto sink_key = std::make_shared<ExchangeDataKey>(query_unique_id, 2, 0);
     BroadcastSenderProxyPtr sink_sender = BroadcastSenderProxyRegistry::instance().getOrCreate(sink_key);
     auto sink_channel = std::make_shared<LocalBroadcastChannel>(sink_key, options, LocalBroadcastChannel::generateNameForTest(100));
     sink_sender->becomeRealSender(sink_channel);
@@ -725,14 +763,16 @@ TEST_F(PlanSegmentExecutorTest, ConcurrentWithDiffIdSameAddr)
     auto context = getInitContext();
     context->setSetting("max_concurrent_queries_for_user", Field(100));
     auto optimizer_context = context->getOptimizerContext();
+    auto rpc_port = server.listen_address().port;
+    optimizer_context->setRPCPort(rpc_port);
     std::vector<std::thread> thread_executors;
     for (int i = 0; i < THREAD_COUNT; i++)
     {
         String initial_query_id = "q" + std::to_string(i);
         UInt16 port = 6666;
-        auto coordinator_address = std::make_shared<AddressInfo>("localhost", port, "test", "123456");
+        auto coordinator_address = std::make_shared<AddressInfo>("localhost", port, "test", "123456", optimizer_context->getRPCPort());
         // planExecutor(initial_query_id, i, coordinator_address, true);
-        std::thread thread_executor(planExecutor, initial_query_id, i, coordinator_address, true);
+        std::thread thread_executor(planExecutor, initial_query_id, i, coordinator_address, true, rpc_port);
         thread_executors.push_back(std::move(thread_executor));
     }
     for (auto & th : thread_executors)
@@ -745,13 +785,15 @@ TEST_F(PlanSegmentExecutorTest, ConcurrentWithDiffIdDiffAddr)
     auto context = getInitContext();
     context->setSetting("max_concurrent_queries_for_user", Field(100));
     auto optimizer_context = context->getOptimizerContext();
+    auto rpc_port = server.listen_address().port;
+    optimizer_context->setRPCPort(rpc_port);
     std::vector<std::thread> thread_executors;
     for (int i = 0; i < THREAD_COUNT; i++)
     {
-        String initial_query_id = "q" + std::to_string(i);
+        String initial_query_id = "query" + std::to_string(i);
         UInt16 port = 6666 + i;
-        auto coordinator_address = std::make_shared<AddressInfo>("localhost", port, "test", "123456");
-        std::thread thread_executor(planExecutor, initial_query_id, i, coordinator_address, true);
+        auto coordinator_address = std::make_shared<AddressInfo>("localhost", port, "test", "123456", optimizer_context->getRPCPort());
+        std::thread thread_executor(planExecutor, initial_query_id, i, coordinator_address, true, rpc_port);
         thread_executors.push_back(std::move(thread_executor));
     }
     for (auto & th : thread_executors)
