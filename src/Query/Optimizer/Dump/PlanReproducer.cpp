@@ -27,7 +27,7 @@ namespace DB
 
 namespace ErrorCodes
 {
-    extern const int FILE_NOT_FOUND;
+    extern const int BAD_ARGUMENTS;
 }
 
 namespace

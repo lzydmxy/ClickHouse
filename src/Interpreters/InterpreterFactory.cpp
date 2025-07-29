@@ -233,6 +233,10 @@ InterpreterFactory::InterpreterPtr InterpreterFactory::get(ASTPtr & query, Conte
     {
         interpreter_name = "InterpreterCreateStatsQuery";
     }
+    else if (query->as<ASTShowStatsQueryExt>())
+    {
+        interpreter_name = "InterpreterShowStatsQuery";
+    }
     else if (query->as<ASTExplainQuery>())
     {
         const auto kind = query->as<ASTExplainQuery>()->getKind();

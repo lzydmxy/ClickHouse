@@ -28,6 +28,7 @@ void registerInterpreterDescribeQuery(InterpreterFactory & factory);
 void registerInterpreterDescribeCacheQuery(InterpreterFactory & factory);
 void registerInterpreterExplainQuery(InterpreterFactory & factory);
 void registerInterpreterShowProcesslistQuery(InterpreterFactory & factory);
+void registerInterpreterShowStatsQuery(InterpreterFactory & factory);
 void registerInterpreterAlterQuery(InterpreterFactory & factory);
 void registerInterpreterAlterNamedCollectionQuery(InterpreterFactory & factory);
 void registerInterpreterCheckQuery(InterpreterFactory & factory);
@@ -90,6 +91,7 @@ void registerInterpreters()
     registerInterpreterDescribeCacheQuery(factory);
     registerInterpreterExplainQuery(factory);
     registerInterpreterShowProcesslistQuery(factory);
+    registerInterpreterShowStatsQuery(factory);
     registerInterpreterAlterQuery(factory);
     registerInterpreterAlterNamedCollectionQuery(factory);
     registerInterpreterCheckQuery(factory);

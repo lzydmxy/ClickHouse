@@ -22,7 +22,7 @@
 
 namespace DB::ErrorCodes
 {
-extern const int FILE_NOT_FOUND;
+extern const int BAD_ARGUMENTS;
 extern const int LOGICAL_ERROR;
 }
 
@@ -108,7 +108,7 @@ std::string getFolder(const std::string & file_path)
     {
         std::filesystem::path zip_path = std::filesystem::path(file_path);
         if (!std::filesystem::exists(zip_path))
-            throw Exception(ErrorCodes::FILE_NOT_FOUND, "zip file not found: {}", file_path);
+            throw Exception(ErrorCodes::BAD_ARGUMENTS, "zip file not found: {}", file_path);
         ZipArchiveReader zip_reader(file_path);
         for (auto & file : zip_reader.getAllFiles())
         {
@@ -127,7 +127,7 @@ Poco::JSON::Object::Ptr readJsonFromAbsolutePath(const std::string & absolute_pa
 {
     std::filesystem::path file_path(absolute_path);
     if (!std::filesystem::exists(file_path))
-        throw Exception(ErrorCodes::FILE_NOT_FOUND, "file not found: {}", absolute_path);
+        throw Exception(ErrorCodes::BAD_ARGUMENTS, "file not found: {}", absolute_path);
     std::ifstream fin(file_path);
     std::stringstream buffer;
     buffer << fin.rdbuf();
