@@ -272,7 +272,8 @@ ENUM_TO_PROTO_CONVERTER(
     (Object, 29),
     (IPv4, 30),
     (IPv6, 31),
-    (CustomType, 32));
+    (CustomType, 32),
+    (SketchBinary, 100));
 
 class QueryPlanStepHelper
 {

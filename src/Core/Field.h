@@ -337,6 +337,7 @@ public:
             IPv4 = 30,
             IPv6 = 31,
             CustomType = 32,
+            SketchBinary = 100,
         };
     };
 
@@ -387,6 +388,19 @@ public:
     Field(const CharT * data, size_t size)
     {
         create(data, size);
+    }
+
+    Field(const char8_t * data, size_t size, bool is_sketch_binary)
+    {
+        if (is_sketch_binary)
+        {
+            new (&storage) String(reinterpret_cast<const char *>(data), size);
+            which = Types::SketchBinary;
+        }
+        else
+        {
+            create(data, size);
+        }
     }
 
     Field & operator= (const Field & rhs)
@@ -524,6 +538,7 @@ public:
             case Types::Decimal256: return get<DecimalField<Decimal256>>() < rhs.get<DecimalField<Decimal256>>();
             case Types::AggregateFunctionState:  return get<AggregateFunctionStateData>() < rhs.get<AggregateFunctionStateData>();
             case Types::CustomType:  return get<CustomType>() < rhs.get<CustomType>();
+            case Types::SketchBinary:  return get<String>()  < rhs.get<String>();
         }
 
         throw Exception(ErrorCodes::BAD_TYPE_OF_FIELD, "Bad type of Field");
@@ -573,6 +588,7 @@ public:
             case Types::Decimal256: return get<DecimalField<Decimal256>>() <= rhs.get<DecimalField<Decimal256>>();
             case Types::AggregateFunctionState:  return get<AggregateFunctionStateData>() <= rhs.get<AggregateFunctionStateData>();
             case Types::CustomType:  return get<CustomType>() <= rhs.get<CustomType>();
+            case Types::SketchBinary:  return get<String>()  <= rhs.get<String>();
         }
 
         throw Exception(ErrorCodes::BAD_TYPE_OF_FIELD, "Bad type of Field");
@@ -617,6 +633,7 @@ public:
             case Types::Decimal256: return get<DecimalField<Decimal256>>() == rhs.get<DecimalField<Decimal256>>();
             case Types::AggregateFunctionState:  return get<AggregateFunctionStateData>() == rhs.get<AggregateFunctionStateData>();
             case Types::CustomType:  return get<CustomType>() == rhs.get<CustomType>();
+            case Types::SketchBinary:  return get<String>()  == rhs.get<String>();
         }
 
         throw Exception(ErrorCodes::BAD_TYPE_OF_FIELD, "Bad type of Field");
@@ -661,6 +678,7 @@ public:
             case Types::Decimal256: return f(field.template get<DecimalField<Decimal256>>());
             case Types::AggregateFunctionState: return f(field.template get<AggregateFunctionStateData>());
             case Types::CustomType: return f(field.template get<CustomType>());
+            case Types::SketchBinary:  return f(field.template get<String>());
         }
 
         UNREACHABLE();

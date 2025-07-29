@@ -292,6 +292,8 @@ DataTypeFactory::DataTypeFactory()
     registerDataTypeMap(*this);
     registerDataTypeObject(*this);
     registerDataTypeVariant(*this);
+
+    registerDataTypeSketchBinary(*this);
 }
 
 DataTypeFactory & DataTypeFactory::instance()

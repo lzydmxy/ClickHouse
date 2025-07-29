@@ -80,6 +80,7 @@ bool ConstantNode::requiresCastCall() const
         case Field::Types::IPv4:
         case Field::Types::IPv6:
         case Field::Types::Null:
+        case Field::Types::SketchBinary:
         case Field::Types::CustomType:
         {
             need_to_add_cast_function = true;

@@ -57,6 +57,8 @@ Field dispatchField(F && f, Field::Types::Which type)
             return f.template operator()<Object>();
         case Field::Types::Bool:
             return f.template operator()<bool>();
+        case Field::Types::SketchBinary:
+            __builtin_unreachable();
     }
     __builtin_unreachable();
 }

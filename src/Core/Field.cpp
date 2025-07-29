@@ -139,6 +139,12 @@ inline Field getBinaryValue(UInt8 type, ReadBuffer & buf)
         case Field::Types::Decimal256:
         case Field::Types::CustomType:
             return Field();
+        case Field::Types::SketchBinary:
+        {
+            std::string value;
+            readStringBinary(value, buf);
+            return value;
+        }
     }
     UNREACHABLE();
 }
@@ -618,6 +624,7 @@ std::string_view fieldTypeToString(Field::Types::Which type)
         case Field::Types::Which::IPv4: return "IPv4"sv;
         case Field::Types::Which::IPv6: return "IPv6"sv;
         case Field::Types::Which::CustomType: return "CustomType"sv;
+        case Field::Types::Which::SketchBinary: return "SketchBinary"sv;
     }
 }
 

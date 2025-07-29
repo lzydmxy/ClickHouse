@@ -76,6 +76,11 @@ public:
             /// char8_t cannot be converted to string implicitly.
             return std::to_string(operator[](index));
         }
+        else if constexpr (std::is_same_v<T, Int8>) // refer to base/types.h
+        {
+            int8_t value = operator[](index); // copy it for lexical_cast does not support _BitInt
+            return boost::lexical_cast<String>(value);
+        }
         else
         {
             return boost::lexical_cast<String>(operator[](index));

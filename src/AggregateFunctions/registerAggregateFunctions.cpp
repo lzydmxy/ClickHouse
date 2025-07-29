@@ -89,6 +89,9 @@ void registerAggregateFunctionFlameGraph(AggregateFunctionFactory &);
 void registerAggregateFunctionKolmogorovSmirnovTest(AggregateFunctionFactory & factory);
 void registerAggregateFunctionLargestTriangleThreeBuckets(AggregateFunctionFactory & factory);
 
+void registerAggregateFunctionHllSketch(AggregateFunctionFactory & factory);
+void registerAggregateFunctionKllSketch(AggregateFunctionFactory & factory);
+
 class AggregateFunctionCombinatorFactory;
 void registerAggregateFunctionCombinatorIf(AggregateFunctionCombinatorFactory &);
 void registerAggregateFunctionCombinatorArray(AggregateFunctionCombinatorFactory &);
@@ -189,6 +192,9 @@ void registerAggregateFunctions()
         registerAggregateFunctionFlameGraph(factory);
         registerAggregateFunctionKolmogorovSmirnovTest(factory);
         registerAggregateFunctionLargestTriangleThreeBuckets(factory);
+
+        registerAggregateFunctionHllSketch(factory);
+        registerAggregateFunctionKllSketch(factory);
 
         registerWindowFunctions(factory);
     }

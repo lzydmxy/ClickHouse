@@ -23,20 +23,64 @@ public:
 
     double getEstimate() const { return getFullResult().get_estimate(); }
 
+    // In StatsHllSketch.h
     template <typename T>
-    void update(const T & value)
+    void update(const T& value)
     {
-        if constexpr (std::is_arithmetic_v<T> || std::is_same_v<T, String>)
+        if constexpr (std::is_integral_v<T>)
         {
-            data.update(value);
+            if constexpr (std::is_signed_v<T>)
+            {
+                if constexpr (sizeof(T) <= 1)
+                    data.update(static_cast<int8_t>(value));
+                else if constexpr (sizeof(T) <= 2)
+                    data.update(static_cast<int16_t>(value));
+                else if constexpr (sizeof(T) <= 4)
+                    data.update(static_cast<int32_t>(value));
+                else
+                    data.update(static_cast<int64_t>(value));
+            }
+            else
+            {
+                if constexpr (sizeof(T) <= 1)
+                    data.update(static_cast<uint8_t>(value));
+                else if constexpr (sizeof(T) <= 2)
+                    data.update(static_cast<uint16_t>(value));
+                else if constexpr (sizeof(T) <= 4)
+                    data.update(static_cast<uint32_t>(value));
+                else
+                    data.update(static_cast<uint64_t>(value));
+            }
+        }
+        else if constexpr (std::is_floating_point_v<T>)
+        {
+            if constexpr (std::is_same_v<T, float>)
+                data.update(static_cast<float>(value));
+            else
+                data.update(static_cast<double>(value));
         }
         else
         {
-            static_assert(std::is_trivial_v<T> || std::is_same_v<UUID, T>);
-            T v = value;
-            data.update(&v, sizeof(v));
+            static_assert(std::is_trivial_v<T> || std::is_same_v<UUID, T>
+                || std::is_same_v<IPv4, T> || std::is_same_v<IPv6, T>);
+            data.update(&value, sizeof(value));
         }
     }
+
+    // template <typename T>
+    // void update(const T & value)
+    // {
+    //     if constexpr (std::is_arithmetic_v<T> || std::is_same_v<T, String>)
+    //     {
+    //         data.update(value);
+    //     }
+    //     else
+    //     {
+    //         static_assert(std::is_trivial_v<T> || std::is_same_v<UUID, T>);
+    //         T v = value;
+    //         data.update(&v, sizeof(v));
+    //     }
+    // }
 
     void merge(const StatsHllSketch & rhs)
     {

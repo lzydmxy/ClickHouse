@@ -101,4 +101,6 @@ void registerDataTypeDomainGeo(DataTypeFactory & factory);
 void registerDataTypeObject(DataTypeFactory & factory);
 void registerDataTypeVariant(DataTypeFactory & factory);
 
+void registerDataTypeSketchBinary(DataTypeFactory & factory);
+
 }

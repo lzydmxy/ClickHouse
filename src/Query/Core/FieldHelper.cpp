@@ -133,6 +133,11 @@ void FieldHelper::writeFieldBinaryBlobImpl(const Field & field, Field::Types::Wh
             writeBinary(field.get<CustomType>(), buf);
             return;
         }
+        case Field::Types::SketchBinary:
+        {
+            writeBinary(field.get<String>(), buf);
+            return;
+        }
         // default:
         //     throw Exception(ErrorCodes::BAD_TYPE_OF_FIELD, "Bad type of Field {} when serializing.", type);
     }

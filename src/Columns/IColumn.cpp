@@ -17,6 +17,7 @@
 #include <Columns/ColumnTuple.h>
 #include <Columns/ColumnVariant.h>
 #include <Columns/ColumnVector.h>
+#include <Query/Columns/ColumnSketchBinary.h>
 #include <Core/Field.h>
 #include <DataTypes/Serializations/SerializationInfo.h>
 #include <IO/Operators.h>
@@ -463,5 +464,7 @@ template class IColumnHelper<ColumnCompressed, IColumn>;
 template class IColumnHelper<ColumnVariant, IColumn>;
 
 template class IColumnHelper<IColumnDummy, IColumn>;
+
+template class IColumnHelper<ColumnSketchBinary, IColumn>;
 
 }

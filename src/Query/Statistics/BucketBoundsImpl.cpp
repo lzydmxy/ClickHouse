@@ -50,6 +50,8 @@ String BucketBoundsImpl<T>::serializeToJson() const
         {
             if constexpr (std::is_same_v<T, UInt8>)
                 array_json.add(static_cast<uint8_t>(ptr));
+            if constexpr (std::is_same_v<T, Int8>)
+                array_json.add(static_cast<int8_t>(ptr));
             else
                 array_json.add(ptr);
         }
@@ -91,11 +93,18 @@ void BucketBoundsImpl<T>::deserializeFromJson(std::string_view blob)
         for (size_t j = 0; j < array->size(); ++j)
         {
             if constexpr (
-                !std::is_same_v<
-                    EmbeddedType,
-                    UInt8> && !std::is_same_v<T, UInt128> && !std::is_same_v<T, Int128> && !std::is_same_v<T, UInt256> && !std::is_same_v<T, Int256>)
+                !std::is_same_v<EmbeddedType, UInt8>
+                && !std::is_same_v<EmbeddedType, Int8>
+                && !std::is_same_v<T, UInt128>
+                && !std::is_same_v<T, Int128>
+                && !std::is_same_v<T, UInt256>
+                && !std::is_same_v<T, Int256>)
             {
                 bounds_.push_back(array->getElement<EmbeddedType>(j));
+            }
+            else if constexpr (std::is_same_v<EmbeddedType, Int8>)
+            {
+                bounds_.push_back(array->getElement<Poco::Int8>(j));
             }
             else if constexpr (std::is_same_v<EmbeddedType, UInt8>)
             {
