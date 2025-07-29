@@ -91,6 +91,7 @@ void registerAggregateFunctionLargestTriangleThreeBuckets(AggregateFunctionFacto
 
 void registerAggregateFunctionHllSketch(AggregateFunctionFactory & factory);
 void registerAggregateFunctionKllSketch(AggregateFunctionFactory & factory);
+void registerAggregateFunctionNdvBucketsExtend(AggregateFunctionFactory & factory);
 
 class AggregateFunctionCombinatorFactory;
 void registerAggregateFunctionCombinatorIf(AggregateFunctionCombinatorFactory &);
@@ -195,6 +196,7 @@ void registerAggregateFunctions()
 
         registerAggregateFunctionHllSketch(factory);
         registerAggregateFunctionKllSketch(factory);
+        registerAggregateFunctionNdvBucketsExtend(factory);
 
         registerWindowFunctions(factory);
     }
