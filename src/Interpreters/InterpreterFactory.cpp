@@ -237,6 +237,10 @@ InterpreterFactory::InterpreterPtr InterpreterFactory::get(ASTPtr & query, Conte
     {
         interpreter_name = "InterpreterShowStatsQuery";
     }
+    else if (query->as<ASTDropStatsQueryExt>())
+    {
+        interpreter_name = "InterpreterDropStatsQuery";
+    }
     else if (query->as<ASTExplainQuery>())
     {
         const auto kind = query->as<ASTExplainQuery>()->getKind();

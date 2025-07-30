@@ -28,7 +28,6 @@ void registerInterpreterDescribeQuery(InterpreterFactory & factory);
 void registerInterpreterDescribeCacheQuery(InterpreterFactory & factory);
 void registerInterpreterExplainQuery(InterpreterFactory & factory);
 void registerInterpreterShowProcesslistQuery(InterpreterFactory & factory);
-void registerInterpreterShowStatsQuery(InterpreterFactory & factory);
 void registerInterpreterAlterQuery(InterpreterFactory & factory);
 void registerInterpreterAlterNamedCollectionQuery(InterpreterFactory & factory);
 void registerInterpreterCheckQuery(InterpreterFactory & factory);
@@ -61,6 +60,8 @@ void registerInterpreterDeleteQuery(InterpreterFactory & factory);
 void registerInterpreterSelectQueryUseOptimizer(InterpreterFactory & factory);
 void registerInterpreterExplainQueryUseOptimizer(InterpreterFactory & factory);
 void registerInterpreterCreateStatsQuery(InterpreterFactory & factory);
+void registerInterpreterShowStatsQuery(InterpreterFactory & factory);
+void registerInterpreterDropStatsQuery(InterpreterFactory & factory);
 
 void registerInterpreters()
 {
@@ -91,7 +92,6 @@ void registerInterpreters()
     registerInterpreterDescribeCacheQuery(factory);
     registerInterpreterExplainQuery(factory);
     registerInterpreterShowProcesslistQuery(factory);
-    registerInterpreterShowStatsQuery(factory);
     registerInterpreterAlterQuery(factory);
     registerInterpreterAlterNamedCollectionQuery(factory);
     registerInterpreterCheckQuery(factory);
@@ -124,5 +124,7 @@ void registerInterpreters()
     registerInterpreterSelectQueryUseOptimizer(factory);
     registerInterpreterExplainQueryUseOptimizer(factory);
     registerInterpreterCreateStatsQuery(factory);
+    registerInterpreterShowStatsQuery(factory);
+    registerInterpreterDropStatsQuery(factory);
 }
 }

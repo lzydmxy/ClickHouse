@@ -23,14 +23,14 @@ void refreshClusterStatsCache(ContextPtr context, const StatsTableIdentifier & t
     (void)context;
     (void)table_identifier;
     (void)is_drop;
-    // todo: zhangwanyun1, other feat: implement when needed
-    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "not implemented");
+    // do nothing here for all nodes should subscribe the changes of statistics in keeper
 }
 
 StatisticsSettings fetchStatisticsSettings(ContextPtr context)
 {
     (void)context;
-    throw Exception(ErrorCodes::NOT_IMPLEMENTED, "not implemented");
+    // TODO wujianchao implement this when we implement auto stats collecting
+    return {};
 }
 
 }
