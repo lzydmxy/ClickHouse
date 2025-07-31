@@ -12,8 +12,6 @@ TEST(BuildQueryPipelineSettingsExtTest, fromPlanSegmentTest)
     AddressInfo coordinator_address = {"1.1.1.1", 9600, "user", "password"};
     plan_segment.setCoordinatorAddress(coordinator_address);
 
-    BuildQueryPipelineSettingsExt pipeline_settings;
-
     auto global_context = Context::getGlobalContextInstance();
 
     PlanSegmentExecutionInfo info;
@@ -22,7 +20,7 @@ TEST(BuildQueryPipelineSettingsExtTest, fromPlanSegmentTest)
     SourceTaskFilter source_task_filter{.index=1, .count=1, .buckets={1}};
     info.source_task_filter = source_task_filter;
 
-    pipeline_settings.fromPlanSegment(&plan_segment, info, global_context, true);
+    auto pipeline_settings = BuildQueryPipelineSettingsExt::fromPlanSegment(&plan_segment, info, global_context, true);
 
 
     EXPECT_EQ(pipeline_settings.distributed_settings.is_distributed, true);
