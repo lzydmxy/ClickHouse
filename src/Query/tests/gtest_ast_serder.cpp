@@ -12,11 +12,13 @@ TEST(ASTSerDerTest, serDerLiteral)
 
     auto func = makeASTFunction("and", lit1, lit2);
 
-    std::cout << func->formatForLogging(0) << std::endl;
+    std::string before = func->formatForLogging(0);
     WriteBufferFromOwnString buf;
     serializeAST(func, buf);
 
     ReadBufferFromMemory read_buf(buf.str());
     auto deserialized_ast = deserializeAST(read_buf);
-    std::cout << deserialized_ast->formatForLogging(0) << std::endl;
+    std::string after = deserialized_ast->formatForLogging(0);
+
+    EXPECT_EQ(before, after);
 }

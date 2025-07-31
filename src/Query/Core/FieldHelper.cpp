@@ -283,9 +283,9 @@ void FieldHelper::readFieldBinaryBlobImpl(Field & field, Field::Types::Which typ
         }
         case Field::Types::Bool:
         {
-            bool value;
+            UInt64 value;
             readBinary(value, buf);
-            field = value;
+            field = static_cast<bool>(value);
             return;
         }
         case Field::Types::Object:

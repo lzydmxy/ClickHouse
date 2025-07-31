@@ -1025,7 +1025,7 @@ template <typename T>
 requires is_arithmetic_v<T>
 inline void writeBinary(const T & x, WriteBuffer & buf) { writePODBinary(x, buf); }
 
-inline void writeBinary(bool & x, WriteBuffer & buf)
+inline void writeBinary(const bool & x, WriteBuffer & buf)
 {
     /// This override is added to avoid writeBinary(UInt64) being used when invoking writeBinary(bool)
     static_assert(sizeof(bool) == sizeof(Int8));
