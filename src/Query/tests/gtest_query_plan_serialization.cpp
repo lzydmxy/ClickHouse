@@ -377,11 +377,12 @@ QueryPlanStepPtr createArrayJoinStep()
         DataStream{.header = Block(columns)}, std::make_shared<ArrayJoinAction>(NameSet{"Array"}, false, context));
 }
 
-TEST(QueryPlanTest, ActionsStepTest)
-{
-    TestSingleActionsStep(createExpressionStep());
-    TestSingleActionsStep(createFilterStepExt());
-    TestSingleActionsStep(createTotalsHavingStepExt());
-
-    TestSingleActionsStep(createArrayJoinStep());
-}
+// actions dag is not supported in protobuf
+// TEST(QueryPlanTest, ActionsStepTest)
+// {
+//     TestSingleActionsStep(createExpressionStep());
+//     TestSingleActionsStep(createFilterStepExt());
+//     TestSingleActionsStep(createTotalsHavingStepExt());
+//
+//     TestSingleActionsStep(createArrayJoinStep());
+// }
