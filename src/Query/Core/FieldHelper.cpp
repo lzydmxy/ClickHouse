@@ -120,7 +120,7 @@ void FieldHelper::writeFieldBinaryBlobImpl(const Field & field, Field::Types::Wh
         }
         case Field::Types::Bool:
         {
-            writeBinary(field.get<bool>(), buf);
+            writeBinary(static_cast<bool>(field.get<bool>()), buf);
             return;
         }
         case Field::Types::Object:
@@ -283,9 +283,9 @@ void FieldHelper::readFieldBinaryBlobImpl(Field & field, Field::Types::Which typ
         }
         case Field::Types::Bool:
         {
-            UInt64 value;
+            bool value;
             readBinary(value, buf);
-            field = static_cast<bool>(value);
+            field = value;
             return;
         }
         case Field::Types::Object:
