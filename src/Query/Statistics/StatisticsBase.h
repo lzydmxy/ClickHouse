@@ -3,6 +3,7 @@
 #include <Core/Block.h>
 #include <Core/Types.h>
 #include <Query/Statistics/CommonErrorCodes.h>
+#include <Query/Protos/optimizer_statistics.pb.h>
 #include <Query/Statistics/StatisticsCommon.h>
 
 #include <chrono>
@@ -68,6 +69,9 @@ struct StatsData
 {
     StatsCollection table_stats;
     std::unordered_map<String, StatsCollection> column_stats;
+
+    String serialize(std::string_view name);
+    static std::pair<String, StatsData> deserialize(std::string_view blob);
 };
 
 // helper function to create statistics object from binary blob

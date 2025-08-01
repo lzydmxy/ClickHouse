@@ -100,12 +100,6 @@ void StatisticsCollector::writeToCatalog()
     // especially when collecting statistics_collect_histogram=0
     proxy->dropColumns(table_info, cols_desc);
     proxy->put(table_info, std::move(data));
-
-
-    // clear udi whenever it is to create/drop stats
-    // since after manual drop stats, users just don't want statistics,
-    // so we needn't care about udi for auto stats until next insertion
-    catalog->removeUdiCount(table_info);
 }
 
 void StatisticsCollector::readAllFromCatalog()

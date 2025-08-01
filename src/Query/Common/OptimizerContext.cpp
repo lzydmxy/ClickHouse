@@ -4,7 +4,7 @@
 #include <Coordination/Defines.h>
 #include <Coordination/KeeperConstants.h>
 #include <Server/CloudPlacementInfo.h>
-#include <Coordination/KeeperFeatureFlags.h>
+#include <Query/Statistics/StatisticsKeeperStore.h>
 #include <Disks/DiskLocal.h>
 #include <Disks/DiskSelector.h>
 #include <IO/S3/Credentials.h>
@@ -192,6 +192,34 @@ PlanCacheManager* OptimizerContext::getPlanCacheManager()
     //todo: zhangdongdong92, other feat: need a part shared lock
     //auto lock = getLock(); // checked
     return shared->plan_cache_manager ? shared->plan_cache_manager.get() : nullptr;
+}
+
+void OptimizerContext::setStatisticsKeeperStore(StatisticsKeeperStorePtr statistics_keeper_store_ptr, ContextMutablePtr)
+{
+    std::lock_guard lock(mutex);
+    if (shared->statistics_keeper_store)
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "statistics keeper store thread has already been initialized");
+    shared->statistics_keeper_store = std::move(statistics_keeper_store_ptr);
+    shared->statistics_keeper_store->startup();
+
+    // auto job = makeLoadJob(
+    // {},
+    // TablesLoaderBackgroundStartupPoolId,
+    // "startup statistics keeper store worker",
+    // [this] (AsyncLoader &, const LoadJobPtr &)
+    // {
+    //     std::lock_guard lock2(mutex);
+    //     shared->statistics_keeper_store->startup();
+    // });
+    //
+    // shared->ddl_worker_startup_task = makeLoadTask(context->getAsyncLoader(), {job});
+    // shared->ddl_worker_startup_task->schedule();
+}
+
+StatisticsKeeperStorePtr OptimizerContext::getStatisticsKeeperStore()
+{
+    std::lock_guard lock(mutex);
+    return shared->statistics_keeper_store ? shared->statistics_keeper_store : nullptr;
 }
 
 HostWithPorts OptimizerContext::getHostWithPorts() const

@@ -217,31 +217,6 @@ public:
         return 0;
     }
 
-    UInt64 fetchAddUdiCount(const StatsTableIdentifier &, UInt64) override
-    {
-        throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Unimplemented");
-        // auto & sms = getStatisticsMemoryStore();
-        // std::unique_lock lck(sms.mtx);
-        // auto unique_key = table_identifier.getUniqueKey();
-        // UInt64 old_count = 0;
-        // if (sms.udi_counters.count(unique_key))
-        // {
-        //     old_count = sms.udi_counters.at(unique_key);
-        // }
-        // //
-        // if (count != 0)
-        // {
-        //     auto new_count = old_count + count;
-        //     sms.udi_counters[unique_key] = new_count;
-        // }
-        // return old_count;
-    }
-
-    void removeUdiCount(const StatsTableIdentifier &) override
-    {
-        // DO NOTHING
-    }
-
 private:
     StatisticsMemoryStore & getStatisticsMemoryStore() { return *statistics_memory_store; }
     std::shared_ptr<StatisticsMemoryStore> statistics_memory_store;

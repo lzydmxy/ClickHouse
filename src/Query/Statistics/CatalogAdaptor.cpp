@@ -16,12 +16,18 @@ extern const int LOGICAL_ERROR;
 namespace DB::QueryStatistics
 {
 CatalogAdaptorPtr createCatalogAdaptorMemory(ContextPtr context);
+CatalogAdaptorPtr createCatalogAdaptorKeeper(ContextPtr context);
 CatalogAdaptorPtr createCatalogAdaptor(ContextPtr context)
 {
+    if (!context->getConfigRef().getString("optimizer.statistics_path", "").empty())
+    {
+        return createCatalogAdaptorKeeper(context);
+    }
     if (context->getOptimizerContext()->getSettingsRef().enable_memory_catalog)
     {
         return createCatalogAdaptorMemory(context);
     }
+
     throw Exception(
         ErrorCodes::LOGICAL_ERROR,
         "CatalogAdaptor is not supported right now, please refer to configuration 'enable_memory_catalog'");

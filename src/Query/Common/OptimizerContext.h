@@ -11,6 +11,7 @@
 #include <Query/Processors/QueryPlan/PlanCache.h>
 #include <Query/Optimizer/OptimizerProfile.h>
 #include <Query/Statistics/StatisticsMemoryStore.h>
+#include <Query/Statistics/StatisticsKeeperStore.h>
 #include <Interpreters/Cluster.h>
 
 namespace DB
@@ -52,6 +53,8 @@ using SegmentSchedulerPtr = std::shared_ptr<SegmentScheduler>;
 class PlanCacheManager;
 using PlanCacheManagerPtr = std::unique_ptr<PlanCacheManager>;
 
+using StatisticsKeeperStorePtr = std::shared_ptr<QueryStatistics::StatisticsKeeperStore>;
+
 struct Settings;
 struct PlanSegmentInstanceID;
 
@@ -77,6 +80,8 @@ struct OptimizerContextSharedData
     SegmentSchedulerPtr segment_scheduler;
     PlanSegmentProcessListPtr plan_segment_process_list;
     PlanCacheManagerPtr plan_cache_manager;
+    StatisticsKeeperStorePtr statistics_keeper_store;
+    LoadTaskPtr ddl_worker_startup_task;
 };
 
 class OptimizerContextData
@@ -222,6 +227,8 @@ public:
     OptimizerMetricsPtr & getOptimizerMetrics() { return optimizer_metrics; }
     void createOptimizerMetrics() { optimizer_metrics = std::make_shared<OptimizerMetrics>(); }
     void setPlanCacheManager(std::unique_ptr<PlanCacheManager> && manager);
+    void setStatisticsKeeperStore(StatisticsKeeperStorePtr statistics_keeper_store_ptr, ContextMutablePtr context);
+    StatisticsKeeperStorePtr getStatisticsKeeperStore();
     void initOptimizerProfile() { optimizer_profile = std::make_unique<OptimizerProfile>(); }
     PlanCacheManager* getPlanCacheManager();
     const SymbolAllocatorPtr & getSymbolAllocator() { return symbol_allocator; }

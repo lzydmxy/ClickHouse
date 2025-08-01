@@ -46,8 +46,6 @@ public:
         return context->getOptimizerContext()->getSettingsRef();
     }
 
-    virtual UInt64 fetchAddUdiCount(const StatsTableIdentifier & table, UInt64 count) = 0;
-    virtual void removeUdiCount(const StatsTableIdentifier & table) = 0;
     struct TableOptions
     {
         bool is_collectable = false;

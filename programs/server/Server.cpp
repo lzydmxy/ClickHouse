@@ -109,6 +109,7 @@
 #include <unordered_set>
 #include <Query/Executor/BrpcServerHolder.h>
 #include <Query/Exchange/bRPC/BrpcApplication.h>
+#include <Query/Statistics/StatisticsKeeperStore.h>
 
 #include "config.h"
 #include <Common/config_version.h>
@@ -2125,6 +2126,7 @@ try
 
         std::vector<std::unique_ptr<BrpcServerHolder>> rpc_server_holders;
         const char * rpc_port_name = "optimizer.rpc_port";
+        const char * statistics_path = "optimizer.statistics_path";
         if (config().has(rpc_port_name))
         {
             global_context->initializeOptimizerContext();
@@ -2145,6 +2147,11 @@ try
             if (!service_available)
             {
                 throw Exception(ErrorCodes::BRPC_EXCEPTION, "Failed to start rpc server in all listen_hosts.");
+            }
+
+            if (has_zookeeper && config().has(statistics_path))
+            {
+                global_context->getOptimizerContext()->setStatisticsKeeperStore(std::make_shared<QueryStatistics::StatisticsKeeperStore>(global_context), global_context);
             }
         }
         else

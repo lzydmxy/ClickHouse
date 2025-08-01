@@ -82,7 +82,7 @@ void OptimizerSettings::loadFromConfig(const String & config_elem, const Poco::U
     {
         for (const String & key : config_keys)
         {
-            if (key == "rpc_port")
+            if (key == "rpc_port" || key == "statistics_path")
                 continue;
             LOG_DEBUG(getLogger("OptiminzerSettings"), "Load settings item {}.{} from config", config_elem, key);
             set(key, config.getString(config_elem + "." + key));
