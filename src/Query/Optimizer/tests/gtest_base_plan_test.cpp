@@ -62,7 +62,7 @@ BasePlanTest::BasePlanTest(const String & database_name_, const std::unordered_m
     tryRegisterAggregateFunctions();
 
     initLogger("warning");
-
+    session_context->initializeOptimizerContext();
     // tryRegisterStorageMockDistributed();
 
     SettingsChanges setting_changes;
