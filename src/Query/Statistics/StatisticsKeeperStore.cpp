@@ -54,7 +54,7 @@ String StatisticsKeeperStore::StatisticsLogEntry::toString() const
 {
     WriteBufferFromOwnString wb;
 
-    wb << "hosts: " << HostID::applyToString(host) << "\n";
+    wb << "host: " << HostID::applyToString(host) << "\n";
     wb << "database: " << database << "\n";
     wb << "table: " << table << "\n";
 
@@ -63,19 +63,15 @@ String StatisticsKeeperStore::StatisticsLogEntry::toString() const
 
 StatisticsKeeperStore::StatisticsLogEntry StatisticsKeeperStore::StatisticsLogEntry::fromString(const String & data)
 {
-    String database, table;
+    String database, table, host_id_string;
     ReadBufferFromString rb(data);
 
+    rb >> "host: " >> host_id_string >> "\n";
     rb >> "database: " >> database >> "\n";
     rb >> "table: " >> table >> "\n";
-
-    String host_id_string;
-    rb >> "host: " >> host_id_string >> "\n";
-    auto host = HostID::fromString(host_id_string);
-
     assertEOF(rb);
 
-    return StatisticsLogEntry{database, table, host};
+    return StatisticsLogEntry{database, table, HostID::fromString(host_id_string)};
 }
 
 zkutil::ZooKeeperPtr StatisticsKeeperStore::getClient() const
@@ -212,6 +208,7 @@ void StatisticsKeeperStore::updateTableStatisticsOnKeeper(String database, Strin
 
     try
     {
+        getClient()->createAncestors(stats_data_path);
         getClient()->createOrUpdate(stats_data_path, node_data, zkutil::CreateMode::Persistent);
         String node_path = getClient()->create(query_path_prefix, log_entry.toString(), zkutil::CreateMode::PersistentSequential);
         LOG_DEBUG(log, "Create node {} for update {}", node_path, stats_data_path);

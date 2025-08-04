@@ -201,19 +201,6 @@ void OptimizerContext::setStatisticsKeeperStore(StatisticsKeeperStorePtr statist
         throw Exception(ErrorCodes::LOGICAL_ERROR, "statistics keeper store thread has already been initialized");
     shared->statistics_keeper_store = std::move(statistics_keeper_store_ptr);
     shared->statistics_keeper_store->startup();
-
-    // auto job = makeLoadJob(
-    // {},
-    // TablesLoaderBackgroundStartupPoolId,
-    // "startup statistics keeper store worker",
-    // [this] (AsyncLoader &, const LoadJobPtr &)
-    // {
-    //     std::lock_guard lock2(mutex);
-    //     shared->statistics_keeper_store->startup();
-    // });
-    //
-    // shared->ddl_worker_startup_task = makeLoadTask(context->getAsyncLoader(), {job});
-    // shared->ddl_worker_startup_task->schedule();
 }
 
 StatisticsKeeperStorePtr OptimizerContext::getStatisticsKeeperStore()

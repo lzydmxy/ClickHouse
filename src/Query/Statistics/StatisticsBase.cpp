@@ -15,9 +15,9 @@ String StatsData::serialize(std::string_view name)
     {
         auto & columns_proto = *proto.add_columns();
         *columns_proto.mutable_column_name() = column_name;
-        for (const auto & [tag , stats] : col_stats)
+        for (const auto & [col_tag , stats] : col_stats)
         {
-            columns_proto.mutable_blobs()->insert({static_cast<int64_t>(tag), stats->serialize()});
+            columns_proto.mutable_blobs()->insert({static_cast<int64_t>(col_tag), stats->serialize()});
         }
     }
     return proto.SerializeAsString();
@@ -39,7 +39,7 @@ std::pair<String, StatsData> StatsData::deserialize(std::string_view blob)
     for (const auto & columns : proto.columns())
     {
         StatsCollection col_stats;
-        for (const auto & [tag , stats] : proto.blobs())
+        for (const auto & [tag , stats] : columns.blobs())
         {
             col_stats.emplace(static_cast<StatisticsTag>(tag), createStatisticsBase(static_cast<StatisticsTag>(tag), stats));
         }

@@ -27,7 +27,7 @@ public:
 
     const StorageID & getStorageID() const { return storage_id; }
     StorageID & getMutableStorageID() { return storage_id; }
-    UUID getUUID() const { return storage_id.uuid; }
+    UUID getUUID() const { return UUID{}; }
     String getNameForLogs() const { return storage_id.getNameForLogs(); }
 
     bool operator==(const StatsTableIdentifier & right) const { return storage_id == right.storage_id; }
