@@ -28,7 +28,7 @@ public:
     {
         auto & sms = getStatisticsMemoryStore();
         std::shared_lock lck(sms.mtx);
-        auto key = table.getUniqueKey();
+        auto key = table.getUniqueKey(context);
         /// return whether table_stats of the corresponding table is non-empty
         return sms.entries.count(key);
     }
@@ -37,7 +37,7 @@ public:
     {
         auto & sms = getStatisticsMemoryStore();
         std::shared_lock lck(sms.mtx);
-        auto key = table.getUniqueKey();
+        auto key = table.getUniqueKey(context);
 
         if (!sms.entries.count(key))
         {
@@ -54,7 +54,7 @@ public:
 
         auto & sms = getStatisticsMemoryStore();
         std::shared_lock lck(sms.mtx);
-        auto key = table.getUniqueKey();
+        auto key = table.getUniqueKey(context);
 
         if (!sms.entries.count(key))
         {
@@ -72,7 +72,7 @@ public:
     {
         auto & sms = getStatisticsMemoryStore();
         std::shared_lock lck(sms.mtx);
-        auto key = table.getUniqueKey();
+        auto key = table.getUniqueKey(context);
 
         if (!sms.entries.count(key))
         {
@@ -108,7 +108,7 @@ public:
 
         auto & sms = getStatisticsMemoryStore();
         std::unique_lock lck(sms.mtx);
-        auto key = table.getUniqueKey();
+        auto key = table.getUniqueKey(context);
         if (!sms.entries.count(key))
         {
             // create new instance
@@ -136,7 +136,7 @@ public:
     {
         auto & sms = getStatisticsMemoryStore();
         std::unique_lock lck(sms.mtx);
-        auto key = table.getUniqueKey();
+        auto key = table.getUniqueKey(context);
         if (sms.entries.count(key))
         {
             auto & entry = sms.entries.at(key);
@@ -153,7 +153,7 @@ public:
     {
         auto & sms = getStatisticsMemoryStore();
         std::unique_lock lck(sms.mtx);
-        auto key = table.getUniqueKey();
+        auto key = table.getUniqueKey(context);
         sms.entries.erase(key);
     }
 

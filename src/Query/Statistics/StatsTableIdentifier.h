@@ -2,9 +2,7 @@
 
 #include <Core/Types.h>
 #include <Interpreters/StorageID.h>
-
-#include <unordered_map>
-#include <utility>
+#include <Interpreters/Context_fwd.h>
 
 // this can be very different for cnch/stable_v2
 namespace DB::QueryStatistics
@@ -23,7 +21,7 @@ public:
     const String & getTableName() const { return storage_id.table_name; }
 
     String getDbTableName() const { return storage_id.getFullTableName(); }
-    UniqueKey getUniqueKey() const;
+    UniqueKey getUniqueKey(ContextPtr local_context) const;
 
     const StorageID & getStorageID() const { return storage_id; }
     StorageID & getMutableStorageID() { return storage_id; }

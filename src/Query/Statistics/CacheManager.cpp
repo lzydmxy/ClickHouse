@@ -41,6 +41,6 @@ namespace DB::QueryStatistics
         // this operation is lightweight:
         //     local, in memory and exception free
         if (cache)
-            cache->invalidate(table.getUniqueKey());
+            cache->invalidate(table.getUniqueKey(context));
     }
 } // namespace DB::QueryStatistics

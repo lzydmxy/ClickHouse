@@ -114,7 +114,7 @@ CacheCatalogAdaptorProxy<cache_only>::getImpl(const StatsTableIdentifier & table
 {
     auto & cache = QueryStatistics::CacheManager::instance();
 
-    auto unique_key = table_id.getUniqueKey();
+    auto unique_key = table_id.getUniqueKey(Context::getGlobalContextInstance());
     (void)table_info;
     (void)columns;
 
@@ -158,7 +158,7 @@ void CacheCatalogAdaptorProxy<cache_only>::drop(const StatsTableIdentifier & tab
         auto & cache = QueryStatistics::CacheManager::instance();
 
         // drop table stats
-        cache.invalidate(table_id.getUniqueKey());
+        cache.invalidate(table_id.getUniqueKey(Context::getGlobalContextInstance()));
         return;
     }
 

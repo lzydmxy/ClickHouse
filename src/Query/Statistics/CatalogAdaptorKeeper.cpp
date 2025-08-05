@@ -25,7 +25,7 @@ public:
     {
         auto & statistics_keeper_store = getStatisticsKeeperStore();
         std::shared_lock lck(statistics_keeper_store.mtx);
-        auto key = table.getUniqueKey();
+        auto key = table.getUniqueKey(context);
         /// return whether table_stats of the corresponding table is non-empty
         return statistics_keeper_store.entries.count(key);
     }
@@ -34,7 +34,7 @@ public:
     {
         auto & statistics_keeper_store = getStatisticsKeeperStore();
         std::shared_lock lck(statistics_keeper_store.mtx);
-        auto key = table.getUniqueKey();
+        auto key = table.getUniqueKey(context);
 
         if (!statistics_keeper_store.entries.count(key))
         {
@@ -51,7 +51,7 @@ public:
 
         auto & statistics_keeper_store = getStatisticsKeeperStore();
         std::shared_lock lck(statistics_keeper_store.mtx);
-        auto key = table.getUniqueKey();
+        auto key = table.getUniqueKey(context);
 
         if (!statistics_keeper_store.entries.contains(key))
         {
@@ -69,7 +69,7 @@ public:
     {
         auto & statistics_keeper_store = getStatisticsKeeperStore();
         std::shared_lock lck(statistics_keeper_store.mtx);
-        auto key = table.getUniqueKey();
+        auto key = table.getUniqueKey(context);
 
         if (!statistics_keeper_store.entries.contains(key))
         {
@@ -105,7 +105,7 @@ public:
         String stats_data_str;
         {
             std::unique_lock lck(statistics_keeper_store.mtx);
-            auto key = table.getUniqueKey();
+            auto key = table.getUniqueKey(context);
             if (!statistics_keeper_store.entries.contains(key))
             {
                 // create new instance
@@ -140,7 +140,7 @@ public:
         String full_table_name = backQuoteIfNeed(table.getDatabaseName()) + "." + backQuoteIfNeed(table.getTableName());
         {
             std::unique_lock lck(statistics_keeper_store.mtx);
-            auto key = table.getUniqueKey();
+            auto key = table.getUniqueKey(context);
             if (statistics_keeper_store.entries.contains(key))
             {
                 auto & entry = statistics_keeper_store.entries.at(key);
@@ -169,7 +169,7 @@ public:
         auto & statistics_keeper_store = getStatisticsKeeperStore();
         {
             std::unique_lock lck(statistics_keeper_store.mtx);
-            auto key = table.getUniqueKey();
+            auto key = table.getUniqueKey(context);
             statistics_keeper_store.entries.erase(key);
         }
 

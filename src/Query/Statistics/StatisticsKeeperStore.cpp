@@ -247,7 +247,7 @@ void StatisticsKeeperStore::fetchTableStatisticsFromKeeper(String database, Stri
     String full_table_name = backQuoteIfNeed(database) + "." + backQuoteIfNeed(table);
     String stats_data_path = fs::path(statistics_data_path) / database/ table ;
     StatsTableIdentifier identifier{StorageID{database, table}};
-    auto uniq_key = identifier.getUniqueKey();
+    auto uniq_key = identifier.getUniqueKey(getContext());
 
     if (!getClient()->tryGet(stats_data_path, node_data))
     {

@@ -484,7 +484,7 @@ BlockIO InterpreterShowStatsQuery::executeTable()
         data.append("database", table.getDatabaseName());
         data.append("table", table.getTableName());
         data.append("engine", storage->getName());
-        data.append("unique_key", UUIDHelpers::UUIDToString(table.getUniqueKey()));
+        data.append("unique_key", UUIDHelpers::UUIDToString(table.getUniqueKey(context)));
         data.append("row_count", obj ? std::to_string(obj->getRowCount()) : "");
 
         String timestamp = "";
