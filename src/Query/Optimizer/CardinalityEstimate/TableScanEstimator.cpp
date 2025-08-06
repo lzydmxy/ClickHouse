@@ -61,34 +61,38 @@ PlanNodeStatisticsPtr TableScanEstimator::estimate(ContextMutablePtr context, co
 std::optional<PlanNodeStatisticsPtr> TableScanEstimator::estimate(
     ContextMutablePtr context, const StorageID & storage_id, const Names & columns)
 {
-    return std::nullopt;
-    // auto catalog = QueryStatistics::createCatalogAdaptor(context);
-    // auto table_info_opt = catalog->getTableIdByName(storage_id.getDatabaseName(), storage_id.getTableName());
-    // if (!table_info_opt.has_value())
-    // {
-    //     // TODO: give a warning here?
-    //     return std::nullopt;
-    // }
-    //
-    // PlanNodeStatisticsPtr plan_node_stats;
-    // try {
-    //     QueryStatistics::StatisticsCollector collector(context, catalog, table_info_opt.value(), {});
-    //     collector.readFromCatalog(columns);
-    //     auto plan_node_stats_opt = collector.toPlanNodeStatistics();
-    //     if (!plan_node_stats_opt.has_value())
-    //     {
-    //         return std::nullopt;
-    //     }
-    //     plan_node_stats = std::move(plan_node_stats_opt.value());
-    // }
-    // catch(...)
-    // {
-    //     auto logger = getLogger("TableScanEstimator");
-    //     tryLogCurrentException(logger);
-    //     return std::nullopt;
-    // }
-    //
-    // return plan_node_stats;
+    if (storage_id.getDatabaseName() == "system" || storage_id.getDatabaseName() == "_table_function")
+    {
+        return std::nullopt;
+    }
+
+    auto catalog = QueryStatistics::createCatalogAdaptor(context);
+    auto table_info_opt = catalog->getTableIdByName(storage_id.getDatabaseName(), storage_id.getTableName());
+    if (!table_info_opt.has_value())
+    {
+        // TODO: give a warning here?
+        return std::nullopt;
+    }
+
+    PlanNodeStatisticsPtr plan_node_stats;
+    try {
+        QueryStatistics::StatisticsCollector collector(context, catalog, table_info_opt.value(), {});
+        collector.readFromCatalog(columns);
+        auto plan_node_stats_opt = collector.toPlanNodeStatistics();
+        if (!plan_node_stats_opt.has_value())
+        {
+            return std::nullopt;
+        }
+        plan_node_stats = std::move(plan_node_stats_opt.value());
+    }
+    catch(...)
+    {
+        auto logger = getLogger("TableScanEstimator");
+        tryLogCurrentException(logger);
+        return std::nullopt;
+    }
+
+    return plan_node_stats;
 }
 
 }
