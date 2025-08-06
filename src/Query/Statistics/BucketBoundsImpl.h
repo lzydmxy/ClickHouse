@@ -83,7 +83,7 @@ public:
         }
         else
         {
-            return boost::lexical_cast<String>(operator[](index));
+            return DB::toString(operator[](index));
         }
     }
 
