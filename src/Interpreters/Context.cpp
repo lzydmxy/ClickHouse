@@ -3559,11 +3559,18 @@ void Context::initializeOptimizerContext()
     optimizer_context = std::make_shared<OptimizerContext>(getSettingsRef(), config);
 }
 
+OptimizerContextPtr Context::tryGetOptimizerContext() const
+{
+    std::lock_guard lock(shared->mutex);
+    return optimizer_context;
+}
+
 OptimizerContextPtr Context::getOptimizerContext() const
 {
-    if (!optimizer_context)
-        throw Exception(ErrorCodes::LOGICAL_ERROR, "Optimizer context must be initialized before requests");
-    return optimizer_context;
+    if (auto res = tryGetOptimizerContext())
+        return res;
+
+    throw Exception(ErrorCodes::LOGICAL_ERROR, "Optimizer context must be initialized before requests");
 }
 
 zkutil::ZooKeeperPtr Context::getAuxiliaryZooKeeper(const String & name) const

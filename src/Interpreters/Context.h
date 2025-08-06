@@ -988,6 +988,7 @@ public:
 
     void initializeOptimizerContext();
     OptimizerContextPtr getOptimizerContext() const;
+    OptimizerContextPtr tryGetOptimizerContext() const;
 
     /// --- Caches ------------------------------------------------------------------------------------------
 

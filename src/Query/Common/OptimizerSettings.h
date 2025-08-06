@@ -479,6 +479,14 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     /** Settings for Map */ \
     M(Bool, allow_map_access_without_key, true, "Allow access map column without providing key", 0) \
     M(Bool, offloading_with_query_plan, false, "utilize query plan to offload the computation completely to worker", 0) \
+    /** Sample setttings */ \
+    M(Bool, enable_sample_by_range, false, "Sample by range if it is true", 0) \
+    M(Bool, enable_deterministic_sample_by_range, false, "Deterministic sample by range if it is true", 0) \
+    M(Bool, uniform_sample_by_range, false, "Sample by range with uniform mode", 0) \
+    M(Bool, ensure_one_mark_in_part_when_sample_by_range, true, "Sample by range will ensure at least a mark is sampled in each part, otherwise will do sample on parts when necessary", 0) \
+    M(Bool, enable_final_sample, false, "Sample from result rows if it is true", 0) \
+    M(Bool, uniform_final_sample, false, "Final sample with uniform mode", 0)\
+    \
     /** Just for compatible, maybe removed or implemented later */ \
     M(UInt64, max_in_value_list_to_pushdown, 10000, "Max size of in value list in filter", 0) \
     M(UInt64, max_query_cpu_seconds, 0, "Limit the maximum amount of CPU resources such a query segment can consume.", 0) \
@@ -486,8 +494,6 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Float, streaming_agg_local_ratio, 0.25f, "The ratio of local streaming agg, 0-all streaming, 1-all local merged", 0) \
     M(Bool, optimize_read_in_partition_order, false, "In optimize_read_in_order mode, whether to read parts partition-by-partition if applicable, it will also delay inverted index evaluation till pipeline execution", 0) \
     M(UInt64, early_limit_for_map_virtual_columns, 0, "Enable early limit while quering _map_column_keys column", 0)\
-    M(Bool, enable_sample_by_range, false, "Sample by range if it is true", 0) \
-    M(Bool, enable_deterministic_sample_by_range, false, "Deterministic sample by range if it is true", 0) \
     M(Bool, force_read_in_partition_order, 0, "Similar to optimize_read_in_partition_order, but throw an exception if it cannot be applied to the query, mainly for testing", 0) \
     M(Bool, check_identifier_begin_valid, true, "Whether to check identifier", 0) \
     M(Bool, ignore_array_join_check_in_join_on_condition, false, "Ignore array-join function check in join on condition", 0) \
@@ -505,7 +511,6 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(DialectType, dialect_type, DialectType::ANSI, "Dialect type, e.g. CLICKHOUSE, ANSI, MYSQL", 0) \
     M(Bool, prefer_alias_if_column_name_is_ambiguous, false, "If source columns are ambiguous, prefer to use alias, for MySQL compatibility", 0) \
     M(Bool, only_full_group_by, true, "If the ONLY_FULL_GROUP_BY is enabled (which it is by default), rejects queries for which the select list, HAVING condition, or ORDER BY list refer to nonaggregated columns that are neither named in the GROUP BY clause nor are functionally dependent on them.", 0) \
-    M(Bool, enable_final_sample, false, "Sample from result rows if it is true", 0) \
     M(Bool, enable_ab_index_optimization, true, "Optimize ab version by reading Bitmap", 0)\
     M(Int64, partition_by_monotonicity_hint, 0, "Hint on whether partition by expression is a monotonic function or not, e.g., '(toYYYYMMDD(ts), toHour(ts))' is a monotonic non-decreasing function. 0 means unknown, Positive means monotonic non-decrasing, Negative means monotonic non-increasing", 0) \
     M(Bool, allow_extended_type_conversion, false, "When enabled, implicit type conversion is allowed for more input types(e.g. UInt64 & Ints, Decimal & Float, Float & Int64)", 0) \

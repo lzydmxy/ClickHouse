@@ -34,6 +34,7 @@
 #include <Processors/QueryPlan/SortingStep.h>
 #include <Processors/Sources/SourceFromSingleChunk.h>
 #include <Processors/Transforms/AggregatingTransform.h>
+#include <Query/Common/OptimizerContext.h>
 
 #include <Core/UUID.h>
 #include <Common/CurrentMetrics.h>
@@ -291,7 +292,14 @@ MergeTreeDataSelectSamplingData MergeTreeDataSelectExecutor::getSampling(
             && data.supportsSampling());
     bool no_data = false; /// There is nothing left after sampling.
 
-    if (sampling.use_sampling)
+    bool sample_by_range = false;
+
+    if (auto optimizer_context = context->tryGetOptimizerContext())
+    {
+        sample_by_range = optimizer_context->getSettingsRef().enable_sample_by_range || optimizer_context->getSettingsRef().enable_deterministic_sample_by_range;
+    }
+
+    if (sampling.use_sampling && !sample_by_range)
     {
         if (relative_sample_size != RelativeSize(0))
             sampling.used_sample_factor = 1.0 / boost::rational_cast<Float64>(relative_sample_size);
@@ -361,7 +369,7 @@ MergeTreeDataSelectSamplingData MergeTreeDataSelectExecutor::getSampling(
         {
             sampling.use_sampling = false;
         }
-        else
+        else if (!sample_by_range)
         {
             /// Let's add the conditions to cut off something else when the index is scanned again and when the request is processed.
 
@@ -440,7 +448,181 @@ MergeTreeDataSelectSamplingData MergeTreeDataSelectExecutor::getSampling(
         sampling.read_nothing = true;
     }
 
+    sampling.relative_sample_size = relative_sample_size;
+
     return sampling;
+}
+
+// high quality uniform sampling is required by sample algorithm of statistics
+MarkRanges uniformSampleByRange(const MarkRange & range, UInt64 sample_size, UInt64 random_seed)
+{
+    if (range.end <= range.begin)
+    {
+        return {};
+    }
+
+    MarkRanges results;
+    size_t marks_size = range.end - range.begin;
+
+    if (sample_size >= marks_size)
+    {
+        results.emplace_back(range);
+        return results;
+    }
+
+    std::default_random_engine eng(random_seed);
+
+    // to minimize impact on performance, use int
+    std::vector<int> candidates;
+    candidates.reserve(marks_size);
+
+    for (size_t i = 0; i < marks_size; i++)
+    {
+        candidates.push_back(i);
+    }
+
+    // do random shuffle, but just for sample_size elements
+    // profiling suggests random number generator is the bottleneck
+    // so we don't want to shuffle all elements
+    for (size_t i = 0; i < sample_size; i++)
+    {
+        int random_index = eng() % (marks_size - i) + i;
+        std::swap(candidates[random_index], candidates[i]);
+    }
+
+    std::sort(candidates.begin(), candidates.begin() + sample_size);
+
+    UInt64 last_mark_index = range.end; // never occurs
+    for (size_t i = 0; i < sample_size; i++)
+    {
+        auto new_mark_index = range.begin + candidates[i];
+        // compress adjacent marks
+        if (last_mark_index == new_mark_index)
+        {
+            ++results.back().end;
+        }
+        else
+        {
+            results.emplace_back(MarkRange{new_mark_index, new_mark_index + 1});
+        }
+        last_mark_index = new_mark_index;
+    }
+
+    return results;
+}
+
+MarkRanges MergeTreeDataSelectExecutor::sliceRange(const MarkRange & range, const UInt64 & sample_size)
+{
+    // Get sample step
+    size_t step = static_cast<size_t>(std::sqrt(sample_size));
+
+    MarkRanges ret_ranges;
+    size_t begin = range.begin;
+    size_t end = range.end;
+
+    // Slice range
+    while (begin < end)
+    {
+        size_t step_end = (begin + step < end) ? begin + step : end;
+        MarkRange step_range(begin, step_end);
+        ret_ranges.push_back(step_range);
+        begin = step_end;
+    }
+
+    return ret_ranges;
+}
+
+MarkRanges MergeTreeDataSelectExecutor::sampleByRange(
+    const MergeTreeData::DataPartPtr & part,
+    const MarkRanges & ranges,
+    const RelativeSize & relative_sample_size,
+    bool deterministic,
+    bool uniform,
+    bool ensure_one_mark_in_part_when_sample_by_range
+    )
+{
+    MarkRanges new_ranges;
+    auto stable_seed = std::hash<String>{}(part->name);
+
+    for (const MarkRange & range : ranges)
+    {
+        UInt64 random_seed = 0;
+        if (deterministic)
+        {
+            // to ensure identical but maybe-unordered <part, range>
+            // will generate the same sampled sliced_ranges
+            // make random_seed a combination of part.name and range
+            random_seed = stable_seed ^ std::hash<UInt64>{}(range.end);
+        }
+        else
+        {
+            // generate from external entropy
+            random_seed = std::random_device{}();
+        }
+
+        auto random_gen = std::mt19937{random_seed};
+
+        // Compute sampled size
+        size_t marks_size = range.end - range.begin;
+        UInt64 sampled_size;
+        if (ensure_one_mark_in_part_when_sample_by_range)
+        {
+            // old logic to ensure at least one mark is sample in this part
+            // keep it as default mode
+            RelativeSize total_size = RelativeSize(marks_size);
+            sampled_size = boost::rational_cast<ASTSampleRatio::BigNum>((relative_sample_size * total_size + RelativeSize(1)));
+        }
+        else
+        {
+            // new logic will sample part
+            // and make sure that the number of rows sampled meets the expected value
+            double n = relative_sample_size.numerator();
+            double d = relative_sample_size.denominator();
+            double expected_size = n / d * marks_size;
+            auto down_cast =  static_cast<UInt64>(expected_size);
+            auto remainder = expected_size - down_cast;
+            std::uniform_real_distribution<> dis(0, 1);
+            sampled_size = down_cast + (remainder >= dis(random_gen) ? 1 : 0);
+        }
+
+        if (sampled_size == 0)
+        {
+            continue;
+        }
+
+        if (uniform)
+        {
+            auto sampled_ranges = uniformSampleByRange(range, sampled_size, random_seed);
+            new_ranges.insert(new_ranges.end(), sampled_ranges.begin(), sampled_ranges.end());
+        }
+        else
+        {
+            // Slice the range via a computed step length
+            MarkRanges sliced_ranges = sliceRange(range, sampled_size);
+            RelativeSize sliced_ranges_size = RelativeSize(sliced_ranges.size());
+            UInt64 sampled_ranges_size
+                = boost::rational_cast<ASTSampleRatio::BigNum>((relative_sample_size * sliced_ranges_size + RelativeSize(1)));
+
+            // Sample sliced ranges
+            MarkRanges sampled_ranges;
+            std::sample(
+                sliced_ranges.begin(),
+                sliced_ranges.end(),
+                std::back_inserter(sampled_ranges),
+                sampled_ranges_size,
+                random_gen);
+            std::sort(sampled_ranges.begin(), sampled_ranges.end(), [](const MarkRange & lhs, const MarkRange & rhs) {
+                return lhs.begin < rhs.begin;
+            });
+            // Construct new ranges
+            for (const MarkRange & sampled_range : sampled_ranges)
+            {
+                new_ranges.push_back(sampled_range);
+            }
+        }
+    }
+
+    return new_ranges;
 }
 
 void MergeTreeDataSelectExecutor::buildKeyConditionFromPartOffset(
@@ -591,7 +773,9 @@ RangesInDataParts MergeTreeDataSelectExecutor::filterPartsByPrimaryKeyAndSkipInd
     LoggerPtr log,
     size_t num_streams,
     ReadFromMergeTree::IndexStats & index_stats,
-    bool use_skip_indexes)
+    bool use_skip_indexes,
+    bool use_sampling,
+    RelativeSize relative_sample_size)
 {
     chassert(alter_conversions.empty() || parts.size() == alter_conversions.size());
 
@@ -650,7 +834,7 @@ RangesInDataParts MergeTreeDataSelectExecutor::filterPartsByPrimaryKeyAndSkipInd
         auto mark_cache = context->getIndexMarkCache();
         auto uncompressed_cache = context->getIndexUncompressedCache();
 
-        auto process_part = [&](size_t part_index)
+        auto process_part = [&](size_t part_index, bool force_ensure_one_mark)
         {
             auto & part = parts[part_index];
             auto alter_conversions_for_part = !alter_conversions.empty()
@@ -669,6 +853,27 @@ RangesInDataParts MergeTreeDataSelectExecutor::filterPartsByPrimaryKeyAndSkipInd
 
             if (!ranges.ranges.empty())
                 sum_parts_pk.fetch_add(1, std::memory_order_relaxed);
+
+            if (use_sampling)
+            {
+                if (auto optimizer_context = context->tryGetOptimizerContext())
+                {
+                    auto & optimizer_settings = optimizer_context->getSettingsRef();
+                    if (optimizer_settings.enable_sample_by_range || optimizer_settings.enable_deterministic_sample_by_range)
+                    {
+                        auto ensure_one_part = optimizer_settings.ensure_one_mark_in_part_when_sample_by_range || force_ensure_one_mark;
+                        MarkRanges sampled_ranges = sampleByRange(
+                            part,
+                            ranges.ranges,
+                            relative_sample_size,
+                            optimizer_settings.enable_deterministic_sample_by_range,
+                            optimizer_settings.uniform_sample_by_range,
+                            ensure_one_part
+                            );
+                        ranges.ranges = std::move(sampled_ranges);
+                    }
+                }
+            }
 
             for (size_t idx = 0; idx < skip_indexes.useful_indices.size(); ++idx)
             {
@@ -733,7 +938,7 @@ RangesInDataParts MergeTreeDataSelectExecutor::filterPartsByPrimaryKeyAndSkipInd
         if (num_threads <= 1)
         {
             for (size_t part_index = 0; part_index < parts.size(); ++part_index)
-                process_part(part_index);
+                process_part(part_index, part_index == 0);
         }
         else
         {
@@ -754,7 +959,7 @@ RangesInDataParts MergeTreeDataSelectExecutor::filterPartsByPrimaryKeyAndSkipInd
                     if (thread_group)
                         CurrentThread::attachToGroupIfDetached(thread_group);
 
-                    process_part(part_index);
+                    process_part(part_index, part_index == 0);
                 });
 
             pool.wait();

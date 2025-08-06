@@ -8,10 +8,13 @@
 #include <Storages/MergeTree/AlterConversions.h>
 #include <Storages/MergeTree/PartitionPruner.h>
 
+#include <boost/rational.hpp>   /// For calculations related to sampling coefficients.
+
 namespace DB
 {
 
 using PartitionIdToMaxBlock = std::unordered_map<String, Int64>;
+using RelativeSize = boost::rational<ASTSampleRatio::BigNum>;
 
 class Pipe;
 
@@ -24,6 +27,7 @@ struct MergeTreeDataSelectSamplingData
     Float64 used_sample_factor = 1.0;
     std::shared_ptr<ASTFunction> filter_function;
     ActionsDAGPtr filter_expression;
+    RelativeSize relative_sample_size = 0;
 };
 
 struct UsefulSkipIndexes

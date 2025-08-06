@@ -44,6 +44,7 @@
 #include <Parsers/parseIdentifierOrStringLiteral.h>
 #include <Parsers/ExpressionListParsers.h>
 #include <Storages/MergeTree/MergeTreeIndexMinMax.h>
+#include <Query/Common/OptimizerContext.h>
 
 #include <algorithm>
 #include <iterator>
@@ -1680,7 +1681,9 @@ ReadFromMergeTree::AnalysisResultPtr ReadFromMergeTree::selectRangesToReadImpl(
             log,
             num_streams,
             result.index_stats,
-            indexes->use_skip_indexes);
+            indexes->use_skip_indexes,
+            result.sampling.use_sampling,
+            result.sampling.relative_sample_size);
     }
 
     size_t sum_marks_pk = total_marks_pk;
@@ -1875,7 +1878,14 @@ Pipe ReadFromMergeTree::spreadMarkRanges(
     Names column_names_to_read = result.column_names_to_read;
     NameSet names(column_names_to_read.begin(), column_names_to_read.end());
 
-    if (!final && result.sampling.use_sampling)
+    bool sample_by_range = false;
+
+    if (auto optimizer_context = context->tryGetOptimizerContext())
+    {
+        sample_by_range = optimizer_context->getSettingsRef().enable_sample_by_range || optimizer_context->getSettingsRef().enable_deterministic_sample_by_range;
+    }
+
+    if (!final && result.sampling.use_sampling && !sample_by_range)
     {
         NameSet sampling_columns;
 
@@ -2031,7 +2041,14 @@ void ReadFromMergeTree::initializePipeline(QueryPipelineBuilder & pipeline, cons
         return;
     }
 
-    if (result.sampling.use_sampling)
+    bool sample_by_range = false;
+
+    if (auto optimizer_context = context->tryGetOptimizerContext())
+    {
+        sample_by_range = optimizer_context->getSettingsRef().enable_sample_by_range || optimizer_context->getSettingsRef().enable_deterministic_sample_by_range;
+    }
+
+    if (result.sampling.use_sampling && !sample_by_range)
     {
         auto sampling_actions = std::make_shared<ExpressionActions>(result.sampling.filter_expression);
         pipe.addSimpleTransform([&](const Block & header)

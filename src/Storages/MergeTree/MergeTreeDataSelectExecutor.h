@@ -8,6 +8,7 @@
 #include <Processors/QueryPlan/ReadFromMergeTree.h>
 
 
+
 namespace DB
 {
 
@@ -200,7 +201,9 @@ public:
         LoggerPtr log,
         size_t num_streams,
         ReadFromMergeTree::IndexStats & index_stats,
-        bool use_skip_indexes);
+        bool use_skip_indexes,
+        bool use_sampling,
+        RelativeSize relative_sample_size);
 
     /// Create expression for sampling.
     /// Also, calculate _sample_factor if needed.
@@ -214,6 +217,16 @@ public:
         const StorageMetadataPtr & metadata_snapshot,
         ContextPtr context,
         LoggerPtr log);
+
+    static MarkRanges sliceRange(const MarkRange & range, const UInt64 & sample_size);
+
+    static MarkRanges sampleByRange(
+        const MergeTreeData::DataPartPtr & part,
+        const MarkRanges & ranges,
+        const RelativeSize & relative_sample_size,
+        bool deterministic,
+        bool uniform,
+        bool ensure_one_mark_in_part_when_sample_by_range);
 
     /// Check query limits: max_partitions_to_read, max_concurrent_queries.
     /// Also, return QueryIdHolder. If not null, we should keep it until query finishes.
