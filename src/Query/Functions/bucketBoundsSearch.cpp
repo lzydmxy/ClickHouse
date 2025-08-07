@@ -41,7 +41,7 @@ public:
         auto data_column = checkAndGetColumn<ColumnVector<T>>(raw_data_column.get());
         if (!data_column)
         {
-            throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Unsupported Column: {}", arguments[1].name);
+            throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Unsupported column: {}", arguments[1].name);
         }
         auto & data_container = data_column->getData();
 
