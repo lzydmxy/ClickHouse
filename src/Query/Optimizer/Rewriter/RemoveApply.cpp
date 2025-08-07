@@ -2440,7 +2440,7 @@ TransformResult ExistsToSemiJoin::transformImpl(PlanNodePtr node, const Captures
 
         if (const auto * literal = apply_step.getAssignment().second->as<ASTLiteral>())
         {
-            UInt64 value = 1;
+            bool value = true;
             literal->value.tryGet(value);
             if (!value)
             {
