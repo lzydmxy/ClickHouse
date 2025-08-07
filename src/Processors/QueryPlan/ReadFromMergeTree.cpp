@@ -1885,7 +1885,8 @@ Pipe ReadFromMergeTree::spreadMarkRanges(
         sample_by_range = optimizer_context->getSettingsRef().enable_sample_by_range || optimizer_context->getSettingsRef().enable_deterministic_sample_by_range;
     }
 
-    if (!final && result.sampling.use_sampling && !sample_by_range)
+    bool no_sample_key = metadata_for_reading->getSamplingKey().data_types.empty();
+    if (!final && result.sampling.use_sampling && !sample_by_range && !no_sample_key)
     {
         NameSet sampling_columns;
 
@@ -2048,7 +2049,8 @@ void ReadFromMergeTree::initializePipeline(QueryPipelineBuilder & pipeline, cons
         sample_by_range = optimizer_context->getSettingsRef().enable_sample_by_range || optimizer_context->getSettingsRef().enable_deterministic_sample_by_range;
     }
 
-    if (result.sampling.use_sampling && !sample_by_range)
+    bool no_sample_key = metadata_for_reading->getSamplingKey().data_types.empty();
+    if (result.sampling.use_sampling && !sample_by_range && !no_sample_key)
     {
         auto sampling_actions = std::make_shared<ExpressionActions>(result.sampling.filter_expression);
         pipe.addSimpleTransform([&](const Block & header)

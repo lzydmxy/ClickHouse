@@ -299,7 +299,8 @@ MergeTreeDataSelectSamplingData MergeTreeDataSelectExecutor::getSampling(
         sample_by_range = optimizer_context->getSettingsRef().enable_sample_by_range || optimizer_context->getSettingsRef().enable_deterministic_sample_by_range;
     }
 
-    if (sampling.use_sampling && !sample_by_range)
+    bool no_sample_key = metadata_snapshot->getSamplingKey().data_types.empty();
+    if (sampling.use_sampling && !sample_by_range && !no_sample_key)
     {
         if (relative_sample_size != RelativeSize(0))
             sampling.used_sample_factor = 1.0 / boost::rational_cast<Float64>(relative_sample_size);
