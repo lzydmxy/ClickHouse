@@ -150,7 +150,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, runtime_filter_min_filter_rows, 10000, "Set minimum row to enable runtime filter", 0) \
     M(Float, runtime_filter_min_filter_factor, 0.4f, "Set minimum filter factor to enable runtime filter", 0) \
     M(Float, runtime_filter_min_filter_factor_for_non_table_scan, 0.9f, "Set minimum filter factor to enable runtime filter if runtime filter can not pushdown", 0) \
-    M(Bool, enable_runtime_filter, true, "Whether enable runtime filter for join", 0) \
+    M(Bool, enable_runtime_filter, false, "Whether enable runtime filter for join", 0) \
     M(Bool, enable_runtime_filter_pipeline_poll, true, "No additional segment needed for the left side during broadcast join, polling time bounded", 0) \
     M(UInt64, wait_runtime_filter_timeout, 1000, "Execute filter wait for runtime filter timeout ms", 0) \
     M(Bool, enable_range_cover, true, "Whether use range rather than bloom or values set for runtime filter", 0) \
