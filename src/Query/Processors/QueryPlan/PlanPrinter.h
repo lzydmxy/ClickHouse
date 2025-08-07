@@ -95,6 +95,7 @@ public:
     TextPrinterIntent forChild(bool last, bool has_children_) const;
     String print() const { return current_lines_prefix; }
     String detailIntent() const;
+    String headerIntent() const;
 
 private:
     TextPrinterIntent(String current_lines_prefix_, String next_lines_prefix_, bool hasChildren);

@@ -2776,11 +2776,9 @@ void GraphvizPrinter::appendPlanSegmentNodes(
 
     appendPlanSegmentNode(out, plan_segment);
 
-    // QueryPlan::Node * plan = plan_segment->getQueryPlan().getRootNode();
-
-    //todo: lizhuoyu, other feat: add PlanSegmentEdgePrinter
-    // PlanSegmentEdgePrinter edge_printer{out};
-    // VisitorUtil::accept(plan, edge_printer, segments);
+    QueryPlan::Node * plan = plan_segment->getQueryPlan().getRoot();
+    PlanSegmentEdgePrinter edge_printer{out};
+    VisitorUtil::accept(plan, edge_printer, segments);
 
     std::vector<PlanSegmentTree::Node *> & children = segmentNode->children;
     for (auto & child : children)
@@ -2880,14 +2878,11 @@ void GraphvizPrinter::appendPlanSegmentNode(std::stringstream & out, const PlanS
     }
     out << "\n";
 
-    //    out << "exchange_output_parallel_size " << segment_ptr->getExchangeOutputParallelSize() << "\n";
     out << "\"";
-    // QueryPlan::Node * node = segment_ptr->getQueryPlan().getRoot();
-    // PrinterContext context{};
-
-    //todo: lizhuoyu, other feat: add PlanSegmentEdgePrinter
-    // PlanSegmentNodePrinter node_printer{out, true};
-    // VisitorUtil::accept(node, node_printer, context);
+    QueryPlan::Node * node = segment_ptr->getQueryPlan().getRoot();
+    PrinterContext context{};
+    PlanSegmentNodePrinter node_printer{out, true};
+    VisitorUtil::accept(node, node_printer, context);
     out << "}\n";
 }
 
@@ -3244,7 +3239,7 @@ void GraphvizPrinter::printMemo(const Memo & memo, GroupId root_id, const Contex
         out << graphviz;
         out.close();
 
-        // todo: lizhuoyu5, other feat storing the graphs of ASTs, plans, and pipelines in QueryStatus
+        // todo: zhangwanyun1, need addGraphviz from QueryStatus
         // auto process_list_elem = context->getProcessListElement();
         // if (process_list_elem)
         //     process_list_elem->addGraphviz(name, graphviz);

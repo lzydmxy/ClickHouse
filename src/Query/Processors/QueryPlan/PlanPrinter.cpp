@@ -587,6 +587,11 @@ String TextPrinterIntent::detailIntent() const
     return "\n" + next_lines_prefix + (hasChildren ? VERTICAL_LINE : EMPTY_PREFIX) + EMPTY_PREFIX;
 }
 
+String TextPrinterIntent::headerIntent() const
+{
+    return next_lines_prefix + (hasChildren ? VERTICAL_LINE : EMPTY_PREFIX) + EMPTY_PREFIX;
+}
+
 String PlanPrinter::TextPrinter::printLogicalPlan(
     PlanNodeBase & plan, const TextPrinterIntent & intent, const StepProfiles & profiles) // NOLINT(misc-no-recursion)
 {
@@ -612,6 +617,37 @@ String PlanPrinter::TextPrinter::printLogicalPlan(
         if (settings.profile && profiles.count(plan.getId()))
             out << printStepProfiles(plan, intent, profiles) << intent.detailIntent() << printQError(plan, profiles);
         out << printDetail(plan.getStep(), intent) << printAttributes(plan, intent, profiles) << "\n";
+    }
+
+    if (settings.query_plan_options.header)
+    {
+        std::stringstream input_ss;
+        input_ss << "InputStreams: [";
+        for (const auto & input_streams : plan.getStep()->getInputStreams())
+        {
+            input_ss << "[";
+            for (const auto & name: input_streams.header.getNames())
+            {
+                input_ss << name << ", ";
+            }
+            input_ss << "], ";
+        }
+        input_ss << "] ";
+
+        out << intent.headerIntent() << input_ss.str() << "\n";
+
+        std::stringstream output_ss;
+
+        output_ss << "OutputStream: [";
+
+        for (const auto & name: plan.getStep()->getOutputStream().header.getNames())
+        {
+            output_ss << name << ", ";
+        }
+
+        output_ss << "] ";
+
+        out << intent.headerIntent() << output_ss.str() << "\n";
     }
 
     if ((getQueryPlanStepType(step) == QueryPlanStepType::CTERefStepExt || getQueryPlanStepType(step) == QueryPlanStepType::ExchangeStepExt) && is_distributed)
@@ -1004,26 +1040,6 @@ String PlanPrinter::TextPrinter::printSuffix(PlanNodeBase & plan)
                 << " segment[" << exchange_to_segment.at(plan.getId()) << "]";
     }
 
-    out << " InputStreams size " << plan.getStep()->getInputStreams().size() << ": [ ";
-    for (const auto & input_streams : plan.getStep()->getInputStreams())
-    {
-        out << "[";
-        for (const auto & name: input_streams.header.getNames())
-        {
-            out << name << ", ";
-        }
-        out << "], ";
-    }
-    out << "] ";
-
-    out << "OutputStream: [ ";
-
-    for (const auto & name: plan.getStep()->getOutputStream().header.getNames())
-    {
-        out << name << ", ";
-    }
-
-    out << "] ";
     return out.str();
 }
 
