@@ -5,7 +5,6 @@
 #include <Core/ColumnNumbers.h>
 #include <DataTypes/DataTypesNumber.h>
 #include <Functions/FunctionFactory.h>
-#include <Functions/IFunction.h>
 #include <Query/Statistics/BucketBoundsImpl.h>
 #include <Query/Statistics/TypeMacros.h>
 #include <Query/Statistics/TypeUtils.h>
