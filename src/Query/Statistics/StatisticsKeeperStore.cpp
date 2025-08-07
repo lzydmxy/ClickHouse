@@ -353,12 +353,14 @@ void StatisticsKeeperStore::shutdown()
     bool prev_stop_flag = stop_flag.exchange(true);
     if (!prev_stop_flag)
     {
+        LOG_DEBUG(log, "Shutting down StatisticsKeeperStore.");
         queue_updated_event->set();
         cleanup_event->set();
         if (update_thread)
             update_thread->join();
         if (cleanup_thread)
             cleanup_thread->join();
+        zookeeper_client.reset();
     }
 }
 

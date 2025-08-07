@@ -229,6 +229,7 @@ public:
     void setPlanCacheManager(std::unique_ptr<PlanCacheManager> && manager);
     void setStatisticsKeeperStore(StatisticsKeeperStorePtr statistics_keeper_store_ptr, ContextMutablePtr context);
     StatisticsKeeperStorePtr getStatisticsKeeperStore();
+    void resetStatisticsKeeperStore();
     void initOptimizerProfile() { optimizer_profile = std::make_unique<OptimizerProfile>(); }
     PlanCacheManager* getPlanCacheManager();
     const SymbolAllocatorPtr & getSymbolAllocator() { return symbol_allocator; }

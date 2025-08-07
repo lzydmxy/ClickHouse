@@ -203,6 +203,13 @@ void OptimizerContext::setStatisticsKeeperStore(StatisticsKeeperStorePtr statist
     shared->statistics_keeper_store->startup();
 }
 
+void OptimizerContext::resetStatisticsKeeperStore()
+{
+    std::lock_guard lock(mutex);
+    if (shared->statistics_keeper_store)
+        shared->statistics_keeper_store->shutdown();
+}
+
 StatisticsKeeperStorePtr OptimizerContext::getStatisticsKeeperStore()
 {
     std::lock_guard lock(mutex);
