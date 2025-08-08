@@ -133,16 +133,17 @@ PlanNodeStatisticsPtr AggregateEstimator::estimate(PlanNodeStatisticsPtr & child
     return std::make_shared<PlanNodeStatistics>(row_count, std::move(symbol_statistics));
 }
 
-SymbolStatisticsPtr AggregateEstimator::estimateAggFun(AggregateFunctionPtr fun, const Names & args, UInt64 row_count, DataTypePtr data_type, PlanNodeStatisticsPtr & child_stats)
+SymbolStatisticsPtr AggregateEstimator::estimateAggFun(AggregateFunctionPtr fun, const Names & args, UInt64 row_count, DataTypePtr data_type, PlanNodeStatisticsPtr & /*child_stats*/)
 {
-    Float64 min = 0;
-    Float64 max = 0;
-    if (fun->getName() == "sum" && !args.empty() && child_stats->getSymbolStatistics(args[0]))
-    {
-        min = child_stats->getSymbolStatistics(args[0])->getMin();
-        max = child_stats->getSymbolStatistics(args[0])->getMax();
-    }
-    SymbolStatistics statistics{row_count, min, max, 0, 0, {}, data_type, "unknown", false};
+    // FIXME(lizhuoyu5), Remove unreasonable max/min estimations after aggregation, as this cause bad cases for TPC-H Q18.
+    // Float64 min = 0;
+    // Float64 max = 0;
+    // if (fun->getName() == "sum" && !args.empty() && child_stats->getSymbolStatistics(args[0]))
+    // {
+    //     min = child_stats->getSymbolStatistics(args[0])->getMin();
+    //     max = child_stats->getSymbolStatistics(args[0])->getMax();
+    // }
+    SymbolStatistics statistics{row_count, 0, 0, 0, 0, {}, data_type, fun->getName(), false};
     return std::make_shared<SymbolStatistics>(statistics);
 }
 
