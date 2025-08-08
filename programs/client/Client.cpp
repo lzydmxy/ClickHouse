@@ -1046,6 +1046,9 @@ void Client::processOptions(const OptionsDescription & options_description,
 
     global_context->setSettings(cmd_settings);
 
+    // Init here for required access to OptimizerContext, especially for optimizer_settings.
+    global_context->initializeOptimizerContext();
+
     /// Copy settings-related program options to config.
     /// TODO: Is this code necessary?
     for (const auto & setting : global_context->getSettingsRef().all())

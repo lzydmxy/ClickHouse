@@ -77,6 +77,7 @@ void applySettingsOverridesForLocal(ContextMutablePtr context)
 {
     Settings settings = context->getSettings();
 
+    settings.enable_optimizer = false; // disable optimizer in local server
     settings.allow_introspection_functions = true;
     settings.storage_file_read_method = LocalFSReadMethod::mmap;
 
