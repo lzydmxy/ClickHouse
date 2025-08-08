@@ -17,9 +17,15 @@ AddressInfo getLocalAddress(const ContextPtr & context)
 AddressInfoPtr getLocalAddressPtr(const ContextPtr & context)
 {
     const auto & clusters = context->getClusters();
+
+    // for test environment
     if (clusters.size() == 0)
     {
-        throw Exception(ErrorCodes::LOGICAL_ERROR, "Can't get local address");
+        const auto & host = getFQDNOrHostName();
+        auto tcp_port = context->getTCPPort();
+        auto rpc_port = context->getOptimizerContext()->getRPCPort();
+        const ClientInfo & info = context->getClientInfo();
+        return std::make_shared<AddressInfo>(host, tcp_port, info.current_user, "", rpc_port);
     }
 
     const auto & cluster = clusters.begin()->second;
