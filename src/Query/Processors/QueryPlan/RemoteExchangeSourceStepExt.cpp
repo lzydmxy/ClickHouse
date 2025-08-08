@@ -129,22 +129,17 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
     }
 
     const Block & exchange_header = getOutputStream().header;
-    Block source_header;
-    if (keep_order)
-        source_header = exchange_header;
 
-    LOG_TRACE(logger, "Initialize pipeline: keeper order {}, is_add_totals {}, is_add_extremes {}, inputs size {}, enable multi receiver {}, source header columns {}, exchange header columns {}",
-        keep_order, is_add_totals, is_add_extremes, inputs.size(),
-        optimizer_context->getSettingsRef().exchange_enable_multipath_receiver,
-        source_header.columns(), exchange_header.columns());
+    LOG_TRACE(logger, "Initialize pipeline: keeper order {}, is_add_totals {}, is_add_extremes {}, inputs size {}, enable multi receiver {}, exchange header columns {}",
+        keep_order, is_add_totals, is_add_extremes, inputs.size(), optimizer_context->getSettingsRef().exchange_enable_multipath_receiver, exchange_header.columns());
 
     ExchangeTotalsSourcePtr totals_source;
     if (is_add_totals)
-        totals_source = std::make_shared<ExchangeTotalsSourceExt>(source_header);
+        totals_source = std::make_shared<ExchangeTotalsSourceExt>(exchange_header);
 
     ExchangeExtremesSourcePtr extremes_source;
     if (is_add_extremes)
-        extremes_source = std::make_shared<ExchangeExtremesSourceExt>(source_header);
+        extremes_source = std::make_shared<ExchangeExtremesSourceExt>(exchange_header);
     auto enable_metrics = optimizer_context->getSettingsRef().log_query_exchange;
     auto query_exchange_log = enable_metrics ? context->getOptimizerContext()->getQueryExchangeLog(): nullptr;
     auto register_mode = BrpcExchangeReceiverRegistryService::BRPC;
@@ -197,9 +192,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
                 //todo: zhangwanyun, other feat: if bsp_mode is required, then add other codes
                 data_key = std::make_shared<ExchangeDataKey>(current_tx_id, exchange_id, partition_id);
 
-                // TODO wujianchao support local exchange optimization
-                // bool is_local_exchange = ExchangeUtils::isLocalExchange(read_address_info, source_address); // TODO wujianchao read_address_info is hostname source_address is localhost
-                bool is_local_exchange = false;
+                bool is_local_exchange = ExchangeUtils::isLocalExchange(read_address_info, source_address);
 
                 LOG_TRACE(logger, "Initialize pipeline input index {}, exchange data key {}, is local exchange {} for receiver," \
                     "read address {}, write address {}, collector is null {}",
@@ -211,7 +204,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
                     register_mode, query_exchange_log);
                 receivers.emplace_back(std::move(receiver));
             }
-            // input_index++;
+            input_index++;
         }
 
         if (optimizer_context->getSettingsRef().exchange_enable_multipath_receiver && !keep_order)
@@ -241,8 +234,8 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
             // LOG_DEBUG(logger, "Create multi receiver name {}, source_header columns {}, struct {}",
             //     multi_path_receiver->getName(), source_header.columns(), source_header.dumpStructure());
 
-            auto source = std::make_shared<ExchangeSourceExt>(source_header, std::move(multi_path_receiver), options, is_final_plan_segment,
-                totals_source, extremes_source);
+            auto source = std::make_shared<ExchangeSourceExt>(exchange_header, std::move(multi_path_receiver), options, is_final_plan_segment,
+                optimizer_context->getSettingsRef().exchange_enable_block_compress, totals_source, extremes_source);
             pipe.addSource(std::move(source));
             source_num++;
         }
@@ -257,13 +250,15 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
                     keep_order, name, std::make_shared<MultiPathBoundedQueue>(remote_queue_size, memory_controller));
                 BroadcastReceiverPtr receiver = std::dynamic_pointer_cast<IBroadcastReceiver>(brpc_receiver);
                 // LOG_DEBUG(logger, "Create single receiver name {}, source_header columns {}", receiver->getName(), source_header.columns());
-                auto source = std::make_shared<ExchangeSourceExt>(source_header, std::move(receiver), options, is_final_plan_segment, totals_source, extremes_source);
+                auto source = std::make_shared<ExchangeSourceExt>(exchange_header, std::move(receiver), options, is_final_plan_segment,
+                    optimizer_context->getSettingsRef().exchange_enable_block_compress, totals_source, extremes_source);
                 pipe.addSource(std::move(source));
                 source_num++;
             }
             for (auto & receiver : receivers)
             {
-                auto source = std::make_shared<ExchangeSourceExt>(source_header, std::move(receiver), options, is_final_plan_segment);
+                auto source = std::make_shared<ExchangeSourceExt>(exchange_header, std::move(receiver), options, is_final_plan_segment,
+                    optimizer_context->getSettingsRef().exchange_enable_block_compress);
                 pipe.addSource(std::move(source));
                 source_num++;
             }
@@ -279,12 +274,13 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
     LOG_TRACE(logger, "Initialize pipeline pipe processors size {}", pipe.getProcessors().size());
     pipeline.init(std::move(pipe));
 
-    if (!keep_order)
-    {
-        pipeline.resize(optimizer_context->getSettingsRef().exchange_source_pipeline_threads);
-        pipeline.addSimpleTransform([enable_compress = optimizer_context->getSettingsRef().exchange_enable_block_compress, header = exchange_header](
-                                        const Block &) { return std::make_shared<DeserializeBufTransform>(header, enable_compress); });
-    }
+    // FIXME(lizhuoyu5), deserialize IOBuf in ExchangeSourceExt, just remove DeserializeBufTransform here.
+    // if (!keep_order)
+    // {
+    //     pipeline.resize(optimizer_context->getSettingsRef().exchange_source_pipeline_threads);
+    //     pipeline.addSimpleTransform([enable_compress = optimizer_context->getSettingsRef().exchange_enable_block_compress, header = exchange_header](
+    //                                     const Block &) { return std::make_shared<DeserializeBufTransform>(header, enable_compress); });
+    // }
 
     auto prev_pipe_threads = pipeline.getNumThreads();
 

@@ -4,6 +4,8 @@
 #include <QueryPipeline/RemoteQueryExecutorReadContext.h>
 #include <Query/Executor/SegmentScheduler.h>
 #include <Processors/Transforms/AggregatingTransform.h>
+#include <Query/Exchange/bRPC/ReadBufferFromBrpc.h>
+#include <Query/Exchange/DataTrans/NativeChunkInputStream.h>
 #include <Common/Exception.h>
 
 #include <algorithm>
@@ -29,6 +31,7 @@ ExchangeSourceExt::ExchangeSourceExt(
     Block header_,
     BroadcastReceiverPtr receiver_,
     ExchangeOptions options_,
+    bool enable_block_compress_,
     ExchangeTotalsSourcePtr totals_source_,
     ExchangeExtremesSourcePtr extremes_source_)
     : ISource(std::move(header_), false)
@@ -37,6 +40,7 @@ ExchangeSourceExt::ExchangeSourceExt(
     , totals_source(std::move(totals_source_))
     , extremes_source(std::move(extremes_source_))
     , logger(getLogger("ExchangeSourceExt"))
+    , enable_block_compress(enable_block_compress_)
 {
 }
 
@@ -45,6 +49,7 @@ ExchangeSourceExt::ExchangeSourceExt(
     BroadcastReceiverPtr receiver_,
     ExchangeOptions options_,
     bool,
+    bool enable_block_compress_,
     ExchangeTotalsSourcePtr totals_source_,
     ExchangeExtremesSourcePtr extremes_source_)
     : ISource(std::move(header_), false)
@@ -53,6 +58,7 @@ ExchangeSourceExt::ExchangeSourceExt(
     , totals_source(std::move(totals_source_))
     , extremes_source(std::move(extremes_source_))
     , logger(getLogger("ExchangeSourceExt"))
+    , enable_block_compress(enable_block_compress_)
 {
 }
 
@@ -71,7 +77,8 @@ String ExchangeSourceExt::getClassName() const
 
 IProcessor::Status ExchangeSourceExt::prepare()
 {
-    LOG_TRACE(logger, "{} begin prepare", getName());
+    LOG_TRACE(logger, "{} begin prepare {} with header: {}", getName(), current_chunk.chunk.getNumColumns(), output.getHeader().columns());
+
     const auto & status = ISource::prepare();
     LOG_TRACE(logger, "{} parent's prepare, status is {}", getName(), ISource::statusToName(status));
     if (status == Status::Finished)
@@ -79,6 +86,33 @@ IProcessor::Status ExchangeSourceExt::prepare()
         receiver->finish(BroadcastStatusCode::RECV_REACH_LIMIT, "ExchangeSourceExt finished");
     }
     return status;
+}
+
+void ExchangeSourceExt::transformIOBufChunk(Chunk & chunk) const
+{
+    const ChunkInfoPtr & info = chunk.getChunkInfo();
+    if (!info)
+        return;
+
+    auto iobuf_info = std::dynamic_pointer_cast<const DeserializeBufTransform::IOBufChunkInfo>(info);
+    if (!iobuf_info)
+        return;
+
+    Stopwatch s;
+    auto read_buffer = std::make_unique<ReadBufferFromBrpc>(iobuf_info->io_buf);
+    std::unique_ptr<ReadBuffer> buf;
+    if (enable_block_compress)
+        buf = std::make_unique<CompressedReadBuffer>(*read_buffer);
+    else
+        buf = std::move(read_buffer);
+    s.restart();
+    NativeChunkInputStream chunk_in(*buf, output.getHeader());
+    chunk = chunk_in.readImpl();
+    if (const auto * io_buf_with_receiver = dynamic_cast<const DeserializeBufTransform::IOBufChunkInfoWithReceiver *>(iobuf_info.get()))
+    {
+        if (auto receiver = io_buf_with_receiver->receiver.lock())
+            receiver->addToMetricsMaybe(0, s.elapsedMilliseconds(), 0, chunk);
+    }
 }
 
 std::optional<Chunk> ExchangeSourceExt::tryGenerate()
@@ -91,10 +125,10 @@ std::optional<Chunk> ExchangeSourceExt::tryGenerate()
     if (std::holds_alternative<Chunk>(packet))
     {
         Chunk chunk = std::move(std::get<Chunk>(packet));
-#ifndef NDEBUG
+        transformIOBufChunk(chunk);
         LOG_TRACE(logger, "{} receive chunk with rows {}", getName(), chunk.getNumRows());
-#endif
-        if (chunk && chunk.getChunkInfo() &&  getChunkType(chunk.getChunkInfo()) == ChunkType::Totals && totals_source)
+
+        if (chunk && chunk.getChunkInfo() && getChunkType(chunk.getChunkInfo()) == ChunkType::Totals && totals_source)
         {
             totals_source->setTotals(std::move(chunk)); // assuming only one totals chunk, so it should be safe to do so.
             chunk = {};

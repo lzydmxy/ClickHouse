@@ -24,6 +24,7 @@ public:
         Block header_,
         BroadcastReceiverPtr receiver_,
         ExchangeOptions options_,
+        bool enable_block_compress_ = true,
         ExchangeTotalsSourcePtr totals_source_ = nullptr,
         ExchangeExtremesSourcePtr extremes_source_ = nullptr);
     ExchangeSourceExt(
@@ -31,6 +32,7 @@ public:
         BroadcastReceiverPtr receiver_,
         ExchangeOptions options_,
         bool fetch_exception_from_scheduler_,
+        bool enable_block_compress_,
         ExchangeTotalsSourcePtr totals_source_ = nullptr,
         ExchangeExtremesSourcePtr extremes_source_ = nullptr);
     ~ExchangeSourceExt() override;
@@ -53,7 +55,9 @@ private:
     std::atomic<bool> was_query_canceled {false};
     std::atomic<bool> was_receiver_finished {false};
     LoggerPtr logger;
+    bool enable_block_compress;
     void checkBroadcastStatus(const BroadcastStatus & status) const;
+    void transformIOBufChunk(Chunk & chunk) const;
 };
 
 class ExchangeTotalsSourceExt : public ISource

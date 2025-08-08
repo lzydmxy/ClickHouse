@@ -16,11 +16,23 @@ AddressInfo getLocalAddress(const ContextPtr & context)
 
 AddressInfoPtr getLocalAddressPtr(const ContextPtr & context)
 {
-    const auto & host = getFQDNOrHostName();
-    auto tcp_port = context->getTCPPort();
-    auto rpc_port = context->getOptimizerContext()->getRPCPort();
-    const ClientInfo & info = context->getClientInfo();
-    return std::make_shared<AddressInfo>(host, tcp_port, info.current_user, "", rpc_port); // TODO wujianchao add password
+    const auto & clusters = context->getClusters();
+    if (clusters.size() == 0)
+    {
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Can't get local address");
+    }
+
+    const auto & cluster = clusters.begin()->second;
+
+    for (const auto & shard : cluster->getShardsInfo())
+    {
+        if (shard.isLocal())
+        {
+            const auto & local_address = shard.local_addresses[0];
+            return std::make_shared<AddressInfo>(local_address.host_name, local_address.port, local_address.user, local_address.password, local_address.rpc_port);
+        }
+    }
+    throw Exception(ErrorCodes::LOGICAL_ERROR, "Can't get local address");
 }
 
 // AddressInfo getRemoteAddress(HostWithPorts host_with_ports, ContextPtr & query_context)
