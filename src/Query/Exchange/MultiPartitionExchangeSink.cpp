@@ -1,5 +1,7 @@
 #include "MultiPartitionExchangeSink.h"
+
 #include <Common/logger_useful.h>
+#include <Columns/ColumnSparse.h>
 #include <Columns/IColumn.h>
 #include <Query/Exchange/RepartitionTransform.h>
 #include <Query/Exchange/DataTrans/IBroadcastSender.h>
@@ -79,7 +81,8 @@ void MultiPartitionExchangeSink::consume(Chunk chunk)
     const auto & columns = chunk.getColumns();
     for (size_t col_idx = 0; col_idx < column_num; col_idx++)
     {
-         auto materialized_columns = columns[col_idx]->scatter(partition_num, partition_selector);
+         auto column_ptr = recursiveRemoveSparse(columns[col_idx]);
+         auto materialized_columns = column_ptr->scatter(partition_num, partition_selector);
          for (size_t partition_idx = 0; partition_idx < partition_num; ++ partition_idx)
          {
              if (col_idx == 0)
