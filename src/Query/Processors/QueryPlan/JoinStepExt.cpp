@@ -162,7 +162,8 @@ JoinPtr JoinStepExt::makeJoin(
     // if (table_join->forceNestedLoopJoin())
     //     return std::make_shared<NestedLoopJoin>(table_join, r_sample_block, context);
 
-    if (table_join->forceHashJoin() || join_algorithm == JoinAlgorithm::DEFAULT || (table_join->preferMergeJoin() && !allow_merge_join))
+    if (table_join->forceHashJoin() || join_algorithm == JoinAlgorithm::HASH || join_algorithm == JoinAlgorithm::PARALLEL_HASH
+        || join_algorithm == JoinAlgorithm::DEFAULT || (table_join->preferMergeJoin() && !allow_merge_join))
     {
         if (table_join->allowParallelHashJoin() && join_algorithm == JoinAlgorithm::PARALLEL_HASH)
         {
