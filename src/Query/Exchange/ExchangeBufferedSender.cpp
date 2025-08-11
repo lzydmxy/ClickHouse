@@ -55,7 +55,7 @@ void ExchangeBufferedSender::resetBuffer()
 void ExchangeBufferedSender::append(
     size_t column_idx, MutableColumnPtr target)
 {
-    partition_buffer[column_idx] = std::move(target);
+    partition_buffer[column_idx]->insertRangeFrom(*target, 0, target->size());
 }
 
 void ExchangeBufferedSender::appendSelective(size_t column_idx, const IColumn & source)
