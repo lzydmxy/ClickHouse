@@ -80,7 +80,7 @@ private:
     void enter(ASTPtr & ast, ScopePtr & scope);
     void leave(ASTPtr & ast, ScopePtr & scope);
 
-    bool needChildVisit(ASTPtr &, ASTPtr &) { return true; }
+    static bool needChildVisit(ASTPtr &, ASTPtr &) { return true; }
 
     void visitChildren(ASTPtr & ast, ScopePtr & scope)
     {

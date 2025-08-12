@@ -33,6 +33,7 @@
 #include <Parsers/queryToString.h>
 #include <Parsers/parseQuery.h>
 #include <Storages/StorageSnapshot.h>
+#include <Query/Interpreters/ReplaceDistributedTableNameVisitor.h>
 
 #include <Common/logger_useful.h>
 #include "Core/SettingsEnums.h"
@@ -191,6 +192,23 @@ namespace
         ReplaceViewWithSubquery data{context};
         ReplaceViewWithSubqueryVisitor(data).visit(query);
         GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-expand-view");
+    }
+
+    void replaceDistributedTableAndCollectClusterInfo(ASTPtr & query, ContextMutablePtr context, int & graphviz_index)
+    {
+        // replace distributed table to local table and collecting clusters info
+        ReplaceDistributedTableNameVisitor visitor(context);
+        visitor.visit(query);
+
+        /// set cluser
+        if (visitor.clusters.size() > 1)
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "More than one cluster found, only support tables in the same cluster");
+
+        if (!visitor.clusters.empty())
+        {
+            context->getOptimizerContext()->setCluster(*visitor.clusters.begin());
+        }
+        GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-replace-distributed-table-and-collect-cluster-info");
     }
 
     void normalizeUnion(ASTPtr & query, ContextMutablePtr context)
@@ -588,6 +606,7 @@ ASTPtr QueryRewriter::rewrite(ASTPtr query, ContextMutablePtr context, bool enab
         rewriteFusionMerge(query, context, graphviz_index);
         expandCte(query, context, graphviz_index);
         expandView(query, context, graphviz_index);
+        replaceDistributedTableAndCollectClusterInfo(query, context, graphviz_index);
         normalizeUnion(query, context); // queries in union may not be normalized, hence normalize them here
         simpleFunctions(query, context);
 
@@ -604,6 +623,7 @@ ASTPtr QueryRewriter::rewrite(ASTPtr query, ContextMutablePtr context, bool enab
         rewriteFusionMerge(query, context, graphviz_index);
         expandCte(query, context, graphviz_index);
         expandView(query, context, graphviz_index);
+        replaceDistributedTableAndCollectClusterInfo(query, context, graphviz_index);
         normalizeUnion(query, context);
         simpleFunctions(query, context);
 

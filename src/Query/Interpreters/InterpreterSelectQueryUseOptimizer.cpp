@@ -8,7 +8,6 @@
 #include <Query/Planner/PlannerExt.h>
 #include <Query/Analyzer/QueryAnalyzer.h>
 #include <Query/Processors/QueryPlan/FinalSampleStepExt.h>
-#include <Query/Interpreters/ReplaceDistributedTableNameVisitor.h>
 #include <Query/Planner/GraphvizPrinter.h>
 #include <Interpreters/InterpreterFactory.h>
 #include <Storages/StorageDistributed.h>
@@ -105,20 +104,6 @@ QueryPlanExtPtr InterpreterSelectQueryUseOptimizer::getQueryPlan(bool skip_optim
     // remove settings to avoid plan cache miss
     RemoveSettings remove_settings_data;
     RemoveSettingsVisitor(remove_settings_data).visit(query_ptr);
-
-    // replace distributed table to local table and parsing cluster info
-    ReplaceDistributedTableNameVisitor visitor(context);
-    visitor.visit(query_ptr);
-
-    /// set cluser
-    if (visitor.clusters.size() > 1)
-        throw Exception(ErrorCodes::LOGICAL_ERROR, "More than one cluster found, only support tables in the same cluster");
-
-    if (!visitor.clusters.empty())
-    {
-        context->getOptimizerContext()->setCluster(*visitor.clusters.begin());
-        LOG_INFO(log, "Set cluster {}", context->getOptimizerContext()->getCluster()->getName());
-    }
 
     if (!query_plan || context->getOptimizerContext()->getSettingsRef().iterative_optimizer_timeout == 999999)
     {
