@@ -20,4 +20,13 @@ bool TableJoinExt::allowMergeJoin() const
     return all_join || special_left;
 }
 
+bool TableJoinExt::enableParallelHashJoin() const
+{
+    if (table_join.kind == JoinKind::Cross)
+        return false;
+    if (isSpecialStorage() || !oneDisjunct())
+        return false;
+    return true;
+}
+
 }

@@ -38,11 +38,7 @@ public:
     void setInequalCondition(ExpressionActionsPtr inequal_condition_actions_, String inequal_column_name_);
 
     bool allowMergeJoin() const;
-    bool forceHashJoin() const
-    {
-    /// HashJoin always used for DictJoin
-    return join_algorithm.size() == 1 && (join_algorithm[0] == JoinAlgorithm::HASH || join_algorithm[0] == JoinAlgorithm::PARALLEL_HASH || join_algorithm[0] == JoinAlgorithm::DIRECT);
-    }
+    bool enableParallelHashJoin() const;
     bool preferMergeJoin() const { return join_algorithm.size() == 1 && join_algorithm[0] == JoinAlgorithm::PREFER_PARTIAL_MERGE; }
     bool forceMergeJoin() const { return join_algorithm.size() == 1 && join_algorithm[0] == JoinAlgorithm::PARTIAL_MERGE; }
     bool forceGraceHashJoin() const { return join_algorithm.size() == 1 && join_algorithm[0] == JoinAlgorithm::GRACE_HASH; }

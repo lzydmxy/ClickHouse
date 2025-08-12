@@ -158,14 +158,18 @@ JoinPtr JoinStepExt::makeJoin(
     String dict_name;
     String key_name;
 
-    // todo: lizhuoyu5, other feat: support NESTED_LOOP_JOIN join Algorithm, we may not need
-    // if (table_join->forceNestedLoopJoin())
-    //     return std::make_shared<NestedLoopJoin>(table_join, r_sample_block, context);
-
-    if (table_join->forceHashJoin() || join_algorithm == JoinAlgorithm::HASH || join_algorithm == JoinAlgorithm::PARALLEL_HASH
-        || join_algorithm == JoinAlgorithm::DEFAULT || (table_join->preferMergeJoin() && !allow_merge_join))
+    MultiEnum<JoinAlgorithm> set_join_algorithm = settings.join_algorithm;
+    if (set_join_algorithm.isSet(JoinAlgorithm::DEFAULT) || set_join_algorithm.isSet(JoinAlgorithm::HASH) || set_join_algorithm.isSet(JoinAlgorithm::PARALLEL_HASH)
+        || (set_join_algorithm.isSet(JoinAlgorithm::PREFER_PARTIAL_MERGE) && !allow_merge_join))
     {
-        if (table_join->allowParallelHashJoin() && join_algorithm == JoinAlgorithm::PARALLEL_HASH)
+        // Use hash join only when it is explicitly set; otherwise, prefer using PARALLEL_HASH whenever possible.
+        if (set_join_algorithm.isSet(JoinAlgorithm::HASH))
+        {
+            return std::make_shared<HashJoin>(table_join, r_sample_block);
+        }
+
+        if ((join_algorithm == JoinAlgorithm::PARALLEL_HASH || join_algorithm == JoinAlgorithm::HASH || join_algorithm == JoinAlgorithm::DEFAULT)
+            && table_join->enableParallelHashJoin())
         {
             // todo: lizhuoyu5, other feat: Yuanning RuntimeFilter, compare with CE code when fix
             // if (enable_parallel_hash_join)
@@ -194,11 +198,12 @@ JoinPtr JoinStepExt::makeJoin(
 
             return std::make_shared<ConcurrentHashJoin>(context, table_join, settings.max_threads, r_sample_block);
         }
-        else if (join_algorithm == JoinAlgorithm::GRACE_HASH && GraceHashJoin::isSupported(table_join) && allow_grace_hash_join)
+
+        if (join_algorithm == JoinAlgorithm::GRACE_HASH && GraceHashJoin::isSupported(table_join) && allow_grace_hash_join)
         {
             if (GraceHashJoin::isSupported(table_join) ) {
                 table_join->join_algorithm = {JoinAlgorithm::GRACE_HASH};
-                // todo: lizhuoyu5, other feat: Parallel execute left input and right input for join
+                // todo: lizhuoyu5, other feat: Parallel execute left input and right input for grace hash join
                 // auto parallel = (context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel != 0 ? context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel: num_streams);
                 return std::make_shared<GraceHashJoin>(context, table_join, l_sample_block, r_sample_block, context->getTempDataOnDisk(), false);
             } else if (allow_merge_join) { // fallback into merge join
@@ -209,6 +214,7 @@ JoinPtr JoinStepExt::makeJoin(
                 return std::make_shared<HashJoin>(table_join, r_sample_block);
             }
         }
+
         return std::make_shared<HashJoin>(table_join, r_sample_block);
     }
     else if (table_join->forceMergeJoin() || (table_join->preferMergeJoin() && allow_merge_join))
@@ -216,7 +222,7 @@ JoinPtr JoinStepExt::makeJoin(
     else if ((table_join->forceGraceHashJoin() || join_algorithm == JoinAlgorithm::GRACE_HASH) && allow_grace_hash_join)
     {
         if (GraceHashJoin::isSupported(table_join) ) {
-            // todo: lizhuoyu5, other feat: Parallel execute left input and right input for join
+            // todo: lizhuoyu5, other feat: Parallel execute left input and right input for grace hash join
             // auto parallel = (context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel != 0 ? context->getOptimizerContext()->getSettingsRef()->grace_hash_join_left_side_parallel: num_streams);
             // return std::make_shared<GraceHashJoin>(context, table_join, l_sample_block, r_sample_block, context->getTempDataOnDisk(), parallel, context->getSettingsRef().spill_mode == SpillMode::AUTO, false, num_streams);
             return std::make_shared<GraceHashJoin>(context, table_join, l_sample_block, r_sample_block, context->getTempDataOnDisk(), false);
@@ -228,7 +234,8 @@ JoinPtr JoinStepExt::makeJoin(
             return std::make_shared<HashJoin>(table_join, r_sample_block);
         }
     }
-    return std::make_shared<JoinSwitcher>(table_join, r_sample_block);
+
+    throw Exception(ErrorCodes::LOGICAL_ERROR, "Can't select join algorithm.");
 }
 
 JoinStepExt::JoinStepExt(

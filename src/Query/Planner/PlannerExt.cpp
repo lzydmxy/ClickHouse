@@ -603,7 +603,7 @@ void QueryPlannerVisitor::planCrossJoin(ASTTableJoin & table_join, PlanBuilder &
             JoinKind::Cross,
             JoinStrictness::Unspecified,
             context->getSettingsRef().max_threads,
-            context->getSettingsRef().optimize_read_in_order);
+            false /*context->getSettingsRef().optimize_read_in_order*/);
 
         left_builder.addStep(std::move(join_step), {left_builder.getRoot(), right_builder.getRoot()});
     }
