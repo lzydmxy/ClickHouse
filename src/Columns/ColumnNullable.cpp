@@ -116,6 +116,18 @@ void ColumnNullable::get(size_t n, Field & res) const
         getNestedColumn().get(n, res);
 }
 
+void ColumnNullable::setNullAt(IColumn::Filter & offsets_set_to_null)
+{
+    auto & null_map_data = typeid_cast<ColumnUInt8 &>(*null_map).getData();
+    auto s = size();
+    for (size_t row = 0; row < s; ++row)
+    {
+        if (offsets_set_to_null[row])
+            null_map_data[row] = 1;
+    }
+}
+
+
 void ColumnNullable::insertData(const char * pos, size_t length)
 {
     if (pos == nullptr)

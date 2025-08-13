@@ -227,6 +227,7 @@ public:
 
 public:
     TableJoin() = default;
+    virtual ~TableJoin() = default;
 
     TableJoin(const Settings & settings, VolumePtr tmp_volume_);
 

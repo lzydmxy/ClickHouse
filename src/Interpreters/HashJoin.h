@@ -26,6 +26,7 @@
 
 #include <Storages/IStorage_fwd.h>
 #include <Interpreters/IKeyValueEntity.h>
+#include <Interpreters/ExpressionActions.h>
 
 namespace DB
 {
@@ -364,6 +365,18 @@ public:
         BlocksList blocks; /// Blocks of "right" table.
         BlockNullmapList blocks_nullmaps; /// Nullmaps for blocks of "right" table (if needed)
 
+        // todo: bc, optimize it, we can encode the block *, and use a flat array to record bools.
+        std::unordered_map<const Block *, std::vector<bool>> used_map; /// bool flags for right table when there is inequal conditions.
+        std::mutex mutex;
+
+        bool checkUsed(const Block* block, size_t row_number) const
+        {
+            if (used_map.empty())
+                return false;
+
+            return used_map.at(block)[row_number];
+        }
+
         /// Additional data - strings for string keys and continuation elements of single-linked lists of references to rows.
         Arena pool;
 
@@ -413,6 +426,10 @@ public:
     std::optional<TypeIndex> asof_type;
     const ASOFJoinInequality asof_inequality;
 
+    ExpressionActionsPtr inequal_condition_actions;
+    String ineuqal_column_name;
+    bool has_inequal_condition {false};
+
     /// Right table data. StorageJoin shares it between many Join objects.
     /// Flags that indicate that particular row already used in join.
     /// Flag is stored for every record in hash map.
@@ -455,6 +472,7 @@ public:
 
     void initRightBlockStructure(Block & saved_block_sample);
 
+    /// Join Block impl without inequal condition
     template <JoinKind KIND, JoinStrictness STRICTNESS, typename Maps>
     Block joinBlockImpl(
         Block & block,
@@ -462,11 +480,21 @@ public:
         const std::vector<const Maps *> & maps_,
         bool is_join_get = false) const;
 
+    /// Join Block impl with inequal condition
+    template <JoinKind KIND, JoinStrictness STRICTNESS, typename Maps>
+    Block joinBlockImplIneuqalCondition(
+        Block & block,
+        const Block & block_with_columns_to_add,
+        const Maps & maps,
+        bool is_join_get = false) const;
+
+
     void joinBlockImplCross(Block & block, ExtraBlockPtr & not_processed) const;
 
     static Type chooseMethod(JoinKind kind, const ColumnRawPtrs & key_columns, Sizes & key_sizes);
 
     bool empty() const;
+    void validateInequalConditions(const ExpressionActionsPtr & inequal_conditions_actions_);
 };
 
 }

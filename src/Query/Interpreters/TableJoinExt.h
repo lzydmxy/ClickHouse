@@ -36,6 +36,10 @@ public:
     std::shared_ptr<RuntimeFilterConsumer> getRuntimeFilterConsumer() const { return runtime_filter_consumer; }
 
     void setInequalCondition(ExpressionActionsPtr inequal_condition_actions_, String inequal_column_name_);
+    ExpressionActionsPtr getInequalCondition() const { return inequal_condition_actions; }
+    String getInequalColumnName() const { return inequal_column_name;}
+
+    void addInequalConditions(const ASTs & inequal_conditions, const NamesAndTypesList & columns_for_join, ContextPtr context);
 
     bool allowMergeJoin() const;
     bool enableParallelHashJoin() const;
@@ -45,6 +49,10 @@ public:
 
     size_t getBloomBuildThreshold() const { return runtime_filter_bloom_build_threshold;}
     size_t getInBuildThreshold() const { return runtime_filter_in_build_threshold;}
+
+    static String kindToString(JoinKind kind);
+
+    static String strictnessToString(JoinStrictness strictness);
 
 private:
     friend class JoinStepExt;

@@ -12,9 +12,10 @@
 namespace DB
 {
 
-template <JoinKind kind, JoinStrictness join_strictness>
+template <JoinKind kind, JoinStrictness join_strictness, bool has_inequal = false>
 struct MapGetter;
 
+///  When has_inequal = false all template instantiation is normal.
 template <> struct MapGetter<JoinKind::Left, JoinStrictness::RightAny>  { using Map = HashJoin::MapsOne; static constexpr bool flagged = false; };
 template <> struct MapGetter<JoinKind::Inner, JoinStrictness::RightAny> { using Map = HashJoin::MapsOne; static constexpr bool flagged = false; };
 template <> struct MapGetter<JoinKind::Right, JoinStrictness::RightAny> { using Map = HashJoin::MapsOne; static constexpr bool flagged = true; };
@@ -42,8 +43,38 @@ template <> struct MapGetter<JoinKind::Inner, JoinStrictness::Anti> { using Map 
 template <> struct MapGetter<JoinKind::Right, JoinStrictness::Anti> { using Map = HashJoin::MapsAll; static constexpr bool flagged = true; };
 template <> struct MapGetter<JoinKind::Full, JoinStrictness::Anti>  { using Map = HashJoin::MapsOne; static constexpr bool flagged = false; };
 
+/// When has_ineuqal = true , only left anti and left semi are valid, others is for templates instantiation.
+template <> struct MapGetter<JoinKind::Left, JoinStrictness::RightAny, true>  { using Map = HashJoin::MapsOne; static constexpr bool flagged = false; };
+template <> struct MapGetter<JoinKind::Inner, JoinStrictness::RightAny, true> { using Map = HashJoin::MapsOne; static constexpr bool flagged = false; };
+template <> struct MapGetter<JoinKind::Right, JoinStrictness::RightAny, true> { using Map = HashJoin::MapsOne; static constexpr bool flagged = true; };
+template <> struct MapGetter<JoinKind::Full, JoinStrictness::RightAny, true>  { using Map = HashJoin::MapsOne; static constexpr bool flagged = true; };
+
+template <> struct MapGetter<JoinKind::Left, JoinStrictness::Any, true>  { using Map = HashJoin::MapsOne; static constexpr bool flagged = false; };
+template <> struct MapGetter<JoinKind::Inner, JoinStrictness::Any, true> { using Map = HashJoin::MapsOne; static constexpr bool flagged = true; };
+template <> struct MapGetter<JoinKind::Right, JoinStrictness::Any, true> { using Map = HashJoin::MapsAll; static constexpr bool flagged = true; };
+template <> struct MapGetter<JoinKind::Full, JoinStrictness::Any, true>  { using Map = HashJoin::MapsAll; static constexpr bool flagged = true; };
+
+template <> struct MapGetter<JoinKind::Left, JoinStrictness::All, true>  { using Map = HashJoin::MapsAll; static constexpr bool flagged = false; };
+template <> struct MapGetter<JoinKind::Inner, JoinStrictness::All, true> { using Map = HashJoin::MapsAll; static constexpr bool flagged = false; };
+template <> struct MapGetter<JoinKind::Right, JoinStrictness::All, true> { using Map = HashJoin::MapsAll; static constexpr bool flagged = true; };
+template <> struct MapGetter<JoinKind::Full, JoinStrictness::All, true>  { using Map = HashJoin::MapsAll; static constexpr bool flagged = true; };
+
+template <> struct MapGetter<JoinKind::Left, JoinStrictness::Semi, true>  { using Map = HashJoin::MapsAll; static constexpr bool flagged = false; };
+template <> struct MapGetter<JoinKind::Inner, JoinStrictness::Semi, true> { using Map = HashJoin::MapsOne; static constexpr bool flagged = false; };
+template <> struct MapGetter<JoinKind::Right, JoinStrictness::Semi, true> { using Map = HashJoin::MapsAll; static constexpr bool flagged = true; };
+template <> struct MapGetter<JoinKind::Full, JoinStrictness::Semi, true>  { using Map = HashJoin::MapsOne; static constexpr bool flagged = false; };
+
+template <> struct MapGetter<JoinKind::Left, JoinStrictness::Anti, true>  { using Map = HashJoin::MapsAll; static constexpr bool flagged = false; };
+template <> struct MapGetter<JoinKind::Inner, JoinStrictness::Anti, true> { using Map = HashJoin::MapsOne; static constexpr bool flagged = false; };
+template <> struct MapGetter<JoinKind::Right, JoinStrictness::Anti, true> { using Map = HashJoin::MapsAll; static constexpr bool flagged = true; };
+template <> struct MapGetter<JoinKind::Full, JoinStrictness::Anti, true>  { using Map = HashJoin::MapsOne; static constexpr bool flagged = false; };
+
 template <JoinKind kind>
 struct MapGetter<kind, JoinStrictness::Asof> { using Map = HashJoin::MapsAsof; static constexpr bool flagged = false; };
+
+template <JoinKind kind>
+struct MapGetter<kind, JoinStrictness::Asof, true> { using Map = HashJoin::MapsAsof; static constexpr bool flagged = false; };
+
 
 static constexpr std::array<JoinStrictness, 6> STRICTNESSES = {
     JoinStrictness::RightAny,
@@ -61,16 +92,23 @@ static constexpr std::array<JoinKind, 4> KINDS = {
     JoinKind::Right
 };
 
+/// whether there is inequal expression in join conditions
+static constexpr std::array<bool, 2> INEQUALS = {
+    false,
+    true
+};
+
 /// Init specified join map
-inline bool joinDispatchInit(JoinKind kind, JoinStrictness strictness, HashJoin::MapsVariant & maps)
+inline bool joinDispatchInit(JoinKind kind, JoinStrictness strictness, HashJoin::MapsVariant & maps, bool has_inequal = false)
 {
-    return static_for<0, KINDS.size() * STRICTNESSES.size()>([&](auto ij)
+    return static_for<0, KINDS.size() * STRICTNESSES.size() * INEQUALS.size()>([&](auto ijk)
     {
-        constexpr auto i = ij / STRICTNESSES.size();
-        constexpr auto j = ij % STRICTNESSES.size();
-        if (kind == KINDS[i] && strictness == STRICTNESSES[j])
+        constexpr auto k = ijk / (KINDS.size() * STRICTNESSES.size());
+        constexpr auto j = (ijk / KINDS.size()) % STRICTNESSES.size();
+        constexpr auto i = ijk % KINDS.size();
+        if (kind == KINDS[i] && strictness == STRICTNESSES[j] && has_inequal == INEQUALS[k])
         {
-            maps = typename MapGetter<KINDS[i], STRICTNESSES[j]>::Map();
+            maps = typename MapGetter<KINDS[i], STRICTNESSES[j], INEQUALS[k]>::Map();
             return true;
         }
         return false;
@@ -79,20 +117,21 @@ inline bool joinDispatchInit(JoinKind kind, JoinStrictness strictness, HashJoin:
 
 /// Call function on specified join map
 template <typename MapsVariant, typename Func>
-inline bool joinDispatch(JoinKind kind, JoinStrictness strictness, MapsVariant & maps, Func && func)
+inline bool joinDispatch(JoinKind kind, JoinStrictness strictness, MapsVariant & maps, Func && func, bool has_inequal = false)
 {
-    return static_for<0, KINDS.size() * STRICTNESSES.size()>([&](auto ij)
+    return static_for<0, KINDS.size() * STRICTNESSES.size() * INEQUALS.size()>([&](auto ijk)
     {
         // NOTE: Avoid using nested static loop as GCC and CLANG have bugs in different ways
         // See https://stackoverflow.com/questions/44386415/gcc-and-clang-disagree-about-c17-constexpr-lambda-captures
-        constexpr auto i = ij / STRICTNESSES.size();
-        constexpr auto j = ij % STRICTNESSES.size();
-        if (kind == KINDS[i] && strictness == STRICTNESSES[j])
+        constexpr auto k = ijk / (KINDS.size() * STRICTNESSES.size());
+        constexpr auto j = (ijk / KINDS.size()) % STRICTNESSES.size();
+        constexpr auto i = ijk % KINDS.size();
+        if (kind == KINDS[i] && strictness == STRICTNESSES[j] && has_inequal == INEQUALS[k])
         {
             func(
                 std::integral_constant<JoinKind, KINDS[i]>(),
                 std::integral_constant<JoinStrictness, STRICTNESSES[j]>(),
-                std::get<typename MapGetter<KINDS[i], STRICTNESSES[j]>::Map>(maps));
+                std::get<typename MapGetter<KINDS[i], STRICTNESSES[j], INEQUALS[k]>::Map>(maps));
             return true;
         }
         return false;
@@ -101,17 +140,18 @@ inline bool joinDispatch(JoinKind kind, JoinStrictness strictness, MapsVariant &
 
 /// Call function on specified join map
 template <typename MapsVariant, typename Func>
-inline bool joinDispatch(JoinKind kind, JoinStrictness strictness, std::vector<const MapsVariant *> & mapsv, Func && func)
+inline bool joinDispatch(JoinKind kind, JoinStrictness strictness, std::vector<const MapsVariant *> & mapsv, Func && func, bool has_inequal = false)
 {
-    return static_for<0, KINDS.size() * STRICTNESSES.size()>([&](auto ij)
+    return static_for<0, KINDS.size() * STRICTNESSES.size() * INEQUALS.size()>([&](auto ijk)
     {
         // NOTE: Avoid using nested static loop as GCC and CLANG have bugs in different ways
         // See https://stackoverflow.com/questions/44386415/gcc-and-clang-disagree-about-c17-constexpr-lambda-captures
-        constexpr auto i = ij / STRICTNESSES.size();
-        constexpr auto j = ij % STRICTNESSES.size();
-        if (kind == KINDS[i] && strictness == STRICTNESSES[j])
+        constexpr auto k = ijk / (KINDS.size() * STRICTNESSES.size());
+        constexpr auto j = (ijk / KINDS.size()) % STRICTNESSES.size();
+        constexpr auto i = ijk % KINDS.size();
+        if (kind == KINDS[i] && strictness == STRICTNESSES[j] && has_inequal == INEQUALS[k])
         {
-            using MapType = typename MapGetter<KINDS[i], STRICTNESSES[j]>::Map;
+            using MapType = typename MapGetter<KINDS[i], STRICTNESSES[j], INEQUALS[k]>::Map;
             std::vector<const MapType *> v;
             v.reserve(mapsv.size());
             for (const auto & el : mapsv)
