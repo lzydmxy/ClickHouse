@@ -285,7 +285,12 @@ public:
     static ActionsDAGPtr createExpressionActions(ContextPtr context, const NamesAndTypesList & source, const Names & output, const ASTPtr & ast, bool add_project = true);
     static ActionsDAGPtr createExpressionActions(ContextPtr context, const NamesAndTypesList & source, const NamesWithAliases & output, const ASTPtr & ast, bool add_project = true);
     static void projection(QueryPipelineBuilder & pipeline, const Block & target, const BuildQueryPipelineSettings & settings);
-    static bool isLogicalQueryPlanStep(const QueryPlanStepPtr & query_plan_step) { return !isPhysicalQueryPlanStep(query_plan_step); }
+    static bool isLogicalQueryPlanStep(const QueryPlanStepPtr & query_plan_step)
+    {
+        if (auto join_step_ext = std::dynamic_pointer_cast<JoinStepExt>(query_plan_step))
+            return join_step_ext->getDistributionType() == DistributionType::UNKNOWN;
+        return true;
+    }
 
     static bool isPhysicalQueryPlanStep(const QueryPlanStepPtr & query_plan_step)
     {
