@@ -271,7 +271,7 @@ std::unordered_set<String> SettingsChanges::WHITELIST_SETTINGS =
         "exchange_multi_path_receiver_queue_size",
         "exchange_output_parallel_size",
         "exchange_remote_receiver_queue_size",
-        "exchange_source_pipeline_threads",
+        "exchange_source_pipeline_threads_to_max_threads_ratio",
         "exchange_timeout",
         "exchange_timeout_ms",
         "exchange_unordered_output_parallel_size",

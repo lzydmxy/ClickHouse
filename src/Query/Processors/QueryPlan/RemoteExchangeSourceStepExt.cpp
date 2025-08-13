@@ -231,8 +231,8 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
             auto multi_path_receiver = std::make_shared<MultiPathReceiver>(
                 collector, std::move(receivers), exchange_header, receiver_name, std::move(multi_path_options), context);
 
-            // LOG_DEBUG(logger, "Create multi receiver name {}, source_header columns {}, struct {}",
-            //     multi_path_receiver->getName(), source_header.columns(), source_header.dumpStructure());
+            LOG_DEBUG(logger, "Create multi receiver name {}, source_header columns {}, struct {}",
+                multi_path_receiver->getName(), exchange_header.columns(), exchange_header.dumpStructure());
 
             auto source = std::make_shared<ExchangeSourceExt>(exchange_header, std::move(multi_path_receiver), options, is_final_plan_segment,
                 optimizer_context->getSettingsRef().exchange_enable_block_compress, totals_source, extremes_source);
@@ -274,13 +274,16 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
     LOG_TRACE(logger, "Initialize pipeline pipe processors size {}", pipe.getProcessors().size());
     pipeline.init(std::move(pipe));
 
-    // FIXME(lizhuoyu5), deserialize IOBuf in ExchangeSourceExt, just remove DeserializeBufTransform here.
-    // if (!keep_order)
-    // {
-    //     pipeline.resize(optimizer_context->getSettingsRef().exchange_source_pipeline_threads);
-    //     pipeline.addSimpleTransform([enable_compress = optimizer_context->getSettingsRef().exchange_enable_block_compress, header = exchange_header](
-    //                                     const Block &) { return std::make_shared<DeserializeBufTransform>(header, enable_compress); });
-    // }
+    if (!keep_order)
+    {
+        size_t max_streams = settings_ext.context->getSettingsRef().max_threads;
+        max_streams = static_cast<size_t>(max_streams * optimizer_context->getSettingsRef().exchange_source_pipeline_threads_to_max_threads_ratio);
+
+        LOG_DEBUG(logger, "Resize RemoteExchangeSourceStepExt stream to {}.", max_streams);
+        pipeline.resize(max_streams);
+        pipeline.addSimpleTransform([enable_compress = optimizer_context->getSettingsRef().exchange_enable_block_compress, header = exchange_header](
+                                        const Block &) { return std::make_shared<DeserializeBufTransform>(header, enable_compress); });
+    }
 
     auto prev_pipe_threads = pipeline.getNumThreads();
 

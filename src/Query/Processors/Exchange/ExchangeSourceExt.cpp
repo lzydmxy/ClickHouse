@@ -125,7 +125,6 @@ std::optional<Chunk> ExchangeSourceExt::tryGenerate()
     if (std::holds_alternative<Chunk>(packet))
     {
         Chunk chunk = std::move(std::get<Chunk>(packet));
-        transformIOBufChunk(chunk);
         LOG_TRACE(logger, "{} receive chunk with rows {}", getName(), chunk.getNumRows());
 
         if (chunk && chunk.getChunkInfo() && getChunkType(chunk.getChunkInfo()) == ChunkType::Totals && totals_source)

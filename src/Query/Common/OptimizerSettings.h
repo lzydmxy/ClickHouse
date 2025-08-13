@@ -144,7 +144,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(UInt64, exchange_multi_path_receiver_queue_size, 20, "Queue size for multi path exchange receiver", 0) \
     M(UInt64, exchange_stream_back_pressure_max_wait_ms, 0, "Default 0, 0 means no control", 0) \
     M(Bool, exchange_enable_multipath_receiver, true, "Whether enable exchange new mode ", 0) \
-    M(UInt64, exchange_source_pipeline_threads, 16, "Recommend number of threads for pipeline which reading data from exchange, ingoned if exchange need keep data order", 0) \
+    M(Float, exchange_source_pipeline_threads_to_max_threads_ratio, 1, "Recommend number of threads for pipeline which reading data from exchange, ingoned if exchange need keep data order ", 0) \
     /** Runtime Filter settings */ \
     M(String, runtime_filter_black_list, "", "Runtime filter ids need be blocked", 0) \
     M(UInt64, runtime_filter_min_filter_rows, 10000, "Set minimum row to enable runtime filter", 0) \

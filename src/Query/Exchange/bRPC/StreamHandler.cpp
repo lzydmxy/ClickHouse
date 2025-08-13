@@ -46,6 +46,7 @@ int StreamHandler::on_received_messages([[maybe_unused]] brpc::StreamId stream_i
                     chunk_info->io_buf.append(msg->movable());
                     chunk.setChunkInfo(std::move(chunk_info));
                 }
+                chunk.setColumns(header.getColumns(), 0);
                 receiver_ptr->pushReceiveQueue(DataPacket{std::move(chunk)});
             }
             return 0;

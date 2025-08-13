@@ -11,7 +11,7 @@
 namespace DB
 {
 DeserializeBufTransform::DeserializeBufTransform(const Block & header_, bool enable_block_compress_)
-    : ISimpleTransform(Block(), header_, true)
+    : ISimpleTransform(header_, header_, true)
     , header(getOutputPort().getHeader())
     , enable_block_compress(enable_block_compress_)
     , logger(getLogger("DeserializeBufTransform"))
