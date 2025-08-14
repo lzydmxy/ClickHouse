@@ -5,15 +5,18 @@ namespace DB
 {
 PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const SortingStepExt & step)
 {
-    return LimitEstimator::getLimitStatistics(child_stats, step.getLimit());
+    if (step.getLimit() > 0)
+    {
+        return LimitEstimator::getLimitStatistics(child_stats, step.getLimit());
+    }
+    return child_stats;
 }
 
 PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const PartialSortingStepExt & step)
 {
     if (step.getLimit() > 0)
     {
-        size_t limit = step.getLimit();
-        return LimitEstimator::getLimitStatistics(child_stats, limit);
+        return LimitEstimator::getLimitStatistics(child_stats, step.getLimit());
     }
     return child_stats;
 }
@@ -22,8 +25,7 @@ PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_s
 {
     if (step.getLimit() > 0)
     {
-        size_t limit = step.getLimit();
-        return LimitEstimator::getLimitStatistics(child_stats, limit);
+        return LimitEstimator::getLimitStatistics(child_stats, step.getLimit());
     }
     return child_stats;
 }
@@ -32,8 +34,7 @@ PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_s
 {
     if (step.getLimit() > 0)
     {
-        size_t limit = step.getLimit();
-        return LimitEstimator::getLimitStatistics(child_stats, limit);
+        return LimitEstimator::getLimitStatistics(child_stats, step.getLimit());
     }
     return child_stats;
 }
@@ -42,8 +43,7 @@ PlanNodeStatisticsPtr SortingEstimator::estimate(PlanNodeStatisticsPtr & child_s
 {
     if (step.getLimit() > 0)
     {
-        size_t limit = step.getLimit();
-        return LimitEstimator::getLimitStatistics(child_stats, limit);
+        return LimitEstimator::getLimitStatistics(child_stats, step.getLimit());
     }
     return child_stats;
 }
