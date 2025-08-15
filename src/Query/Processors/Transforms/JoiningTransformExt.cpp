@@ -143,7 +143,7 @@ void JoiningTransformExt::work()
                     has_counter_finished = true;
                 }
 
-                concurrent_join->hash_joins[index]->data->getNonJoinedBlocks(inputs.front().getHeader(), outputs.front().getHeader(), max_block_size);
+                non_joined_blocks = concurrent_join->getNonJoinedBlocks(inputs.front().getHeader(), outputs.front().getHeader(), max_block_size);
                 if (!non_joined_blocks)
                 {
                     process_non_joined = false;
