@@ -137,7 +137,7 @@ void NodeSelector::setSources(
                 if (enable_local_input)
                 {
                     LOG_TRACE(log, "Local plan segment input, id:{}", input_plan_segment_id);
-                    auto local_addr = getLocalAddressPtr(query_context);
+                    std::shared_ptr<AddressInfo> local_addr = std::make_shared<AddressInfo>("localhost", 0, "", "");
                     result->source_addresses[exchange_id].emplace_back(local_addr);
                     for (UInt32 parallel_id = 0; parallel_id < result->worker_nodes.size(); parallel_id++)
                     {
@@ -591,9 +591,6 @@ NodeSelectorResult NodeSelector::select(PlanSegment * plan_segment_ptr, bool has
     LOG_TRACE(log, "Begin to select nodes for segment, id: {}, has table scan/value: {}", segment_id, has_table_scan_or_value);
 
     {
-        auto read_partitions = splitReadPartitions(plan_segment_ptr);
-        plan_segment_ptr->setParallelSize(read_partitions.size());
-
         if (isLocal(plan_segment_ptr))
         {
             result = local_node_selector.select(plan_segment_ptr, query_context);
@@ -604,20 +601,9 @@ NodeSelectorResult NodeSelector::select(PlanSegment * plan_segment_ptr, bool has
         }
         else
         {
-            result = locality_node_selector.select(plan_segment_ptr, query_context, dag_graph_ptr);
-            if (result.worker_nodes.empty() || result.worker_nodes.size() != plan_segment_ptr->getParallelSize())
-            {
-                throw Exception(
-                    ErrorCodes::LOGICAL_ERROR,
-                    "Select result size {} of plansegment {} doesn't equal to parallel size {}, fallback to compute selector",
-                    result.worker_nodes.size(),
-                    segment_id,
-                    plan_segment_ptr->getParallelSize());
-            }
+            result = compute_node_selector.select(plan_segment_ptr, query_context, dag_graph_ptr);
         }
-        auto it = dag_graph_ptr->id_to_segment.find(segment_id);
-        if (it == dag_graph_ptr->id_to_segment.end())
-            throw Exception(ErrorCodes::LOGICAL_ERROR, "Logical error: plan segment segment can not be found");
+        std::map<PlanSegmentInstanceID, std::vector<UInt32>> read_partitions;
         setSources(plan_segment_ptr, &result, read_partitions);
     }
 

@@ -12,7 +12,7 @@ public:
     virtual size_t selectNext() override { return count++ % partition_num; }
 
 private:
-    UInt32 count = rand(); // NOLINT
+    UInt32 count = randomSeed(); // NOLINT
 };
 
 LoadBalancedExchangeSink::LoadBalancedExchangeSink(Block header_, BroadcastSenderPtrs senders_, const String &name_)

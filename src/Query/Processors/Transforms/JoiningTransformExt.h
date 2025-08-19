@@ -35,7 +35,7 @@ public:
 
     ~JoiningTransformExt() override;
 
-    String getName() const override { return "JoiningTransform"; }
+    String getName() const override { return "JoiningTransformExt"; }
 
     OutputPort & getFinishedSignal();
 

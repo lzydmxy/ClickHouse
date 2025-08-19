@@ -67,12 +67,19 @@ IProcessor::Status JoiningTransformExt::prepare()
     if (inputs.size() > 1)
     {
         auto & last_in = inputs.back();
+        auto & left_in = inputs.front();
         if (!last_in.isFinished())
         {
             last_in.setNeeded();
             if (last_in.hasData())
                 throw Exception(ErrorCodes::LOGICAL_ERROR, "No data is expected from second JoiningTransform port");
 
+            // parallel run for left input.
+            // join.prepare -> left_in.setNeeded() -> left_in.to.prepare().
+            if (join_parallel_left_right && !left_in.hasData())
+            {
+                left_in.setNeeded();
+            }
             return Status::NeedData;
         }
     }

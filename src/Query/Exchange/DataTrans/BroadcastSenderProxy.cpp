@@ -144,7 +144,7 @@ void BroadcastSenderProxy::becomeRealSender(BroadcastSenderPtr sender)
         return;
     }
 
-    LOG_TRACE(logger, "Proxy become real sender: {}", sender->getName());
+    LOG_TRACE(logger, "Proxy become real sender: {} for {}", sender->getName(), *data_key);
     real_sender = std::move(sender);
     has_real_sender.store(true, std::memory_order_release);
     wait_become_real.notify_all();

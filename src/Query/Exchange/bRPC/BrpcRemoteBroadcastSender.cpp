@@ -176,7 +176,7 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_
             {
                 // TODO: retain stream object before finish code is read.
                 // Ingore error when writing to the closed stream, because this stream is closed by remote peer before read any finish code.
-                LOG_INFO(log, "Stream {} with key {} is closed", stream_id, data_key);
+                LOG_DEBUG(log, "Stream {} with key {} is closed", stream_id, data_key);
                 return BroadcastStatus(BroadcastStatusCode::RECV_UNKNOWN_ERROR, false, "Stream is closed by peer");
             }
 
@@ -186,7 +186,7 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_
         else if (rect_code == EINVAL)
         {
             // Ingore error when writing to the closed stream, because this stream is closed by remote peer before read any finish code.
-            LOG_INFO(log, "Stream {} with key {} is closed", stream_id, data_key);
+            LOG_DEBUG(log, "Stream {} with key {} is closed", stream_id, data_key);
             return BroadcastStatus(BroadcastStatusCode::RECV_UNKNOWN_ERROR, false, "Stream is closed by peer");
         }
         else if (rect_code == 1011) //EOVERCROWDED   | 1011 | The server is overcrowded
@@ -213,7 +213,7 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_
             // Stream is closed by remote peer and we can get finish code now
             if (rc == EINVAL)
                 return BroadcastStatus(BroadcastStatusCode::RECV_UNKNOWN_ERROR, false, "Stream is closed by peer");
-            LOG_INFO(log, "Stream-{} write receive finish request, finish code:{}, data_key-{}", stream_id, rect_code, data_key);
+            LOG_DEBUG(log, "Stream-{} write receive finish request, finish code:{}, data_key-{}", stream_id, rect_code, data_key);
             return BroadcastStatus(static_cast<BroadcastStatusCode>(rect_code), false, "Stream Write receive finish request");
         }
         else
