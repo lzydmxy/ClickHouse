@@ -102,6 +102,10 @@ inline T getSingleValue(const Block & block, size_t index)
     auto col = block.getByPosition(index).column;
     if constexpr (std::is_same_v<T, std::string_view>)
     {
+        if (col->isNullAt(0))
+        {
+            return std::string_view{};
+        }
         return static_cast<std::string_view>(col->getDataAt(0));
     }
     else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>)
