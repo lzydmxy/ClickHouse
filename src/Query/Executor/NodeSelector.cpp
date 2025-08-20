@@ -137,6 +137,10 @@ void NodeSelector::setSources(
                 if (enable_local_input)
                 {
                     LOG_TRACE(log, "Local plan segment input, id:{}", input_plan_segment_id);
+                    // For each plan segment in the initial node, we set its source address as "localhost" to explicitly mark it as a local exchange.
+                    // (We do not use getLocalAddressPtr here, since "localhost" clearly indicates local data flow.)
+                    // Worker nodes receive the segment and keep it in RemoteExchangeSourceStepExt::initializePipeline when isLocalExchange is true.
+                    // For more details: http://xingyun.jd.com/codingRoot/EasyOLAP/ClickHouse_new/merges/412
                     std::shared_ptr<AddressInfo> local_addr = std::make_shared<AddressInfo>("localhost", 0, "", "");
                     result->source_addresses[exchange_id].emplace_back(local_addr);
                     for (UInt32 parallel_id = 0; parallel_id < result->worker_nodes.size(); parallel_id++)
