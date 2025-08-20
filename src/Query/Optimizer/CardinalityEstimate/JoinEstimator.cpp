@@ -323,7 +323,7 @@ PlanNodeStatisticsPtr JoinEstimator::computeCardinality(
     {
         double adjust_correlated_coefficient
             = std::pow(context.getOptimizerContext()->getSettingsRef().multi_join_keys_correlated_coefficient, left_keys.size() - 1);
-        join_card *= static_cast<UInt64>(adjust_correlated_coefficient);
+        join_card = static_cast<UInt64>(join_card * adjust_correlated_coefficient);
     }
 
     // All rows from left side should be in the result.
