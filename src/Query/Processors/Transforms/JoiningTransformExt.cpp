@@ -5,6 +5,9 @@
 #include <Interpreters/ExpressionAnalyzer.h>
 #include <Interpreters/ConcurrentHashJoin.h>
 
+#include <Interpreters/TableJoin.h>
+#include <Query/Interpreters/JoinUtilsExt.h>
+
 namespace DB
 {
 namespace ErrorCodes
@@ -149,8 +152,25 @@ void JoiningTransformExt::work()
                     }
                     has_counter_finished = true;
                 }
+                if (isRightOrFull(concurrent_join->table_join->kind()))
+                {
+                    std::vector<IBlocksStreamPtr> streams;
+                    for (size_t i = 0; i < concurrent_join->hash_joins.size(); i++)
+                    {
+                        if (i % total_size == index)
+                        {
+                            if (auto stream = concurrent_join->hash_joins[i]->data->getNonJoinedBlocks(inputs.front().getHeader(), outputs.front().getHeader(), max_block_size))
+                                streams.push_back(std::move(stream));
+                        }
+                    }
+                    if (streams.empty())
+                        non_joined_blocks = {};
+                    else
+                        non_joined_blocks = std::make_unique<NotJoinedStreamFromMultipleJoins>(std::move(streams));
+                }
+                else
+                    non_joined_blocks = join->getNonJoinedBlocks(inputs.front().getHeader(), outputs.front().getHeader(), max_block_size);
 
-                non_joined_blocks = concurrent_join->getNonJoinedBlocks(inputs.front().getHeader(), outputs.front().getHeader(), max_block_size);
                 if (!non_joined_blocks)
                 {
                     process_non_joined = false;
