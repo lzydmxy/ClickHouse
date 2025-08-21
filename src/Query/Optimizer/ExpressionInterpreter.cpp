@@ -790,8 +790,7 @@ InterpretIMResult ExpressionInterpreter::visitOrdinaryFunction(const ASTFunction
     }
 
     // === Null simplify ===
-    // todo: hongzhigao1, implement useDefaultImplementationForNulls
-    if (has_null_argument && /*function_builder->useDefaultImplementationForNulls() &&*/ setting.enable_null_simplify)
+    if (has_null_argument && function_builder->useDefaultImplementationForNulls() && setting.enable_null_simplify)
         return {JoinCommon::tryConvertTypeToNullable(std::make_shared<DataTypeNothing>()), simplified_node, Null()};
 
     // === Function simplify ===

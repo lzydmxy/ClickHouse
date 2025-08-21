@@ -104,6 +104,7 @@ protected:
     virtual bool canBeExecutedOnDefaultArguments() const { return true; }
 
 private:
+    friend class ExpressionInterpreter;
 
     ColumnPtr defaultImplementationForConstantArguments(
             const ColumnsWithTypeAndName & args, const DataTypePtr & result_type, size_t input_rows_count, bool dry_run) const;
@@ -410,6 +411,7 @@ protected:
     virtual bool canBeExecutedOnLowCardinalityDictionary() const { return true; }
 
 private:
+    friend class  ExpressionInterpreter;
 
     DataTypePtr getReturnTypeWithoutLowCardinality(const ColumnsWithTypeAndName & arguments) const;
 };
@@ -550,6 +552,9 @@ protected:
     }
 
 #endif
+
+private:
+    friend class ExpressionInterpreter;
 };
 
 using FunctionPtr = std::shared_ptr<IFunction>;
