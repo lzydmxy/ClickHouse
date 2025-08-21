@@ -405,9 +405,7 @@ ColumnWithTypeAndName ExprAnalyzerVisitor::analyzeOrdinaryFunction(ASTFunctionPt
 
     ColumnPtr res_col;
     auto function_ret_type = function_base->getResultType();
-    // todo: zhangwanyun1, need isSuitableForConstantFoldingInOptimizer, it will call isSuitableForConstantFolding by default.
-    // functions about ExternalDictionary, in, map will override and return false, adjustments will be made later if necessary
-    if (options.evaluate_constant_expression && function_base->isSuitableForConstantFolding())
+    if (options.evaluate_constant_expression && isSuitableForConstantFoldingInOptimizer(function_base))
     {
         if (all_const)
             res_col = function_base->execute(processed_arguments, function_ret_type, 1, false);
