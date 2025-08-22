@@ -19,13 +19,22 @@ String getFunctionResultName(const String & function_name, const Strings & arg_r
 
 bool isSuitableForConstantFoldingInOptimizer(const FunctionBasePtr & function_base)
 {
-    // todo: zhangwanyun1, now only support in
     // functions about ExternalDictionary, in, map will override and return false, adjustments will be made later if necessary
     static const std::unordered_set<std::string> unsuitable_function_names = {
         "in", "globalIn", "notIn", "globalNotIn", "nullIn", "globalNullIn",
         "notNullIn", "globalNotNullIn", "inIgnoreSet", "globalInIgnoreSet",
         "notInIgnoreSet", "globalNotInIgnoreSet", "nullInIgnoreSet", "globalNullInIgnoreSet",
-        "notNullInIgnoreSet", "globalNotNullInIgnoreSet"
+        "notNullInIgnoreSet", "globalNotNullInIgnoreSet",
+        "getMapKeys", /// map related functions
+        "dictHas", "dictGet", "dictGetOrNull", "dictGetHierarchy", "dictIsIn", "dictGetChildren", "dictGetDescendants",
+        "dictGetUInt8", "dictGetUInt16", "dictGetUInt32", "dictGetUInt64",
+        "dictGetInt8", "dictGetInt16", "dictGetInt32", "dictGetInt64",
+        "dictGetFloat32", "dictGetFloat64", "dictGetString", "dictGetDate", "dictGetDateTime",
+        "dictGetUUID", "dictGetIPv4", "dictGetIPv6", "dictGetDecimal32", "dictGetDecimal64", "dictGetDecimal128",
+        "dictGetUInt8OrDefault", "dictGetUInt16OrDefault", "dictGetUInt32OrDefault", "dictGetUInt64OrDefault",
+        "dictGetInt8OrDefault", "dictGetInt16OrDefault", "dictGetInt32OrDefault", "dictGetInt64OrDefault",
+        "dictGetFloat32OrDefault", "dictGetFloat64OrDefault", "dictGetStringOrDefault", "dictGetDateOrDefault", "dictGetDateTimeOrDefault",
+        "dictGetUUIDOrDefault", "dictGetIPv4OrDefault", "dictGetIPv6OrDefault", "dictGetDecimal32OrDefault", "dictGetDecimal64OrDefault", "dictGetDecimal128OrDefault",
     };
 
     if (unsuitable_function_names.contains(function_base->getName()))
