@@ -2,6 +2,7 @@
 #include <IO/WriteHelpers.h>
 #include <IO/ReadHelpers.h>
 #include <Query/Protos/plan_node.pb.h>
+#include <Query/ProtosHelper/FieldHelper.h>
 
 namespace JDDB
 {
@@ -40,18 +41,16 @@ void SettingChange::deserialize(ReadBuffer & buf)
     value = DB::Field::restoreFromDump(res);
 }
 
-// Todo should Impl Field to Proto
 void SettingChange::toProto(DB::Protos::SettingChange & proto) const
 {
     proto.set_name(name);
-    // value.toProto(*proto.mutable_value());
+    FieldToProto(value, *proto.mutable_value());
 }
 
-// Todo should Impl Field to Proto
 void SettingChange::fillFromProto(const DB::Protos::SettingChange & proto)
 {
     name = proto.name();
-    // value.fillFromProto(proto.value());
+    FieldFillFromProto(value, proto.value());
 }
 
 bool SettingsChanges::tryGet(const std::string_view & name, Field & out_value) const
