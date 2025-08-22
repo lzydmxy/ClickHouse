@@ -66,7 +66,7 @@ bool parseDatabaseAndTableNameOrAsterisksExt(IParser::Pos & pos, Expected & expe
             /// *
             pos = pos_before_dot;
             any_database = false;
-            database = nullptr;  // TODO wujianchao use default database?
+            database = nullptr;  // will use default database?
             any_table = true;
             table = nullptr;
             return true;
@@ -103,7 +103,7 @@ bool parseDatabaseAndTableNameOrAsterisksExt(IParser::Pos & pos, Expected & expe
             /// table
             pos = pos_before_dot;
             any_database = false;
-            database = nullptr;  // TODO wujianchao use default database?
+            database = nullptr;  // will use default database?
             any_table = false;
             table = ast_db;
             return true;
