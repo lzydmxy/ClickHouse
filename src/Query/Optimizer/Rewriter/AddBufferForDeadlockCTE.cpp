@@ -14,6 +14,7 @@
 #include <Query/Processors/QueryPlan/PlanVisitor.h>
 #include <Query/Processors/QueryPlan/SimplePlanRewriter.h>
 #include <Query/Processors/QueryPlan/SimplePlanVisitor.h>
+#include <Query/Processors/QueryPlan/PlanPrinter.h>
 #include <Query/Common/Void.h>
 #include <fmt/core.h>
 
@@ -401,7 +402,11 @@ bool AddBufferForDeadlockCTE::rewrite(QueryPlanExt & plan, ContextMutablePtr con
                std::make_shared<IterativeRewriter>(Rules::removeRedundantRules(), "RemoveRedundant")};
 
         for (auto & rewriter : rewriters)
+        {
+            if (context->getOptimizerContext()->getSettingsRef().log_plan_after_each_rewriter)
+                LOG_DEBUG(getLogger("AddBufferForDeadlockCTE::PlanOptimizer"), "Logical plan before {} optimize: \n{}", rewriter->name(), PlanPrinter::textLogicalPlan(plan, context));
             rewriter->rewritePlan(plan, context);
+        }
     }
     return true;
 }

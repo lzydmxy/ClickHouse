@@ -239,7 +239,7 @@ PlanNodePtr PredicateVisitor::visitFilterStepExtNode(FilterStepExtNode & node, P
         return rewritten;
     }
 
-    if (getQueryPlanStepType(rewritten->getStep()) != QueryPlanStepType::FilterStepExt)
+    if (getQueryPlanStepType(rewritten->getStep()) == QueryPlanStepType::FilterStepExt)
     {
         if (rewritten->getChildren()[0] != node.getChildren()[0])
         {
