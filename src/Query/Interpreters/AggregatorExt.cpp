@@ -543,14 +543,6 @@ void AggregatorExt::chooseAggregationMethodByOption(
         }
         if (key_size == num_fixed_contiguous_keys && !has_low_cardinality)
         {
-            /// Pack if possible all the keys along with information about which key values are nulls
-            /// into a fixed 16- or 32-byte blob.
-            if (std::tuple_size<KeysNullMap<UInt64>>::value + keys_bytes <= 8)
-            {
-                method_chosen = AggregatedDataVariants::Type::nullable_key64;
-                return;
-            }
-
             if (std::tuple_size<KeysNullMap<UInt128>>::value + keys_bytes <= 16)
             {
                 method_chosen = AggregatedDataVariants::Type::nullable_keys128;
