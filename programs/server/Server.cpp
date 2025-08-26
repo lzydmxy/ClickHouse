@@ -781,7 +781,7 @@ try
 
         global_context->shutdownRaftDispatcher();
 
-        if (auto optimizer_context = global_context->getOptimizerContext())
+        if (auto optimizer_context = global_context->tryGetOptimizerContext())
         {
             LOG_DEBUG(log, "Reset statistics keeper store.");
             optimizer_context->resetStatisticsKeeperStore();
