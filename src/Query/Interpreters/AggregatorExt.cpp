@@ -1491,7 +1491,7 @@ template <typename Method, bool use_compiled_functions, typename Table>
 void NO_INLINE AggregatorExt::convertToBlockImplFinal(
     Method & method, Table & data, std::vector<IColumn *> key_columns, MutableColumns & final_aggregate_columns, Arena * arena) const
 {
-    if constexpr (Method::low_cardinality_optimization)
+    if constexpr (Method::low_cardinality_optimization || Method::one_key_nullable_optimization)
     {
         if (data.hasNullKeyData())
         {
@@ -1600,7 +1600,7 @@ template <typename Method, typename Table>
 void NO_INLINE AggregatorExt::convertToBlockImplNotFinal(
     Method & method, Table & data, std::vector<IColumn *> key_columns, AggregateColumnsData & aggregate_columns) const
 {
-    if constexpr (Method::low_cardinality_optimization)
+    if constexpr (Method::low_cardinality_optimization || Method::one_key_nullable_optimization)
     {
         if (data.hasNullKeyData())
         {
@@ -1969,7 +1969,7 @@ BlocksList AggregatorExt::convertToBlocks(AggregatedDataVariants & data_variants
 template <typename Method, typename Table>
 void NO_INLINE AggregatorExt::mergeDataNullKey(Table & table_dst, Table & table_src, Arena * arena) const
 {
-    if constexpr (Method::low_cardinality_optimization)
+    if constexpr (Method::low_cardinality_optimization || Method::one_key_nullable_optimization)
     {
         if (table_src.hasNullKeyData())
         {
@@ -2055,7 +2055,7 @@ void NO_INLINE
 AggregatorExt::mergeDataNoMoreKeysImpl(Table & table_dst, AggregatedDataWithoutKey & overflows, Table & table_src, Arena * arena) const
 {
     /// Note : will create data for NULL key if not exist
-    if constexpr (Method::low_cardinality_optimization)
+    if constexpr (Method::low_cardinality_optimization || Method::one_key_nullable_optimization)
         mergeDataNullKey<Method, Table>(table_dst, table_src, arena);
 
     table_src.mergeToViaFind(
@@ -2079,7 +2079,7 @@ template <typename Method, typename Table>
 void NO_INLINE AggregatorExt::mergeDataOnlyExistingKeysImpl(Table & table_dst, Table & table_src, Arena * arena) const
 {
     /// Note : will create data for NULL key if not exist
-    if constexpr (Method::low_cardinality_optimization)
+    if constexpr (Method::low_cardinality_optimization || Method::one_key_nullable_optimization)
         mergeDataNullKey<Method, Table>(table_dst, table_src, arena);
 
     table_src.mergeToViaFind(
@@ -2743,7 +2743,7 @@ void NO_INLINE AggregatorExt::convertBlockToTwoLevelImpl(
     /// For every row.
     for (size_t i = 0; i < rows; ++i)
     {
-        if constexpr (Method::low_cardinality_optimization)
+        if constexpr (Method::low_cardinality_optimization || Method::one_key_nullable_optimization)
         {
             if (state.isNullAt(i))
             {
