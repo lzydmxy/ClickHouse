@@ -130,7 +130,8 @@ QueryPlanStepPtr createAggregatingStepExt()
         true,
         nullptr,
         std::move(group_by_sort_description),
-        true);
+        true,
+        false);
 }
 
 QueryPlanStepPtr serializeQueryPlanStep(QueryPlanStepPtr & step)
