@@ -768,13 +768,14 @@ std::shared_ptr<ValuesStepExt> SymbolMapper::map(const ValuesStepExt & values)
     return std::make_shared<ValuesStepExt>(map(values.getOutputStream().header), values.getFields(), values.getRows());
 }
 
-std::shared_ptr<WindowStep> SymbolMapper::map(const WindowStep & window)
+std::shared_ptr<WindowStepExt> SymbolMapper::map(const WindowStepExt & window)
 {
-    return std::make_shared<WindowStep>(
+    return std::make_shared<WindowStepExt>(
         map(window.getInputStreams()[0]),
         map(window.getWindowDescription()),
-        map(QueryPlanStepHelper::getWindowStepFunctions(window)),
-        QueryPlanStepHelper::getWindowStepStreamsFanOut(window));
+        map(window.getFunctions()),
+        window.needSort(),
+        SortDescription{map(window.getPrefixDescription())});
 }
 
 std::shared_ptr<CTERefStepExt> SymbolMapper::map(const CTERefStepExt & cte_ref)

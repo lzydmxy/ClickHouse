@@ -7,7 +7,7 @@
 
 #include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <Query/Processors/QueryPlan/LimitStepExt.h>
-#include <Processors/QueryPlan/WindowStep.h>
+#include <Query/Processors/QueryPlan/WindowStepExt.h>
 
 namespace DB
 {
@@ -225,13 +225,13 @@ TransformResult LimitZeroToReadNothing::transformImpl(PlanNodePtr node, const Ca
 
 ConstRefPatternPtr PushdownLimitIntoWindow::getPattern() const
 {
-    static auto pattern = Patterns::limit().withSingle(Patterns::window().matchingStep<WindowStep>([](const WindowStep & window_step) {
+    static auto pattern = Patterns::limit().withSingle(Patterns::window().matchingStep<WindowStepExt>([](const WindowStepExt & window_step) {
         bool all_row_number = true;
-        for (const auto & func : QueryPlanStepHelper::getWindowStepFunctions(window_step))
+        for (const auto & func : window_step.getFunctions())
         {
             all_row_number &= func.aggregate_function->getName() == "row_number";
         }
-        return all_row_number && !QueryPlanStepHelper::getWindowStepWindow(window_step).order_by.empty();
+        return all_row_number && !window_step.getWindow().order_by.empty();
     })).result();
     return pattern;
 }
@@ -239,22 +239,23 @@ ConstRefPatternPtr PushdownLimitIntoWindow::getPattern() const
 TransformResult PushdownLimitIntoWindow::transformImpl(PlanNodePtr node, const Captures &, RuleContext & context)
 {
     auto window = node->getChildren()[0];
-    const auto * window_step = dynamic_cast<const WindowStep *>(window->getStep().get());
+    const auto * window_step = dynamic_cast<const WindowStepExt *>(window->getStep().get());
     const auto * limit_step = dynamic_cast<const LimitStepExt *>(node->getStep().get());
     auto source = window->getChildren()[0];
 
     if (limit_step->hasPreparedParam())
         return {};
 
-    if (getQueryPlanStepType(*source->getStep()) == QueryPlanStepType::LimitStepExt || QueryPlanStepHelper::getWindowStepWindow(*window_step).order_by.empty())
+    if (getQueryPlanStepType(*source->getStep()) == QueryPlanStepType::LimitStepExt || window_step->getWindow().order_by.empty())
     {
         return {};
     }
 
+
     auto new_sort = PlanNodeBase::createPlanNode(
         context.context->getOptimizerContext()->nextNodeId(),
         std::make_shared<SortingStepExt>(
-            source->getStep()->getOutputStream(), QueryPlanStepHelper::getWindowStepWindow(*window_step).order_by, limit_step->getLimit(), SortingStepExt::Stage::FULL, SortDescription{}),
+            source->getStep()->getOutputStream(), window_step->getWindow().order_by, limit_step->getLimit(), SortingStepExt::Stage::FULL, SortDescription{}),
         {source});
 
     auto new_limit = PlanNodeBase::createPlanNode(

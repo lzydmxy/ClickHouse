@@ -78,7 +78,7 @@ public:
     ExchangeResult visitIntersectOrExceptStepNode(IntersectOrExceptStepNode & node, ExchangeContext & cxt) override;
     ExchangeResult visitDistinctStepExtNode(DistinctStepExtNode & node, ExchangeContext & cxt) override;
     ExchangeResult visitExtremesStepNode(ExtremesStepNode & node, ExchangeContext & cxt) override;
-    ExchangeResult visitWindowStepNode(WindowStepNode & node, ExchangeContext & cxt) override;
+    ExchangeResult visitWindowStepExtNode(WindowStepExtNode & node, ExchangeContext & cxt) override;
     ExchangeResult visitApplyStepExtNode(ApplyStepExtNode & node, ExchangeContext &) override;
     ExchangeResult visitEnforceSingleRowStepExtNode(EnforceSingleRowStepExtNode & node, ExchangeContext & cxt) override;
     ExchangeResult visitAssignUniqueIdStepExtNode(AssignUniqueIdStepExtNode & node, ExchangeContext & cxt) override;

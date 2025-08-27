@@ -745,11 +745,12 @@ message WindowDescription {
     repeated WindowFunctionDescription window_functions = 6;
 }
 
-message WindowStep {
+message WindowStepExt {
     ITransformingStep query_plan_base = 1;
     WindowDescription window_description = 2;
     repeated WindowFunctionDescription window_functions = 3;
-    bool streams_fan_out = 4;
+    bool need_sort = 4;
+    repeated SortColumnDescription prefix_description = 5;
 }
 
 message IntersectOrExceptStep {
@@ -867,7 +868,7 @@ message QueryPlanStep {
         TableWriteStep table_write_step = 32;
         TopNFilteringStepExt top_n_filtering_step_ext = 33;
         UnionStepExt union_step_ext = 34;
-        WindowStep window_step = 35;
+        WindowStepExt window_step_ext = 35;
         ValuesStepExt values_step_ext = 36;
         IntersectOrExceptStep intersect_or_except_step = 37;
         BufferStepExt buffer_step_ext = 38;

@@ -2,7 +2,7 @@
 
 namespace DB
 {
-PlanNodeStatisticsPtr WindowEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const WindowStep &)
+PlanNodeStatisticsPtr WindowEstimator::estimate(PlanNodeStatisticsPtr & child_stats, const WindowStepExt &)
 {
     if (!child_stats)
     {

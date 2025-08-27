@@ -175,21 +175,8 @@ PlanNodePtr SetOperationNodeTranslator::appendCounts(
         functions.emplace_back(function);
     }
 
-    PlanNodePtr window_input_node = sourceNode;
-    if (!desc.full_sort_description.empty())
-    {
-        auto sorting_step = std::make_shared<SortingStepExt>(
-            sourceNode->getCurrentDataStream(),
-            desc.full_sort_description,
-            0 /*limit*/,
-            SortingStepExt::Stage::FULL
-        );
-        sorting_step->setStepDescription("Sorting for window '" + desc.window_name + "'");
-        window_input_node = PlanNodeBase::createPlanNode(context.getOptimizerContext()->nextNodeId(), std::move(sorting_step), PlanNodes{sourceNode});
-    }
-
-    auto window_step = std::make_shared<WindowStep>(window_input_node->getCurrentDataStream(), desc, functions, false);
-    return PlanNodeBase::createPlanNode(context.getOptimizerContext()->nextNodeId(), window_step, PlanNodes{window_input_node});
+    auto step = std::make_shared<WindowStepExt>(sourceNode->getStep()->getOutputStream(), desc, functions, true);
+    return PlanNodeBase::createPlanNode(context.getOptimizerContext()->nextNodeId(), std::move(step), PlanNodes{sourceNode});
 };
 
 }

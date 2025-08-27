@@ -107,7 +107,7 @@ inline PatternBuilder filter() { return typeOf(QueryPlanStepType::FilterStepExt)
 inline PatternBuilder join() { return typeOf(QueryPlanStepType::JoinStepExt); }
 inline PatternBuilder multiJoin() { return typeOf(QueryPlanStepType::MultiJoinStepExt); }
 inline PatternBuilder aggregating() { return typeOf(QueryPlanStepType::AggregatingStepExt); }
-inline PatternBuilder window() { return typeOf(QueryPlanStepType::WindowStep); }
+inline PatternBuilder window() { return typeOf(QueryPlanStepType::WindowStepExt); }
 inline PatternBuilder mergingAggregated() { return typeOf(QueryPlanStepType::MergingAggregatedStepExt); }
 inline PatternBuilder unionn() { return typeOf(QueryPlanStepType::UnionStepExt); }
 inline PatternBuilder intersect() { return typeOf(QueryPlanStepType::IntersectStepExt); }

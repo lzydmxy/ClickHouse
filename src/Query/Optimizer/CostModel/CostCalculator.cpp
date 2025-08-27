@@ -84,7 +84,7 @@ PlanNodeCost CostVisitor::visitReadStorageRowCountStepExt(const ReadStorageRowCo
     return visitStep(step, context);
 }
 
-PlanNodeCost CostVisitor::visitWindowStep(const WindowStep & step, CostContext & context)
+PlanNodeCost CostVisitor::visitWindowStepExt(const WindowStepExt & step, CostContext & context)
 {
     return visitStep(step, context);
 }

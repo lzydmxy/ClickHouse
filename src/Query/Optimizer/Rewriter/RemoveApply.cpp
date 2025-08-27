@@ -33,7 +33,7 @@
 #include <Query/Processors/QueryPlan/TableScanStepExt.h>
 #include <Query/Interpreters/InterpreterSelectQueryUseOptimizer.h>
 #include <Query/Optimizer/Utils.h>
-#include <Processors/QueryPlan/WindowStep.h>
+#include <Query/Processors/QueryPlan/WindowStepExt.h>
 
 
 namespace DB
@@ -2343,21 +2343,8 @@ TransformResult UnnestingWithWindow::transformImpl(PlanNodePtr filter_node, cons
     auto new_filter_step = std::make_shared<FilterStepExt>(left_node->getCurrentDataStream(), new_filter_ast);
     auto new_filter_node = PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), new_filter_step, {left_node});
 
-    PlanNodePtr window_input_node = new_filter_node;
-    if (!desc.full_sort_description.empty())
-    {
-        auto sorting_step = std::make_shared<SortingStepExt>(
-            new_filter_node->getCurrentDataStream(),
-            desc.full_sort_description,
-            0 /*limit*/,
-            SortingStepExt::Stage::FULL
-        );
-        sorting_step->setStepDescription("Sorting for window '" + desc.window_name + "'");
-        window_input_node = PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), sorting_step, {new_filter_node});
-    }
-
-    auto window_step = std::make_shared<WindowStep>(window_input_node->getCurrentDataStream(), desc, desc.window_functions, false);
-    auto window_node = PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), window_step, {window_input_node});
+    auto window_step = std::make_shared<WindowStepExt>(new_filter_node->getCurrentDataStream(), desc, true, SortDescription{});
+    auto window_node = PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), window_step, {new_filter_node});
 
     if (proj_step)
     {

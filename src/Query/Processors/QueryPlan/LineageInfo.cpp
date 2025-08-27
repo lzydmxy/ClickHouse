@@ -112,7 +112,7 @@ void LineageInfoVisitor::visitLimitByStepNode(LimitByStepNode & node, LineageInf
     VisitorUtil::accept(node.getChildren()[0], *this, lineage_info_context);
 }
 
-void LineageInfoVisitor::visitWindowStepNode(WindowStepNode & node, LineageInfoContext & lineage_info_context)
+void LineageInfoVisitor::visitWindowStepExtNode(WindowStepExtNode & node, LineageInfoContext & lineage_info_context)
 {
     const auto * step = node.getStep().get();
     VisitorUtil::accept(node.getChildren()[0], *this, lineage_info_context);
@@ -123,7 +123,7 @@ void LineageInfoVisitor::visitWindowStepNode(WindowStepNode & node, LineageInfoC
     new_expression_or_value_source_info.source_tables = lineage_info_context.tables;
 
     std::unordered_map<String, const WindowFunctionDescription &> column_name_to_window_desc;
-    for (const auto & function : QueryPlanStepHelper::getWindowStepFunctions(*step))
+    for (const auto & function : step->getFunctions())
     {
         column_name_to_window_desc.emplace(function.column_name, function);
     }

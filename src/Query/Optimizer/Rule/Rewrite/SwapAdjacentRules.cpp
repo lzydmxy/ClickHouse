@@ -3,19 +3,19 @@
 #include <Query/Optimizer/PlanNodeCardinality.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
 #include <Query/Processors/QueryPlan/PlanNodeIdAllocator.h>
-#include <Processors/QueryPlan/WindowStep.h>
+#include <Query/Processors/QueryPlan/WindowStepExt.h>
 
 namespace DB
 {
 TransformResult SwapAdjacentWindows::transformImpl(PlanNodePtr node, const Captures &, RuleContext & context)
 {
-    auto & step = dynamic_cast<const WindowStep &>(*node->getStep().get());
+    auto & step = dynamic_cast<const WindowStepExt &>(*node->getStep().get());
     PlanNodePtr child_ptr = node->getChildren()[0];
 
-    if (getQueryPlanStepType(child_ptr->getStep()) != QueryPlanStepType::WindowStep)
+    if (getQueryPlanStepType(child_ptr->getStep()) != QueryPlanStepType::WindowStepExt)
         return {};
 
-    auto & partition_scheme = QueryPlanStepHelper::getWindowStepWindow(step).partition_by;
+    auto & partition_scheme = step.getWindow().partition_by;
     std::vector<std::string> partition_keys;
 
     for (const auto & sort_column_description : partition_scheme)
@@ -24,8 +24,8 @@ TransformResult SwapAdjacentWindows::transformImpl(PlanNodePtr node, const Captu
     }
 
     std::vector<std::string> child_partition_keys;
-    auto & child_step = dynamic_cast<const WindowStep &>(*child_ptr->getStep());
-    auto & child_partition_scheme = QueryPlanStepHelper::getWindowStepWindow(child_step).partition_by;
+    auto & child_step = dynamic_cast<const WindowStepExt &>(*child_ptr->getStep());
+    auto & child_partition_scheme = child_step.getWindow().partition_by;
 
     for (const auto & sort_column_description : child_partition_scheme)
     {
@@ -56,7 +56,7 @@ TransformResult SwapAdjacentWindows::transformImpl(PlanNodePtr node, const Captu
         return {};
     }
 
-    auto & sort_scheme = QueryPlanStepHelper::getWindowStepWindow(step).order_by;
+    auto & sort_scheme = step.getWindow().order_by;
     std::vector<std::string> order_keys;
 
     for (auto & sort_column_description : sort_scheme)
@@ -66,7 +66,7 @@ TransformResult SwapAdjacentWindows::transformImpl(PlanNodePtr node, const Captu
 
     std::vector<std::string> window_function_arguments;
 
-    for (auto & window_function_description : QueryPlanStepHelper::getWindowStepWindow(step).window_functions)
+    for (auto & window_function_description : step.getWindow().window_functions)
     {
         for (auto & window_function_argument : window_function_description.argument_names)
         {
@@ -76,7 +76,7 @@ TransformResult SwapAdjacentWindows::transformImpl(PlanNodePtr node, const Captu
 
     std::unordered_set<std::string> child_get_created_symbol_set;
 
-    for (auto & window_function_description : QueryPlanStepHelper::getWindowStepWindow(child_step).window_functions)
+    for (auto & window_function_description : child_step.getWindow().window_functions)
     {
         child_get_created_symbol_set.insert(window_function_description.column_name);
     }
@@ -105,14 +105,10 @@ TransformResult SwapAdjacentWindows::transformImpl(PlanNodePtr node, const Captu
         }
     }
 
-    QueryPlanStepPtr new_child_step = std::make_shared<WindowStep>(child_step.getInputStreams()[0],
-                                                                   QueryPlanStepHelper::getWindowStepWindow(step),
-                                                                   QueryPlanStepHelper::getWindowStepFunctions(step),
-                                                                   QueryPlanStepHelper::getWindowStepStreamsFanOut(step));
-    QueryPlanStepPtr new_step = std::make_shared<WindowStep>(new_child_step->getOutputStream(),
-                                                             QueryPlanStepHelper::getWindowStepWindow(child_step),
-                                                             QueryPlanStepHelper::getWindowStepFunctions(child_step),
-                                                             QueryPlanStepHelper::getWindowStepStreamsFanOut(child_step));
+    QueryPlanStepPtr new_child_step
+        = std::make_shared<WindowStepExt>(child_step.getInputStreams()[0], step.getWindow(), step.needSort(), step.getPrefixDescription());
+    QueryPlanStepPtr new_step = std::make_shared<WindowStepExt>(
+        new_child_step->getOutputStream(), child_step.getWindow(), child_step.needSort(), child_step.getPrefixDescription());
 
     auto new_child_node = PlanNodeBase::createPlanNode(context.context->getOptimizerContext()->nextNodeId(), std::move(new_child_step), child_ptr->getChildren());
     auto new_node = PlanNodeBase::createPlanNode(context.context->getOptimizerContext()->nextNodeId(), std::move(new_step), PlanNodes{new_child_node});

@@ -15,7 +15,6 @@
 #include <Processors/QueryPlan/ReadFromPreparedSource.h>
 #include <Processors/QueryPlan/RollupStep.h>
 #include <Processors/QueryPlan/SortingStep.h>
-#include <Processors/QueryPlan/WindowStep.h>
 #include <Processors/QueryPlan/ReadNothingStep.h>
 
 #include <Query/Processors/QueryPlan/AggregatingStepExt.h>
@@ -55,6 +54,7 @@
 #include <Query/Processors/QueryPlan/MergingSortedStepExt.h>
 #include <Query/Processors/QueryPlan/PartialSortingStepExt.h>
 #include <Query/Processors/QueryPlan/SortingStepExt.h>
+#include <Query/Processors/QueryPlan/WindowStepExt.h>
 #include <Query/Processors/QueryPlan/FinishSortingStepExt.h>
 #include <Query/ProtosHelper/PlanSerDerHelper.h>
 
@@ -97,6 +97,7 @@ namespace DB
     M(MergingSortedStepExt, merging_sorted_step_ext) \
     M(PartialSortingStepExt, partial_sorting_step_ext) \
     M(SortingStepExt, sorting_step_ext) \
+    M(WindowStepExt, window_step_ext) \
     M(FinishSortingStepExt, finish_sorting_step_ext)
 
 // protobuf's types and names for Step with proto
@@ -108,8 +109,7 @@ namespace DB
     M(IntersectOrExceptStep, intersect_or_except_step) \
     M(LimitByStep, limit_by_step) \
     M(OffsetStep, offset_step) \
-    M(ReadNothingStep, read_nothing_step) \
-    M(WindowStep, window_step) \
+    M(ReadNothingStep, read_nothing_step)
 
 // types for StepExt without proto
 #define APPLY_NOPROTOBUF_STEP_TYPES_FOR_EXT(M) \
@@ -359,10 +359,6 @@ break; \
     static size_t getLimitByStepGroupOffset(const LimitByStep & limit) { return limit.group_offset; }
 
     static size_t getOffsetStepOffset(const OffsetStep & offset) {return offset.offset;}
-
-    static const std::vector<WindowFunctionDescription> & getWindowStepFunctions(const WindowStep & window) {return window.window_functions;}
-    static bool getWindowStepStreamsFanOut(const WindowStep & window) {return window.streams_fan_out;}
-    static const WindowDescription & getWindowStepWindow(const WindowStep & window) {return window.window_description;}
 
     static const SortDescription & getFillingStepFillDescription(const FillingStep & filling_step) {return filling_step.fill_description;}
     static bool getFillingStepUseWithFillBySortingPrefix(const FillingStep & filling_step) {return filling_step.use_with_fill_by_sorting_prefix;}

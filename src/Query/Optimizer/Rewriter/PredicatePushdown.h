@@ -62,7 +62,7 @@ public:
     PlanNodePtr visitJoinStepExtNode(JoinStepExtNode &, PredicateContext &) override;
     PlanNodePtr visitArrayJoinStepNode(ArrayJoinStepNode &, PredicateContext &) override;
     PlanNodePtr visitExchangeStepExtNode(ExchangeStepExtNode & node, PredicateContext & predicate_context) override;
-    PlanNodePtr visitWindowStepNode(WindowStepNode &, PredicateContext &) override;
+    PlanNodePtr visitWindowStepExtNode(WindowStepExtNode &, PredicateContext &) override;
     PlanNodePtr visitMergeSortingStepExtNode(MergeSortingStepExtNode &, PredicateContext &) override;
     PlanNodePtr visitPartialSortingStepExtNode(PartialSortingStepExtNode &, PredicateContext &) override;
     PlanNodePtr visitSortingStepExtNode(SortingStepExtNode &, PredicateContext &) override;
@@ -150,7 +150,7 @@ public:
     ASTPtr visitAggregatingStepExtNode(AggregatingStepExtNode &, ContextMutablePtr &) override;
     ASTPtr visitJoinStepExtNode(JoinStepExtNode &, ContextMutablePtr &) override;
     ASTPtr visitExchangeStepExtNode(ExchangeStepExtNode &, ContextMutablePtr &) override;
-    ASTPtr visitWindowStepNode(WindowStepNode &, ContextMutablePtr &) override;
+    ASTPtr visitWindowStepExtNode(WindowStepExtNode &, ContextMutablePtr &) override;
     ASTPtr visitMergeSortingStepExtNode(MergeSortingStepExtNode &, ContextMutablePtr &) override;
     ASTPtr visitUnionStepExtNode(UnionStepExtNode &, ContextMutablePtr &) override;
     ASTPtr visitTableScanStepExtNode(TableScanStepExtNode &, ContextMutablePtr &) override;

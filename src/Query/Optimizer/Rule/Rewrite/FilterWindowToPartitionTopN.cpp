@@ -19,7 +19,7 @@ TransformResult FilterWindowToPartitionTopN::transformImpl(PlanNodePtr node, con
     const auto & step = *filter_node->getStep();
     const auto & predicate = step.getFilter();
 
-    auto * window_node = dynamic_cast<WindowStepNode *>(node->getChildren()[0].get());
+    auto * window_node = dynamic_cast<WindowStepExtNode *>(node->getChildren()[0].get());
     const auto & window_step = *window_node->getStep();
 
     auto * exchange_node = dynamic_cast<ExchangeStepExtNode *>(window_node->getChildren()[0].get());

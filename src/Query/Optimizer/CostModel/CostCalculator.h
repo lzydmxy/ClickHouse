@@ -44,7 +44,7 @@ public:
     PlanNodeCost visitJoinStepExt(const JoinStepExt & step, CostContext & cost_context) override;
     PlanNodeCost visitArrayJoinStep(const ArrayJoinStep & step, CostContext & cost_context) override;
     PlanNodeCost visitAggregatingStepExt(const AggregatingStepExt & step, CostContext & context) override;
-    PlanNodeCost visitWindowStep(const WindowStep & step, CostContext & context) override;
+    PlanNodeCost visitWindowStepExt(const WindowStepExt & step, CostContext & context) override;
     PlanNodeCost visitMergingAggregatedStepExt(const MergingAggregatedStepExt & step, CostContext & context) override;
     PlanNodeCost visitUnionStepExt(const UnionStepExt & step, CostContext & context) override;
     /// todo wujianchao add intersect and except

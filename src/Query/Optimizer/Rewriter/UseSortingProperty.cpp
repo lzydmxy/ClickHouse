@@ -96,7 +96,7 @@ PlanAndPropConstants SortingOrderedSource::Rewriter::visitAggregatingStepExtNode
     return visitPlanNode(node, required);
 }
 
-PlanAndPropConstants SortingOrderedSource::Rewriter::visitWindowStepNode(WindowStepNode & node, SortDescription & required)
+PlanAndPropConstants SortingOrderedSource::Rewriter::visitWindowStepExtNode(WindowStepExtNode & node, SortDescription & required)
 {
 #if 0
     if (context->getSettingsRef().optimize_read_in_window_order)
@@ -114,7 +114,7 @@ PlanAndPropConstants SortingOrderedSource::Rewriter::visitWindowStepNode(WindowS
 
         Constants constants = ConstantsDeriver::deriveConstants(node.getStep(), {result.constants}, cte_helper.getCTEInfo(), context);
         auto prefix_sorting = PropertyMatcher::matchSorting(*context, order_descr, result.property.getSorting(), {}, constants);
-        QueryPlanStepHelper::setSortingStepPrefixDescription(*step, prefix_sorting.toSortDesc());
+        step->setPrefixDescription(prefix_sorting.toSortDesc());
 
         Property any_prop;
         Property prop = PropertyDeriver::deriveProperty(node.getStep(), {result.property}, any_prop, context);
@@ -218,13 +218,12 @@ PlanNodePtr PruneSortingInfoRewriter::visitAggregatingStepExtNode(AggregatingSte
 }
 
 
-// todo: lizhuoyu5 need WindowStep add PrefixDescription
-// PlanNodePtr PruneSortingInfoRewriter::visitWindowStepNode(WindowStepNode & node, SortInfo &)
-// {
-//     auto prefix_desc = QueryPlanStepHelper::getWindowStepPrefixDescription(*node.getStep());
-//     SortInfo s{prefix_desc, size_t{0}};
-//     return SimplePlanRewriter::visitPlanNode(node, s);
-// }
+PlanNodePtr PruneSortingInfoRewriter::visitWindowStepExtNode(WindowStepExtNode & node, SortInfo &)
+{
+    auto prefix_desc = node.getStep()->getPrefixDescription();
+    SortInfo s{prefix_desc, size_t{0}};
+    return SimplePlanRewriter::visitPlanNode(node, s);
+}
 
 PlanNodePtr PruneSortingInfoRewriter::visitTopNFilteringStepExtNode(TopNFilteringStepExtNode & node, SortInfo &)
 {

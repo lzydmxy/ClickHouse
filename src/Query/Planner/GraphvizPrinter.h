@@ -83,7 +83,7 @@ public:
     Void visitApplyStepExtNode(ApplyStepExtNode & node, PrinterContext & context) override;
     Void visitEnforceSingleRowStepExtNode(EnforceSingleRowStepExtNode & node, PrinterContext & context) override;
     Void visitAssignUniqueIdStepExtNode(AssignUniqueIdStepExtNode & node, PrinterContext & context) override;
-    Void visitWindowStepNode(WindowStepNode & node, PrinterContext & context) override;
+    Void visitWindowStepExtNode(WindowStepExtNode & node, PrinterContext & context) override;
     Void visitCTERefStepExtNode(CTERefStepExtNode & node, PrinterContext & context) override;
     Void visitPartitionTopNStepExtNode(PartitionTopNStepExtNode & node, PrinterContext & context) override;
     Void visitExplainAnalyzeStepExtNode(ExplainAnalyzeStepExtNode & node, PrinterContext & context) override;
@@ -156,7 +156,7 @@ public:
     Void visitApplyStepExtNode(QueryPlan::Node * node, PrinterContext & context) override;
     Void visitEnforceSingleRowStepExtNode(QueryPlan::Node * node, PrinterContext & context) override;
     Void visitAssignUniqueIdStepExtNode(QueryPlan::Node * node, PrinterContext & context) override;
-    Void visitWindowStepNode(QueryPlan::Node * node, PrinterContext & context) override;
+    Void visitWindowStepExtNode(QueryPlan::Node * node, PrinterContext & context) override;
     Void visitPartitionTopNStepExtNode(QueryPlan::Node * node, PrinterContext & context) override;
     Void visitExplainAnalyzeStepExtNode(QueryPlan::Node * node, PrinterContext & context) override;
     Void visitTopNFilteringStepExtNode(QueryPlan::Node * node, PrinterContext & context) override;
@@ -213,7 +213,7 @@ public:
     static String printApplyStepExt(const ApplyStepExt & step);
     static String printEnforceSingleRowStepExt(const EnforceSingleRowStepExt & step);
     static String printAssignUniqueIdStepExt(const AssignUniqueIdStepExt & step);
-    static String printWindowStep(const WindowStep & step);
+    static String printWindowStepExt(const WindowStepExt & step);
     static String printCTERefStepExt(const CTERefStepExt & step);
     static String printPartitionTopNStepExt(const PartitionTopNStepExt & step);
     static String printExplainAnalyzeStepExt(const ExplainAnalyzeStepExt & step);

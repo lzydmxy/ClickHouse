@@ -242,7 +242,7 @@ ExchangeResult ExchangeVisitor::visitExtremesStepNode(ExtremesStepNode & node, E
 //    return enforceNodeAndStream(node, cxt);
 //}
 
-ExchangeResult ExchangeVisitor::visitWindowStepNode(WindowStepNode & node, ExchangeContext & cxt)
+ExchangeResult ExchangeVisitor::visitWindowStepExtNode(WindowStepExtNode & node, ExchangeContext & cxt)
 {
     return enforceNode(node, cxt);
 }

@@ -633,7 +633,7 @@ Property DeriverVisitor::visitExtremesStep(const ExtremesStep &, DeriverContext 
     return context.getInput()[0].clearSorting();
 }
 
-Property DeriverVisitor::visitWindowStep(const WindowStep &, DeriverContext & context)
+Property DeriverVisitor::visitWindowStepExt(const WindowStepExt &, DeriverContext & context)
 {
     return context.getInput()[0].clearSorting().withStreamPartitioning({});
 }

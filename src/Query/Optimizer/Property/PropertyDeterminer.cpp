@@ -7,7 +7,7 @@
 #include <Query/Processors/QueryPlan/JoinStepExt.h>
 #include <Query/Processors/QueryPlan/TotalsHavingStepExt.h>
 #include <Query/Processors/QueryPlan/UnionStepExt.h>
-#include <Processors/QueryPlan/WindowStep.h>
+#include <Query/Processors/QueryPlan/WindowStepExt.h>
 
 #include <set>
 
@@ -461,9 +461,9 @@ PropertySets DeterminerVisitor::visitExtremesStep(const ExtremesStep &, Determin
     return {{Property{Partitioning{Partitioning::Handle::SINGLE}, Partitioning{Partitioning::Handle::SINGLE}}}};
 }
 
-PropertySets DeterminerVisitor::visitWindowStep(const WindowStep & step, DeterminerContext & context)
+PropertySets DeterminerVisitor::visitWindowStepExt(const WindowStepExt & step, DeterminerContext & context)
 {
-    const auto & keys = QueryPlanStepHelper::getWindowStepWindow(step).partition_by;
+    auto keys = step.getWindow().partition_by;
     if (keys.empty())
     {
         PropertySet set;

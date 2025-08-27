@@ -76,7 +76,7 @@ public:
         return Range{std::max(static_cast<size_t>(0), source_range.lower_bound), std::max(static_cast<size_t>(1), source_range.upper_bound)};
     }
 
-    Range visitWindowStepNode(WindowStepNode & node, Void & context) override { return VisitorUtil::accept(node.getChildren()[0], *this, context); }
+    Range visitWindowStepExtNode(WindowStepExtNode & node, Void & context) override { return VisitorUtil::accept(node.getChildren()[0], *this, context); }
 
     Range visitDistinctStepExtNode(DistinctStepExtNode & node, Void & context) override
     {

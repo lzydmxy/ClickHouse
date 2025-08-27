@@ -188,7 +188,7 @@ PlanNodeStatisticsPtr CardinalityVisitor::visitAggregatingStepExt(const Aggregat
     return stats;
 }
 
-PlanNodeStatisticsPtr CardinalityVisitor::visitWindowStep(const WindowStep & step, CardinalityContext & context)
+PlanNodeStatisticsPtr CardinalityVisitor::visitWindowStepExt(const WindowStepExt & step, CardinalityContext & context)
 {
     PlanNodeStatisticsPtr child_stats = context.children_stats[0];
     PlanNodeStatisticsPtr stats = WindowEstimator::estimate(child_stats, step);

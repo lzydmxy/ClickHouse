@@ -78,14 +78,6 @@ QueryPlanStepPtr QueryPlanStepHelper::copyQueryPlanStep(const QueryPlanStepPtr &
             step_ptr->group_by_sort_description,
             step_ptr->memory_bound_merging_of_aggregation_results_enabled);
     }
-    else if (auto window_step = std::dynamic_pointer_cast<WindowStep>(query_plan_step))
-    {
-        return std::make_shared<WindowStep>(
-            window_step->input_streams[0],
-            window_step->window_description,
-            window_step->window_functions,
-            window_step->streams_fan_out);
-    }
     else if (auto sorting_step = std::dynamic_pointer_cast<SortingStep>(query_plan_step))
     {
         switch (sorting_step->getType())
@@ -210,15 +202,6 @@ void QueryPlanStepHelper::toProto(const ArrayJoinStep & step, Protos::ArrayJoinS
     ProtosSerDerHelper::toProto(*step.arrayJoin(), *proto_step.mutable_array_join());
 }
 
-void QueryPlanStepHelper::toProto(const WindowStep & step, Protos::WindowStep & proto_step, bool)
-{
-    ProtosSerDerHelper::serializeToProtoBase(step, *proto_step.mutable_query_plan_base());
-    ProtosSerDerHelper::toProto(step.window_description, *proto_step.mutable_window_description());
-    for (const auto & element : step.window_functions)
-        ProtosSerDerHelper::toProto(element, *proto_step.add_window_functions());
-    proto_step.set_streams_fan_out(step.streams_fan_out);
-}
-
 #define TO_PROTO_EXT_IMP(TYPE, VAR_NAME) \
 void QueryPlanStepHelper::toProto(const TYPE & step, Protos::TYPE & proto, bool for_hash_equals) \
 { \
@@ -291,13 +274,6 @@ void QueryPlanStepHelper::toProto(const IQueryPlanStep & query_plan_step, Protos
         {
             const auto & step = dynamic_cast<const ArrayJoinStep &>(query_plan_step);
             auto *proto_step = proto.mutable_array_join_step();
-            toProto(step, *proto_step);
-            break;
-        }
-        case QueryPlanStepType::WindowStep:
-        {
-            const auto & step = dynamic_cast<const WindowStep &>(query_plan_step);
-            auto *proto_step = proto.mutable_window_step();
             toProto(step, *proto_step);
             break;
         }
@@ -389,22 +365,6 @@ QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::ArrayJoinStep & pr
     return step;
 }
 
-QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::WindowStep & proto_step, ContextPtr)
-{
-    auto [step_description, base_input_stream] = ProtosSerDerHelper::deserializeFromProtoBase(proto_step.query_plan_base());
-    WindowDescription window_description = *ProtosSerDerHelper::fillFromProto(proto_step.window_description());
-    std::vector<WindowFunctionDescription> window_functions;
-    for (const auto & proto_element : proto_step.window_functions())
-    {
-        WindowFunctionDescription element = *ProtosSerDerHelper::fillFromProto(proto_element);
-        window_functions.emplace_back(std::move(element));
-    }
-    auto streams_fan_out = proto_step.streams_fan_out();
-    auto step = std::make_shared<WindowStep>(base_input_stream, window_description, window_functions, streams_fan_out);
-    step->setStepDescription(step_description);
-    return step;
-}
-
 #define FROM_PROTO_EXT_IMP(TYPE, VAR_NAME) \
 QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::TYPE & proto, ContextPtr context) \
 { \
@@ -455,10 +415,6 @@ QueryPlanStepPtr QueryPlanStepHelper::fromProto(const Protos::QueryPlanStep & pr
         case Protos::QueryPlanStep::StepCase::kArrayJoinStep:
         {
             return fromProto(proto.array_join_step(), context);
-        }
-        case Protos::QueryPlanStep::StepCase::kWindowStep:
-        {
-            return fromProto(proto.window_step(), context);
         }
         default: {
             throw Exception(ErrorCodes::PROTOBUF_BAD_CAST, "not implemented step: {}", static_cast<int>(proto.step_case()));

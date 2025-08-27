@@ -36,7 +36,7 @@ static std::unordered_map<QueryPlanStepType, std::string> NODE_COLORS = {
     {QueryPlanStepType::ArrayJoinStep, "orange"},
     {QueryPlanStepType::AggregatingStepExt, "chartreuse3"},
     {QueryPlanStepType::MergingAggregatedStepExt, "chartreuse3"},
-    {QueryPlanStepType::WindowStep, "darkolivegreen4"},
+    {QueryPlanStepType::WindowStepExt, "darkolivegreen4"},
     {QueryPlanStepType::PartitionTopNStepExt, "darkolivegreen4"},
     {QueryPlanStepType::UnionStepExt, "turquoise4"},
     {QueryPlanStepType::IntersectOrExceptStep, "turquoise4"},
@@ -388,12 +388,12 @@ Void PlanNodePrinter::visitAssignUniqueIdStepExtNode(AssignUniqueIdStepExtNode &
     return visitChildren(node, context);
 }
 
-Void PlanNodePrinter::visitWindowStepNode(WindowStepNode & node, PrinterContext & context)
+Void PlanNodePrinter::visitWindowStepExtNode(WindowStepExtNode & node, PrinterContext & context)
 {
     const auto & step_ptr = node.getStep();
     String color{NODE_COLORS[getQueryPlanStepType(step_ptr)]};
     String label{"WindowNode"};
-    printNode(node, label, StepPrinter::printWindowStep(*step_ptr), color, context);
+    printNode(node, label, StepPrinter::printWindowStepExt(*step_ptr), color, context);
     return visitChildren(node, context);
 }
 
@@ -912,13 +912,13 @@ Void PlanSegmentNodePrinter::visitAssignUniqueIdStepExtNode(QueryPlan::Node * no
     return visitChildren(node, context);
 }
 
-Void PlanSegmentNodePrinter::visitWindowStepNode(QueryPlan::Node * node, PrinterContext & context)
+Void PlanSegmentNodePrinter::visitWindowStepExtNode(QueryPlan::Node * node, PrinterContext & context)
 {
     auto & step_ptr = node->step;
-    auto & step = dynamic_cast<const WindowStep &>(*step_ptr);
+    auto & step = dynamic_cast<const WindowStepExt &>(*step_ptr);
     String label{"WindowNode"};
     String color{NODE_COLORS.at(getQueryPlanStepType(step_ptr))};
-    printNode(node, label, StepPrinter::printWindowStep(step), color, context);
+    printNode(node, label, StepPrinter::printWindowStepExt(step), color, context);
     return visitChildren(node, context);
 }
 
@@ -2195,11 +2195,11 @@ String StepPrinter::printPartitionTopNStepExt(const PartitionTopNStepExt & step)
     return details.str();
 }
 
-String StepPrinter::printWindowStep(const WindowStep & step)
+String StepPrinter::printWindowStepExt(const WindowStepExt & step)
 {
     std::stringstream details;
 
-    const auto & window = QueryPlanStepHelper::getWindowStepWindow(step);
+    const auto & window = step.getWindow();
 
     details << "Partition Key\\n";
     for (const auto & pk : window.partition_by)
@@ -2209,6 +2209,8 @@ String StepPrinter::printWindowStep(const WindowStep & step)
     for (const auto & sort : window.full_sort_description)
         details << sort.column_name << "\\n";
     details << "|";
+    details << "Need Sort:" << step.needSort() << "\\n";
+    details << "|";
     details << "Sort Key\\n";
     for (const auto & sk : window.order_by)
         details << sk.column_name << " " << (sk.direction == 1 ? "ASC" : "DESC") << "\\n";
@@ -2216,7 +2218,7 @@ String StepPrinter::printWindowStep(const WindowStep & step)
     details << "Frame Type\\n";
     details << window.frame.toString();
 
-    const auto & functions = QueryPlanStepHelper::getWindowStepFunctions(step);
+    const auto & functions = step.getFunctions();
     details << "|";
     details << "Window Functions\\n";
 
@@ -2229,7 +2231,7 @@ String StepPrinter::printWindowStep(const WindowStep & step)
         details << ")\\n";
     }
 
-    const auto & prefix_descs = window.full_sort_description;
+    const auto & prefix_descs = step.getPrefixDescription();
     if (!prefix_descs.empty())
     {
         details << "|";
@@ -2239,7 +2241,16 @@ String StepPrinter::printWindowStep(const WindowStep & step)
             details << desc.column_name << " " << desc.direction << " " << desc.nulls_direction << "\\n";
         }
     }
-
+    /*
+    details << "|";
+    details << "Output |";
+    for (auto & column : step_ptr->getOutputStream().header)
+    {
+        details << column.name << ":";
+        details << column.type->getName() << " ";
+        details << (column.column ? column.column->getName() : "") << "\\n";
+    }
+     */
     return details.str();
 }
 

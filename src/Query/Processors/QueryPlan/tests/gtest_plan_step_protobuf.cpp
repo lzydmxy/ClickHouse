@@ -1082,19 +1082,19 @@ TEST_F(ProtobufTest, WindowStep)
             functions.emplace_back(function);
         }
 
-        auto s = std::make_shared<WindowStep>(output_stream, desc, functions, true);
+        auto s = std::make_shared<WindowStepExt>(output_stream, desc, functions, true);
         s->setStepDescription(step_description);
         return s;
     }();
 
     // serialize to protobuf
-    Protos::WindowStep pb;
-    QueryPlanStepHelper::toProto(*step, pb);;
+    Protos::WindowStepExt pb;
+    step->toProto(pb);
     // deserialize from protobuf
-    auto step2 = QueryPlanStepHelper::fromProto(pb, context);
+    auto step2 = WindowStepExt::fromProto(pb, context);
     // re-serialize to protobuf
-    Protos::WindowStep pb2;
-    QueryPlanStepHelper::toProto(*step2, pb2);
+    Protos::WindowStepExt pb2;
+    step2->toProto(pb2);
     compareProto(pb, pb2);
     compareStep(step, step2);
 }

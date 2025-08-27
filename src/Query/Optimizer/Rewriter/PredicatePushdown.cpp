@@ -871,12 +871,12 @@ PlanNodePtr PredicateVisitor::visitExchangeStepExtNode(ExchangeStepExtNode & nod
     return processChild(node, predicate_context);
 }
 
-PlanNodePtr PredicateVisitor::visitWindowStepNode(WindowStepNode & node, PredicateContext & predicate_context)
+PlanNodePtr PredicateVisitor::visitWindowStepExtNode(WindowStepExtNode & node, PredicateContext & predicate_context)
 {
     auto & step_ptr = node.getStep();
-    const auto * step = dynamic_cast<const WindowStep *>(step_ptr.get());
+    const auto * step = dynamic_cast<const WindowStepExt *>(step_ptr.get());
 
-    const WindowDescription & window_desc = QueryPlanStepHelper::getWindowStepWindow(*step);
+    const WindowDescription & window_desc = step->getWindow();
     SortDescription scheme = window_desc.partition_by;
     Strings partition_symbols;
     for (auto & partition : scheme)
@@ -1733,7 +1733,7 @@ ASTPtr EffectivePredicateVisitor::visitExchangeStepExtNode(ExchangeStepExtNode &
     return PredicateConst::TRUE_VALUE;
 }
 
-ASTPtr EffectivePredicateVisitor::visitWindowStepNode(WindowStepNode & node, ContextMutablePtr & context)
+ASTPtr EffectivePredicateVisitor::visitWindowStepExtNode(WindowStepExtNode & node, ContextMutablePtr & context)
 {
     return process(node, context);
 }

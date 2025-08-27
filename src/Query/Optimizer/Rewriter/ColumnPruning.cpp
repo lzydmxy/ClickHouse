@@ -300,7 +300,7 @@ PlanNodePtr ColumnPruningVisitor::visitLimitByStepNode(LimitByStepNode & node, C
     return LimitByStepNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(limit_step), PlanNodes{child}, node.getStatistics());
 }
 
-PlanNodePtr ColumnPruningVisitor::visitWindowStepNode(WindowStepNode & node, ColumnPruningContext & column_pruning_context)
+PlanNodePtr ColumnPruningVisitor::visitWindowStepExtNode(WindowStepExtNode & node, ColumnPruningContext & column_pruning_context)
 {
     const auto * step = node.getStep().get();
     NameSet & require = column_pruning_context.name_set;
@@ -308,7 +308,7 @@ PlanNodePtr ColumnPruningVisitor::visitWindowStepNode(WindowStepNode & node, Col
     NameSet child_require = require;
 
     std::vector<WindowFunctionDescription> window_functions;
-    for (const auto & function : QueryPlanStepHelper::getWindowStepFunctions(*step))
+    for (const auto & function : step->getFunctions())
     {
         if (!require.contains(function.column_name))
             continue;
@@ -318,13 +318,13 @@ PlanNodePtr ColumnPruningVisitor::visitWindowStepNode(WindowStepNode & node, Col
         window_functions.push_back(function);
         child_require.insert(function.argument_names.begin(), function.argument_names.end());
     }
-    for (const auto & item : QueryPlanStepHelper::getWindowStepWindow(*step).order_by)
+    for (const auto & item : step->getWindow().order_by)
         child_require.insert(item.column_name);
 
-    for (const auto & item : QueryPlanStepHelper::getWindowStepWindow(*step).partition_by)
+    for (const auto & item : step->getWindow().partition_by)
         child_require.insert(item.column_name);
 
-    for (const auto & item : QueryPlanStepHelper::getWindowStepWindow(*step).full_sort_description)
+    for (const auto & item : step->getWindow().full_sort_description)
         child_require.insert(item.column_name);
 
     ColumnPruningContext child_column_pruning_context{.name_set = child_require};
@@ -333,11 +333,11 @@ PlanNodePtr ColumnPruningVisitor::visitWindowStepNode(WindowStepNode & node, Col
     if (window_functions.empty())
         return child;
 
-    auto window_step = std::make_shared<WindowStep>(
-        child->getStep()->getOutputStream(), QueryPlanStepHelper::getWindowStepWindow(*step), window_functions, QueryPlanStepHelper::getWindowStepStreamsFanOut(*step));
+    auto window_step = std::make_shared<WindowStepExt>(
+        child->getStep()->getOutputStream(), step->getWindow(), window_functions, step->needSort(), step->getPrefixDescription());
 
     PlanNodes children{child};
-    return WindowStepNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(window_step), children, node.getStatistics());
+    return WindowStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(window_step), children, node.getStatistics());
 }
 
 PlanNodePtr ColumnPruningVisitor::visitFilterStepExtNode(FilterStepExtNode & node, ColumnPruningContext & column_pruning_context)
@@ -1298,12 +1298,12 @@ PlanNodePtr ColumnPruningVisitor::convertDistinctToGroupBy(PlanNodePtr node)
 PlanNodePtr ColumnPruningVisitor::convertFilterWindowToSortingLimit(PlanNodePtr node, NameSet & require)
 {
     const auto & filter_step = dynamic_cast<FilterStepExt &>(*node->getStep());
-    auto * window_node = dynamic_cast<WindowStepNode *>(node->getChildren()[0].get());
+    auto * window_node = dynamic_cast<WindowStepExtNode *>(node->getChildren()[0].get());
     if (!window_node)
         return node;
 
-    const auto & window_step = dynamic_cast<WindowStep &>(*window_node->getStep());
-    const auto & window_desc = QueryPlanStepHelper::getWindowStepWindow(window_step);
+    const auto & window_step = dynamic_cast<WindowStepExt &>(*window_node->getStep());
+    const auto & window_desc = window_step.getWindow();
     if (window_desc.order_by.empty() || !window_desc.partition_by.empty() || window_desc.window_functions.size() != 1)
         return node;
 
@@ -1356,6 +1356,9 @@ PlanNodePtr ColumnPruningVisitor::convertFilterWindowToSortingLimit(PlanNodePtr 
         if (!column || column_name != column->name())
             return std::nullopt;
 
+        // if (const auto * prepared_param = func->arguments->children[1]->as<ASTPreparedParameter>())
+        //     return prepared_param->name;
+
         auto rhs = interpreter.evaluateConstantExpression(func->arguments->children[1]);
         if (!rhs || !isNativeInteger(rhs->first) || !WhichDataType(rhs->first).isUInt())
             return std::nullopt;
@@ -1388,7 +1391,8 @@ PlanNodePtr ColumnPruningVisitor::convertFilterWindowToSortingLimit(PlanNodePtr 
         window_node->getChildren()[0]->getStep()->getOutputStream(),
         window_desc.order_by,
         limit,
-        SortingStepExt::Stage::FULL);
+        SortingStepExt::Stage::FULL,
+        SortDescription{});
     auto child_node = SortingStepExtNode::createPlanNode(
         context->getOptimizerContext()->nextNodeId(), std::move(sorting_step), PlanNodes{window_node->getChildren()}, node->getStatistics());
 

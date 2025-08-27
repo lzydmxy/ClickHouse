@@ -1448,56 +1448,20 @@ void QueryPlannerVisitor::planWindow(PlanBuilder & builder, ASTSelectQuery & sel
 
 
     // add window steps
-    size_t i = 0;
-    auto before_iter = window_descriptions.begin();
-    const auto & settings = context->getSettingsRef();
-    const auto window_descriptions_size = window_descriptions.size();
-
-    for (auto iter = window_descriptions.begin(); iter != window_descriptions.end(); ++iter)
+    for (const auto & [_, window_desc] : window_descriptions)
     {
-        const auto & window_description = iter->second;
-        const auto & before_description = before_iter->second;
-
-        bool need_sort = !window_description.full_sort_description.empty();
-        if (need_sort && i != 0)
-        {
-            need_sort = !sortDescriptionIsPrefix(window_description.full_sort_description, before_description.full_sort_description)
-                        || (settings.max_threads != 1 && window_description.partition_by.size() != before_description.partition_by.size());
-        }
-
-        // todo: lizhuoyu5, Adding a SortStep during the planner phase may cause side effects.
-        // todo: Perhaps we should add the SortedTransform in the WindowStep::transformPipeline stage instead.
-        if (need_sort)
-        {
-            auto sorting_step = std::make_unique<SortingStepExt>(
-                builder.getCurrentDataStream(),
-                window_description.full_sort_description,
-                0 /*limit*/,
-                SortingStepExt::Stage::FULL
-                );
-            sorting_step->setStepDescription("Sorting for window '" + window_description.window_name + "'");
-            builder.addStep(std::move(sorting_step));
-        }
-
-        // Fan out streams only for the last window to preserve the ordering between windows,
-        // and WindowTransform works on single stream anyway.
-        const bool streams_fan_out = settings.query_plan_enable_multithreading_after_window_functions && ((i + 1) == window_descriptions_size);
-
         AstToSymbol mappings = createScopeAwaredASTMap<String>(analysis, builder.getScope());
 
-        for (const auto & window_func : window_description.window_functions)
+        for (const auto & window_func : window_desc.window_functions)
         {
             ASTPtr window_expr = std::const_pointer_cast<IAST>(window_func.function_node->shared_from_this());
             mappings.emplace(window_expr, window_func.column_name);
         }
 
-        auto window_step = std::make_shared<WindowStep>(builder.getCurrentDataStream(), window_description,  window_description.window_functions, streams_fan_out);
+        auto window_step = std::make_shared<WindowStepExt>(builder.getCurrentDataStream(), window_desc, true, SortDescription{});
         builder.addStep(std::move(window_step));
         builder.withAdditionalMappings(mappings);
         PRINT_PLAN(builder.plan, plan_window);
-
-        before_iter = iter;
-        ++i;
     }
 }
 
