@@ -2472,6 +2472,11 @@ void Context::makeGlobalContext()
     global_context = shared_from_this();
 }
 
+void Context::disableOptimizer()
+{
+    settings.enable_optimizer = false;
+}
+
 const EmbeddedDictionaries & Context::getEmbeddedDictionaries() const
 {
     return getEmbeddedDictionariesImpl(false);

@@ -903,6 +903,8 @@ public:
 
     const Settings & getSettingsRef() const { return settings; }
 
+    void disableOptimizer();
+
     void setProgressCallback(ProgressCallback callback);
     /// Used in executeQuery() to pass it to the QueryPipeline.
     ProgressCallback getProgressCallback() const;

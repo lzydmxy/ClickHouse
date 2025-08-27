@@ -165,6 +165,7 @@ QueryPipeline ClickHouseDictionarySource::createStreamForQuery(const String & qu
     /// Copy context because results of scalar subqueries potentially could be cached
     auto context_copy = Context::createCopy(context);
     context_copy->makeQueryContext();
+    context_copy->disableOptimizer();
 
     if (configuration.is_local)
     {
