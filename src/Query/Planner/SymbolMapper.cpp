@@ -445,7 +445,8 @@ std::shared_ptr<AggregatingStepExt> SymbolMapper::map(const AggregatingStepExt &
         agg.needOverflowRow(),
         agg.shouldProduceResultsInOrderOfBucketNumber(),
         agg.isNoShuffle(),
-        agg.isStreamingForCache());
+        agg.isStreamingForCache(),
+        agg.isGroupByUseNulls());
 }
 
 std::shared_ptr<ApplyStepExt> SymbolMapper::map(const ApplyStepExt & apply)

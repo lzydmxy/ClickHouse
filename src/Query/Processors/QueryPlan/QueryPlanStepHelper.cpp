@@ -60,7 +60,8 @@ QueryPlanStepPtr QueryPlanStepHelper::copyQueryPlanStep(const QueryPlanStepPtr &
             step_ptr->needOverflowRow(),
             step_ptr->should_produce_results_in_order_of_bucket_number,
             step_ptr->no_shuffle,
-            step_ptr->streaming_for_cache);
+            step_ptr->streaming_for_cache,
+            step_ptr->group_by_use_nulls);
     }
     else if (auto step_ptr = std::dynamic_pointer_cast<MergingAggregatedStep>(query_plan_step))
     {

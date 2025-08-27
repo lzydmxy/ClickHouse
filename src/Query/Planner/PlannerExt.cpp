@@ -1295,7 +1295,10 @@ void QueryPlannerVisitor::planAggregate(PlanBuilder & builder, ASTSelectQuery & 
         SortDescriptionWithPositions{},
         grouping_operations_descs,
         needAggregateOverflowRow(select_query),
-        false);
+        false,
+        false,
+        false,
+        context->getSettingsRef().group_by_use_nulls);
 
     builder.addStep(std::move(agg_step));
     builder.withAdditionalMappings(mappings_for_aggregate);

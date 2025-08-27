@@ -91,6 +91,7 @@ public:
         InputOrderInfoPtr group_by_info_,
         SortDescriptionWithPositions group_by_sort_description_,
         bool should_produce_results_in_order_of_bucket_number_,
+        bool group_by_use_nulls_,
         bool no_shuffle_ = false)
         : AggregatingStepExt(
               input_stream_,
@@ -110,7 +111,8 @@ public:
               false,
               should_produce_results_in_order_of_bucket_number_,
               no_shuffle_,
-              false)
+              false,
+              group_by_use_nulls_)
     {
     }
 
@@ -127,7 +129,8 @@ public:
         bool overflow_row_ = false,
         bool should_produce_results_in_order_of_bucket_number_ = false,
         bool no_shuffle_ = false,
-        bool streaming_for_cache_ = false)
+        bool streaming_for_cache_ = false,
+        bool group_by_use_nulls_ = false)
         : AggregatingStepExt(
               input_stream_,
               keys_,
@@ -146,7 +149,8 @@ public:
               false,
               should_produce_results_in_order_of_bucket_number_,
               no_shuffle_,
-              streaming_for_cache_)
+              streaming_for_cache_,
+              group_by_use_nulls_)
     {
     }
 
@@ -168,9 +172,10 @@ public:
         bool totals_ = false,
         bool should_produce_results_in_order_of_bucket_number = true,
         bool no_shuffle_ = false,
-        bool streaming_for_cache_ = false);
+        bool streaming_for_cache_ = false,
+        bool group_by_use_nulls_ = false);
 
-    static Block appendGroupingColumn(Block block, bool has_grouping);
+    static Block appendGroupingColumn(Block block, bool has_grouping, bool use_nulls);
 
     String getName() const override { return "AggregatingExt"; }
 
@@ -194,6 +199,8 @@ public:
     bool isFinal() const { return final; }
     bool isStreamingForCache() const { return streaming_for_cache; }
     void setStreamingForCache(bool streaming_for_cache_) { streaming_for_cache = streaming_for_cache_; }
+
+    bool isGroupByUseNulls() const { return group_by_use_nulls; }
 
     bool isPartial() const { return !final; }
     bool isGroupingSet() const { return !grouping_sets_params.empty(); }
@@ -222,7 +229,7 @@ public:
     GroupingSetsParamsExtList prepareGroupingSetsParams() const;
 
 private:
-    LoggerPtr log = getLogger("TableScanStepExt");
+    LoggerPtr log = getLogger("AggregatingStepExt");
     Names keys;
 
     NameSet keys_not_hashed; // keys which can be output directly, same as function `any`, but no type loss.
@@ -258,6 +265,7 @@ private:
     /// therefore the default value is true in the constructor
     bool should_produce_results_in_order_of_bucket_number;
     bool streaming_for_cache = false;
+    bool group_by_use_nulls = false;
 
     // for bitengine sqls
     bool no_shuffle;

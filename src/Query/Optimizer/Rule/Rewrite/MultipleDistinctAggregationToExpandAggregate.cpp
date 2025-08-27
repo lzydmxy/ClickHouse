@@ -303,7 +303,10 @@ TransformResult MultipleDistinctAggregationToExpandAggregate::transformImpl(Plan
         step.getGroupBySortDescription(),
         step.getGroupings(),
         step.needOverflowRow(),
-        step.shouldProduceResultsInOrderOfBucketNumber());
+        step.shouldProduceResultsInOrderOfBucketNumber(),
+        false,
+        false,
+        step.isGroupByUseNulls());
 
     auto pre_agg_node = PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), std::move(pre_agg_step), {expand_node});
 
@@ -356,7 +359,8 @@ TransformResult MultipleDistinctAggregationToExpandAggregate::transformImpl(Plan
         step.needOverflowRow(),
         step.shouldProduceResultsInOrderOfBucketNumber(),
         step.isNoShuffle(),
-        step.isStreamingForCache());
+        step.isStreamingForCache(),
+        step.isGroupByUseNulls());
     auto count_agg_node = PlanNodeBase::createPlanNode(rule_context.context->getOptimizerContext()->nextNodeId(), std::move(count_agg_step), {child});
 
     return count_agg_node;

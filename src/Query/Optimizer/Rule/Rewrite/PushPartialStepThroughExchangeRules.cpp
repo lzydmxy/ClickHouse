@@ -158,7 +158,10 @@ TransformResult split(const PlanNodePtr & node, RuleContext & context)
             step->getGroupBySortDescription(),
             step->getGroupings(),
             step->needOverflowRow(),
-            false);
+            false,
+            false,
+            false,
+            step->isGroupByUseNulls());
 
         auto state_agg_node = PlanNodeBase::createPlanNode(context.context->getOptimizerContext()->nextNodeId(), state_agg, node->getChildren());
         ProjectionPlanner projection_planner(state_agg_node, context.context);
@@ -203,7 +206,10 @@ TransformResult split(const PlanNodePtr & node, RuleContext & context)
             step->getGroupBySortDescription(),
             step->getGroupings(),
             step->needOverflowRow(),
-            false);
+            false,
+            false,
+            false,
+            step->isGroupByUseNulls());
 
         return PlanNodeBase::createPlanNode(context.context->getOptimizerContext()->nextNodeId(), merge_agg, {state_projection_node});
     }
@@ -221,7 +227,8 @@ TransformResult split(const PlanNodePtr & node, RuleContext & context)
         step->needOverflowRow(),
         false,
         step->isNoShuffle(),
-        step->isStreamingForCache());
+        step->isStreamingForCache(),
+        step->isGroupByUseNulls());
 
     auto partial_agg_node
         = PlanNodeBase::createPlanNode(context.context->getOptimizerContext()->nextNodeId(), std::move(partial_agg), node->getChildren(), node->getStatistics());

@@ -312,7 +312,8 @@ TransformResult PushAggThroughOuterJoin::transformImpl(PlanNodePtr aggregation, 
         agg_step->needOverflowRow(),
         false,
         agg_step->isNoShuffle(),
-        agg_step->isStreamingForCache());
+        agg_step->isStreamingForCache(),
+        agg_step->isGroupByUseNulls());
     auto rewritten_agg_node = PlanNodeBase::createPlanNode(context.context->getOptimizerContext()->nextNodeId(), std::move(rewritten_aggregation), {inner_table});
 
     PlanNodePtr rewritten_join;
@@ -480,7 +481,8 @@ TransformResult PushAggThroughInnerJoin::transformImpl(PlanNodePtr aggregation, 
         agg_step->needOverflowRow(),
         false,
         agg_step->isNoShuffle(),
-        agg_step->isStreamingForCache());
+        agg_step->isStreamingForCache(),
+        agg_step->isGroupByUseNulls());
     auto left_agg_node = PlanNodeBase::createPlanNode(context.context->getOptimizerContext()->nextNodeId(), std::move(left_aggregation), {left_table});
 
     auto right_aggregation = std::make_shared<AggregatingStepExt>(
@@ -496,7 +498,8 @@ TransformResult PushAggThroughInnerJoin::transformImpl(PlanNodePtr aggregation, 
         agg_step->needOverflowRow(),
         false,
         agg_step->isNoShuffle(),
-        agg_step->isStreamingForCache());
+        agg_step->isStreamingForCache(),
+        agg_step->isGroupByUseNulls());
     auto right_agg_node = PlanNodeBase::createPlanNode(context.context->getOptimizerContext()->nextNodeId(), std::move(right_aggregation), {right_table});
 
     auto output_stream = agg_step->getInputStreams()[0];

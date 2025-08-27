@@ -632,7 +632,8 @@ PlanNodePtr doInsertAggregation(
                 agg_step.needOverflowRow(),
                 agg_step.shouldProduceResultsInOrderOfBucketNumber(),
                 agg_step.isNoShuffle(),
-                agg_step.isStreamingForCache());
+                agg_step.isStreamingForCache(),
+                agg_step.isGroupByUseNulls());
                 //todo: liyang453, other feat: add hints
                 //agg_step.getHints());
 

@@ -235,7 +235,8 @@ PlanNodePtr UnifyNullableVisitor::visitAggregatingStepExtNodeImpl(AggregatingSte
         step.needOverflowRow(),
         step.shouldProduceResultsInOrderOfBucketNumber(),
         step.isNoShuffle(),
-        step.isStreamingForCache());
+        step.isStreamingForCache(),
+        step.isGroupByUseNulls());
     auto agg_node_set_null
         = AggregatingStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(agg_step_set_null), PlanNodes{child}/*, node.getStatistics()*/);
 

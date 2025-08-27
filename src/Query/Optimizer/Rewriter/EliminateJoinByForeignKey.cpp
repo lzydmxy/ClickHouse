@@ -1126,7 +1126,8 @@ PlanNodePtr EliminateJoinByFK::Eliminator::visitAggregatingStepExtNode(Aggregati
             false,
             step->shouldProduceResultsInOrderOfBucketNumber(),
             step->isNoShuffle(),
-            step->isStreamingForCache());
+            step->isStreamingForCache(),
+            step->isGroupByUseNulls());
 
         return AggregatingStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(agg_step), node.getChildren());
     }

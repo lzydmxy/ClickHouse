@@ -118,8 +118,19 @@ void computeGroupingFunctions(
     pipeline.addSimpleTransform([&](const Block & header) { return std::make_shared<ExpressionTransform>(header, expression); });
 }
 
+static inline void convertToNullable(Block & header, const Names & keys)
+{
+    for (const auto & key : keys)
+    {
+        auto & column = header.getByName(key);
+
+        column.type = makeNullableSafe(column.type);
+        column.column = makeNullableSafe(column.column);
+    }
+}
+
 static Block appendGroupingColumns(
-    Block block, const GroupingSetsParamsExtList & grouping_set_params, const GroupingDescriptions & groupings, bool final)
+    Block block, const Names & keys, const GroupingSetsParamsExtList & grouping_set_params, const GroupingDescriptions & groupings, bool final, bool use_nulls)
 {
     Block res;
 
@@ -145,15 +156,18 @@ static Block appendGroupingColumns(
             res.insert({type, grouping.output_name});
         }
     }
+
+    if (!grouping_set_params.empty() && use_nulls)
+        convertToNullable(res, keys);
     return res;
 }
 
-Block AggregatingStepExt::appendGroupingColumn(Block block, bool has_grouping)
+Block AggregatingStepExt::appendGroupingColumn(Block block, bool has_grouping, bool use_nulls)
 {
     if (!has_grouping)
         return block;
 
-    return generateOutputHeader(block, {}, false);
+    return generateOutputHeader(block, {}, use_nulls);
 }
 
 AggregatorExt::Params
@@ -261,10 +275,11 @@ AggregatingStepExt::AggregatingStepExt(
     bool,
     bool should_produce_results_in_order_of_bucket_number_,
     bool no_shuffle_,
-    bool streaming_for_cache_)
+    bool streaming_for_cache_,
+    bool group_by_use_nulls_)
     : ITransformingStep(
           input_stream_,
-          appendGroupingColumns(params_.getHeader(final_), grouping_sets_params_, groupings_, final_),
+          appendGroupingColumns(params_.getHeader(final_), keys_, grouping_sets_params_, groupings_, final_, group_by_use_nulls_),
           getTraits(should_produce_results_in_order_of_bucket_number_),
           false)
     , keys(std::move(keys_))
@@ -282,6 +297,7 @@ AggregatingStepExt::AggregatingStepExt(
     , groupings(groupings_)
     , should_produce_results_in_order_of_bucket_number(should_produce_results_in_order_of_bucket_number_)
     , streaming_for_cache(streaming_for_cache_)
+    , group_by_use_nulls(group_by_use_nulls_)
     , no_shuffle(no_shuffle_)
 
 {
@@ -313,14 +329,15 @@ std::shared_ptr<IQueryPlanStep> AggregatingStepExt::copy(ContextPtr) const
         needOverflowRow(),
         should_produce_results_in_order_of_bucket_number,
         no_shuffle,
-        streaming_for_cache);
+        streaming_for_cache,
+        group_by_use_nulls);
 }
 
 
 void AggregatingStepExt::updateOutputStream()
 {
     //todo: bc, other feat: what if input_streams and params->getHeader() are inconsistent?
-    output_stream->header = appendGroupingColumns(params.getHeader(final), grouping_sets_params, groupings, final);
+    output_stream->header = appendGroupingColumns(params.getHeader(final), keys, grouping_sets_params, groupings, final, group_by_use_nulls);
 }
 
 void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings & build_settings)
@@ -559,6 +576,9 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                 assert(ports.size() == grouping_sets_size);
                 auto output_header = transform_params->getHeader();
 
+                if (group_by_use_nulls)
+                    convertToNullable(output_header, keys);
+
                 for (size_t set_counter = 0; set_counter < grouping_sets_size; ++set_counter)
                 {
                     const auto & header = ports[set_counter]->getHeader();
@@ -577,10 +597,14 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
 
                     size_t missign_column_index = 0;
                     const auto & missing_columns = prepared_sets_params[set_counter].missing_keys;
+                    const auto & used_keys = grouping_sets_params[set_counter].used_key_names;
 
+                    auto to_nullable_function = FunctionFactory::instance().get("toNullable", nullptr);
                     for (size_t i = 0; i < output_header.columns(); ++i)
                     {
                         auto & col = output_header.getByPosition(i);
+                        const auto used_it = std::find_if(
+                    used_keys.begin(), used_keys.end(), [&](const auto & used_col) { return used_col == col.name; });
                         if (missign_column_index < missing_columns.size() && missing_columns[missign_column_index] == i)
                         {
                             ++missign_column_index;
@@ -592,7 +616,13 @@ void AggregatingStepExt::transformPipeline(QueryPipelineBuilder & pipeline, cons
                             outputs.push_back(node);
                         }
                         else
-                            outputs.push_back(dag->getOutputs()[header.getPositionByName(col.name)]);
+                        {
+                            const auto * column_node = dag->getOutputs()[header.getPositionByName(col.name)];
+                            if (used_it != used_keys.end() && group_by_use_nulls && column_node->result_type->canBeInsideNullable())
+                                outputs.push_back(&dag->addFunction(to_nullable_function, { column_node }, col.name));
+                            else
+                                outputs.push_back(column_node);
+                        }
                     }
 
                     dag->getOutputs().swap(outputs);
@@ -854,6 +884,7 @@ void AggregatingStepExt::toProto(Protos::AggregatingStepExt & proto, bool) const
         element.toProto(*proto.add_groupings());
     proto.set_should_produce_results_in_order_of_bucket_number(should_produce_results_in_order_of_bucket_number);
     proto.set_streaming_for_cache(streaming_for_cache);
+    proto.set_group_by_use_nulls(group_by_use_nulls);
 }
 
 std::shared_ptr<AggregatingStepExt> AggregatingStepExt::fromProto(const Protos::AggregatingStepExt & proto, ContextPtr context)
@@ -898,6 +929,7 @@ std::shared_ptr<AggregatingStepExt> AggregatingStepExt::fromProto(const Protos::
     }
     auto should_produce_results_in_order_of_bucket_number = proto.should_produce_results_in_order_of_bucket_number();
     auto streaming_for_cache = proto.streaming_for_cache();
+    auto group_by_use_nulls = proto.group_by_use_nulls();
 
     auto step = std::make_shared<AggregatingStepExt>(
         base_input_stream,
@@ -917,7 +949,8 @@ std::shared_ptr<AggregatingStepExt> AggregatingStepExt::fromProto(const Protos::
         false,
         should_produce_results_in_order_of_bucket_number,
         false,
-        streaming_for_cache);
+        streaming_for_cache,
+        group_by_use_nulls);
     step->setStepDescription(step_description);
     return step;
 }

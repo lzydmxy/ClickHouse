@@ -645,7 +645,8 @@ PlanNodePtr ColumnPruningVisitor::visitAggregatingStepExtNode(AggregatingStepExt
         step->needOverflowRow(),
         step->shouldProduceResultsInOrderOfBucketNumber(),
         step->isNoShuffle(),
-        step->isStreamingForCache());
+        step->isStreamingForCache(),
+        step->isGroupByUseNulls());
 
     PlanNodes children{child};
     auto agg_node = AggregatingStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(agg_step), children, node.getStatistics());
