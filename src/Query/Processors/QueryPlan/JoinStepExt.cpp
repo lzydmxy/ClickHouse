@@ -13,6 +13,7 @@
 #include <Query/ProtosHelper/ASTSerDerHelper.h>
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
 
+#include <Functions/FunctionFactory.h>
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Interpreters/ConcurrentHashJoin.h>
 #include <Interpreters/GraceHashJoin.h>
@@ -334,6 +335,29 @@ void JoinStepExt::describeActions(JSONBuilder::JSONMap & map) const
         JoinStep::describeActions(map);
 }
 
+void joinCastColumnsToNullable(QueryPipelineBuilder & pipeline, const FunctionOverloadResolverPtr & to_nullable_function, const BuildQueryPipelineSettings & settings)
+{
+    auto cast_actions_dag = std::make_shared<ActionsDAG>(pipeline.getHeader().getColumnsWithTypeAndName());
+
+    for (auto & output_node : cast_actions_dag->getOutputs())
+    {
+        DataTypePtr type_to_check = output_node->result_type;
+        if (const auto * type_to_check_low_cardinality = typeid_cast<const DataTypeLowCardinality *>(type_to_check.get()))
+            type_to_check = type_to_check_low_cardinality->getDictionaryType();
+
+        if (type_to_check->canBeInsideNullable())
+            output_node = &cast_actions_dag->addFunction(to_nullable_function, {output_node}, output_node->result_name);
+    }
+
+    auto expression = std::make_shared<ExpressionActions>(cast_actions_dag, settings.getActionsSettings());
+    pipeline.addSimpleTransform([&](const Block & header)
+    {
+        return std::make_shared<ExpressionTransform>(header, expression);
+    });
+}
+
+
+
 QueryPipelineBuilderPtr JoinStepExt::updatePipeline(QueryPipelineBuilders pipelines, const BuildQueryPipelineSettings & settings)
 {
     if (pipelines.size() != 2)
@@ -343,8 +367,29 @@ QueryPipelineBuilderPtr JoinStepExt::updatePipeline(QueryPipelineBuilders pipeli
 
     ExpressionActionsPtr filter_action;
 
-    // const auto & settings_ext = settings.getBuildQueryPipelineSettingsExt();
     const auto & settings_ext = BuildQueryPipelineSettingsExt::cast(settings);
+
+    if (settings_ext.context->getSettingsRef().join_use_nulls)
+    {
+        auto to_nullable_function = FunctionFactory::instance().get("toNullable", nullptr);
+        if (isFull(kind))
+        {
+            joinCastColumnsToNullable(*pipelines[0], to_nullable_function, settings);
+            input_streams[0].header = pipelines[0]->getHeader();
+            joinCastColumnsToNullable(*pipelines[1], to_nullable_function, settings);
+            input_streams[1].header = pipelines[0]->getHeader();
+        }
+        else if (isLeft(kind))
+        {
+            joinCastColumnsToNullable(*pipelines[1], to_nullable_function, settings);
+            input_streams[1].header = pipelines[1]->getHeader();
+        }
+        else if (isRight(kind))
+        {
+            joinCastColumnsToNullable(*pipelines[0], to_nullable_function, settings);
+            input_streams[0].header = pipelines[0]->getHeader();
+        }
+    }
 
     if (!join)
     {
