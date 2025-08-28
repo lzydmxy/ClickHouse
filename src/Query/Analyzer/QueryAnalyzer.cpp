@@ -44,11 +44,20 @@
 #include <Storages/StorageDistributed.h>
 #include <Storages/StorageMaterializedView.h>
 #include <Storages/StorageMemory.h>
+#include <Storages/StorageLog.h>
+#include <Storages/StorageKeeperMap.h>
+#include <Storages/StorageMySQL.h>
+#include <Storages/Hive/StorageHive.h>
+#include <Storages/HDFS/StorageHDFS.h>
+#include <Storages/RocksDB/StorageReplicatedRocksDB.h>
+#include <Storages/StorageFile.h>
 #include <Query/Common/getLeastSupertypeExt.h>
 #include <Query/Interpreters/QueryAliasesVisitorExt.h>
 
 #include <sstream>
 #include <unordered_map>
+
+#include <aws/core/utils/memory/AWSMemory.h>
 
 using namespace std::string_literals;
 
@@ -74,6 +83,20 @@ namespace ErrorCodes
     extern const int ILLEGAL_PREWHERE;
     extern const int ACCESS_DENIED;
     extern const int CANNOT_COMPILE_REGEXP;
+}
+
+namespace
+{
+    bool storageSupportOptimizer(const StoragePtr & storage)
+    {
+        if (storage->getStorageID().getDatabaseName() == "system")
+            return true;
+        if (storage->as<StorageMergeTree>() || storage->as<StorageReplicatedMergeTree>() || storage->as<StorageMaterializedView>()
+            || storage->as<StorageMemory>() || storage->as<StorageLog>() || storage->as<StorageKeeperMap>() || storage->as<StorageMySQL>()
+            || storage->as<StorageHive>() || storage->as<StorageHDFS>() || storage->as<StorageFile>() || storage->as<StorageReplicatedRocksDB>())
+            return true;
+        return false;
+    }
 }
 
 class QueryAnalyzerVisitor : public ASTVisitor<Void, const Void>
@@ -501,15 +524,8 @@ ScopePtr QueryAnalyzerVisitor::analyzeTable(
         storage->renameInMemory(storage_id);
         full_table_name = storage_id.getFullTableName();
 
-        // todo: zhangwanyun1, need !storage->supportsOptimizer(), temporarily use the type judgment method to identify whether support optimizer
-        bool support_optimizer = false;
-        if (storage->as<StorageMergeTree>() || storage->as<StorageReplicatedMergeTree>() || storage->as<StorageMaterializedView>())
-        {
-            support_optimizer = true;
-        }
-
-        if (storage_id.getDatabaseName() != "system" && !support_optimizer)
-            throw Exception(ErrorCodes::NOT_IMPLEMENTED, "table is not supported in optimizer");
+        if (storageSupportOptimizer(storage))
+            throw Exception(ErrorCodes::NOT_IMPLEMENTED, "table does not support optimizer");
 
         analysis.storage_results[&db_and_table] = StorageAnalysis{storage_id.getDatabaseName(), storage_id.getTableName(), storage};
     }
