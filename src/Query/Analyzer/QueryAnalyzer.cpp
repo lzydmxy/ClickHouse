@@ -524,7 +524,7 @@ ScopePtr QueryAnalyzerVisitor::analyzeTable(
         storage->renameInMemory(storage_id);
         full_table_name = storage_id.getFullTableName();
 
-        if (storageSupportOptimizer(storage))
+        if (!storageSupportOptimizer(storage))
             throw Exception(ErrorCodes::NOT_IMPLEMENTED, "table does not support optimizer");
 
         analysis.storage_results[&db_and_table] = StorageAnalysis{storage_id.getDatabaseName(), storage_id.getTableName(), storage};
