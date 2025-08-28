@@ -493,7 +493,7 @@ std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitReadStor
 
 std::vector<std::optional<Partitioning::Handle>> SourceNodeFinder::visitTableScanStepExtNode(QueryPlanExt::Node * node, const Context &)
 {
-    // TODO wujianchao any table who does not support distributed reading?
+    // TODO wujianchao is there any table who does not support distributed reading?
     return {{Partitioning::Handle::FIXED_HASH}};
 }
 
