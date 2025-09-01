@@ -699,12 +699,12 @@ void ExprAnalyzerVisitor::expandAsterisk(ASTs & nodes)
         }
         else if (auto * qualified_asterisk = node->as<ASTQualifiedAsterisk>())
         {
-            if (qualified_asterisk->children.empty() || !qualified_asterisk->children[0]->as<ASTTableIdentifier>())
+            if (qualified_asterisk->children.empty() || !qualified_asterisk->children[0]->as<ASTIdentifier>())
                 throw Exception(ErrorCodes::UNKNOWN_IDENTIFIER, "Unable to resolve qualified asterisk");
 
             has_asterisk = true;
-            ASTIdentifier & astidentifier = qualified_asterisk->children[0]->as<ASTTableIdentifier &>();
-            auto prefix = QualifiedName::extractQualifiedName(astidentifier);
+            ASTIdentifier & ast_identifier = qualified_asterisk->children[0]->as<ASTIdentifier &>();
+            auto prefix = QualifiedName::extractQualifiedName(ast_identifier);
             bool matched = false;
             for (size_t field_index = 0; field_index < baseScope()->size(); ++field_index)
             {

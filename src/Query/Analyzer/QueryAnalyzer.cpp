@@ -1485,11 +1485,11 @@ ASTs QueryAnalyzerVisitor::analyzeSelect(ASTSelectQuery & select_query, ScopePtr
         }
         else if (select_item->as<ASTQualifiedAsterisk>())
         {
-            if (select_item->children.empty() || !select_item->children[0]->as<ASTTableIdentifier>())
+            if (select_item->children.empty() || !select_item->children[0]->as<ASTIdentifier>())
                 throw Exception(ErrorCodes::UNKNOWN_IDENTIFIER, "Unable to resolve qualified asterisk");
 
-            ASTIdentifier & astidentifier = select_item->children[0]->as<ASTTableIdentifier &>();
-            auto prefix = QualifiedName::extractQualifiedName(astidentifier);
+            ASTIdentifier & ast_identifier = select_item->children[0]->as<ASTIdentifier &>();
+            auto prefix = QualifiedName::extractQualifiedName(ast_identifier);
             bool matched = false;
 
             for (size_t field_index = 0; field_index < source_scope->size(); ++field_index)
