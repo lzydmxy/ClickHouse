@@ -1235,7 +1235,7 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
             }
         }
 
-        /// todo wujianchao we should
+        /// todo wujianchao
         bool need_ck_optimizations = false;
         if (auto * storage_view = dynamic_cast<StorageView *>(storage.get()))
         {
