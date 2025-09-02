@@ -82,6 +82,9 @@ class PageCache;
 class MMappedFileCache;
 class UncompressedCache;
 class ProcessList;
+class ProcessListEntry;
+class PlanSegmentProcessList;
+class PlanSegmentProcessListEntry;
 class QueryStatus;
 using QueryStatusPtr = std::shared_ptr<QueryStatus>;
 class Macros;
@@ -288,6 +291,7 @@ protected:
     FileProgressCallback file_progress_callback; /// Callback for tracking progress of file loading.
 
     std::weak_ptr<QueryStatus> process_list_elem;  /// For tracking total resource usage for query.
+    std::weak_ptr<ProcessListEntry> process_list_entry;
     bool has_process_list_elem = false;     /// It's impossible to check if weak_ptr was initialized or not
     struct InsertionTableInfo
     {
@@ -436,6 +440,7 @@ protected:
     /// Prepared sets that can be shared between different queries. One use case is when is to share prepared sets between
     /// mutation tasks of one mutation executed against different parts of the same table.
     PreparedSetsCachePtr prepared_sets_cache;
+    std::weak_ptr<PlanSegmentProcessListEntry> segment_process_list_entry;
 
 public:
     /// Some counters for current query execution.
@@ -912,6 +917,9 @@ public:
     void setFileProgressCallback(FileProgressCallback && callback) { file_progress_callback = callback; }
     FileProgressCallback getFileProgressCallback() const { return file_progress_callback; }
 
+    void setProcessListEntry(std::shared_ptr<ProcessListEntry> process_list_entry_);
+    std::weak_ptr<ProcessListEntry> getProcessListEntry() const;
+
     /** Set in executeQuery and InterpreterSelectQuery. Then it is used in QueryPipeline,
       *  to update and monitor information about the total number of resources spent for the query.
       */
@@ -923,6 +931,13 @@ public:
     /// List all queries.
     ProcessList & getProcessList();
     const ProcessList & getProcessList() const;
+
+    /// List all plan segment queries;
+    PlanSegmentProcessList & getPlanSegmentProcessList();
+    const PlanSegmentProcessList & getPlanSegmentProcessList() const;
+
+    void setPlanSegmentProcessListEntry(std::shared_ptr<PlanSegmentProcessListEntry> segment_process_list_entry_);
+    std::weak_ptr<PlanSegmentProcessListEntry> getPlanSegmentProcessListEntry() const;
 
     OvercommitTracker * getGlobalOvercommitTracker() const;
 

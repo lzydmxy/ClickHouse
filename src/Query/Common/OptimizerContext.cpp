@@ -42,7 +42,6 @@ OptimizerContext::OptimizerContext(const Settings & settings_, const Poco::Util:
     else
         query_max_execution_time = 300 * 1000; // default 300 seconds
     initQueryExpirationTimeStamp();
-    setPlanSegmentProcessList(std::make_shared<PlanSegmentProcessList>());
 }
 
 void OptimizerContext::setQueryMaxExecutionTime(UInt32 milli_second)
@@ -94,36 +93,6 @@ void OptimizerContext::setRPCPort(UInt16 rpc_port_)
 UInt16 OptimizerContext::getRPCPort()
 {
     return rpc_port;
-}
-
-void OptimizerContext::setPlanSegmentProcessListEntry(PlanSegmentProcessListEntryPtr segment_process_list_entry_)
-{
-    segment_process_list_entry = segment_process_list_entry_;
-}
-
-PlanSegmentProcessListEntryPtr OptimizerContext::getPlanSegmentProcessListEntry() const
-{
-    return segment_process_list_entry;
-}
-
-void OptimizerContext::setPlanSegmentProcessList(PlanSegmentProcessListPtr segment_process_list_)
-{
-    shared->plan_segment_process_list = segment_process_list_;
-}
-
-PlanSegmentProcessListPtr OptimizerContext::getPlanSegmentProcessList() const
-{
-    return shared->plan_segment_process_list;
-}
-
-void OptimizerContext::setProcessListEntry(ProcessListEntryPtr process_list_entry_)
-{
-    process_list_entry = process_list_entry_;
-}
-
-ProcessListEntryPtr OptimizerContext::getProcessListEntry() const
-{
-    return process_list_entry;
 }
 
 void OptimizerContext::setProcessListElement(QueryStatusPtr elem)

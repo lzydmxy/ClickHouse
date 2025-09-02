@@ -117,7 +117,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteTest)
     std::unordered_map<std::string, Field> settings;
     auto context = createQueryContext(query_id, settings);
     auto optimizer_context = context->getOptimizerContext();
-    optimizer_context->setProcessListEntry(nullptr);
+    context->setProcessListEntry(nullptr);
 
     const size_t rows = 100;
     Block block = createUInt64Block(rows, 10, 88);
@@ -215,7 +215,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteTest)
     QueryPlan::Node remote_node{.step = std::move(exchange_source_step), .children = {}};
     query_plan.addRoot(std::move(remote_node));
     plan_segment.setQueryPlan(std::move(query_plan));
-    auto plan_segment_process_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(context, plan_segment.getPlanSegmentId());
+    auto plan_segment_process_entry = context->getPlanSegmentProcessList().insertGroup(context, plan_segment.getPlanSegmentId());
     plan_segment_instance->plan_segment = std::make_unique<PlanSegment>(std::move(plan_segment));
     PlanSegmentExecutor executor(std::move(plan_segment_instance), context, std::move(plan_segment_process_entry), exchange_options);
     LOG_TRACE(log, "Execute query");
@@ -254,7 +254,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteAsyncTest)
     std::unordered_map<std::string, Field> settings;
     auto context = createQueryContext(query_id, settings);
     auto optimizer_context = context->getOptimizerContext();
-    optimizer_context->setProcessListEntry(nullptr);
+    context->setProcessListEntry(nullptr);
 
     const size_t rows = 100;
     Block block = createUInt64Block(rows, 10, 88);
@@ -343,7 +343,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteAsyncTest)
     query_plan.addRoot(std::move(remote_node));
     plan_segment.setQueryPlan(std::move(query_plan));
 
-    auto plan_segment_process_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(context, plan_segment.getPlanSegmentId());
+    auto plan_segment_process_entry = context->getPlanSegmentProcessList().insertGroup(context, plan_segment.getPlanSegmentId());
     plan_segment_instance->plan_segment = std::make_unique<PlanSegment>(std::move(plan_segment));
 
     PlanSegmentExecutor executor(std::move(plan_segment_instance), context, std::move(plan_segment_process_entry), exchange_options);
@@ -399,7 +399,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteCancelTest)
     std::unordered_map<std::string, Field> settings;
     auto context = createQueryContext(query_id, settings);
     auto optimizer_context = context->getOptimizerContext();
-    optimizer_context->setProcessListEntry(nullptr);
+    context->setProcessListEntry(nullptr);
 
     const size_t rows = 100;
     Block block = createUInt64Block(rows, 10, 88);
@@ -504,7 +504,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteCancelTest)
         LOG_TRACE(log, "*****ExecuteCancelTest try cancel plan segment group");
         CancellationCode code = CancellationCode::NotFound;
         int max_time = 100;
-        for (; code == CancellationCode::NotFound; code = optimizer_context->getPlanSegmentProcessList()->tryCancelPlanSegmentGroup(query_id))
+        for (; code == CancellationCode::NotFound; code = context->getPlanSegmentProcessList().tryCancelPlanSegmentGroup(query_id))
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             max_time--;
@@ -531,7 +531,7 @@ TEST_F(PlanSegmentExecutorTest, ExecuteCancelTest)
     QueryPlan::Node remote_node{.step = std::move(exchange_source_step), .children = {}};
     query_plan.addRoot(std::move(remote_node));
     plan_segment.setQueryPlan(std::move(query_plan));
-    auto plan_segment_process_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(context, plan_segment.getPlanSegmentId());
+    auto plan_segment_process_entry = context->getPlanSegmentProcessList().insertGroup(context, plan_segment.getPlanSegmentId());
     plan_segment_instance->plan_segment = std::make_unique<PlanSegment>(std::move(plan_segment));
     // buffer will flush when row_num reached to send_threshold_in_row_num
     PlanSegmentExecutor executor(std::move(plan_segment_instance), context, std::move(plan_segment_process_entry), exchange_options);
@@ -553,7 +553,7 @@ void planExecutor(String query_id, size_t query_tx_id, AddressInfoPtr coordinato
     std::unordered_map<std::string, Field> settings;
     auto context = createQueryContext(query_id, settings);
     auto optimizer_context = context->getOptimizerContext();
-    optimizer_context->setProcessListEntry(nullptr);
+    context->setProcessListEntry(nullptr);
     optimizer_context->setRPCPort(rpc_port);
 
     const size_t rows = 10;
@@ -644,7 +644,7 @@ void planExecutor(String query_id, size_t query_tx_id, AddressInfoPtr coordinato
     QueryPlan::Node remote_node{.step = std::move(exchange_source_step), .children = {}};
     query_plan.addRoot(std::move(remote_node));
     plan_segment.setQueryPlan(std::move(query_plan));
-    auto plan_segment_process_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(context, plan_segment.getPlanSegmentId());
+    auto plan_segment_process_entry = context->getPlanSegmentProcessList().insertGroup(context, plan_segment.getPlanSegmentId());
     plan_segment_instance->plan_segment = std::make_unique<PlanSegment>(std::move(plan_segment));
     PlanSegmentExecutor executor(std::move(plan_segment_instance), context, std::move(plan_segment_process_entry), exchange_options);
     executor.execute();
@@ -666,7 +666,7 @@ void planExecutor1(String query_id, AddressInfo coordinator_address)
     {
         const auto context = Context::createCopy(getContext().context);
         context->initializeOptimizerContext();
-        context->getOptimizerContext()->setProcessListEntry(nullptr);
+        context->setProcessListEntry(nullptr);
 
         const size_t rows = 100;
         Block block = createUInt64Block(rows, 10, 88);
@@ -747,7 +747,7 @@ void planExecutor1(String query_id, AddressInfo coordinator_address)
         QueryPlan::Node remote_node{.step = std::move(exchange_source_step), .children = {}};
         query_plan.addRoot(std::move(remote_node));
         plan_segment->setQueryPlan(std::move(query_plan));
-        auto plan_segment_process_entry = context->getOptimizerContext()->getPlanSegmentProcessList()->insertGroup(context, plan_segment->getPlanSegmentId());
+        auto plan_segment_process_entry = context->getPlanSegmentProcessList().insertGroup(context, plan_segment->getPlanSegmentId());
         plan_segment_instance->plan_segment = std::move(plan_segment);
         PlanSegmentExecutor executor(std::move(plan_segment_instance), context, std::move(plan_segment_process_entry), exchange_options);
 
@@ -777,7 +777,7 @@ TEST_F(PlanSegmentExecutorTest, ConcurrentWithDiffIdSameAddr)
     }
     for (auto & th : thread_executors)
         th.join();
-    ASSERT_EQ(optimizer_context->getPlanSegmentProcessList()->size(), 0);
+    ASSERT_EQ(context->getPlanSegmentProcessList().size(), 0);
 }
 
 TEST_F(PlanSegmentExecutorTest, ConcurrentWithDiffIdDiffAddr)
@@ -798,7 +798,7 @@ TEST_F(PlanSegmentExecutorTest, ConcurrentWithDiffIdDiffAddr)
     }
     for (auto & th : thread_executors)
         th.join();
-    ASSERT_EQ(optimizer_context->getPlanSegmentProcessList()->size(), 0);
+    ASSERT_EQ(context->getPlanSegmentProcessList().size(), 0);
 }
 
 /*

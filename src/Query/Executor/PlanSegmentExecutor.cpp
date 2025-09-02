@@ -236,10 +236,10 @@ BlockIO PlanSegmentExecutor::lazyExecute(bool /*add_output_processors*/)
     if (!CurrentThread::get().getQueryContext() || CurrentThread::get().getQueryContext().get() != context.get())
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Context not match");
 
-    auto plan_segment_process_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(context, plan_segment->getPlanSegmentId());
-    optimizer_context->getPlanSegmentProcessList()->insertProcessList(plan_segment_process_entry, plan_segment->getPlanSegmentId(), context);
+    auto plan_segment_process_entry = context->getPlanSegmentProcessList().insertGroup(context, plan_segment->getPlanSegmentId());
+    context->getPlanSegmentProcessList().insertProcessList(plan_segment_process_entry, plan_segment->getPlanSegmentId(), context);
     // set entry before buildPipeline to control memory usage of exchange queue
-    optimizer_context->setPlanSegmentProcessListEntry(plan_segment_process_entry);
+    context->setPlanSegmentProcessListEntry(plan_segment_process_entry);
     res.pipeline = buildPipeline();
     return res;
 }
@@ -345,8 +345,8 @@ void PlanSegmentExecutor::doExecute()
             collectSegmentQueryRuntimeMetric(process_plan_segment_entry->getQueryStatus().get());
     });
 
-    optimizer_context->getPlanSegmentProcessList()->insertProcessList(process_plan_segment_entry, plan_segment->getPlanSegmentId(), context);
-    optimizer_context->setPlanSegmentProcessListEntry(process_plan_segment_entry);
+    context->getPlanSegmentProcessList().insertProcessList(process_plan_segment_entry, plan_segment->getPlanSegmentId(), context);
+    context->setPlanSegmentProcessListEntry(process_plan_segment_entry);
     auto query_status = process_plan_segment_entry->getQueryStatus();
     context->setProcessListElement(query_status);
     BroadcastSenderPtrs senders;

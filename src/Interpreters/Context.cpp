@@ -118,6 +118,7 @@
 #include <base/defines.h>
 #include <Query/Common/OptimizerContext.h>
 #include <Query/Common/OptimizerSettings.h>
+#include <Query/Executor/PlanSegmentProcessList.h>
 
 
 namespace fs = std::filesystem;
@@ -306,6 +307,7 @@ struct ContextSharedPart : boost::noncopyable
     GlobalOvercommitTracker global_overcommit_tracker;
     MergeList merge_list;                                       /// The list of executable merge (for (Replicated)?MergeTree)
     MovesList moves_list;                                       /// The list of executing moves (for (Replicated)?MergeTree)
+    PlanSegmentProcessList plan_segment_process_list;           /// The list of running plansegments in the moment;
     ReplicatedFetchList replicated_fetch_list;
     RefreshSet refresh_set;                                 /// The list of active refreshes (for MaterializedView)
     ConfigurationPtr users_config TSA_GUARDED_BY(mutex);                              /// Config with the users, profiles and quotas sections.
@@ -873,6 +875,38 @@ Context::~Context() = default;
 
 InterserverIOHandler & Context::getInterserverIOHandler() { return shared->interserver_io_handler; }
 const InterserverIOHandler & Context::getInterserverIOHandler() const { return shared->interserver_io_handler; }
+
+void Context::setProcessListEntry(std::shared_ptr<ProcessListEntry> process_list_entry_)
+{
+    process_list_entry = process_list_entry_;
+    if (process_list_entry_)
+        process_list_elem = process_list_entry_->getQueryStatus();
+    else
+        process_list_elem.reset();
+}
+
+std::weak_ptr<ProcessListEntry> Context::getProcessListEntry() const
+{
+    return process_list_entry;
+}
+
+void Context::setPlanSegmentProcessListEntry(std::shared_ptr<PlanSegmentProcessListEntry> segment_process_list_entry_)
+{
+    segment_process_list_entry = segment_process_list_entry_;
+}
+
+std::weak_ptr<PlanSegmentProcessListEntry> Context::getPlanSegmentProcessListEntry() const
+{
+    return segment_process_list_entry;
+}
+PlanSegmentProcessList & Context::getPlanSegmentProcessList()
+{
+    return shared->plan_segment_process_list;
+}
+const PlanSegmentProcessList & Context::getPlanSegmentProcessList() const
+{
+    return shared->plan_segment_process_list;
+}
 
 ProcessList & Context::getProcessList() { return shared->process_list; }
 const ProcessList & Context::getProcessList() const { return shared->process_list; }
