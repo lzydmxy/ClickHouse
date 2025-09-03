@@ -92,6 +92,7 @@ class TranslationMapVisitor : public ASTVisitor<ASTPtr, const Void>
 public:
     ASTPtr visitASTLiteral(ASTPtr & node, const Void &) override;
     ASTPtr visitASTIdentifier(ASTPtr & node, const Void &) override;
+    ASTPtr visitASTFieldReferenceExt(ASTPtr & node, const Void &) override;
     ASTPtr visitASTFunction(ASTPtr & node, const Void &) override;
     ASTPtr visitASTSubquery(ASTPtr & node, const Void &) override;
 
@@ -206,6 +207,18 @@ ASTPtr TranslationMapVisitor::visitASTIdentifier(ASTPtr & node, const Void &)
 
         // lambda argument reference
         return std::make_shared<ASTIdentifier>(iden->as<ASTIdentifier &>().name());
+    });
+}
+
+ASTPtr TranslationMapVisitor::visitASTFieldReferenceExt(ASTPtr & node, const Void &)
+{
+    return preferToUseMapped(node, [&](auto & field_ref) {
+        auto column_refer = analysis.tryGetColumnReference(field_ref);
+
+        if (!column_refer)
+            throw Exception(ErrorCodes::LOGICAL_ERROR, "Expression is not a column reference.");
+
+        return handleColumnReference(*column_refer, field_ref);
     });
 }
 
