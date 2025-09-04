@@ -1,24 +1,37 @@
 #include "RuntimeFilterUtils.h"
+
 #include <Common/Exception.h>
+#include <Functions/InternalFunctionRuntimeFilter.h>
+#include <Functions/FunctionsRuntimeFilter.h>
 #include <Parsers/ASTFunction.h>
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/IAST_fwd.h>
-#include <Parsers/formatAST.h>
 #include <Query/Parsers/ASTHelper.h>
 #include <Query/Optimizer/Utils.h>
 #include <Query/Optimizer/PredicateUtils.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
-//#include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
-//#include <Functions/FunctionsRuntimeFilter.h>
-//#include <Functions/InternalFunctionRuntimeFilter.h>
-//#include <Optimizer/CardinalityEstimate/FilterEstimator.h>
-//#include <Optimizer/CardinalityEstimate/SymbolStatistics.h>
-//#include <Optimizer/PredicateUtils.h>
-//#include <Optimizer/Utils.h>
+#include <Query/Optimizer/CardinalityEstimate/PlanNodeStatistics.h>
+#include <Query/Optimizer/CardinalityEstimate/FilterEstimator.h>
+#include <Query/Optimizer/CardinalityEstimate/SymbolStatistics.h>
+#include <Query/Optimizer/PredicateUtils.h>
+#include <Query/Optimizer/Utils.h>
 
 namespace DB
 {
+
+
+std::shared_ptr<ASTFunction> makeASTFunctionWithVectorArgs(const DB::String &name, ASTs &&args)
+{
+    auto function = std::make_shared<ASTFunction>();
+    function->name = name;
+    function->arguments = std::make_shared<ASTExpressionList>();
+    function->children.push_back(function->arguments);
+    function->arguments->children = std::move(args);
+
+    return function;
+}
+
 ConstASTPtr RuntimeFilterUtils::createRuntimeFilterExpression(
     RuntimeFilterId id, const std::string & symbol, const std::vector<String> & partition_columns, double filter_factor)
 {
@@ -30,15 +43,12 @@ ConstASTPtr RuntimeFilterUtils::createRuntimeFilterExpression(
         partition_columns_tuple->arguments->children.emplace_back(std::make_shared<ASTIdentifier>(column));
     partition_columns_tuple->children.push_back(partition_columns_tuple->arguments);
 
-    return nullptr;
-
-    // TODO: Need InternalFunctionRuntimeFilter
-    // return makeASTFunction(
-    //     InternalFunctionRuntimeFilter::name,
-    //     std::make_shared<ASTLiteral>(id),
-    //     std::make_shared<ASTIdentifier>(symbol),
-    //     std::make_shared<ASTLiteral>(filter_factor),
-    //     partition_columns_tuple);
+    return makeASTFunction(
+        InternalFunctionRuntimeFilter::name,
+        std::make_shared<ASTLiteral>(id),
+        std::make_shared<ASTIdentifier>(symbol),
+        std::make_shared<ASTLiteral>(filter_factor),
+        partition_columns_tuple);
 }
 
 ConstASTPtr RuntimeFilterUtils::createRuntimeFilterExpression(const RuntimeFilterDescription & description)
@@ -49,14 +59,12 @@ ConstASTPtr RuntimeFilterUtils::createRuntimeFilterExpression(const RuntimeFilte
     partition_columns_tuple->arguments->children = description.partition_columns_exprs;
     partition_columns_tuple->children.push_back(partition_columns_tuple->arguments);
 
-    return nullptr;
-    // TODO: Need InternalFunctionRuntimeFilter
-    // return makeASTFunction(
-    //     InternalFunctionRuntimeFilter::name,
-    //     std::make_shared<ASTLiteral>(description.id),
-    //     description.expr,
-    //     std::make_shared<ASTLiteral>(description.filter_factor),
-    //     partition_columns_tuple);
+    return makeASTFunction(
+        InternalFunctionRuntimeFilter::name,
+        std::make_shared<ASTLiteral>(description.id),
+        description.expr,
+        std::make_shared<ASTLiteral>(description.filter_factor),
+        partition_columns_tuple);
 }
 
 bool RuntimeFilterUtils::containsRuntimeFilters(ConstASTPtr filter)
@@ -70,9 +78,8 @@ bool RuntimeFilterUtils::containsRuntimeFilters(ConstASTPtr filter)
 
     if (getAstType(filter) == ASTType::ASTFunction)
     {
-        //TODO: Need InternalFunctionRuntimeFilter/RuntimeFilterBloomFilterExists
-        //const auto * function = filter->as<ASTFunction>();
-        //return function->name == InternalFunctionRuntimeFilter::name || function->name == RuntimeFilterBloomFilterExists::name;
+        const auto * function = filter->as<ASTFunction>();
+        return function->name == InternalFunctionRuntimeFilter::name || function->name == RuntimeFilterBloomFilterExists::name;
     }
 
     return false;
@@ -80,22 +87,17 @@ bool RuntimeFilterUtils::containsRuntimeFilters(ConstASTPtr filter)
 
 bool RuntimeFilterUtils::isExecutableRuntimeFilter(const ASTPtr & expr)
 {
-    //return expr && getAstType(expr) == ASTType::ASTFunction && expr->as<ASTFunction &>().name == RuntimeFilterBloomFilterExists::name;
-    //TODO: Need RuntimeFilterBloomFilterExists
-    return false;
+    return expr && getAstType(expr) == ASTType::ASTFunction && expr->as<ASTFunction &>().name == RuntimeFilterBloomFilterExists::name;
 }
 
 bool RuntimeFilterUtils::isInternalRuntimeFilter(const ConstASTPtr & expr)
 {
-    //return expr && getAstType(expr) == ASTType::ASTFunction && expr->as<ASTFunction &>().name == InternalFunctionRuntimeFilter::name;
-    //TODO: Need InternalFunctionRuntimeFilter
-    return false;
+    return expr && getAstType(expr) == ASTType::ASTFunction && expr->as<ASTFunction &>().name == InternalFunctionRuntimeFilter::name;
 }
 
 bool RuntimeFilterUtils::isInternalRuntimeFilter(const ASTFunction & function)
 {
-    //return function.name == InternalFunctionRuntimeFilter::name;
-    return false;
+    return function.name == InternalFunctionRuntimeFilter::name;
 }
 
 double RuntimeFilterUtils::estimateSelectivity(
@@ -105,21 +107,19 @@ double RuntimeFilterUtils::estimateSelectivity(
     const NamesAndTypes & column_types,
     ContextMutablePtr & context)
 {
-    //TODO: PlanNodeStatistics can not be compiled
-    // auto stats = probe_stats->copy();
-    // ASTPtr constructed_runtime_filter = makeASTFunction(
-    //     "and",
-    //     makeASTFunction("greaterOrEquals", expr, std::make_shared<ASTLiteral>(build_stats->getMin())),
-    //     makeASTFunction("lessOrEquals", expr, std::make_shared<ASTLiteral>(build_stats->getMax())));
-    // auto selectivity = FilterEstimator::estimateFilterSelectivity(stats, constructed_runtime_filter, column_types, context);
+    auto stats = probe_stats->copy();
+    ASTPtr constructed_runtime_filter = makeASTFunction(
+        "and",
+        makeASTFunction("greaterOrEquals", expr, std::make_shared<ASTLiteral>(build_stats->getMin())),
+        makeASTFunction("lessOrEquals", expr, std::make_shared<ASTLiteral>(build_stats->getMax())));
+    auto selectivity = FilterEstimator::estimateFilterSelectivity(stats, constructed_runtime_filter, column_types, context);
 
-    // if (const auto * identifier = expr->as<ASTIdentifier>())
-    // {
-    //     auto ndv_selectivity = static_cast<double>(build_stats->getNdv()) / probe_stats->getSymbolStatistics(identifier->name())->getNdv();
-    //     selectivity = std::min(selectivity, ndv_selectivity);
-    // }
-    // return selectivity;
-    return 0.0;
+    if (const auto * identifier = expr->as<ASTIdentifier>())
+    {
+        auto ndv_selectivity = static_cast<double>(build_stats->getNdv()) / probe_stats->getSymbolStatistics(identifier->name())->getNdv();
+        selectivity = std::min(selectivity, ndv_selectivity);
+    }
+    return selectivity;
 }
 
 std::pair<ASTs, ASTs> RuntimeFilterUtils::extractExecutableRuntimeFiltersAndPush1stRf(const ASTPtr & conjuncts)
@@ -201,9 +201,8 @@ std::optional<RuntimeFilterDescription> RuntimeFilterUtils::extractDescription(c
         return {};
 
     auto function = runtime_filter->as<ASTFunction &>();
-    //TODO:
-    // if (function.name != InternalFunctionRuntimeFilter::name)
-    //     return {};
+    if (function.name != InternalFunctionRuntimeFilter::name)
+        return {};
 
     auto id = function.arguments->children[0]->as<ASTLiteral &>().value.get<RuntimeFilterId>();
     auto expr = function.arguments->children[1];
@@ -221,10 +220,8 @@ ASTs RuntimeFilterUtils::createRuntimeFilterForFilter(const RuntimeFilterDescrip
     if (only_bf)
     {
         auto key = RuntimeFilterManager::makeKey(query_id, description.id);
-        //TODO: Need RuntimeFilterBloomFilterExists
-        // return {
-        //     ASTFunction::makeASTFunctionWithVectorArgs(RuntimeFilterBloomFilterExists::name, generateFunctionArgs(description, query_id))
-        // };
+        return {
+            makeASTFunctionWithVectorArgs(RuntimeFilterBloomFilterExists::name, generateFunctionArgs(description, query_id))};
     }
 
     bool is_range_or_set, has_bf;
@@ -288,10 +285,9 @@ ASTs RuntimeFilterUtils::createRuntimeFilterForTableScan(
                     }
                     if (need_bf) {
                         has_bf = true;
-                        //TODO: Need RuntimeFilterBloomFilterExists
-                        // res.emplace_back(ASTFunction::makeASTFunctionWithVectorArgs(
-                        //     RuntimeFilterBloomFilterExists::name,
-                        //     generateFunctionArgs(description, query_id)));
+                         res.emplace_back(makeASTFunctionWithVectorArgs(
+                             RuntimeFilterBloomFilterExists::name,
+                             generateFunctionArgs(description, query_id)));
                     }
                 }
             }
@@ -368,10 +364,9 @@ ASTs RuntimeFilterUtils::createRuntimeFilterForTableScan(
              if (!d.bf.isNull() && need_bf)
             {
                 has_bf = true;
-                //TODO: Need RuntimeFilterBloomFilterExists
-                // res.emplace_back(ASTFunction::makeASTFunctionWithVectorArgs(
-                //     RuntimeFilterBloomFilterExists::name,
-                //     generateFunctionArgs(description, query_id)));
+                res.emplace_back(makeASTFunctionWithVectorArgs(
+                    RuntimeFilterBloomFilterExists::name,
+                    generateFunctionArgs(description, query_id)));
             }
         }
     }
@@ -379,10 +374,9 @@ ASTs RuntimeFilterUtils::createRuntimeFilterForTableScan(
     {
         // only enable bloom
         has_bf = true;
-        // auto key = RuntimeFilterManager::makeKey(query_id, description.id);
-        //TODO: Need RuntimeFilterBloomFilterExists
-        // res.emplace_back(
-        //     ASTFunction::makeASTFunctionWithVectorArgs(RuntimeFilterBloomFilterExists::name, generateFunctionArgs(description, query_id)));
+        auto key = RuntimeFilterManager::makeKey(query_id, description.id);
+        res.emplace_back(
+            makeASTFunctionWithVectorArgs(RuntimeFilterBloomFilterExists::name, generateFunctionArgs(description, query_id)));
     }
 
     return res;

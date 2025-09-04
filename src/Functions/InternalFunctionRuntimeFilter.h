@@ -18,12 +18,12 @@ public:
 
     static FunctionPtr create(ContextPtr /*context*/)
     {
-        //todo: liyang453, other feat: instantiation of function template specialization
-        //return std::make_shared<InternalFunctionRuntimeFilter>();
-        return nullptr;
+        return std::make_shared<InternalFunctionRuntimeFilter>();
     }
 
     String getName() const override { return name; }
+
+    bool isSuitableForShortCircuitArgumentsExecution(const DataTypesWithConstInfo & /*arguments*/) const override { return false; }
 
     bool isSuitableForConstantFolding() const override
     {

@@ -6,7 +6,7 @@
 #include <DataTypes/DataTypeNullable.h>
 #include <DataTypes/DataTypeString.h>
 #include <DataTypes/DataTypesNumber.h>
-#include <Query/Functions/InternalFunctionRuntimeFilter.h>
+#include <Functions/InternalFunctionRuntimeFilter.h>
 #include <Interpreters/convertFieldToType.h>
 #include <Query/Interpreters/JoinUtilsExt.h>
 #include <Query/Optimizer/FunctionInvoker.h>

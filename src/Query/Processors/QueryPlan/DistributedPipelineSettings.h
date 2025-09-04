@@ -11,7 +11,7 @@ struct PlanSegmentExecutionInfo;
 
 struct DistributedPipelineSettings
 {
-    bool is_distributed = false;
+    bool is_distributed = true;
     String query_id;
     size_t plan_segment_id = 0;
     size_t parallel_size = 1;

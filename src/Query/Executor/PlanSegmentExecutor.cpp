@@ -524,7 +524,7 @@ QueryPipeline PlanSegmentExecutor::buildPipeline(BroadcastSenderPtrs & senders)
 
     auto builder = plan_segment->getQueryPlan().buildQueryPipeline(
         buildOptimizationSettingsWithCheck(logger, context),
-        BuildQueryPipelineSettingsExt::fromContext(context));
+        BuildQueryPipelineSettingsExt::fromPlanSegment(plan_segment, plan_segment_instance->info, context));
 
     if (plan_segment->getPlanSegmentOutputs().empty())
         throw Exception(ErrorCodes::LOGICAL_ERROR, "PlanSegment has no output");

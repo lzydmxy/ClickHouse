@@ -6,6 +6,7 @@
 #include <Common/KnownObjectNames.h>
 #include <IO/WriteHelpers.h>
 #include <Parsers/ASTFunction.h>
+#include <TableFunctions/TableFunctionRemote.h>
 
 
 namespace DB

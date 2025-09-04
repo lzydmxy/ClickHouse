@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <optional>
 #include <DataTypes/FieldToDataType.h>
-#include <Query/Functions/InternalFunctionRuntimeFilter.h>
+#include <Functions/InternalFunctionRuntimeFilter.h>
 #include <Query/Optimizer/PredicateUtils.h>
 #include <Parsers/ASTFunction.h>
 #include <Query/Statistics/StringHash.h>

@@ -9,6 +9,7 @@
 #include <Query/Optimizer/SymbolTransformMap.h>
 #include <Query/Optimizer/SymbolsExtractor.h>
 #include <Query/Processors/IQueryPlanStepExt.h>
+#include <Query/Processors/Transforms/MergeTreeSelectPrepareProcessorExt.h>
 #include <Query/Processors/QueryPlan/BuildQueryPipelineSettingsExt.h>
 #include <Query/Processors/QueryPlan/ExecutePlanElement.h>
 #include <Query/Processors/QueryPlan/QueryPlanStepHelper.h>
@@ -1045,6 +1046,7 @@ void TableScanStepExt::rewriteDynamicFilter(SelectQueryInfo & select_query, cons
             }
         }
 
+        prewhere_predicates.insert(prewhere_predicates.end(), tmp_prewhere_predicates.begin(), tmp_prewhere_predicates.end());
         auto prewhere_dicates = PredicateUtils::combineConjuncts(prewhere_predicates);
         if (!PredicateUtils::isTruePredicate(prewhere_dicates))
             query->setExpression(ASTSelectQuery::Expression::PREWHERE, std::move(prewhere_dicates));
@@ -1095,6 +1097,20 @@ void TableScanStepExt::initializePipeline(QueryPipelineBuilder & pipeline, const
         {
             auto prewhere_ids = RuntimeFilterUtils::extractRuntimeFilterId(partition_filter);
             ids.insert(ids.end(), prewhere_ids.begin(), prewhere_ids.end());
+        }
+
+        if (!ids.empty())
+        {
+            Pipe pipe(std::make_shared<MergeTreeSelectPrepareProcessorExt>(
+                *this,
+                settings_ext,
+                table_output_stream.header,
+                std::move(ids),
+                 settings_ext.context->getOptimizerContext()->getSettingsRef().wait_runtime_filter_timeout));
+            pipeline.init(std::move(pipe));
+            pipeline.addTransform(std::make_shared<ResizeProcessor>(
+                table_output_stream.header, 1,  settings_ext.context->getSettingsRef().max_threads));
+            return;
         }
     }
 

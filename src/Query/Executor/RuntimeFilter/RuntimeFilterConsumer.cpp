@@ -32,8 +32,16 @@ RuntimeFilterConsumer::RuntimeFilterConsumer(
 bool RuntimeFilterConsumer::addBuildParams(size_t ht_size, const DB::BlocksList * blocks)
 {
     auto index = num_partial.fetch_add(1, std::memory_order_relaxed);
-    build_params_blocks[index] = blocks;
-    ht_sizes.fetch_add(ht_size, std::memory_order_relaxed);
+    if (ht_size)
+    {
+        build_params_blocks[index] = blocks;
+        ht_sizes.fetch_add(ht_size, std::memory_order_relaxed);
+    }
+    else
+    {
+        build_params_blocks[index] = nullptr;
+    }
+
     return static_cast<size_t>(index) == (local_stream_parallel - 1);
 }
 

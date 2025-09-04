@@ -18,7 +18,7 @@
 #include <Query/Processors/QueryPlan/MergingSortedStepExt.h>
 #include <Query/Processors/QueryPlan/PartialSortingStepExt.h>
 #include <Query/Processors/QueryPlan/QueryPlanExt.h>
-#include <Query/Functions/InternalFunctionRuntimeFilter.h>
+#include <Functions/InternalFunctionRuntimeFilter.h>
 #include <Query/Core/BlockHelper.h>
 
 

@@ -197,7 +197,10 @@ JoinPtr JoinStepExt::makeJoin(
             if (consumer)
                 consumer->fixParallel(toPowerOfTwo(std::min<size_t>(num_streams, 256)));
 
-            return std::make_shared<ConcurrentHashJoin>(context, table_join, settings.max_threads, r_sample_block);
+            auto concurrent_hash_join = std::make_shared<ConcurrentHashJoin>(context, table_join, settings.max_threads, r_sample_block);
+            if (consumer)
+                consumer->fixParallel(concurrent_hash_join->slots);
+            return concurrent_hash_join;
         }
 
         if (join_algorithm == JoinAlgorithm::GRACE_HASH && GraceHashJoin::isSupported(table_join) && allow_grace_hash_join)
@@ -452,11 +455,6 @@ QueryPipelineBuilderPtr JoinStepExt::updatePipeline(QueryPipelineBuilders pipeli
         max_block_size = settings_ext.context->getSettingsRef().max_block_size;
     }
 
-    if (need_build_runtime_filter)
-    {
-        throw Exception(ErrorCodes::NOT_IMPLEMENTED, "QueryPipelineBuilder should support runtime filter.");
-    }
-
     auto pipeline = QueryPipelineBuilderHelper::joinPipelinesWithRuntimeFilter(
         std::move(pipelines[0]),
         std::move(pipelines[1]),
@@ -550,8 +548,8 @@ std::shared_ptr<IQueryPlanStep> JoinStepExt::copy(ContextPtr) const
         join_algorithm,
         is_magic,
         is_ordered,
-        simple_reordered
-        /*runtime_filter_builders*/);
+        simple_reordered,
+        runtime_filter_builders);
 }
 
 void JoinStepExt::describePipeline(FormatSettings & settings) const

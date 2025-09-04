@@ -717,6 +717,14 @@ void HashJoin::initRightBlockStructure(Block & saved_block_sample)
                             table_join->isEnabledAlgorithm(JoinAlgorithm::GRACE_HASH) ||
                             isRightOrFull(kind) ||
                             multiple_disjuncts;
+    if (auto table_join_ext = std::static_pointer_cast<TableJoinExt>(table_join))
+    {
+        if (table_join_ext->getRuntimeFilterConsumer() != nullptr)
+        {
+            save_key_columns = true;
+        }
+    }
+
     if (save_key_columns)
     {
         saved_block_sample = right_table_keys.cloneEmpty();

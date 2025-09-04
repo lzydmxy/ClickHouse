@@ -13,7 +13,7 @@
 #include <Functions/FunctionFactory.h>
 #include <Functions/FunctionHelpers.h>
 #include <Functions/FunctionsLogical.h>
-#include <Query/Functions/InternalFunctionRuntimeFilter.h>
+#include <Functions/InternalFunctionRuntimeFilter.h>
 #include <Interpreters/ActionsVisitor.h>
 #include <Interpreters/convertFieldToType.h>
 #include <Query/Interpreters/JoinUtilsExt.h>

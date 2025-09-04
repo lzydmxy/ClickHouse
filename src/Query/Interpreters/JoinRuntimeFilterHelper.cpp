@@ -169,7 +169,7 @@ void JoinRuntimeFiltersHelper::tryBuildRuntimeFilters(JoinPtr join)
             return ;
         }
 
-        auto table_join_ext = std::static_pointer_cast<TableJoinExt>(hash_join->table_join);
+        auto table_join_ext = std::static_pointer_cast<TableJoinExt>(concurrent_hash_join->table_join);
         if (!table_join_ext)
             throw Exception(ErrorCodes::LOGICAL_ERROR, "HashJoin need hold TableJoinExt to support RuntimeFilters");
 

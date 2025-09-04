@@ -1,12 +1,14 @@
 #include "RuntimeFilterManager.h"
-#include <Common/logger_useful.h>
+
 #include <Processors/QueryPlan/FilterStep.h>
 #include <Processors/QueryPlan/IQueryPlanStep.h>
 #include <Processors/QueryPlan/JoinStep.h>
 #include <Processors/QueryPlan/QueryPlan.h>
-#include <Query/Processors/QueryPlan/TableScanStepExt.h>
-#include <Query/Optimizer/Property/Equivalences.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterUtils.h>
+#include <Query/Optimizer/Property/Equivalences.h>
+#include <Query/Processors/QueryPlan/TableScanStepExt.h>
+#include <Common/logger_useful.h>
+#include "Query/Processors/QueryPlan/QueryPlanStepHelper.h"
 
 namespace DB
 {
@@ -22,56 +24,55 @@ namespace
             if (!visited.emplace(plan_segment).second)
                 return;
 
-            //TODO: Need new QueryPlan class
+            auto collect_runtime_filters = [&](const ConstASTPtr & filter) {
+                for (const auto & runtime_filter : RuntimeFilterUtils::extractRuntimeFilters(filter).first)
+                {
+                    auto id = RuntimeFilterUtils::extractId(runtime_filter);
+                    runtime_filter_probes[id].emplace(plan_segment);
+                }
+            };
 
-            // auto collect_runtime_filters = [&](const ConstASTPtr & filter) {
-            //     for (const auto & runtime_filter : RuntimeFilterUtils::extractRuntimeFilters(filter).first)
-            //     {
-            //         auto id = RuntimeFilterUtils::extractId(runtime_filter);
-            //         runtime_filter_probes[id].emplace(plan_segment);
-            //     }
-            // };
+            for (auto & node : plan_segment->getQueryPlan().getNodes())
+            {
+                if (getQueryPlanStepType(node.step) == QueryPlanStepType::JoinStepExt)
+                {
+                    const auto & join_step = static_cast<const JoinStepExt &>(*node.step);
+                    for (const auto & runtime_filter : join_step.getRuntimeFilterBuilders())
+                    {
+                        runtime_filter_builds.emplace(runtime_filter.second.id, std::make_pair(plan_segment, &node));
+                        if (runtime_filter.second.distribution == RRuntimeFilter::DISTRIBUTED)
+                            remote_runtime_filter_builds.emplace(runtime_filter.second.id);
+                        else
+                            local_runtime_filter_builds.emplace(runtime_filter.second.id);
+                    }
+                }
 
-            // for (auto & node : plan_segment->getQueryPlan().getNodes())
-            // {
-            //     if (node.step->getType() == IQueryPlanStep::Type::Join)
-            //     {
-            //         const auto & join_step = static_cast<const JoinStep &>(*node.step);
-            //         for (const auto & runtime_filter : join_step.getRuntimeFilterBuilders())
-            //         {
-            //             runtime_filter_builds.emplace(runtime_filter.second.id, std::make_pair(plan_segment, &node));
-            //             if (runtime_filter.second.distribution == RRuntimeFilter::DISTRIBUTED)
-            //                 remote_runtime_filter_builds.emplace(runtime_filter.second.id);
-            //             else
-            //                 local_runtime_filter_builds.emplace(runtime_filter.second.id);
-            //         }
-            //     }
-
-            //     if (node.step->getType() == IQueryPlanStep::Type::Filter)
-            //     {
-            //         const auto & filter_step = dynamic_cast<const FilterStep &>(*node.step);
-            //         collect_runtime_filters(filter_step.getFilter());
-            //     }
-            //     else if (node.step->getType() == IQueryPlanStep::Type::TableScan)
-            //     {
-            //         const auto & table_step = dynamic_cast<const TableScanStep &>(*node.step);
-            //         if (const auto * filter = table_step.getPushdownFilterCast())
-            //             collect_runtime_filters(filter->getFilter());
-            //         auto * query = table_step.getQueryInfo().query->as<ASTSelectQuery>();
-            //         if (auto query_filter = query->getWhere())
-            //             collect_runtime_filters(query_filter);
-            //         if (auto query_filter = query->getPrewhere())
-            //             collect_runtime_filters(query_filter);
-            //         if (auto partition_filter = table_step.getQueryInfo().partition_filter)
-            //             collect_runtime_filters(partition_filter);
-            //     }
-            // }
+                if (getQueryPlanStepType(node.step) == QueryPlanStepType::FilterStepExt)
+                {
+                    const auto & filter_step = dynamic_cast<const FilterStepExt &>(*node.step);
+                    collect_runtime_filters(filter_step.getFilter());
+                }
+                else if (getQueryPlanStepType(node.step) == QueryPlanStepType::TableScanStepExt)
+                {
+                    const auto & table_step = dynamic_cast<const TableScanStepExt &>(*node.step);
+                    if (const auto * filter = table_step.getPushdownFilterCast())
+                        collect_runtime_filters(filter->getFilter());
+                    auto * query = table_step.getQueryInfo().query->as<ASTSelectQuery>();
+                    if (auto query_filter = query->getExpression(ASTSelectQuery::Expression::WHERE, true))
+                        collect_runtime_filters(query_filter);
+                    if (auto query_filter = query->getExpression(ASTSelectQuery::Expression::WHERE, true))
+                        collect_runtime_filters(query_filter);
+                    // Todo wujianchao5 support partition pruning
+                    // if (auto partition_filter = table_step.getQueryInfo().partition_filter)
+                    //     collect_runtime_filters(partition_filter);
+                }
+            }
 
             for (auto * child : plan_segment_node.children)
                 visit(*child);
         }
 
-        std::unordered_map<RuntimeFilterId, std::pair<PlanSegment *, QueryPlan::Node *>> runtime_filter_builds;
+        std::unordered_map<RuntimeFilterId, std::pair<PlanSegment *, QueryPlanExt::Node *>> runtime_filter_builds;
         std::unordered_map<RuntimeFilterId, std::unordered_set<PlanSegment *>> runtime_filter_probes;
 
         std::unordered_set<RuntimeFilterId> remote_runtime_filter_builds;
@@ -187,19 +188,17 @@ void RuntimeFilterManager::registerQuery(const String & query_id, PlanSegmentTre
     std::unordered_map<RuntimeFilterBuilderId, RuntimeFilterCollectionPtr> builders;
     std::unordered_map<RuntimeFilterId, std::unordered_set<size_t>> targets;
 
-    //TODO: Need createRuntimeFilterBuilder method
-
     // register remote runtime filters information in coordinator
-    // for (const auto & id : collector.remote_runtime_filter_builds)
-    // {
-    //     const auto & runtime_filter_build = collector.runtime_filter_builds[id];
-    //     const auto * plan_segment = runtime_filter_build.first;
-    //     auto * join_step = dynamic_cast<JoinStep *>(runtime_filter_build.second->step.get());
-    //     auto builder = join_step->createRuntimeFilterBuilder(context);
-    //     builders.emplace(builder->getId(), std::make_shared<RuntimeFilterCollection>(builder, plan_segment->getParallelSize()));
-    //     for (const auto * probe_plan_segment : collector.runtime_filter_probes[id])
-    //         targets[id].emplace(probe_plan_segment->getPlanSegmentId());
-    // }
+    for (const auto & id : collector.remote_runtime_filter_builds)
+    {
+        const auto & runtime_filter_build = collector.runtime_filter_builds[id];
+        const auto * plan_segment = runtime_filter_build.first;
+        auto * join_step = dynamic_cast<JoinStepExt *>(runtime_filter_build.second->step.get());
+        auto builder = join_step->createRuntimeFilterBuilder(context);
+        builders.emplace(builder->getId(), std::make_shared<RuntimeFilterCollection>(builder, plan_segment->getParallelSize()));
+        for (const auto * probe_plan_segment : collector.runtime_filter_probes[id])
+            targets[id].emplace(probe_plan_segment->getPlanSegmentId());
+    }
 
     if (log->debug())
     {
