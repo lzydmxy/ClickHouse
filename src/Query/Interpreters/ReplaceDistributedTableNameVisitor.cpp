@@ -144,20 +144,7 @@ ReplaceDistributedTableNameVisitor::enter(ASTFunction & table_function, ASTPtr &
     storages.emplace_back(local_table);
     clusters.insert(storage_distributed->getCluster());
 
-    // TODO wujianchao support sharding key
-    // if (auto sharding_key = storage_distributed->getShardingKey())
-    // {
-    //     WriteBufferFromOwnString write_buffer;
-    //     IAST::FormatSettings settings(write_buffer, true, false, true);
-    //     sharding_key->format(settings);
-    //     sharding_keys.emplace_back(write_buffer.str());
-    // }
-    // else
-    // {
-    //     sharding_keys.emplace_back();
-    // }
-    sharding_keys.emplace_back();
-
+    sharding_keys = storage_distributed->getShardingKeyRequiredColumns();
     has_distributed_table = true;
 
     return local_table_ident;
@@ -206,20 +193,7 @@ void ReplaceDistributedTableNameVisitor::enter(ASTTableIdentifier & table_ident,
             storages.emplace_back(local_table);
             clusters.insert(distributed_table->getCluster());
 
-            // TODO wujianchao support sharding key
-            // if (auto sharding_key = distributed_table->getShardingKey())
-            // {
-            //     WriteBufferFromOwnString write_buffer;
-            //     IAST::FormatSettings settings(write_buffer, true, false, true);
-            //     sharding_key->format(settings);
-            //     sharding_keys.emplace_back(write_buffer.str());
-            // }
-            // else
-            // {
-            //     sharding_keys.emplace_back();
-            // }
-            sharding_keys.emplace_back();
-
+            sharding_keys = distributed_table->getShardingKeyRequiredColumns();
             has_distributed_table = true;
         }
     }

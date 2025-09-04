@@ -160,6 +160,8 @@ public:
     bool initializeDiskOnConfigChange(const std::set<String> & new_added_disks) override;
     std::string getClusterName() const { return cluster_name.empty() ? "<remote>" : cluster_name; }
 
+    Names getShardingKeyRequiredColumns() const { return has_sharding_key ? sharding_key_expr->getRequiredColumns() : Names(); }
+
 private:
     void renameOnDisk(const String & new_path_to_table_data);
 

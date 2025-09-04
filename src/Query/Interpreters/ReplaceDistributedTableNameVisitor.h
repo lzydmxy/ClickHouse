@@ -62,8 +62,8 @@ public:
     std::vector<StorageID> storages;
     /// Cluster set for storages
     std::unordered_set<ClusterPtr> clusters;
-    /// Sharding key columns for storages
-    std::vector<String> sharding_keys;
+    /// Sharding key columns for storages, such as: f(col1), col2 -> col1, col2
+    Names sharding_keys;
 
     bool has_distributed_table = false;
     bool has_local_table = false;
