@@ -19,7 +19,7 @@ AddressInfoPtr getLocalAddressPtr(const ContextPtr & context)
     const auto & clusters = context->getClusters();
 
     // for test environment
-    if (clusters.size() == 0)
+    if (clusters.size() <= 1)
     {
         const auto & host = getFQDNOrHostName();
         auto tcp_port = context->getTCPPort();
