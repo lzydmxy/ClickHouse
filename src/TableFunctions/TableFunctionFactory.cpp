@@ -6,8 +6,6 @@
 #include <Common/KnownObjectNames.h>
 #include <IO/WriteHelpers.h>
 #include <Parsers/ASTFunction.h>
-#include <TableFunctions/TableFunctionRemote.h>
-
 
 namespace DB
 {
@@ -47,7 +45,10 @@ TableFunctionPtr TableFunctionFactory::get(
             throw Exception(ErrorCodes::UNKNOWN_FUNCTION, "Unknown table function {}", table_function->name);
     }
 
-    if (context->getSettingsRef().enable_optimizer && std::dynamic_pointer_cast<TableFunctionRemote>(res))
+    // TableFunctionRemote is not supported by the optimizer currently.
+    // SegmentScheduler selects nodes only from cluster_nodes, and currently supports only a single logical cluster.
+    // For more details, see NodeSelector::select.
+    if (context->getSettingsRef().enable_optimizer && (res->getName() == "remote" || res->getName() == "cluster" || res->getName() == "clusterAllReplicas"))
     {
         throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not Support table function {} for optimizer. Maybe you should set enable_optimizer = false", table_function->name);
     }
