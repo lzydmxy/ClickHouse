@@ -47,9 +47,9 @@ struct ReplaceViewWithSubquery
                     {
                         throw Exception(
                             ErrorCodes::ACCESS_DENIED,
-                            "{}: Not enough privileges. To execute this query it's necessary to have grant SELECT on {}",
+                            "{}: Not enough privileges. To execute this query it's necessary to have the grant {}",
                             context->getUserName(),
-                            table->getStorageID().getFullTableName());
+                            AccessRightsElement{AccessType::SELECT, table->getStorageID().getDatabaseName(), table->getStorageID().getTableName()}.toStringWithoutOptions());
                     }
                 }
             

@@ -2198,7 +2198,7 @@ void checkAccess(AnalysisPtr analysis, ContextPtr context)
             if (!is_any_column_granted)
                 throw Exception(
                     ErrorCodes::ACCESS_DENIED,
-                    "{}: Not enough privileges. To execute this query it's necessary to have grant SELECT for at least one column on {}",
+                    "{}: Not enough privileges. To execute this query it's necessary to have the grant SELECT for at least one column on {}",
                     context->getUserName(),
                     storage_analysis.storage->getStorageID().getFullTableName());
         }
