@@ -48,7 +48,8 @@ TableFunctionPtr TableFunctionFactory::get(
     // TableFunctionRemote is not supported by the optimizer currently.
     // SegmentScheduler selects nodes only from cluster_nodes, and currently supports only a single logical cluster.
     // For more details, see NodeSelector::select.
-    if (context->getSettingsRef().enable_optimizer && (res->getName() == "remote" || res->getName() == "cluster" || res->getName() == "clusterAllReplicas"))
+    if (context->getSettingsRef().enable_optimizer && (res->getName() == "remote" || res->getName() == "remoteSecure"
+        || res->getName() == "cluster" || res->getName() == "clusterAllReplicas"))
     {
         throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not Support table function {} for optimizer. Maybe you should set enable_optimizer = false", table_function->name);
     }
