@@ -47,6 +47,11 @@ TableFunctionPtr TableFunctionFactory::get(
             throw Exception(ErrorCodes::UNKNOWN_FUNCTION, "Unknown table function {}", table_function->name);
     }
 
+    if (context->getSettingsRef().enable_optimizer && std::dynamic_pointer_cast<TableFunctionRemote>(res))
+    {
+        throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not Support table function {} for optimizer. Maybe you should set enable_optimizer = false", table_function->name);
+    }
+
     res->parseArguments(ast_function, context);
     return res;
 }
