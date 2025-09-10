@@ -59,7 +59,7 @@ void PlanSegmentRpcService::cancelQuery(
 
     try
     {
-        auto cancel_code = context->getPlanSegmentProcessList().tryCancelPlanSegmentGroup(
+        auto cancel_code = optimizer_context->getPlanSegmentProcessList()->tryCancelPlanSegmentGroup(
             request->query_id(), request->coordinator_address());
         response->set_status_code(std::to_string(static_cast<int>(cancel_code)));
     }
@@ -330,7 +330,7 @@ void PlanSegmentRpcService::innerExecutePlanSegment(
             auto optimizer_context = query_context->getOptimizerContext();
 
             if (!process_plan_segment_entry)
-                process_plan_segment_entry = query_context->getPlanSegmentProcessList().insertGroup(query_context, segment_id);
+                process_plan_segment_entry = optimizer_context->getPlanSegmentProcessList()->insertGroup(query_context, segment_id);
 
             process_plan_segment_entry->prepareQueryScope(query_context);
 
@@ -467,7 +467,7 @@ void PlanSegmentRpcService::executePlanSegments(
         auto first_query_context
             = createQueryContext(context, query_common, cntl->remote_side().port, *first_instance_id);
         auto optimizer_context = first_query_context->getOptimizerContext();
-        auto process_plan_segment_entries = context->getPlanSegmentProcessList().insertGroup(first_query_context, segment_ids);
+        auto process_plan_segment_entries = optimizer_context->getPlanSegmentProcessList()->insertGroup(first_query_context, segment_ids);
 
         for (int i = 0; i < headers.size(); i++)
         {

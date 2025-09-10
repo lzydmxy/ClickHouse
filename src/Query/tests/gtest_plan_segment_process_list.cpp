@@ -48,9 +48,9 @@ QueryPlanExt generateEmptyPlan()
 
 PlanSegmentProcessList::EntryPtr insertProcessList(PlanSegment & plan_segment, ContextMutablePtr context, bool force = false)
 {
-    auto & process_list = context->getPlanSegmentProcessList();
-    auto plan_segment_process_entry = process_list.insertGroup(context, plan_segment.getPlanSegmentId(), force);
-    process_list.insertProcessList(plan_segment_process_entry, plan_segment.getPlanSegmentId(), context, force);
+    auto process_list = context->getOptimizerContext()->getPlanSegmentProcessList();
+    auto plan_segment_process_entry = process_list->insertGroup(context, plan_segment.getPlanSegmentId(), force);
+    process_list->insertProcessList(plan_segment_process_entry, plan_segment.getPlanSegmentId(), context, force);
     return plan_segment_process_entry;
 }
 
@@ -59,7 +59,7 @@ TEST(PlanSegmentProcessListTest, InsertTest)
     const auto & context = getInitContext();
     // context->setTemporaryStoragePath("./tmp/", 1024);
     auto optimizer_context = context->getOptimizerContext();
-    context->setProcessListEntry(nullptr);
+    optimizer_context->setProcessListEntry(nullptr);
     auto & client_info = context->getClientInfo();
     PlanSegment plan_segment = PlanSegment();
     plan_segment.setQueryId("PlanSegmentProcessList_test");

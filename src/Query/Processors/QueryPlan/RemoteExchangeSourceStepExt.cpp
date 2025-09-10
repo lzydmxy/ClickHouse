@@ -149,7 +149,7 @@ void RemoteExchangeSourceStepExt::initializePipeline(QueryPipelineBuilder & pipe
     size_t remote_queue_size = optimizer_context->getSettingsRef().exchange_remote_receiver_queue_size;
     size_t multi_path_queue_size = optimizer_context->getSettingsRef().exchange_multi_path_receiver_queue_size;
     std::shared_ptr<MemoryController> memory_controller;
-    auto weak_segment_process_list_entry = context->getPlanSegmentProcessListEntry().lock();
+    auto weak_segment_process_list_entry = optimizer_context->getPlanSegmentProcessListEntry();
     if (weak_segment_process_list_entry)
         memory_controller = weak_segment_process_list_entry->getMemoryController();
 
@@ -314,7 +314,7 @@ BroadcastReceiverPtr RemoteExchangeSourceStepExt::createReceiver(
     auto optimizer_context = context->getOptimizerContext();
     size_t remote_queue_size = optimizer_context->getSettingsRef().exchange_remote_receiver_queue_size;
     std::shared_ptr<MemoryController> memory_controller;
-    auto weak_segment_process_list_entry = context->getPlanSegmentProcessListEntry().lock();
+    auto weak_segment_process_list_entry = optimizer_context->getPlanSegmentProcessListEntry();
     if (weak_segment_process_list_entry)
         memory_controller = weak_segment_process_list_entry->getMemoryController();
     if (is_local_exchange)

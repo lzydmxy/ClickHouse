@@ -12,7 +12,6 @@
 #include <Query/Optimizer/OptimizerProfile.h>
 #include <Query/Statistics/StatisticsMemoryStore.h>
 #include <Query/Statistics/StatisticsKeeperStore.h>
-#include <Query/Executor/PlanSegmentProcessList.h>
 #include <Interpreters/Cluster.h>
 
 namespace DB
@@ -34,6 +33,9 @@ using SegmentSchedulerPtr = std::shared_ptr<SegmentScheduler>;
 
 class AddressInfo;
 using AddressInfoPtr = std::shared_ptr<AddressInfo>;
+
+class ProcessListEntry;
+using ProcessListEntryPtr = std::shared_ptr<ProcessListEntry>;
 
 struct ProcessorProfileLogElement;
 template <typename>
@@ -76,6 +78,7 @@ struct OptimizerContextSharedData
 
     QueryExchangeLogPtr query_exchange_log;
     SegmentSchedulerPtr segment_scheduler;
+    PlanSegmentProcessListPtr plan_segment_process_list;
     PlanCacheManagerPtr plan_cache_manager;
     StatisticsKeeperStorePtr statistics_keeper_store;
     LoadTaskPtr ddl_worker_startup_task;
@@ -96,6 +99,7 @@ protected:
     std::function<void()> send_tcp_progress{nullptr};
 
     QueryStatusPtr query_process_element = nullptr; /// For tracking total resource usage for query.
+    ProcessListEntryPtr process_list_entry;
 
     PlanNodeIdAllocatorPtr id_allocator = nullptr;
     std::shared_ptr<SymbolAllocator> symbol_allocator = nullptr;
@@ -149,6 +153,15 @@ public:
 
     void setRPCPort(UInt16 rpc_port_);
     UInt16 getRPCPort();
+
+    void setPlanSegmentProcessListEntry(PlanSegmentProcessListEntryPtr segment_process_list_entry_);
+    PlanSegmentProcessListEntryPtr getPlanSegmentProcessListEntry() const;
+
+    void setPlanSegmentProcessList(PlanSegmentProcessListPtr segment_process_list_);
+    PlanSegmentProcessListPtr getPlanSegmentProcessList() const;
+
+    void setProcessListEntry(ProcessListEntryPtr process_list_entry_);
+    ProcessListEntryPtr getProcessListEntry() const;
 
     void
     setProcessorProfileElementConsumer(std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> processor_log_element_consumer_);

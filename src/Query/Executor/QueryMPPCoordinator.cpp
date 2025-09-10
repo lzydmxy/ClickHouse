@@ -61,7 +61,7 @@ BlockIO QueryMPPCoordinator::execute()
 
     /// set progress_callback before send plan segment
     progress_manager.setProgressCallback([previous_progress_callback = query_context->getProgressCallback(),
-                                          entry = query_context->getProcessListEntry().lock()](const Progress & p) {
+                                          entry = optimizer_context->getProcessListEntry()](const Progress & p) {
         if (previous_progress_callback)
             previous_progress_callback(p);
         // Todo: lizhuoyu, impl processlist
@@ -308,7 +308,7 @@ void QueryMPPCoordinator::cancelQuery(const QueryError & query_error, bool is_ca
 {
     query_status.status_code.store(QueryMPPStatusCode::CANCEL, std::memory_order_release);
     LOG_TRACE(log, "Cancel execute query");
-    query_context->getPlanSegmentProcessList().tryCancelPlanSegmentGroup(query_id);
+    optimizer_context->getPlanSegmentProcessList()->tryCancelPlanSegmentGroup(query_id);
     optimizer_context->getSegmentScheduler()->cancelPlanSegmentsFromCoordinator(
         query_id, query_error.code, query_error.message, query_context);
     if (!is_canceled)
