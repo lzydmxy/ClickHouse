@@ -80,7 +80,7 @@ if (which.idx == TypeIndex::TYPE) ret = procNumericBlock<TYPE, equal_null>(bf_wi
 
 void JoinRuntimeFiltersHelper::tryBuildRuntimeFilters(HashJoin & hash_join)
 {
-    auto table_join_ext = std::static_pointer_cast<TableJoinExt>(hash_join.table_join);
+    auto table_join_ext = std::dynamic_pointer_cast<TableJoinExt>(hash_join.table_join);
     if (!table_join_ext)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "HashJoin need hold TableJoinExt to support RuntimeFilters");
 
@@ -169,7 +169,7 @@ void JoinRuntimeFiltersHelper::tryBuildRuntimeFilters(JoinPtr join)
             return ;
         }
 
-        auto table_join_ext = std::static_pointer_cast<TableJoinExt>(concurrent_hash_join->table_join);
+        auto table_join_ext = std::dynamic_pointer_cast<TableJoinExt>(concurrent_hash_join->table_join);
         if (!table_join_ext)
             throw Exception(ErrorCodes::LOGICAL_ERROR, "HashJoin need hold TableJoinExt to support RuntimeFilters");
 
@@ -194,7 +194,7 @@ void JoinRuntimeFiltersHelper::tryBuildRuntimeFilters(JoinPtr join)
 
 void JoinRuntimeFiltersHelper::bypassRuntimeFilters(HashJoin & hash_join, BypassType type, size_t total_size)
 {
-    auto table_join_ext = std::static_pointer_cast<TableJoinExt>(hash_join.table_join);
+    auto table_join_ext = std::dynamic_pointer_cast<TableJoinExt>(hash_join.table_join);
     if (!table_join_ext)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "HashJoin need hold TableJoinExt to support RuntimeFilters");
     const auto & runtime_filter_consumer = table_join_ext->getRuntimeFilterConsumer();
@@ -208,7 +208,7 @@ void JoinRuntimeFiltersHelper::buildAllRF(HashJoin & hash_join, size_t total_siz
 {
     const auto & runtime_filters = rf_consumer->getRuntimeFilters();
 
-    auto table_join_ext = std::static_pointer_cast<TableJoinExt>(hash_join.table_join);
+    auto table_join_ext = std::dynamic_pointer_cast<TableJoinExt>(hash_join.table_join);
     if (!table_join_ext)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "HashJoin need hold TableJoinExt to support RuntimeFilters");
 

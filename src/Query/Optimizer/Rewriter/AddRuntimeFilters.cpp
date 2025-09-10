@@ -198,7 +198,7 @@ PlanPropEquivalences AddRuntimeFilters::AddRuntimeFilterRewriter::visitJoinStepE
         auto filter_id = nextId(); // generate unique id
         probes.emplace_back(RuntimeFilterUtils::createRuntimeFilterExpression(filter_id, *left_key, partition_columns, filter_factor));
 
-        RRuntimeFilter::Enum distribution = RRuntimeFilter::LOCAL;
+        RRuntimeFilter::Enum distribution = RRuntimeFilter::UNKNOWN;
         runtime_filter_builders.emplace(*right_key, RuntimeFilter{filter_id, distribution});
     }
 

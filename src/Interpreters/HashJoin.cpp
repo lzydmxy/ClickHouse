@@ -717,7 +717,9 @@ void HashJoin::initRightBlockStructure(Block & saved_block_sample)
                             table_join->isEnabledAlgorithm(JoinAlgorithm::GRACE_HASH) ||
                             isRightOrFull(kind) ||
                             multiple_disjuncts;
-    if (auto table_join_ext = std::static_pointer_cast<TableJoinExt>(table_join))
+
+    // Should save key_columns for runtime filter, we need it in FillingRightJoinSideTransformExt::work to build runtime filter
+    if (auto table_join_ext = std::dynamic_pointer_cast<TableJoinExt>(table_join))
     {
         if (table_join_ext->getRuntimeFilterConsumer() != nullptr)
         {
