@@ -16,6 +16,7 @@ public:
     static std::vector<RulePtr> simplifyPrewhereRules();
     static std::vector<RulePtr> inlineProjectionRules();
     static std::vector<RulePtr> pushPartialStepRules();
+    static std::vector<RulePtr> removeFinalStepRules();
     static std::vector<RulePtr> optimizeAggregateRules();
     static std::vector<RulePtr> pushAggRules();
     static std::vector<RulePtr> pushDownLimitRules();

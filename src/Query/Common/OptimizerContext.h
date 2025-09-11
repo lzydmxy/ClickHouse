@@ -241,7 +241,10 @@ public:
     void setSetting(std::string_view name, const Field & value);
 
     ClusterPtr getCluster() const { return cluster; }
-    void setCluster(const ClusterPtr & cluster_) {cluster = cluster_; }
+    void setCluster(const ClusterPtr & cluster_) { cluster = cluster_; }
+
+    Names getShardingKeys() const { return sharding_keys; }
+    void setShardingKeys(const Names & sharding_keys_) { sharding_keys = sharding_keys_; }
 
     size_t getWorkerSize() const;
     String getClusterName() const;
@@ -255,6 +258,9 @@ private:
     mutable ContextSharedMutex mutex;
     String query_plan;
     ClusterPtr cluster;
+    /// Sharding key columns for storages, such as: f(col1), col2 -> col1, col2
+    Names sharding_keys;
+
 
 	UInt64 txt_id{0};
     InternalTextLogsQueuePtr logs_queue;

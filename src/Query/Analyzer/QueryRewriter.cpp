@@ -207,6 +207,7 @@ namespace
         if (!visitor.clusters.empty())
         {
             context->getOptimizerContext()->setCluster(*visitor.clusters.begin());
+            context->getOptimizerContext()->setShardingKeys(visitor.sharding_keys);
         }
         GraphvizPrinter::printAST(query, context, toString(graphviz_index++) + "-AST-replace-distributed-table-and-collect-cluster-info");
     }

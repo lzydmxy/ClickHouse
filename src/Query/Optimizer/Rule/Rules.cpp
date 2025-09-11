@@ -1,4 +1,5 @@
 #include <Query/Optimizer/Rule/Rules.h>
+#include "Rewrite/RemoveFinalStepRules.h"
 
 #include <Query/Optimizer/Rewriter/RemoveApply.h>
 #include <Query/Optimizer/Rule/Rewrite/CrossJoinToUnion.h>
@@ -90,6 +91,11 @@ std::vector<RulePtr> Rules::pushPartialStepRules()
         std::make_shared<PushProjectionThroughExchange>(),
         std::make_shared<FilterWindowToPartitionTopN>(),
         std::make_shared<PushPartialDistinctThroughExchange>()};
+}
+
+std::vector<RulePtr> Rules::removeFinalStepRules()
+{
+    return {std::make_shared<RemoveFinalAggStep>()};
 }
 
 std::vector<RulePtr> Rules::optimizeAggregateRules()

@@ -217,6 +217,7 @@ constexpr uint64_t DEFAULT_KLL_SKETCH_LOG_K = 1600;
     M(Bool, enable_unwrap_cast_in, true, "Whether enable unwrap cast function", 0) \
     M(Bool, enable_windows_reorder, true, "Reorder adjacent windows to decrease exchange", 0) \
     M(Bool, enable_push_partial_agg, true, "Whether enable push partial agg", 0) \
+    M(Bool, enable_remove_final_agg, true, "Whether enable remove final agg", 0) \
     M(Bool, enable_cbo_push_partial_agg, false, "Whether enable cost base push partial agg", 0) \
     M(Bool, enable_shuffle_before_state_func, true, "Whether shuffle when agg func is state func.", 0) \
     M(Bool, enable_share_common_plan_node, true, "Whether enable share common plan node using cte", 0) \

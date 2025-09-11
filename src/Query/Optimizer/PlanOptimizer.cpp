@@ -113,6 +113,7 @@ const Rewriters & PlanOptimizer::getSimpleRewriters()
         std::make_shared<AddBufferForDeadlockCTE>(),
         std::make_shared<IterativeRewriter>(Rules::pushTopNDistinct(), "PushTopNDistinct"),
         std::make_shared<IterativeRewriter>(Rules::pushPartialStepRules(), "PushPartialStep"),
+        std::make_shared<IterativeRewriter>(Rules::removeFinalStepRules(), "RemoveFinalStep"),
         std::make_shared<IterativeRewriter>(Rules::optimizeAggregateRules(), "OptimizeAggregate"),
         std::make_shared<RemoveRedundantDistinct>(),
 
@@ -295,6 +296,10 @@ const Rewriters & PlanOptimizer::getLegacyFullRewriters()
         // push partial step through exchange
         // TODO cost-base partial aggregate push down
         std::make_shared<IterativeRewriter>(Rules::pushPartialStepRules(), "PushPartialStep"),
+
+        // remove final step
+        std::make_shared<IterativeRewriter>(Rules::removeFinalStepRules(), "RemoveFinalStep"),
+
         std::make_shared<IterativeRewriter>(Rules::optimizeAggregateRules(), "OptimizeAggregate"),
         std::make_shared<RemoveRedundantDistinct>(),
 
@@ -464,6 +469,9 @@ const Rewriters & PlanOptimizer::getFullRewriters()
         // push partial step through exchange
         std::make_shared<IterativeRewriter>(Rules::pushTopNDistinct(), "PushTopNDistinct"),
         std::make_shared<IterativeRewriter>(Rules::pushPartialStepRules(), "PushPartialStep"),
+
+        // remove final step
+        std::make_shared<IterativeRewriter>(Rules::removeFinalStepRules(), "RemoveFinalStep"),
 
         std::make_shared<IterativeRewriter>(Rules::optimizeAggregateRules(), "OptimizeAggregate"),
 

@@ -109,7 +109,7 @@ inline PatternBuilder multiJoin() { return typeOf(QueryPlanStepType::MultiJoinSt
 inline PatternBuilder aggregating() { return typeOf(QueryPlanStepType::AggregatingStepExt); }
 inline PatternBuilder window() { return typeOf(QueryPlanStepType::WindowStepExt); }
 inline PatternBuilder mergingAggregated() { return typeOf(QueryPlanStepType::MergingAggregatedStepExt); }
-inline PatternBuilder unionn() { return typeOf(QueryPlanStepType::UnionStepExt); }
+inline PatternBuilder unionn() { return typeOf(QueryPlanStepType::UnionStepExt); } // TODO wujianchao typo
 inline PatternBuilder intersect() { return typeOf(QueryPlanStepType::IntersectStepExt); }
 inline PatternBuilder except() { return typeOf(QueryPlanStepType::ExceptStepExt); }
 inline PatternBuilder exchange() { return typeOf(QueryPlanStepType::ExchangeStepExt); }
