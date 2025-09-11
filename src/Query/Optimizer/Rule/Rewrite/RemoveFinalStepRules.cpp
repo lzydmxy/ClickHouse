@@ -9,6 +9,9 @@ namespace
 {
     bool isShardingKeysAndGroupByKeysMatching(const Names & sharding_keys, const Names & group_by_keys)
     {
+        if (sharding_keys.size() != group_by_keys.size())
+            return false;
+
         // We should not warry about alias in group by keys, for the group by keys will remove the alias
         // For example:  select k as k1, sum(v) from t3 group by k1; the group by key is 'k'
         std::unordered_set<std::string> expr_columns;
@@ -41,8 +44,6 @@ ConstRefPatternPtr RemoveFinalAggStep::getPattern() const
     // static auto pattern = Patterns::any().withSingle(Patterns::mergingAggregated())
     //     .withSingle(Patterns::exchange()).withSingle(Patterns::aggregating()).result();
 
-
-
     static auto pattern
         = Patterns::any()
               .withSingle(Patterns::mergingAggregated().withSingle(Patterns::exchange().withSingle(Patterns::aggregating())))
@@ -54,14 +55,9 @@ TransformResult RemoveFinalAggStep::transformImpl(PlanNodePtr node, const Captur
 {
     auto * merging_agg_step = dynamic_cast<const MergingAggregatedStepExt *>(node->getChildren()[0]->getStep().get());
 
-    // - TODO: WITH TOTALS can be implemented
-    // - TODO: WITH ROLLUP can be implemented
-    // - TODO: group_by_with_cube
-    // Window functions are not supported.
-    // TODO: extremes support can be implemented
     // TODO check LIMIT BY
 
-    if (!merging_agg_step->getGroupings().empty())
+    if (!merging_agg_step->getGroupings().empty()) // skip if cube, rollup, TODO wujianchao totals
         return {};
 
     if (isShardingKeysAndGroupByKeysMatching(context.context->getOptimizerContext()->getShardingKeys(), merging_agg_step->getKeys()))
