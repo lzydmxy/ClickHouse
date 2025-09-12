@@ -163,14 +163,8 @@ JoinPtr JoinStepExt::makeJoin(
     if (set_join_algorithm.isSet(JoinAlgorithm::DEFAULT) || set_join_algorithm.isSet(JoinAlgorithm::HASH) || set_join_algorithm.isSet(JoinAlgorithm::PARALLEL_HASH)
         || (set_join_algorithm.isSet(JoinAlgorithm::PREFER_PARTIAL_MERGE) && !allow_merge_join))
     {
-        // Use hash join only when it is explicitly set; otherwise, prefer using PARALLEL_HASH whenever possible.
-        if (set_join_algorithm.isSet(JoinAlgorithm::HASH))
-        {
-            return std::make_shared<HashJoin>(table_join, r_sample_block);
-        }
-
-        if ((join_algorithm == JoinAlgorithm::PARALLEL_HASH || join_algorithm == JoinAlgorithm::HASH || join_algorithm == JoinAlgorithm::DEFAULT)
-            && table_join->enableParallelHashJoin())
+        // Use PARALLEL HASH join when it is explicitly set
+        if ( (set_join_algorithm.isSet(JoinAlgorithm::PARALLEL_HASH) || join_algorithm == JoinAlgorithm::PARALLEL_HASH) && table_join->enableParallelHashJoin())
         {
             // todo: lizhuoyu5, other feat: Yuanning RuntimeFilter, compare with CE code when fix
             // if (enable_parallel_hash_join)

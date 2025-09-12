@@ -155,6 +155,8 @@ void BroadcastSenderProxy::waitBecomeRealSender(UInt32 timeout_ms)
     std::unique_lock lock(mutex);
     if (real_sender)
         return;
+
+    LOG_TRACE(logger, "BroadcastSenderProxy::waitBecomeRealSender {}", *data_key);
     if (!wait_become_real.wait_for(
             lock, std::chrono::milliseconds(timeout_ms), [this] { return this->real_sender.operator bool() || closed; }))
         throw Exception(ErrorCodes::EXCHANGE_DATA_TRANS_EXCEPTION, "Wait become real sender timeout for {}, timeout {}", *data_key, timeout_ms);
