@@ -28,16 +28,18 @@ AddressInfoPtr getLocalAddressPtr(const ContextPtr & context)
         return std::make_shared<AddressInfo>(host, tcp_port, info.current_user, "", rpc_port);
     }
 
-    const auto & cluster = clusters.begin()->second;
-
-    for (const auto & shard : cluster->getShardsInfo())
+    for (const auto & cluster : clusters)
     {
-        if (shard.isLocal())
+        for (const auto & shard : cluster.second->getShardsInfo())
         {
-            const auto & local_address = shard.local_addresses[0];
-            return std::make_shared<AddressInfo>(local_address.host_name, local_address.port, local_address.user, local_address.password, local_address.rpc_port);
+            if (shard.isLocal())
+            {
+                const auto & local_address = shard.local_addresses[0];
+                return std::make_shared<AddressInfo>(local_address.host_name, local_address.port, local_address.user, local_address.password, local_address.rpc_port);
+            }
         }
     }
+
     throw Exception(ErrorCodes::LOGICAL_ERROR, "Can't get local address");
 }
 
