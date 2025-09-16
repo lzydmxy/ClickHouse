@@ -244,7 +244,7 @@ PlanPropEquivalences AddRuntimeFilters::AddRuntimeFilterRewriter::visitJoinStepE
                     std::make_shared<FilterStepExt>(
                         node.getChildren()[0]->getStep()->getOutputStream(), PredicateUtils::combineConjuncts(probes)),
                     PlanNodes{left.plan}),
-                right.plan}/*, node.getStatistics()*/),
+                right.plan}, node.getStatistics()),
         prop,
         equivalences};
 }
@@ -472,7 +472,7 @@ PlanNodePtr AddRuntimeFilters::RemoveUnusedRuntimeFilterProbRewriter::visitFilte
             node.getId(),
             std::make_shared<FilterStepExt>(
                 child->getCurrentDataStream(), removeAllRuntimeFilters(filter_step->getFilter()), filter_step->removesFilterColumn()),
-            PlanNodes{child}/*, node.getStatistics()*/);
+            PlanNodes{child}, node.getStatistics());
     }
 
     bool is_table_scan_filter = node.getChildren()[0]->getType() == QueryPlanStepType::TableScanStepExt;
@@ -518,7 +518,7 @@ PlanNodePtr AddRuntimeFilters::RemoveUnusedRuntimeFilterProbRewriter::visitFilte
         node.getId(),
         std::make_shared<FilterStepExt>(
             child->getCurrentDataStream(), PredicateUtils::combineConjuncts(predicates), filter_step->removesFilterColumn()),
-        PlanNodes{child}/*, node.getStatistics()*/);
+        PlanNodes{child}, node.getStatistics());
 }
 
 PlanNodePtr AddRuntimeFilters::RemoveUnusedRuntimeFilterProbRewriter::visitJoinStepExtNode(
@@ -557,7 +557,7 @@ PlanNodePtr AddRuntimeFilters::RemoveUnusedRuntimeFilterProbRewriter::visitJoinS
             join_step->isOrdered(),
             join_step->isSimpleReordered(),
             join_step->getRuntimeFilterBuilders()),
-        PlanNodes{left, right}/*, node.getStatistics()*/);
+        PlanNodes{left, right}, node.getStatistics());
 }
 
 PlanNodePtr AddRuntimeFilters::RemoveUnusedRuntimeFilterProbRewriter::visitCTERefStepExtNode(
@@ -726,6 +726,6 @@ PlanNodePtr AddRuntimeFilters::AddExchange::visitFilterStepExtNode(FilterStepExt
             RExchangeMode::LOCAL_NO_NEED_REPARTITION,
             Partitioning{Partitioning::Handle::FIXED_ARBITRARY},
             context->getOptimizerContext()->getSettingsRef().enable_shuffle_with_order),
-        PlanNodes{child}/*, node.getStatistics()*/);
+        PlanNodes{child}, node.getStatistics());
 }
 }

@@ -64,7 +64,7 @@ return visit##TYPE##NodeImpl(dynamic_cast<TYPE##Node &>(node), context); \
             if (step->canUpdateInputStream())
                 step->updateInputStreams(new_inputs);
 
-            return PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(step), new_children/*, node.getStatistics()*/);
+            return PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(step), new_children, node.getStatistics());
 
         }
     }
@@ -88,7 +88,7 @@ PlanNodePtr UnifyNullableVisitor::visitProjectionStepExtNodeImpl(ProjectionStepE
 
     auto expression_step = std::make_shared<ProjectionStepExt>(
         child->getStep()->getOutputStream(), assignments, set_nullable, step.isFinalProject(), step.isIndexProject());
-    return ProjectionStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(expression_step), PlanNodes{child}/*, node.getStatistics()*/);
+    return ProjectionStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(expression_step), PlanNodes{child}, node.getStatistics());
 }
 
 PlanNodePtr UnifyNullableVisitor::visitJoinStepExtNodeImpl(JoinStepExtNode & node, ContextMutablePtr & context)
@@ -169,7 +169,7 @@ PlanNodePtr UnifyNullableVisitor::visitJoinStepExtNodeImpl(JoinStepExtNode & nod
         join_step.isOrdered(),
         join_step.isSimpleReordered(),
         join_step.getRuntimeFilterBuilders());
-    return JoinStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(join_step_set_null), children/*, node.getStatistics()*/);
+    return JoinStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(join_step_set_null), children, node.getStatistics());
 }
 
 PlanNodePtr UnifyNullableVisitor::visitAggregatingStepExtNodeImpl(AggregatingStepExtNode & node, ContextMutablePtr & context)
@@ -238,7 +238,7 @@ PlanNodePtr UnifyNullableVisitor::visitAggregatingStepExtNodeImpl(AggregatingSte
         step.isStreamingForCache(),
         step.isGroupByUseNulls());
     auto agg_node_set_null
-        = AggregatingStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(agg_step_set_null), PlanNodes{child}/*, node.getStatistics()*/);
+        = AggregatingStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(agg_step_set_null), PlanNodes{child}, node.getStatistics());
 
     return agg_node_set_null;
 }
@@ -312,7 +312,7 @@ PlanNodePtr UnifyNullableVisitor::visitMergingAggregatedStepExtNodeImpl(MergingA
         step.getMemoryBoundMergingOfAggregationResultsEnabled());
 
     auto merge_agg_node_set_null = MergingAggregatedStepExtNode::createPlanNode(
-        context->getOptimizerContext()->nextNodeId(), std::move(merge_agg_step_set_null), PlanNodes{child}/*, node.getStatistics()*/);
+        context->getOptimizerContext()->nextNodeId(), std::move(merge_agg_step_set_null), PlanNodes{child}, node.getStatistics());
 
     return merge_agg_node_set_null;
 }
@@ -417,7 +417,7 @@ PlanNodePtr UnifyNullableVisitor::visitUnionStepExtNodeImpl(UnionStepExtNode & n
     auto rewritten_step = std::make_unique<UnionStepExt>(
         new_inputs_add_cast, DataStream{new_output_header}, step.getOutToInputs(), step.getMaxThreads(), step.isLocal());
     auto rewritten_node
-        = UnionStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(rewritten_step), children_add_nullable/*, node.getStatistics()*/);
+        = UnionStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(rewritten_step), children_add_nullable, node.getStatistics());
     return rewritten_node;
 }
 
@@ -437,7 +437,7 @@ PlanNodePtr UnifyNullableVisitor::visitExchangeStepExtNodeImpl(ExchangeStepExtNo
     // update it's input/output stream types.
     auto exchange_step_set_null = std::make_unique<ExchangeStepExt>(inputs, step.getExchangeMode(), step.getSchema(), step.needKeepOrder());
     auto exchange_node_set_null
-        = ExchangeStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(exchange_step_set_null), children/*, node.getStatistics()*/);
+        = ExchangeStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(exchange_step_set_null), children, node.getStatistics());
     return exchange_node_set_null;
 }
 
@@ -454,7 +454,7 @@ PlanNodePtr UnifyNullableVisitor::visitCTERefStepExtNodeImpl(CTERefStepExtNode &
         output_stream.header.insert(ColumnWithTypeAndName{cte_output_stream.getByName(output.second).type, output.first});
 
     auto cte_ref_step = std::make_unique<CTERefStepExt>(output_stream, cte_step->getId(), cte_step->getOutputColumns(), cte_step->hasFilter());
-    auto cte_ref_node = CTERefStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(cte_ref_step), PlanNodes{}/*, node.getStatistics()*/);
+    auto cte_ref_node = CTERefStepExtNode::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(cte_ref_step), PlanNodes{}, node.getStatistics());
     return cte_ref_node;
 }
 }

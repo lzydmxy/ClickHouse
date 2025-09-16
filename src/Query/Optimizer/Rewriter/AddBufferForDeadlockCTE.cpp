@@ -291,7 +291,7 @@ namespace
 
         QueryPlanStepPtr buffer_step = std::make_shared<BufferStepExt>(node.getCurrentDataStream());
         PlanNodePtr buffer_node
-            = PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(buffer_step), {node.shared_from_this()}/*, node.getStatistics()*/);
+            = PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), std::move(buffer_step), {node.shared_from_this()}, node.getStatistics());
         return buffer_node;
     }
 

@@ -345,7 +345,7 @@ PlanNodePtr PredicateVisitor::visitAggregatingStepExtNode(AggregatingStepExtNode
     PlanNodePtr output = node.shared_from_this();
     if (rewritten != node.getChildren()[0])
     {
-        output = PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), node.getStep(), PlanNodes{rewritten}/*, node.getStatistics()*/);
+        output = PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), node.getStep(), PlanNodes{rewritten}, node.getStatistics());
     }
     if (!post_aggregation_conjuncts.empty())
     {
@@ -744,7 +744,7 @@ PlanNodePtr PredicateVisitor::visitJoinStepExtNode(JoinStepExtNode & node, Predi
     }
 
     auto join_node = PlanNodeBase::createPlanNode(
-        context->getOptimizerContext()->nextNodeId(), join_step, PlanNodes{left_source_expression_node, right_source_expression_node}/*, node.getStatistics()*/);
+        context->getOptimizerContext()->nextNodeId(), join_step, PlanNodes{left_source_expression_node, right_source_expression_node}, node.getStatistics());
 
     /**
      * Predicate push down may produce nest loop join with right join, which is not supported by nest loop join.
@@ -773,7 +773,7 @@ PlanNodePtr PredicateVisitor::visitJoinStepExtNode(JoinStepExtNode & node, Predi
             step->isSimpleReordered(),
             step->getRuntimeFilterBuilders());
         join_node = PlanNodeBase::createPlanNode(
-            context->getOptimizerContext()->nextNodeId(), join_step, PlanNodes{right_source_expression_node, left_source_expression_node}/*, node.getStatistics()*/);
+            context->getOptimizerContext()->nextNodeId(), join_step, PlanNodes{right_source_expression_node, left_source_expression_node}, node.getStatistics());
     }
 
     if (!PredicateUtils::isTruePredicate(post_join_predicate))
@@ -855,7 +855,7 @@ PlanNodePtr PredicateVisitor::visitArrayJoinStepNode(ArrayJoinStepNode & node, P
     PlanNodePtr output = node.shared_from_this();
     if (rewritten != node.getChildren()[0])
     {
-        output = PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), node.getStep(), PlanNodes{rewritten}/*, node.getStatistics()*/);
+        output = PlanNodeBase::createPlanNode(context->getOptimizerContext()->nextNodeId(), node.getStep(), PlanNodes{rewritten}, node.getStatistics());
     }
     if (!post_array_join_conjuncts.empty())
     {

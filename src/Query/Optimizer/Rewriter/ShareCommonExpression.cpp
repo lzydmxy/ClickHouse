@@ -486,7 +486,7 @@ namespace
         auto new_projection_step = std::make_shared<ProjectionStepExt>(
             cur_node->getCurrentDataStream(), assignments, name_to_type, projection_step.isFinalProject(), projection_step.isIndexProject());
 
-        return PlanNodeBase::createPlanNode(node.getId(), new_projection_step, PlanNodes{cur_node}/*, node.getStatistics()*/);
+        return PlanNodeBase::createPlanNode(node.getId(), new_projection_step, PlanNodes{cur_node}, node.getStatistics());
     }
 
     PlanNodePtr FoldExpressionPlanVisitor::visitFilterStepExtNode(FilterStepExtNode & node, PlanNodePtr & cur_node)
