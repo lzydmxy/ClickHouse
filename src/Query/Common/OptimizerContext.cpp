@@ -101,7 +101,7 @@ void OptimizerContext::setPlanSegmentProcessListEntry(PlanSegmentProcessListEntr
     segment_process_list_entry = segment_process_list_entry_;
 }
 
-PlanSegmentProcessListEntryPtr OptimizerContext::getPlanSegmentProcessListEntry() const
+PlanSegmentProcessListEntryWeakPtr OptimizerContext::getPlanSegmentProcessListEntry() const
 {
     return segment_process_list_entry;
 }
@@ -121,7 +121,7 @@ void OptimizerContext::setProcessListEntry(ProcessListEntryPtr process_list_entr
     process_list_entry = process_list_entry_;
 }
 
-ProcessListEntryPtr OptimizerContext::getProcessListEntry() const
+ProcessListEntryWeakPtr OptimizerContext::getProcessListEntry() const
 {
     return process_list_entry;
 }

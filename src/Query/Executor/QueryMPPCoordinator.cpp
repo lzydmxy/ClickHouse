@@ -64,9 +64,8 @@ BlockIO QueryMPPCoordinator::execute()
                                           entry = optimizer_context->getProcessListEntry()](const Progress & p) {
         if (previous_progress_callback)
             previous_progress_callback(p);
-        // Todo: lizhuoyu, impl processlist
-        if (entry)
-            entry->getQueryStatus()->updateProgressIn(p);
+        if (auto process_list_elem_ptr = entry.lock())
+            process_list_elem_ptr->getQueryStatus()->updateProgressIn(p);
     });
 
     {

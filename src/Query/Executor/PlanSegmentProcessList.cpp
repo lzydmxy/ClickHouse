@@ -142,7 +142,7 @@ void PlanSegmentProcessList::insertProcessList(
     EntryPtr plan_segment_process_entry, size_t segment_id, ContextMutablePtr query_context, bool force)
 {
     ProcessList::EntryPtr entry;
-    auto context_process_list_entry = query_context->getOptimizerContext()->getProcessListEntry();
+    auto context_process_list_entry = query_context->getOptimizerContext()->getProcessListEntry().lock();
 
     LOG_TRACE(logger, "Insert process list, context entry is null {}, segment_id {}, force {}",
         context_process_list_entry == nullptr, segment_id, force);

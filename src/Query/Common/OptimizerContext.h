@@ -36,6 +36,7 @@ using AddressInfoPtr = std::shared_ptr<AddressInfo>;
 
 class ProcessListEntry;
 using ProcessListEntryPtr = std::shared_ptr<ProcessListEntry>;
+using ProcessListEntryWeakPtr = std::weak_ptr<ProcessListEntry>;
 
 struct ProcessorProfileLogElement;
 template <typename>
@@ -99,7 +100,7 @@ protected:
     std::function<void()> send_tcp_progress{nullptr};
 
     QueryStatusPtr query_process_element = nullptr; /// For tracking total resource usage for query.
-    ProcessListEntryPtr process_list_entry;
+    ProcessListEntryWeakPtr process_list_entry;
 
     PlanNodeIdAllocatorPtr id_allocator = nullptr;
     std::shared_ptr<SymbolAllocator> symbol_allocator = nullptr;
@@ -113,7 +114,7 @@ protected:
 
     std::shared_ptr<OptimizerProfile> optimizer_profile = nullptr;
 
-    PlanSegmentProcessListEntryPtr segment_process_list_entry;
+    PlanSegmentProcessListEntryWeakPtr segment_process_list_entry;
 
     UInt32 query_max_execution_time;
     TimePoint query_expiration_timestamp;
@@ -155,13 +156,13 @@ public:
     UInt16 getRPCPort();
 
     void setPlanSegmentProcessListEntry(PlanSegmentProcessListEntryPtr segment_process_list_entry_);
-    PlanSegmentProcessListEntryPtr getPlanSegmentProcessListEntry() const;
+    PlanSegmentProcessListEntryWeakPtr getPlanSegmentProcessListEntry() const;
 
     void setPlanSegmentProcessList(PlanSegmentProcessListPtr segment_process_list_);
     PlanSegmentProcessListPtr getPlanSegmentProcessList() const;
 
     void setProcessListEntry(ProcessListEntryPtr process_list_entry_);
-    ProcessListEntryPtr getProcessListEntry() const;
+    ProcessListEntryWeakPtr getProcessListEntry() const;
 
     void
     setProcessorProfileElementConsumer(std::shared_ptr<ProfileElementConsumer<ProcessorProfileLogElement>> processor_log_element_consumer_);
