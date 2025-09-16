@@ -48,6 +48,12 @@ void RuntimeFilterService::transferRuntimeFilter(
 
         auto & manager = RuntimeFilterManager::getInstance();
 
+        LOG_INFO(
+            log,
+            "Try get runtime filter collection context for query id: {}, builder id: {}.",
+            request->query_id(),
+            request->builder_id());
+
         auto collection_context = manager.getRuntimeFilterCollectionContext(request->query_id());
         auto collection = collection_context->getCollection(request->builder_id());
         size_t received = collection->add(std::move(data), request->parallel_id());

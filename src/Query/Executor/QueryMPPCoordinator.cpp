@@ -16,7 +16,6 @@
 #include <Query/Executor/executePlanSegment.h>
 #include <Query/Executor/SegmentScheduler.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
-#include <Query/Executor/sendPlanSegment.h>
 
 namespace DB
 {
@@ -48,6 +47,7 @@ BlockIO QueryMPPCoordinator::execute()
 
     PlanSegmentsStatusPtr scheduler_status;
 
+    LOG_TRACE(log, "QueryMPPCoordinator::execute");
     if (plan_segment_tree->getNodes().size() > 1)
     {
         RuntimeFilterManager::getInstance().registerQuery(query_id, *plan_segment_tree, query_context);
@@ -106,7 +106,9 @@ BlockIO QueryMPPCoordinator::execute()
 
     try
     {
-        return DB::executePlanSegmentClient(std::move(final_segment_instance), query_context);
+        auto res = DB::executePlanSegmentClient(std::move(final_segment_instance), query_context);
+        res.coordinator = this_coordinator;
+        return res;
     }
     catch (const Exception & e)
     {
@@ -325,6 +327,7 @@ QueryMPPCoordinator::~QueryMPPCoordinator()
 {
     try
     {
+        LOG_TRACE(log, "~QueryMPPCoordinator");
         RuntimeFilterManager::getInstance().removeQuery(query_id);
         optimizer_context->getSegmentScheduler()->finishPlanSegments(query_id);
     }

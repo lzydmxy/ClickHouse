@@ -23,6 +23,7 @@ void BlockIO::reset()
 
     pipeline.reset();
     process_list_entry.reset();
+    coordinator.reset();
 
     /// TODO Do we need also reset callbacks? In which order?
 }
@@ -35,6 +36,7 @@ BlockIO & BlockIO::operator= (BlockIO && rhs) noexcept
     /// Explicitly reset fields, so everything is destructed in right order
     reset();
 
+    coordinator = std::move(rhs.coordinator);
     process_list_entry      = std::move(rhs.process_list_entry);
     pipeline                = std::move(rhs.pipeline);
 

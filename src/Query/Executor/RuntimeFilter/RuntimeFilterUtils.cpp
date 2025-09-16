@@ -258,7 +258,7 @@ ASTs RuntimeFilterUtils::createRuntimeFilterForTableScan(
         else if (value.bypass == BypassType::BYPASS_EMPTY_HT)
         {
             is_range_or_set = true;
-            return {std::make_shared<ASTLiteral>(0)};
+            return {std::make_shared<ASTLiteral>(0u)};
         }
 
         if (value.is_local)

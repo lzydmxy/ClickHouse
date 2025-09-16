@@ -3,7 +3,6 @@
 #include <memory>
 #include <fmt/core.h>
 #include <fmt/format.h>
-#include <Query/Common/OptimizerContext.h>
 
 namespace DB
 {

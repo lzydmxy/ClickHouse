@@ -559,6 +559,7 @@ dbms_target_link_libraries (PUBLIC ch_contrib::sparsehash)
 
 if (TARGET ch_contrib::protobuf)
     dbms_target_link_libraries (PRIVATE ch_contrib::protobuf)
+    target_link_libraries(clickhouse_common_io PUBLIC ch_contrib::protobuf)
 endif ()
 
 if (TARGET clickhouse_grpc_protos)

@@ -5,17 +5,23 @@
 #include <Poco/Logger.h>
 #include <base/types.h>
 #include <Interpreters/Context_fwd.h>
-#include <QueryPipeline/BlockIO.h>
-#include <Query/Common/OptimizerContext.h>
 #include <Query/Executor/ExecutorUtils.h>
-#include <Query/Executor/PlanSegment.h>
 #include <Query/Executor/ProgressManager.h>
 #include <Query/Executor/RuntimeSegmentsStatus.h>
 
 namespace DB
 {
 class PlanSegmentTree;
+using PlanSegmentTreeUniqPtr = std::unique_ptr<PlanSegmentTree>;
+using PlanSegmentTreePtr = std::shared_ptr<PlanSegmentTree>;
+
 struct BlockIO;
+
+class OptimizerContext;
+using OptimizerContextPtr = std::shared_ptr<OptimizerContext>;
+
+struct PlanSegmentInstanceID;
+using PlanSegmentSet = std::unordered_set<PlanSegmentInstanceID>;
 
 enum PostProcessingRPCID : uint8_t
 {

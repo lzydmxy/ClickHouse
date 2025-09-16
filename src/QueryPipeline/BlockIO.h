@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <QueryPipeline/QueryPipeline.h>
+#include <Query/Executor/QueryMPPCoordinator.h>
 
 
 namespace DB
@@ -20,6 +21,7 @@ struct BlockIO
     BlockIO(const BlockIO &) = delete;
     BlockIO & operator= (const BlockIO & rhs) = delete;
 
+    std::shared_ptr<QueryMPPCoordinator> coordinator;
     std::shared_ptr<ProcessListEntry> process_list_entry;
 
     QueryPipeline pipeline;
