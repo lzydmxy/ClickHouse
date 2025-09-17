@@ -750,7 +750,7 @@ PlanNodePtr PredicateVisitor::visitJoinStepExtNode(JoinStepExtNode & node, Predi
      * Predicate push down may produce nest loop join with right join, which is not supported by nest loop join.
      * todo: remove this if hash join support filter or nest loop join support right join.
      */
-    if (/*join_step->enforceNestLoopJoin() && */ join_step->supportSwap() && join_step->getKind() == JoinKind::Right)
+    if (join_step->enforceNestLoopJoin() && join_step->supportSwap() && join_step->getKind() == JoinKind::Right)
     {
         join_step = std::make_shared<JoinStepExt>(
             DataStreams{join_step->getInputStreams()[1], join_step->getInputStreams()[0]},

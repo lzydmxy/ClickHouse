@@ -485,11 +485,12 @@ QueryPipelineBuilderPtr JoinStepExt::updatePipeline(QueryPipelineBuilders pipeli
 
 bool JoinStepExt::enforceNestLoopJoin() const
 {
-    if (filter && !PredicateUtils::isTruePredicate(filter))
-    {
-        bool strictness_join = strictness == JoinStrictness::Any || strictness == JoinStrictness::Asof;
-        return strictness_join || (left_keys.empty() && isLeftOrRightOuterJoin());
-    }
+    // todo: lizhuoyu5, other feat: support NESTED_LOOP_JOIN join Algorithm, we may not need
+    // if (filter && !PredicateUtils::isTruePredicate(filter))
+    // {
+    //     bool strictness_join = strictness == JoinStrictness::Any || strictness == JoinStrictness::Asof;
+    //     return strictness_join || (left_keys.empty() && isLeftOrRightOuterJoin());
+    // }
     return false;
 }
 
