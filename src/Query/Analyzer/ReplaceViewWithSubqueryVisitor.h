@@ -67,18 +67,6 @@ struct ReplaceViewWithSubquery
                 table_expression.children.clear();
                 table_expression.children.push_back(table_expression.subquery);
             }
-            else if (auto mv = dynamic_cast<const StorageMaterializedView *>(table.get()))
-            {
-                // we consider MaterializedView as a special View
-                // replace it with target table
-                const auto alias = table_expression.database_and_table_name->tryGetAlias();
-                auto identifier = std::make_shared<ASTTableIdentifier>(mv->getTargetTableId());
-                if (!alias.empty())
-                    identifier->setAlias(alias);
-                table_expression.database_and_table_name = identifier;
-                table_expression.children.clear();
-                table_expression.children.push_back(table_expression.database_and_table_name);
-            }
         }
     }
 };
