@@ -1,4 +1,5 @@
 #include <TableFunctions/TableFunctionFactory.h>
+#include "boost/unordered/unordered_set.hpp"
 
 #include <Interpreters/Context.h>
 #include <Common/CurrentThread.h>
@@ -45,13 +46,15 @@ TableFunctionPtr TableFunctionFactory::get(
             throw Exception(ErrorCodes::UNKNOWN_FUNCTION, "Unknown table function {}", table_function->name);
     }
 
-    // TableFunctionRemote is not supported by the optimizer currently.
-    // SegmentScheduler selects nodes only from cluster_nodes, and currently supports only a single logical cluster.
-    // For more details, see NodeSelector::select.
-    if (context->getSettingsRef().enable_optimizer && (res->getName() == "remote" || res->getName() == "remoteSecure"
-        || res->getName() == "cluster" || res->getName() == "clusterAllReplicas"))
+    // Table functions are not fully supported yet. Currently, only the following table functions are known to be fully supported.
+    // Other types of table functions may cause query errors or even fatal errors due to incomplete support in the underlying storage.
+    // If you want to add additional table functions, thorough testing is required.
+    // For more details, see https://joyspace.jd.com/sheets/OHhBII8qyN8tQLBaqQVJ
+    static const std::unordered_set<String> support_table_function_names
+        = {"file", "format", "generateRandom", "null", "numbers_mt", "numbers", "zeros_mt", "zeros", "values", "view", "viewIfPermitted"};
+    if (context->getSettingsRef().enable_optimizer && !support_table_function_names.contains(res->getName()))
     {
-        throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Not Support table function {} for optimizer. Maybe you should set enable_optimizer = false", table_function->name);
+        throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Table function {} is not supported for optimizer, Maybe set enable_optimizer = false", table_function->name);
     }
 
     res->parseArguments(ast_function, context);
