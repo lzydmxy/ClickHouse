@@ -42,6 +42,8 @@ QueryMPPCoordinator::QueryMPPCoordinator(
 
 BlockIO QueryMPPCoordinator::execute()
 {
+    beginQuery();
+
     auto this_coordinator = shared_from_this();
     QueryMPPManager::instance().registerQuery(query_id, this_coordinator);
 
@@ -171,7 +173,7 @@ void QueryMPPCoordinator::updateSegmentInstanceStatus(const RuntimeSegmentStatus
         // Root query plan segment means this node is coordinator
         if (status.segment_id == 0)
         {
-            finishQuery();
+            finishQuery(true);
         }
     }
     else
@@ -203,7 +205,7 @@ void QueryMPPCoordinator::tryUpdateRootErrorCause(const QueryError & query_error
     {
         query_status.root_cause_error = std::move(query_error);
         lock.unlock();
-        finishQuery();
+        finishQuery(false);
         return;
     }
     query_status.additional_errors.emplace_back(std::move(query_error));
@@ -300,26 +302,43 @@ void QueryMPPCoordinator::waitUntilAllPostProcessingRPCReceived()
 
 void QueryMPPCoordinator::beginQuery()
 {
-    LOG_TRACE(log, "Begin execute query");
+    query_status.status_code.store(QueryMPPStatusCode::INIT, std::memory_order_release);
+    LOG_TRACE(log, "Beginning query: {}", query_id);  
 }
 
 void QueryMPPCoordinator::cancelQuery(const QueryError & query_error, bool is_canceled)
 {
     query_status.status_code.store(QueryMPPStatusCode::CANCEL, std::memory_order_release);
-    LOG_TRACE(log, "Cancel execute query");
+    LOG_TRACE(log, "Cancelling query: {}, error: {}", query_id, query_error.message);
+
+    {
+        std::lock_guard<std::mutex> lock(status_mutex);
+        query_status.cancelled = is_canceled;
+    }
+
     optimizer_context->getPlanSegmentProcessList()->tryCancelPlanSegmentGroup(query_id);
     optimizer_context->getSegmentScheduler()->cancelPlanSegmentsFromCoordinator(
         query_id, query_error.code, query_error.message, query_context);
-    if (!is_canceled)
-    {
-        query_status.status_code.store(QueryMPPStatusCode::WAIT_ROOT_ERROR, std::memory_order_release);
-    }
+
+    waitForRootCauseError();
 }
 
-void QueryMPPCoordinator::finishQuery()
+void QueryMPPCoordinator::waitForRootCauseError()
+{
+    LOG_TRACE(log, "Waiting for root cause error: {}", query_id);
+    query_status.status_code.store(QueryMPPStatusCode::WAIT_ROOT_ERROR, std::memory_order_release);
+}
+
+void QueryMPPCoordinator::finishQuery(bool success)
 {
     query_status.status_code.store(QueryMPPStatusCode::FINISH, std::memory_order_release);
-    status_cv.notify_all();
+    LOG_TRACE(log, "Finish execute query: {}, success: {}", query_id, success);
+
+    {
+        std::lock_guard<std::mutex> lock(status_mutex);
+        query_status.success = success;
+        status_cv.notify_all();
+    }
 }
 
 QueryMPPCoordinator::~QueryMPPCoordinator()

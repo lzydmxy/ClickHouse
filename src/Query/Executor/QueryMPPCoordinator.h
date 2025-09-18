@@ -86,7 +86,8 @@ private:
 
     void beginQuery();
     void cancelQuery(const QueryError & query_error, bool is_canceled);
-    void finishQuery();
+    void waitForRootCauseError();
+    void finishQuery(bool success);
 };
 
 using QueryMPPCoordinatorPtr = std::shared_ptr<QueryMPPCoordinator>;
