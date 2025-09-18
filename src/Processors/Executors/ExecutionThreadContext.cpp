@@ -1,7 +1,11 @@
 #include <Processors/Executors/ExecutionThreadContext.h>
 #include <QueryPipeline/ReadProgressCallback.h>
+#include <Common/CurrentThread.h>
 #include <Common/Stopwatch.h>
 #include <Interpreters/OpenTelemetrySpanLog.h>
+
+#include <Query/Common/OptimizerContext.h>
+#include <Query/Executor/PlanSegmentReport.h>
 
 namespace DB
 {
@@ -97,6 +101,25 @@ bool ExecutionThreadContext::executeTask()
     }
     catch (...)
     {
+        auto query_context = CurrentThread::get().getQueryContext();
+        if (query_context && query_context->getSettingsRef().enable_optimizer)
+        {
+            auto segment_id = query_context->getOptimizerContext()->getPlanSegmentInstanceID().segment_id;
+            auto exception_handler = query_context->getOptimizerContext()->getPlanSegmentExceptionHandler();
+            if (segment_id != std::numeric_limits<UInt32>::max() && segment_id != 0
+                && exception_handler->setException(std::current_exception()))
+            {
+                int exception_code = getCurrentExceptionCode();
+                auto exception_message = getCurrentExceptionMessage(false);
+
+                PlanSegmentExecutionInfo info{
+                    .execution_address = std::make_shared<AddressInfo>(
+                        getHostIPFromEnv(), query_context->getTCPPort(), "", "", query_context->getOptimizerContext()->getRPCPort())};
+                auto result = convertFailurePlanSegmentStatusToResult(std::move(query_context), info, exception_code, exception_message);
+                reportExecutionResult(result);
+            }
+        }
+
         node->exception = std::current_exception();
     }
 

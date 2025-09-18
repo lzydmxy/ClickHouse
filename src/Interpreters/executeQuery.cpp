@@ -77,6 +77,7 @@
 #include <Query/Common/OptimizerSettings.h>
 #include <Query/Parsers/ParserQueryExt.h>
 #include <Query/Parsers/ASTReplaceVisitor.h>
+#include <Query/Interpreters/executeSubQuery.h>
 #include <Query/Interpreters/InterpreterSelectQueryUseOptimizer.h>
 
 #include <base/EnumReflection.h>
@@ -531,6 +532,9 @@ void logQueryException(
 
     if (settings.calculate_text_stack_trace && log_error)
         setExceptionStackTrace(elem);
+
+    bool throw_root_cause = needThrowRootCauseError(context.get(), elem.exception_code, elem.exception);
+
     logException(context, elem, log_error);
 
     /// In case of exception we log internal queries also
@@ -553,6 +557,11 @@ void logQueryException(
         query_span->addAttribute("clickhouse.exception", elem.exception);
         query_span->addAttribute("clickhouse.exception_code", elem.exception_code);
         query_span->finish();
+    }
+
+    if (throw_root_cause)
+    {
+        throw Exception(elem.exception_code, "{}", elem.exception);
     }
 }
 
