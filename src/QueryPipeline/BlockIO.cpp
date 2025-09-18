@@ -36,7 +36,7 @@ BlockIO & BlockIO::operator= (BlockIO && rhs) noexcept
     /// Explicitly reset fields, so everything is destructed in right order
     reset();
 
-    coordinator = std::move(rhs.coordinator);
+    coordinator             = std::move(rhs.coordinator);
     process_list_entry      = std::move(rhs.process_list_entry);
     pipeline                = std::move(rhs.pipeline);
 

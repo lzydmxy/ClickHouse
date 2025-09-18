@@ -8,6 +8,7 @@
 namespace DB
 {
 
+class QueryMPPCoordinator;
 class ProcessListEntry;
 
 struct BlockIO
