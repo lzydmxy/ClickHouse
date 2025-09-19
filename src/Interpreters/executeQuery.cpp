@@ -79,6 +79,7 @@
 #include <Query/Parsers/ASTReplaceVisitor.h>
 #include <Query/Interpreters/executeSubQuery.h>
 #include <Query/Interpreters/InterpreterSelectQueryUseOptimizer.h>
+#include <Query/Optimizer/QueryUseOptimizerChecker.h>
 
 #include <base/EnumReflection.h>
 #include <base/demangle.h>
@@ -112,6 +113,8 @@ namespace ErrorCodes
     extern const int SYNTAX_ERROR;
     extern const int SUPPORT_IS_DISABLED;
     extern const int INCORRECT_QUERY;
+    extern const int SOCKET_TIMEOUT;
+    extern const int TOO_MANY_SIMULTANEOUS_QUERIES;
 }
 
 namespace FailPoints
@@ -1199,6 +1202,8 @@ static std::tuple<ASTPtr, BlockIO> executeQueryImpl(
                 if (auto * create_interpreter = typeid_cast<InterpreterCreateQuery *>(&*interpreter))
                     create_interpreter->setIsRestoreFromBackup(flags.distributed_backup_restore);
 
+                // if fallback by optimizer, write the ExceptionMessage to query_log
+                String fallback_reason;
                 {
                     std::unique_ptr<OpenTelemetry::SpanHolder> span;
                     if (OpenTelemetry::CurrentContext().isTraceEnabled())
@@ -1208,7 +1213,45 @@ static std::tuple<ASTPtr, BlockIO> executeQueryImpl(
                         span = std::make_unique<OpenTelemetry::SpanHolder>(class_name + "::execute()");
                     }
 
-                    res = interpreter->execute();
+                    try
+                    {
+                        res = interpreter->execute();
+                    }
+                    catch (...)
+                    {
+                        if (typeid_cast<const InterpreterSelectQueryUseOptimizer *>(&*interpreter))
+                        {
+                            static std::unordered_set<int> no_fallback_error_codes = {
+                                ErrorCodes::TIMEOUT_EXCEEDED,
+                                ErrorCodes::TOO_MANY_SIMULTANEOUS_QUERIES,
+                                ErrorCodes::SOCKET_TIMEOUT,
+                                ErrorCodes::QUERY_WAS_CANCELLED,
+                                ErrorCodes::QUERY_WAS_CANCELLED_INTERNAL,
+                                ErrorCodes::EXCHANGE_DATA_TRANS_EXCEPTION,
+                                ErrorCodes::BRPC_EXCEPTION};
+                            // fallback to simple query process
+                            if (context->getOptimizerContext()->getSettingsRef().enable_optimizer_fallback && !no_fallback_error_codes.contains(getCurrentExceptionCode()))
+                            {
+                                fallback_reason = getCurrentExceptionMessage(true);
+                                LOG_WARNING(
+                                       getLogger("executeQuery"), "Query failed in optimizer enabled, try to fallback to simple query");
+
+                                turnOffOptimizer(context, ast);
+                                auto fall_back_ast = getFallBackQuery(context, ast);
+                                auto retry_interpreter = InterpreterFactory::instance().get(fall_back_ast, context, SelectQueryOptions(stage).setInternal(internal));
+                                res = retry_interpreter->execute();
+                            }
+                            else
+                            {
+                                LOG_INFO(getLogger("executeQuery"), "Query failed in optimizer enabled, throw exception");
+                                throw;
+                            }
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
 
                     /// If it is a non-internal SELECT query, and active (write) use of the query cache is enabled, then add a processor on
                     /// top of the pipeline which stores the result in the query cache.

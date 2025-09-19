@@ -12,6 +12,8 @@
 #include <Interpreters/executeQuery.h>
 #include <Query/Parsers/ASTExplainQueryExt.h>
 #include <Parsers/ASTInsertQuery.h>
+#include <Parsers/ParserQuery.h>
+#include <Parsers/parseQuery.h>
 
 namespace DB
 {
@@ -52,6 +54,16 @@ void turnOffOptimizer(ContextMutablePtr context, ASTPtr & node)
 
     context->applySettingsChanges(setting_changes);
     changeASTSettings(node);
+}
+
+ASTPtr getFallBackQuery(ContextMutablePtr context, const ASTPtr & query)
+{
+    auto query_str = queryToString(query);
+    const auto & settings = context->getSettingsRef();
+    auto * begin = query_str.data();
+    auto * end = query_str.data() + query_str.size();
+    ParserQuery parser(end, settings.allow_settings_after_format_in_insert, /*enable_optimizer*/ false);
+    return parseQuery(parser, begin, end, "", settings.max_query_size, settings.max_parser_depth, settings.max_parser_backtracks);
 }
 
 static bool checkDatabaseAndTable(String database_name, String table_name, ContextMutablePtr context, const NameSet & ctes, String & reason)

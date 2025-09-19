@@ -10,6 +10,8 @@ class Context;
 
 void turnOffOptimizer(ContextMutablePtr context, ASTPtr & node);
 
+ASTPtr getFallBackQuery(ContextMutablePtr context, const ASTPtr & node);
+
 class QueryUseOptimizerChecker
 {
 public:

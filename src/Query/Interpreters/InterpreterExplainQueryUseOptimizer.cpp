@@ -10,6 +10,7 @@
 #include <Interpreters/InterpreterFactory.h>
 #include <Interpreters/InterpreterSelectQuery.h>
 #include <Interpreters/InterpreterSelectWithUnionQuery.h>
+#include <Interpreters/InterpreterExplainQuery.h>
 #include <Interpreters/InterpreterSetQuery.h>
 #include <Parsers/ASTInsertQuery.h>
 #include <Parsers/ASTTablesInSelectQuery.h>
@@ -202,8 +203,27 @@ BlockIO InterpreterExplainQueryUseOptimizer::execute()
     // Explain in bsp mode makes no sense.
     getContext()->getOptimizerContext()->setSetting("bsp_mode", false);
 
-    res.pipeline = executeImpl();
-    return res;
+    // if settings.enable_optimizer = true && query is supported by optimizer, print plan with optimizer.
+    // if query is not supported by optimizer, settings `settings.enable_optimizer` in context will be disabled.
+    if (ast.getKind() == ASTExplainQueryExt::MetaData)
+    {
+        res.pipeline = explainMetaData();
+        return res;
+    }
+    else if (getContext()->getSettingsRef().enable_optimizer
+        && QueryUseOptimizerChecker::check(
+            query, getContext(), !getContext()->getOptimizerContext()->getSettingsRef().enable_optimizer_fallback))
+    {
+        res.pipeline = explainUsingOptimizer();
+        return res;
+    }
+
+    turnOffOptimizer(getContext(), query);
+    auto fall_back_ast = getFallBackQuery(getContext(), query);
+
+    LOG_WARNING(log, "Query failed in optimizer enabled, try to fallback to simple query");
+    auto retry_explain = InterpreterExplainQuery(fall_back_ast, getContext());
+    return retry_explain.execute();
 }
 
 
