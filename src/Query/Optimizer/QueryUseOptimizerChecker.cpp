@@ -62,6 +62,8 @@ ASTPtr getFallBackQuery(ContextMutablePtr context, const ASTPtr & query)
     const auto & settings = context->getSettingsRef();
     auto * begin = query_str.data();
     auto * end = query_str.data() + query_str.size();
+
+    // Reparse the query, as some extended ASTs are incompatible with native ClickHouse.
     ParserQuery parser(end, settings.allow_settings_after_format_in_insert, /*enable_optimizer*/ false);
     return parseQuery(parser, begin, end, "", settings.max_query_size, settings.max_parser_depth, settings.max_parser_backtracks);
 }
