@@ -109,11 +109,13 @@ namespace ErrorCodes
     extern const int LOGICAL_ERROR;
     extern const int NOT_IMPLEMENTED;
     extern const int QUERY_WAS_CANCELLED;
+    extern const int QUERY_WAS_CANCELLED_INTERNAL;
     extern const int INCORRECT_DATA;
     extern const int SYNTAX_ERROR;
     extern const int SUPPORT_IS_DISABLED;
     extern const int INCORRECT_QUERY;
     extern const int SOCKET_TIMEOUT;
+    extern const int EXCHANGE_DATA_TRANS_EXCEPTION;
     extern const int TOO_MANY_SIMULTANEOUS_QUERIES;
 }
 
