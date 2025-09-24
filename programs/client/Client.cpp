@@ -14,6 +14,7 @@
 #include "Client/ConnectionString.h"
 #include "Core/Protocol.h"
 #include "Parsers/formatAST.h"
+#include <Parsers/queryToString.h>
 
 #include <Access/AccessControl.h>
 
@@ -23,6 +24,7 @@
 #include <Common/TerminalSize.h>
 #include <Common/Config/ConfigProcessor.h>
 #include <Common/Config/getClientConfigPath.h>
+#include <Query/Common/OptimizerContext.h>
 
 #include <Columns/ColumnString.h>
 #include <Poco/Util/Application.h>
@@ -305,6 +307,52 @@ void Client::initialize(Poco::Util::Application & self)
         global_context->setGoogleProtosPath(fs::weakly_canonical(config().getString("google_protos_path")));
 }
 
+void Client::setOptimizerSettings()
+{
+    auto all_changed = cmd_optimizer_settings.allChanged();
+    if (all_changed.begin() == all_changed.end())
+        return;
+
+    auto settings_ast = std::make_shared<ASTSetQuery>();
+    for (const auto & setting : all_changed)
+    {
+        settings_ast->changes.emplace_back(SettingChange(setting.getName(), setting.getValue()));
+    }
+
+    connection->sendQuery(
+        connection_parameters.timeouts, queryToString(settings_ast), {} /* query_parameters */, "" /* query_id */, QueryProcessingStage::Complete, nullptr, nullptr, false, {});
+
+    while (true)
+    {
+        Packet packet = connection->receivePacket();
+        switch (packet.type)
+        {
+            case Protocol::Server::Data:
+                continue;
+
+            case Protocol::Server::TimezoneUpdate:
+            case Protocol::Server::Progress:
+            case Protocol::Server::ProfileInfo:
+            case Protocol::Server::Totals:
+            case Protocol::Server::Extremes:
+            case Protocol::Server::Log:
+            case Protocol::Server::ProfileEvents:
+                continue;
+
+            case Protocol::Server::Exception:
+                packet.exception->rethrow();
+                return;
+
+            case Protocol::Server::EndOfStream:
+                return;
+
+            default:
+                throw Exception(ErrorCodes::UNKNOWN_PACKET_FROM_SERVER, "Unknown packet {} from server {}",
+                    packet.type, connection->getDescription());
+        }
+    }
+}
+
 
 int Client::main(const std::vector<std::string> & /*args*/)
 try
@@ -363,6 +411,8 @@ try
     /// Set user password complexity rules
     auto & access_control = global_context->getAccessControl();
     access_control.setPasswordComplexityRules(connection->getPasswordComplexityRules());
+
+    setOptimizerSettings();
 
     if (is_interactive && !delayed_interactive)
     {

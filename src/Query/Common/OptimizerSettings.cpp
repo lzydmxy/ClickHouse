@@ -98,4 +98,17 @@ void OptimizerSettings::loadFromConfig(const String & config_elem, const Poco::U
     LOG_DEBUG(getLogger("OptiminzerSettings"), "Load settings {} from config", config_elem);
 }
 
+std::vector<String> OptimizerSettings::getAllRegisteredNames() const
+{
+    std::vector<String> all_settings;
+    for (const auto & setting_field : all())
+        all_settings.push_back(setting_field.getName());
+    return all_settings;
+}
+
+void OptimizerSettings::set(std::string_view name, const Field & value)
+{
+    BaseSettings::set(name, value);
+}
+
 }

@@ -6,6 +6,7 @@
 #include <Core/SettingsEnums.h>
 #include <Poco/Util/AbstractConfiguration.h>
 #include <Poco/JSON/Object.h>
+#include <Common/NamePrompter.h>
 
 namespace DB
 {
@@ -532,8 +533,9 @@ OBSOLETE_OPTIMIZER_SETTINGS(M, ALIAS) \
 DECLARE_SETTINGS_TRAITS(OptimizerSettingsTraits, ALL_OPTIMIZER_SETTINGS)
 
 
-struct OptimizerSettings : public BaseSettings<OptimizerSettingsTraits>
+struct OptimizerSettings : public BaseSettings<OptimizerSettingsTraits>, public IHints<2>
 {
+    OptimizerSettings() = default;
     void loadFromConfig(const String & config_elem, const Poco::Util::AbstractConfiguration & config);
 
     std::unordered_map<String, String> dumpToMap() const
@@ -555,6 +557,10 @@ struct OptimizerSettings : public BaseSettings<OptimizerSettingsTraits>
             dumpJson.set(name, value);
         }
     }
+
+    std::vector<String> getAllRegisteredNames() const override;
+
+    void set(std::string_view name, const Field & value) override;
 };
 
 using OptimizerSettingsPtr = std::shared_ptr<OptimizerSettings>;

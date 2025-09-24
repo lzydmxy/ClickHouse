@@ -45,6 +45,7 @@ protected:
         std::vector<Arguments> & hosts_and_ports_arguments) override;
 
 private:
+    void setOptimizerSettings();
     void printChangedSettings() const;
     void showWarnings();
     void parseConnectionsCredentials(Poco::Util::AbstractConfiguration & config, const std::string & connection_name);

@@ -107,6 +107,13 @@ void SettingsConstraints::get(const MergeTreeSettings &, std::string_view short_
     writability = checker.constraint.writability;
 }
 
+void SettingsConstraints::get(const OptimizerSettings &, std::string_view short_name, Field & min_value, Field & max_value, SettingConstraintWritability & writability) const
+{
+    min_value = Field{};
+    max_value = Field{};
+    writability = SettingConstraintWritability::WRITABLE;
+}
+
 void SettingsConstraints::merge(const SettingsConstraints & other)
 {
     if (access_control->doesSettingsConstraintsReplacePrevious())
@@ -434,6 +441,8 @@ SettingsConstraints::Checker SettingsConstraints::getMergeTreeChecker(std::strin
         return Checker(MergeTreeSettings::Traits::resolveName); // Allowed
     return Checker(it->second, MergeTreeSettings::Traits::resolveName);
 }
+
+
 
 bool SettingsConstraints::Constraint::operator==(const Constraint & other) const
 {
