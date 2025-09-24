@@ -14,6 +14,7 @@ namespace DB
 {
 struct Settings;
 struct MergeTreeSettings;
+struct OptimizerSettings;
 struct SettingChange;
 class SettingsChanges;
 class AccessControl;
@@ -70,6 +71,8 @@ public:
     void set(const String & full_name, const Field & min_value, const Field & max_value, SettingConstraintWritability writability);
     void get(const Settings & current_settings, std::string_view short_name, Field & min_value, Field & max_value, SettingConstraintWritability & writability) const;
     void get(const MergeTreeSettings & current_settings, std::string_view short_name, Field & min_value, Field & max_value, SettingConstraintWritability & writability) const;
+    void get(const OptimizerSettings & current_settings, std::string_view short_name, Field & min_value, Field & max_value, SettingConstraintWritability & writability) const;
+
 
     void merge(const SettingsConstraints & other);
 

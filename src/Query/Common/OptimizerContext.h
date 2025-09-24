@@ -140,6 +140,7 @@ public:
     const OptimizerSettings & getSettingsRef() const { return optimizer_settings; }
     OptimizerSettings & getSettingsRef() { return optimizer_settings; }
     const OptimizerSettings getSettings() const { return optimizer_settings; }
+    void setSettings(const OptimizerSettings & settings_) { optimizer_settings = settings_;}
 
     /// milliseconds
     UInt32 getQueryMaxExecutionTime() const;

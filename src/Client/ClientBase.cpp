@@ -2878,6 +2878,18 @@ void ClientBase::parseAndCheckOptions(OptionsDescription & options_description, 
         }
     }
 
+    {
+        auto & main_options = options_description.main_description.value();
+        for (const auto & setting : cmd_optimizer_settings.all())
+        {
+            const auto & name = setting.getName();
+            if (allow_repeated_settings)
+                addProgramOptionAsMultitoken(cmd_optimizer_settings, main_options, name, setting);
+            else
+                addProgramOption(cmd_optimizer_settings, main_options, name, setting);
+        }
+    }
+
     /// Parse main commandline options.
     auto parser = po::command_line_parser(arguments)
                       .options(options_description.main_description.value())

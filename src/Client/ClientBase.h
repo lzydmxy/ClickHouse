@@ -17,6 +17,7 @@
 #include <Storages/StorageFile.h>
 #include <Storages/SelectQueryInfo.h>
 #include <Storages/MergeTree/MergeTreeSettings.h>
+#include <Query/Common/OptimizerContext.h>
 
 
 namespace po = boost::program_options;
@@ -240,6 +241,7 @@ protected:
     /// Settings specified via command line args
     Settings cmd_settings;
     MergeTreeSettings cmd_merge_tree_settings;
+    OptimizerSettings cmd_optimizer_settings;
 
     /// thread status should be destructed before shared context because it relies on process list.
     std::optional<ThreadStatus> thread_status;
