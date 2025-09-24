@@ -405,7 +405,13 @@ ArrayJoinActionPtr SymbolMapper::map(const ArrayJoinActionPtr & array_join_actio
 {
     if (array_join_action == nullptr)
         return nullptr;
-    return std::make_shared<ArrayJoinAction>(*array_join_action);
+
+    NameSet mapped_columns = map(array_join_action->columns);
+
+    auto new_action = std::make_shared<ArrayJoinAction>(*array_join_action);
+    new_action->columns = std::move(mapped_columns);
+
+    return new_action;
 }
 
 SortDescription SymbolMapper::map(const SortDescription & sort_desc)
