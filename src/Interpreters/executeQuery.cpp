@@ -616,6 +616,8 @@ void logExceptionBeforeStart(
     elem.exception = std::move(exception_message.text);
     elem.exception_format_string = exception_message.format_string;
 
+    bool throw_root_cause = needThrowRootCauseError(context.get(), elem.exception_code, elem.exception);
+
     elem.client_info = context->getClientInfo();
 
     elem.log_comment = settings.log_comment;
@@ -660,6 +662,10 @@ void logExceptionBeforeStart(
         {
             ProfileEvents::increment(ProfileEvents::FailedInsertQuery);
         }
+    }
+    if (throw_root_cause)
+    {
+        throw Exception(elem.exception_code, "{}", elem.exception);
     }
 }
 
