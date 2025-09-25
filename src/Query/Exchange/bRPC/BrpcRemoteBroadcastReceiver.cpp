@@ -9,7 +9,6 @@
 #include <Query/Exchange/ExchangeUtils.h>
 #include <Query/Exchange/RpcChannelPool.h>
 #include <Query/Exchange/RpcClient.h>
-#include <Query/Exchange/bRPC/BrpcProxy.h>
 #include <Query/Exchange/bRPC/StreamHandler.h>
 #include <Query/Exchange/DataTrans/DataTrans_fwd.h>
 #include <Query/Exchange/DataTrans/NativeChunkOutputStream.h>
@@ -76,7 +75,7 @@ BrpcRemoteBroadcastReceiver::~BrpcRemoteBroadcastReceiver()
         if (stream_id != brpc::INVALID_STREAM_ID)
         {
             LOG_TRACE(log, "Destructor close receive stream {} for name {} address {}", stream_id, name, registry_address);
-            BrpcProxy::getInstance().StreamClose(stream_id);
+            brpc::StreamClose(stream_id);
         }
 
         if (!enable_receiver_metrics || !query_exchange_log)
@@ -101,27 +100,10 @@ BrpcRemoteBroadcastReceiver::~BrpcRemoteBroadcastReceiver()
         element.message = receiver_metrics.message;
         element.type = "brpc_receiver@reg_addr_" + registry_address;
         query_exchange_log->add(element);
-        releaseOptions();   //release options's handler
     }
     catch (...)
     {
         tryLogCurrentException(log);
-    }
-}
-
-brpc::StreamOptions & BrpcRemoteBroadcastReceiver::getOptions()
-{
-    if (stream_options.handler == NULL)
-        stream_options.handler = new StreamHandler(context, shared_from_this(), header, keep_order);
-    return stream_options;
-}
-
-void BrpcRemoteBroadcastReceiver::releaseOptions()
-{
-    if (stream_options.handler != NULL)
-    {
-        delete stream_options.handler;
-        stream_options.handler = NULL;
     }
 }
 
@@ -131,13 +113,14 @@ void BrpcRemoteBroadcastReceiver::registerToSenders(UInt32 timeout_ms)
     std::shared_ptr<RpcClient> rpc_client = RpcChannelPool::getInstance().getClient(registry_address, BrpcChannelPoolOptions::STREAM_DEFAULT_CONFIG_KEY);
     Protos::RegistryService_Stub stub = Protos::RegistryService_Stub(&rpc_client->getChannel());
     brpc::Controller cntl;
+    brpc::StreamOptions stream_options;
+    stream_options.handler = std::make_shared<StreamHandler>(context, shared_from_this(), header, keep_order);
     if (timeout_ms == 0)
         cntl.set_timeout_ms(rpc_client->getChannel().options().timeout_ms);
     else
         cntl.set_timeout_ms(timeout_ms);
     cntl.set_max_retry(3);
-    auto & options = getOptions();
-    if (BrpcProxy::getInstance().StreamCreate(&stream_id, cntl, &options) != 0)
+    if (brpc::StreamCreate(&stream_id, cntl, &stream_options) != 0)
         throw Exception(ErrorCodes::BRPC_EXCEPTION, "Fail to create stream for {}", getName());
 
     if (stream_id == brpc::INVALID_STREAM_ID)
@@ -251,19 +234,18 @@ BroadcastStatus BrpcRemoteBroadcastReceiver::finish(BroadcastStatusCode status_c
     int actual_status_code = BroadcastStatusCode::RUNNING;
 
     BroadcastStatusCode new_fin_code = status_code;
-    // TODO wujianchao sender should send finish
-    // if (status_code < 0)
-    // {
-    //     // if send_done_flag has never been set, sender should have some unkown errors.
-    //     if (!send_done_flag.test(std::memory_order_acquire))
-    //         new_fin_code = BroadcastStatusCode::SEND_UNKNOWN_ERROR;
-    // }
+    if (status_code < 0)
+    {
+        // if send_done_flag has never been set, sender should have some unkown errors.
+        if (!send_done_flag.test(std::memory_order_acquire))
+            new_fin_code = BroadcastStatusCode::SEND_UNKNOWN_ERROR;
+    }
 
     if (finish_status_code.compare_exchange_strong(current_fin_code, new_fin_code, std::memory_order_relaxed, std::memory_order_relaxed))
     {
         if (new_fin_code > 0)
             queue->close();
-        BrpcProxy::getInstance().StreamFinish(stream_id, actual_status_code, new_fin_code, new_fin_code > 0);
+        brpc::StreamFinish(stream_id, actual_status_code, new_fin_code, new_fin_code > 0);
         receiver_metrics.finish_code = new_fin_code;
         receiver_metrics.is_modifier = 1;
         receiver_metrics.message = std::move(message);
@@ -317,14 +299,15 @@ AsyncRegisterResult BrpcRemoteBroadcastReceiver::registerToSendersAsync(UInt32 t
     Protos::RegistryService_Stub stub = Protos::RegistryService_Stub(&rpc_client->getChannel());
 
     brpc::Controller & cntl = *res.cntl;
+    brpc::StreamOptions stream_options;
+    stream_options.handler = std::make_shared<StreamHandler>(context, shared_from_this(), header, keep_order);
 
     if (timeout_ms == 0)
         cntl.set_timeout_ms(rpc_client->getChannel().options().timeout_ms);
     else
         cntl.set_timeout_ms(timeout_ms);
     cntl.set_max_retry(3);
-    auto & options = getOptions();
-    if (BrpcProxy::getInstance().StreamCreate(&stream_id, cntl, &options) != 0)
+    if (brpc::StreamCreate(&stream_id, cntl, &stream_options) != 0)
         throw Exception(ErrorCodes::BRPC_EXCEPTION, "Fail to create stream for {}", getName());
 
     if (stream_id == brpc::INVALID_STREAM_ID)

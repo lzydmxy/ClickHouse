@@ -24,6 +24,8 @@ public:
     void on_closed(brpc::StreamId id) override;
 
     void on_failed(brpc::StreamId id, int32_t error_code, const std::string& error_text) override;
+
+    void on_finished(brpc::StreamId id, int32_t finish_status_code) override;
 private:
     ContextPtr context;
     OptimizerContextPtr optimizer_context;

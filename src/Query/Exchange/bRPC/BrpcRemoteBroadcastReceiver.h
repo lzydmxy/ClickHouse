@@ -87,9 +87,6 @@ private:
     std::shared_ptr<QueryExchangeLog> query_exchange_log;
     String coordinator_address;
 
-    brpc::StreamOptions & getOptions();
-    void releaseOptions();
-
     void sendRegisterRPC(
         Protos::RegistryService_Stub & stub,
         brpc::Controller & cntl,
