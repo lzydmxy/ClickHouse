@@ -2357,7 +2357,7 @@ void Context::setCurrentQueryId(const String & query_id)
 void Context::killCurrentQuery() const
 {
     if (auto elem = getProcessListElement())
-        elem->cancelQuery(true);
+        elem->cancelQuery(true, false);
 }
 
 bool Context::isCurrentQueryKilled() const

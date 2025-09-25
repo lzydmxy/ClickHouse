@@ -187,7 +187,7 @@ bool PlanSegmentGroup::tryCancel(bool internal)
 
         for (auto & entry : to_cancel)
         {
-            entry->getQueryStatus()->cancelQuery(internal);
+            entry->getQueryStatus()->cancelQuery(true, internal);
         }
     }
 

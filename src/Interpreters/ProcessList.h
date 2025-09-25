@@ -103,8 +103,13 @@ protected:
     /// ProcessListEntry should not be destroyed if is_cancelling is true
     /// Flag changes is synced with ProcessListBase::mutex and notified with ProcessList::cancelled_cv
     bool is_cancelling { false };
+
+    /// Highest bit indicates the kill signal is sended by query itself (internal)
+    static constexpr UInt8 INTERNAL_KILL_BIT = 0x80;
+    /// Lowest bit indicates the kill signal is sended by exteranl
+    static constexpr UInt8 EXTERNAL_KILL_BIT = 0x01;
     /// KILL was send to the query
-    std::atomic<bool> is_killed { false };
+    std::atomic<UInt8> is_killed{0};
 
     /// All data to the client already had been sent.
     /// Including EndOfStream or Exception.
@@ -223,9 +228,11 @@ public:
 
     QueryStatusInfo getInfo(bool get_thread_list = false, bool get_profile_events = false, bool get_settings = false) const;
 
-    CancellationCode cancelQuery(bool kill);
+    CancellationCode cancelQuery(bool kill, bool internal);
 
     bool isKilled() const { return is_killed; }
+
+    bool isInternalKill() const { return is_killed & 0x80; }
 
     /// Returns an entry in the ProcessList associated with this QueryStatus. The function can return nullptr.
     std::shared_ptr<ProcessListEntry> getProcessListEntry() const;
