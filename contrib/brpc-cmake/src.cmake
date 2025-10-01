@@ -26,30 +26,6 @@ include_directories(${_BRPC_SOURCE_DIR}/src)
 set(BRPC_REPLACE_FILE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(BRPC_REPLACE_FILE_DEST_DIR ${_BRPC_SOURCE_DIR})
 
-add_custom_target(copy_mutex ALL
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${BRPC_REPLACE_FILE_SOURCE_DIR}/mutex.cpp
-        ${BRPC_REPLACE_FILE_DEST_DIR}/src/bthread/mutex.cpp
-        COMMENT "Copy mutex.cpp to src/bthread every time"
-)
-
-add_custom_target(copy_json2pb ALL
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${BRPC_REPLACE_FILE_SOURCE_DIR}/json_to_pb.cpp
-        ${BRPC_REPLACE_FILE_DEST_DIR}/src/json2pb/json_to_pb.cpp
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${BRPC_REPLACE_FILE_SOURCE_DIR}/pb_to_json.cpp
-        ${BRPC_REPLACE_FILE_DEST_DIR}/src/json2pb/pb_to_json.cpp
-        COMMENT "Copy json2pb"
-)
-
-add_custom_target(copy_protocol ALL
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${BRPC_REPLACE_FILE_SOURCE_DIR}/protocol.cpp
-        ${BRPC_REPLACE_FILE_DEST_DIR}/src/brpc/protocol.cpp
-        COMMENT "Copy protoco.cpp to src/brpc every time"
-)
-
 
 add_library(BRPC_BUTIL_LIB OBJECT ${BRPC_BUTIL_SOURCES})
 #target_compile_options(BRPC_BUTIL_LIB PRIVATE -Wno-macro-redefined)
@@ -57,7 +33,6 @@ target_compile_options(BRPC_BUTIL_LIB PRIVATE -Wno-macro-redefined -Wno-vla-cxx-
 
 target_link_libraries(BRPC_BUTIL_LIB ${DYNAMIC_LIB})
 add_library(BRPC_SOURCES_LIB OBJECT ${BRPC_SOURCES})
-add_dependencies(BRPC_SOURCES_LIB copy_mutex copy_json2pb copy_protocol)
 #target_compile_options(BRPC_SOURCES_LIB PRIVATE -Wno-deprecated-declarations -Wno-macro-redefined)
 target_compile_options(BRPC_SOURCES_LIB PRIVATE -Wno-deprecated-declarations -Wno-macro-redefined -Wno-vla-cxx-extension)
 
