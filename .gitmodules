@@ -506,7 +506,7 @@
 [submodule "contrib/brpc"]
 	path = contrib/brpc
 #	url = https://github.com/apache/brpc.git
-	url = git@github.com:apache/brpc.git
+	url = git@coding.jd.com:EasyOLAP/brpc.git
 [submodule "contrib/leveldb"]
 	path = contrib/leveldb
 	url = git@github.com:google/leveldb.git
