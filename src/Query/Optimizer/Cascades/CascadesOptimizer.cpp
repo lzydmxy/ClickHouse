@@ -50,7 +50,7 @@ static bool hasCBOType(const std::set<QueryPlanStepType> & typs)
 
 bool CascadesOptimizer::rewrite(QueryPlanExt & plan, ContextMutablePtr context) const
 {
-    LOG_DEBUG(getLogger("CascadesOptimizer"), "Logical plan before CascadesOptimizer: \n{}", PlanPrinter::textLogicalPlan(plan, context));
+    LOG_TRACE(getLogger("CascadesOptimizer"), "Logical plan before CascadesOptimizer: \n{}", PlanPrinter::textLogicalPlan(plan, context));
     int id = context->getOptimizerContext()->getRuleId();
     CascadesContext cascades_context{
         context,

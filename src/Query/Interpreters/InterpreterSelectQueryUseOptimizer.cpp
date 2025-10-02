@@ -308,7 +308,7 @@ void InterpreterSelectQueryUseOptimizer::buildQueryPlan(QueryPlanExtPtr & query_
     context->getOptimizerContext()->logOptimizerProfile(log, "Optimizer stage run time: ", "Planning {} ms", stage_watch.elapsedMilliseconds());
     ProfileEvents::increment(ProfileEvents::QueryPlannerTime, stage_watch.elapsedMilliseconds());
 
-    LOG_DEBUG(log, "Logical plan before optimize: \n{}", PlanPrinter::textLogicalPlan(*query_plan, context));
+    LOG_TRACE(log, "Logical plan before optimize: \n{}", PlanPrinter::textLogicalPlan(*query_plan, context));
 
     if (!skip_optimize)
     {
@@ -322,7 +322,7 @@ void InterpreterSelectQueryUseOptimizer::buildQueryPlan(QueryPlanExtPtr & query_
         context->getOptimizerContext()->logOptimizerProfile(log, "Optimizer stage run time: ", "Optimizer {} ms", stage_watch.elapsedMilliseconds());
         ProfileEvents::increment(ProfileEvents::QueryOptimizerTime, stage_watch.elapsedMilliseconds());
 
-        LOG_DEBUG(log, "Logical plan after optimize: \n{}", PlanPrinter::textLogicalPlan(*query_plan, context));
+        LOG_TRACE(log, "Logical plan after optimize: \n{}", PlanPrinter::textLogicalPlan(*query_plan, context));
     }
 }
 

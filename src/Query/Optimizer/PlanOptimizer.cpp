@@ -546,7 +546,7 @@ void PlanOptimizer::optimize(QueryPlanExt & plan, ContextMutablePtr context)
         }
     }
 
-    LOG_DEBUG(getLogger("PlanOptimizer"), "Logical plan before check: \n{}", PlanPrinter::textLogicalPlan(plan, context));
+    LOG_TRACE(getLogger("PlanOptimizer"), "Logical plan before check: \n{}", PlanPrinter::textLogicalPlan(plan, context));
     // Check final plan to satisfy with :
     // 1 Symbol exist check
     total_watch.restart();
