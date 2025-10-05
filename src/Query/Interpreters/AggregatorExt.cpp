@@ -217,7 +217,7 @@ AggregatorExt::Params AggregatorExt::Params::fromProto(const Protos::AggregatorE
     auto compile_aggregate_expressions = proto.compile_aggregate_expressions();
     auto min_count_to_compile_aggregate_expression = proto.min_count_to_compile_aggregate_expression();
     auto enable_lc_group_by_opt = proto.enable_lc_group_by_opt();
-    auto step = AggregatorExt::Params(
+    auto params = AggregatorExt::Params(
         src_header,
         keys,
         aggregates,
@@ -244,7 +244,7 @@ AggregatorExt::Params AggregatorExt::Params::fromProto(const Protos::AggregatorE
         intermediate_header,
         enable_lc_group_by_opt);
 
-    return step;
+    return params;
 }
 
 #if USE_EMBEDDED_COMPILER
