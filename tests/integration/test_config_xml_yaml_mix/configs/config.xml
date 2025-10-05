@@ -206,4 +206,7 @@
     </send_crash_reports>
 
     <mark_cache_size>123451234</mark_cache_size>
+    <optimizer>
+        <rpc_port>9090</rpc_port>
+    </optimizer>
 </clickhouse>
