@@ -91,9 +91,9 @@ StatisticsKeeperStore::StatisticsKeeperStore(ContextPtr context_)
     : WithMutableContext(context_->getGlobalContext()),
     log(getLogger("StatisticsKeeperStore"))
 {
-    std::string path_prefix = context_->getConfigRef().getString("optimizer.statistics_path", "");
+    std::string path_prefix = context_->getConfigRef().getString("optimizer.statistics_path", "/clickhouse/optimizer/statistics");
     if (path_prefix.empty())
-        throw Exception(ErrorCodes::BAD_ARGUMENTS, "KeeperMap is disabled because 'keeper_map_path_prefix' config is not defined");
+        throw Exception(ErrorCodes::BAD_ARGUMENTS, "optimizer.statistics_path can not be empty");
 
     statistics_path = path_prefix;
     statistics_data_path = fs::path(statistics_path)/ "data";

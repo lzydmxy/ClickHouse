@@ -2131,13 +2131,12 @@ try
         ProfileEvents::increment(ProfileEvents::ServerStartupMilliseconds, startup_watch.elapsedMilliseconds());
 
         std::vector<std::unique_ptr<BrpcServerHolder>> rpc_server_holders;
-        const char * rpc_port_name = "optimizer.rpc_port";
-        const char * statistics_path = "optimizer.statistics_path";
-        if (config().has(rpc_port_name))
+        // optimizer rpc port and statistics store
         {
+            const char * rpc_port_name = "optimizer.rpc_port";
             global_context->initializeOptimizerContext();
             global_context->getOptimizerContext()->setComplexQueryActive(true);
-            auto rpc_port = config().getInt(rpc_port_name);
+            auto rpc_port = config().getInt(rpc_port_name, 9090);
             LOG_DEBUG(log, "Start RPC server with port {}.", rpc_port);
             global_context->getOptimizerContext()->setRPCPort(rpc_port);
             for (auto & host : listen_hosts)
@@ -2155,16 +2154,8 @@ try
                 throw Exception(ErrorCodes::BRPC_EXCEPTION, "Failed to start rpc server in all listen_hosts.");
             }
 
-            if (has_zookeeper && config().has(statistics_path))
-            {
+            if (has_zookeeper)
                 global_context->getOptimizerContext()->setStatisticsKeeperStore(std::make_shared<QueryStatistics::StatisticsKeeperStore>(global_context), global_context);
-            }
-        }
-        else
-        {
-            LOG_WARNING(log, "Without the configuration item of optimizer.rpc_port when enable_optimizer is true, the RPC server cannot be started");
-            throw Exception(ErrorCodes::NO_ELEMENTS_IN_CONFIG, "No brpc servers started (add valid 'optimizer.rpc_port' "
-                            "to configuration file, or set enable_optimizer to false.)");
         }
 
         try

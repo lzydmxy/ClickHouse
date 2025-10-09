@@ -190,7 +190,7 @@ void OptimizerContext::setPlanCacheManager(std::unique_ptr<PlanCacheManager> && 
 PlanCacheManager* OptimizerContext::getPlanCacheManager()
 {
     //todo: zhangdongdong92, other feat: need a part shared lock
-    //auto lock = getLock(); // checked
+    //auto lock = getLock(); // checked 
     return shared->plan_cache_manager ? shared->plan_cache_manager.get() : nullptr;
 }
 
