@@ -36,26 +36,6 @@ set(_BRPC_BINARY_DIR "${ClickHouse_BINARY_DIR}/contrib/brpc")
 #option(BUILD_BRPC_TOOLS "Whether to build brpc tools" ON)
 #option(DOWNLOAD_GTEST "Download and build a fresh copy of googletest. Requires Internet access." ON)
 
-file(GLOB _BRPC_PATCH_FILES "${CMAKE_CURRENT_LIST_DIR}/patches/*.patch")
-if(_BRPC_PATCH_FILES)
-    foreach(PATCH_FILE ${_BRPC_PATCH_FILES})
-        message(STATUS "Applying brpc patch from patches: ${PATCH_FILE}")
-        execute_process(
-            COMMAND patch -N -p1 -d ${_BRPC_SOURCE_DIR} -i ${PATCH_FILE}
-            RESULT_VARIABLE PATCH_RESULT
-            OUTPUT_VARIABLE PATCH_OUTPUT
-            ERROR_VARIABLE PATCH_ERROR
-        )
-        if(PATCH_RESULT EQUAL 0)
-            message(STATUS "Apply brpc patch ${PATCH_FILE} successfully")
-        elseif(PATCH_RESULT EQUAL 1)
-            message(WARNING "Brpc patch ${PATCH_FILE} may have already been applied")
-        else()
-            message(FATAL_ERROR "Failed to apply brpc patch ${PATCH_FILE}:\n${PATCH_ERROR}")
-        endif()
-    endforeach()
-endif()
-
 # Enable MACOSX_RPATH. Run "cmake --help-policy CMP0042" for policy details.
 if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
