@@ -15,7 +15,6 @@
 #include <DataTypes/DataTypeFactory.h>
 #include <Query/Common/OptimizerContext.h>
 #include <Query/Exchange/QueryExchangeLog.h>
-#include <Query/Exchange/bRPC/BrpcProxy.h>
 #include <Query/Exchange/bRPC/WriteBufferFromBrpc.h>
 #include <Query/Exchange/ExchangeDataKey.h>
 #include <Query/Exchange/DataTrans/NativeChunkOutputStream.h>
@@ -52,7 +51,7 @@ BrpcRemoteBroadcastSender::~BrpcRemoteBroadcastSender()
             if(sender_stream_id != brpc::INVALID_STREAM_ID)
             {
                 LOG_TRACE(log, "Brpc proxy close sender stream {}", sender_stream_id);
-                BrpcProxy::getInstance().StreamClose(sender_stream_id);
+                brpc::StreamClose(sender_stream_id);
             }
         }
         if (trans_keys.empty())
@@ -157,9 +156,13 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_
     Stopwatch s;
     bool success = false;
     auto query_expiration_tp = optimizer_context->getQueryExpirationTimeStamp();
-    while (std::chrono::system_clock::now() < query_expiration_tp)
+    while (true)
     {
-        int rect_code = BrpcProxy::getInstance().StreamWrite(stream_id, io_buffer);
+        auto now = std::chrono::system_clock::now();
+        if (now >= query_expiration_tp)
+            break;
+
+        int rect_code = brpc::StreamWrite(stream_id, io_buffer);
 #ifndef NDEBUG
         // LOG_TRACE(log, "Stream write buffer stream_id {} ,data_key {} res code {} size {} ",
         //     stream_id, data_key, rect_code, io_buffer.size());
@@ -171,7 +174,8 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_
         }
         else if (rect_code == EAGAIN)
         {
-            int wait_res_code = BrpcProxy::getInstance().StreamWait(stream_id, query_expiration_tp);
+            auto due_time = chronoToTimespec(query_expiration_tp);
+            int wait_res_code = brpc::StreamWait(stream_id, &due_time);
             if (wait_res_code == EINVAL)
             {
                 // TODO: retain stream object before finish code is read.
@@ -191,7 +195,6 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_
         }
         else if (rect_code == 1011) //EOVERCROWDED   | 1011 | The server is overcrowded
         {
-            auto now = std::chrono::system_clock::now();
             if (now < query_expiration_tp)
             {
                 if (enable_sender_metrics)
@@ -206,10 +209,10 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_
                 stream_id, rect_code, data_key, retry_count, overcrowded_retry);
         }
         // stream finished
-        else if (rect_code == -1)  // TODO wujiancaho rect_code will never be -1
+        else if (rect_code == -1)
         {
             int stream_finished_code = 0;
-            auto rc = BrpcProxy::getInstance().StreamFinishedCode(stream_id, stream_finished_code);
+            auto rc = brpc::StreamFinishedCode(stream_id, stream_finished_code);
             // Stream is closed by remote peer and we can get finish code now
             if (rc == EINVAL)
                 return BroadcastStatus(BroadcastStatusCode::RECV_UNKNOWN_ERROR, false, "Stream is closed by peer");
@@ -236,7 +239,7 @@ BroadcastStatus BrpcRemoteBroadcastSender::sendIOBuffer(const butil::IOBuf & io_
         LOG_ERROR(log, "{}", msg);
         auto current_status = BroadcastStatus(BroadcastStatusCode::SEND_TIMEOUT, true, msg);
         int actual_status_code = BroadcastStatusCode::RUNNING;
-        int ret_code = BrpcProxy::getInstance().StreamFinish(stream_id, actual_status_code, BroadcastStatusCode::SEND_TIMEOUT, true);
+        int ret_code = brpc::StreamFinish(stream_id, actual_status_code, BroadcastStatusCode::SEND_TIMEOUT, true);
          if (ret_code != 0)
              return BroadcastStatus(static_cast<BroadcastStatusCode>(actual_status_code), false, "Stream Write receive finish request");
         // coverity[uninit_use_in_call]
@@ -256,14 +259,14 @@ BroadcastStatus BrpcRemoteBroadcastSender::finish(BroadcastStatusCode status_cod
     for (auto stream_id : sender_stream_ids)
     {
         int actual_status_code = status_code;
-        int ret_code = BrpcProxy::getInstance().StreamFinish(stream_id, actual_status_code, status_code, true);
+        int ret_code = brpc::StreamFinish(stream_id, actual_status_code, status_code, true);
         LOG_TRACE(log, "{} finished id {} code {} msg {}", getName(), stream_id, status_code, message);
         if (ret_code == 0)
         {
             is_modifer = true;
             // Close stream if all data are sent to make peer stream finished faster
             if (actual_status_code == BroadcastStatusCode::ALL_SENDERS_DONE)
-                BrpcProxy::getInstance().StreamClose(stream_id);
+                brpc::StreamClose(stream_id);
         }
         else
             // already has been changed

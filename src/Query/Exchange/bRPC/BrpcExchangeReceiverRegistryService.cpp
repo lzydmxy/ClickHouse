@@ -14,7 +14,6 @@
 #include <Query/Exchange/ExchangeUtils.h>
 #include <Query/Exchange/DataTrans/BroadcastSenderProxy.h>
 #include <Query/Exchange/bRPC/AsyncRegisterResult.h>
-#include <Query/Exchange/bRPC/BrpcProxy.h>
 #include <Query/Exchange/bRPC/BrpcRemoteBroadcastSender.h>
 
 namespace DB
@@ -90,7 +89,7 @@ void BrpcExchangeReceiverRegistryService::registerSenderToProxy(
     }
     catch (...)
     {
-        BrpcProxy::getInstance().StreamClose(sender_stream_id);
+        brpc::StreamClose(sender_stream_id);
         LOG_ERROR(log, "registerSenderToProxy failed for query_id:{} key:{} by exception: {}", query_id, *key, getCurrentExceptionMessage(false));
     }
 }
@@ -109,7 +108,7 @@ void BrpcExchangeReceiverRegistryService::acceptStream(
     try
     {
         sender->waitAccept(accept_timeout_ms);
-        if (BrpcProxy::getInstance().StreamAccept(&sender_stream_id, *cntl, &stream_options) != 0)
+        if (brpc::StreamAccept(&sender_stream_id, *cntl, &stream_options) != 0)
         {
             sender_stream_id = brpc::INVALID_STREAM_ID;
             String error_msg = "Fail to accept stream " + key->toString() + " for query " + query_id;

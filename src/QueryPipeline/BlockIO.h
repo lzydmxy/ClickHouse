@@ -2,7 +2,6 @@
 
 #include <functional>
 #include <QueryPipeline/QueryPipeline.h>
-#include <Query/Executor/QueryMPPCoordinator.h>
 
 
 namespace DB

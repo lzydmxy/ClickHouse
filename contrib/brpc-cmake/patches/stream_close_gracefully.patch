@@ -1,0 +1,244 @@
+diff --git a/src/brpc/policy/streaming_rpc_protocol.cpp b/src/brpc/policy/streaming_rpc_protocol.cpp
+index 85d2a7d5..b3f5f2b9 100644
+--- a/src/brpc/policy/streaming_rpc_protocol.cpp
++++ b/src/brpc/policy/streaming_rpc_protocol.cpp
+@@ -106,7 +106,8 @@ ParseResult ParseStreamingMessage(butil::IOBuf* source,
+         if (Socket::Address((SocketId)fm.stream_id(), &ptr) != 0) {
+             RPC_VLOG_IF(fm.frame_type() != FRAME_TYPE_RST 
+                             && fm.frame_type() != FRAME_TYPE_CLOSE
+-                            && fm.frame_type() != FRAME_TYPE_FEEDBACK)
++                            && fm.frame_type() != FRAME_TYPE_FEEDBACK
++                            && fm.frame_type() != FRAME_TYPE_FIN)
+                    << "Fail to find stream=" << fm.stream_id();
+             // It's normal that the stream is closed before receiving feedback frames from peer.
+             // In this case, RST frame should not be sent to peer, otherwise on-fly data can be lost.
+diff --git a/src/brpc/stream.cpp b/src/brpc/stream.cpp
+index 73d64051..a6871709 100644
+--- a/src/brpc/stream.cpp
++++ b/src/brpc/stream.cpp
+@@ -38,6 +38,7 @@ DECLARE_bool(usercode_in_pthread);
+ DECLARE_int64(socket_max_streams_unconsumed_bytes);
+ 
+ const static butil::IOBuf *TIMEOUT_TASK = (butil::IOBuf*)-1L;
++const static int32_t RUNNING = 0;
+ 
+ Stream::Stream() 
+     : _host_socket(NULL)
+@@ -74,6 +75,7 @@ int Stream::Create(const StreamOptions &options,
+     s->_fake_socket_weak_ref = NULL;
+     s->_connected = false;
+     s->_options = options;
++    s->_finish_status_code = RUNNING;
+     s->_closed = false;
+     s->_error_code = 0;
+     s->_cur_buf_size = options.max_buf_size > 0 ? options.max_buf_size : 0;
+@@ -348,6 +350,19 @@ void Stream::SetRemoteConsumed(size_t new_remote_consumed) {
+     bthread_id_list_destroy(&tmplist);
+ }
+ 
++int Stream::SetFinStatusCode(int32_t fin_status_code) {
++    int expected_value = RUNNING;
++    if (_finish_status_code.compare_exchange_strong(
++            expected_value, fin_status_code, butil::memory_order_relaxed, butil::memory_order_relaxed)) {
++        return 0;
++    }
++    return -1;
++}
++
++int Stream::GetFinStatusCode() {
++    return _finish_status_code.load(butil::memory_order_relaxed);
++}
++
+ void* Stream::RunOnWritable(void* arg) {
+     WritableMeta *wm = (WritableMeta*)arg;
+     wm->on_writable(wm->id, wm->arg, wm->error_code);
+@@ -456,6 +471,9 @@ int Stream::OnReceived(const StreamFrameMeta& fm, butil::IOBuf *buf, Socket* soc
+         CHECK(buf->empty());
+         break;
+     case FRAME_TYPE_DATA:
++        if(GetFinStatusCode() > 0) {
++            break;
++        }
+         if (_pending_buf != NULL) {
+             _pending_buf->append(*buf);
+             buf->clear();
+@@ -483,6 +501,17 @@ int Stream::OnReceived(const StreamFrameMeta& fm, butil::IOBuf *buf, Socket* soc
+         // TODO:: See the comments in Consume
+         Close(0, "Received CLOSE frame");
+         break;
++    case FRAME_TYPE_FIN:
++        RPC_VLOG << "stream=" << id() << " received fin frame";
++        if (GetFinStatusCode() == 0) {
++            if (_options.handler != NULL) {
++                _options.handler->on_finished(id(), fm.fin_status_code());
++            }
++            else {
++                SetFinStatusCode(fm.fin_status_code());
++            }
++        }
++        break;
+     case FRAME_TYPE_UNKNOWN:
+         RPC_VLOG << "Received unknown frame";
+         return -1;
+@@ -595,6 +624,20 @@ void Stream::SendFeedback() {
+     WriteToHostSocket(&out);
+ }
+ 
++void Stream::SendStreamFin(int32_t fin_status_code) {
++    if (!_connected) {
++        return;
++    }
++    StreamFrameMeta fm;
++    fm.set_stream_id(_remote_settings.stream_id());
++    fm.set_frame_type(FRAME_TYPE_FIN);
++    fm.set_source_stream_id(id());
++    fm.set_fin_status_code(fin_status_code);
++    butil::IOBuf out;
++    policy::PackStreamMessage(&out, fm, NULL);
++    WriteToHostSocket(&out);
++}
++
+ int Stream::SetHostSocket(Socket *host_socket) {
+     if (_host_socket != NULL) {
+         CHECK(false) << "SetHostSocket has already been called";
+@@ -694,6 +737,23 @@ int Stream::SetFailed(const StreamIds& ids, int error_code, const char* reason_f
+     return 0;
+ }
+ 
++int Stream::SetFinished(StreamId stream_id, int32_t &actual_fin_code, int32_t expected_fin_code, bool finish_remote_stream) {
++    SocketUniquePtr ptr;
++    if (Socket::AddressFailedAsWell(stream_id, &ptr) == -1) {
++        return EINVAL;
++    }
++    Stream *s = (Stream *) ptr->conn();
++    if (s->SetFinStatusCode(expected_fin_code) != 0) {
++      actual_fin_code = s->_finish_status_code.load(butil::memory_order_relaxed);
++      return -1;
++    }
++    if (finish_remote_stream && !ptr->Failed()) {
++        s->SendStreamFin(expected_fin_code);
++    }
++    actual_fin_code = expected_fin_code;
++    return 0;
++}
++
+ void Stream::HandleRpcResponse(butil::IOBuf* response_buffer) {
+     CHECK(!_remote_settings.IsInitialized());
+     CHECK(_host_socket != NULL);
+@@ -725,6 +785,9 @@ int StreamWrite(StreamId stream_id, const butil::IOBuf &message,
+         return EINVAL;
+     }
+     Stream* s = (Stream*)ptr->conn();
++    if (s->GetFinStatusCode() != RUNNING) {
++        return -1;
++    }
+     const int rc = s->AppendIfNotFull(message, options);
+     if (rc == 0) {
+         return 0;
+@@ -769,6 +832,20 @@ int StreamClose(StreamId stream_id) {
+     return Stream::SetFailed(stream_id, 0, "Local close");
+ }
+ 
++int StreamFinish(StreamId stream_id, int32_t &actual_fin_code, int32_t expected_fin_code, bool finish_remote_stream) {
++    return Stream::SetFinished(stream_id, actual_fin_code, expected_fin_code, finish_remote_stream);
++}
++
++int StreamFinishedCode(StreamId stream_id, int32_t &fin_status_code) {
++    SocketUniquePtr ptr;
++    if (Socket::AddressFailedAsWell(stream_id, &ptr) == -1) {
++        return EINVAL;
++    }
++    Stream *s = (Stream *) ptr->conn();
++    fin_status_code = s->GetFinStatusCode();
++    return 0;
++}
++
+ int StreamCreate(StreamId *request_stream, Controller &cntl,
+                  const StreamOptions* options) {
+     if (request_stream == NULL) {
+diff --git a/src/brpc/stream.h b/src/brpc/stream.h
+index 36c0def7..e3558f9d 100644
+--- a/src/brpc/stream.h
++++ b/src/brpc/stream.h
+@@ -50,8 +50,11 @@ public:
+     // when the stream is closed abnormally.
+     virtual void on_failed(StreamId id, int error_code,
+                            const std::string& error_text) {}
++    virtual void on_finished(StreamId id, int32_t finish_status_code) = 0;
+ };
+ 
++typedef std::shared_ptr<StreamInputHandler> StreamInputHandlerSharedPtr;
++
+ struct StreamOptions {
+     StreamOptions()
+         : min_buf_size(1024 * 1024)
+@@ -84,7 +87,7 @@ struct StreamOptions {
+     // Handle input message, if handler is NULL, the remote side is not allowed to
+     // write any message, who will get EBADF on writting
+     // default: NULL
+-    StreamInputHandler* handler;
++    StreamInputHandlerSharedPtr handler;
+ };
+ 
+ struct StreamWriteOptions {
+@@ -159,6 +162,10 @@ void StreamWait(StreamId stream_id, const timespec *due_time,
+ // This function could be called multiple times without side-effects
+ int StreamClose(StreamId stream_id);
+ 
++int StreamFinish(StreamId stream_id, int32_t &actual_fin_code, int32_t expected_fin_code, bool finish_remote_stream);
++
++int StreamFinishedCode(StreamId stream_id, int32_t& fin_status_code);
++
+ namespace detail {
+ 
+ struct StreamIdTraits {
+diff --git a/src/brpc/stream_impl.h b/src/brpc/stream_impl.h
+index 66e0d719..4396b672 100644
+--- a/src/brpc/stream_impl.h
++++ b/src/brpc/stream_impl.h
+@@ -65,6 +65,9 @@ public:
+         __attribute__ ((__format__ (__printf__, 3, 4)));
+     static int SetFailed(const StreamIds& ids, int error_code, const char* reason_fmt, ...)
+     __attribute__ ((__format__ (__printf__, 3, 4)));
++    static int SetFinished(StreamId stream_id, int32_t &actual_fin_code, int32_t expected_fin_code, bool finish_remote_stream);
++    int SetFinStatusCode(int32_t fin_status_code);
++    inline int GetFinStatusCode();
+     void Close(int error_code, const char* reason_fmt, ...)
+         __attribute__ ((__format__ (__printf__, 3, 4)));
+     int ShareHostSocket(Stream& other_stream);
+@@ -82,6 +85,7 @@ friend struct butil::DefaultDeleter<Stream>;
+     void Wait(void (*on_writable)(StreamId, void*, int), void* arg, 
+               const timespec* due_time, bool new_thread, bthread_id_t *join_id);
+     void SendFeedback();
++    void SendStreamFin(int32_t finish_code);
+     void StartIdleTimer();
+     void StopIdleTimer();
+     void HandleRpcResponse(butil::IOBuf* response_buffer);
+@@ -124,6 +128,7 @@ friend struct butil::DefaultDeleter<Stream>;
+     size_t _produced;
+     size_t _remote_consumed;
+     size_t _cur_buf_size;
++    butil::atomic<int32_t> _finish_status_code;
+     bthread_id_list_t _writable_wait_list;
+ 
+     int64_t _local_consumed;
+diff --git a/src/brpc/streaming_rpc_meta.proto b/src/brpc/streaming_rpc_meta.proto
+index 5474583d..7b571493 100644
+--- a/src/brpc/streaming_rpc_meta.proto
++++ b/src/brpc/streaming_rpc_meta.proto
+@@ -34,6 +34,7 @@ enum FrameType {
+     FRAME_TYPE_CLOSE = 2;
+     FRAME_TYPE_DATA = 3;
+     FRAME_TYPE_FEEDBACK= 4;
++    FRAME_TYPE_FIN = 5;
+ }
+ 
+ message StreamFrameMeta {
+@@ -42,6 +43,7 @@ message StreamFrameMeta {
+     optional FrameType frame_type = 3;
+     optional bool has_continuation = 4;
+     optional Feedback feedback = 5;
++    optional int32 fin_status_code = 6;
+ }
+ 
+ message Feedback {
