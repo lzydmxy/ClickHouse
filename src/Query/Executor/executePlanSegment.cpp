@@ -1,9 +1,8 @@
 #include "executePlanSegment.h"
+
 #include <brpc/callback.h>
 #include <brpc/controller.h>
 #include <butil/iobuf.h>
-#include <Core/Defines.h>
-#include <Core/Types.h>
 #include <Common/logger_useful.h>
 #include <Interpreters/Context.h>
 #include <Interpreters/Context_fwd.h>
@@ -14,7 +13,7 @@
 #include <Query/Executor/PlanSegmentReport.h>
 #include <Query/Executor/RuntimeFilter/RuntimeFilterManager.h>
 #include <Query/Exchange/RpcChannelPool.h>
-#include <Query/Exchange/bRPC/WriteBufferFromBrpc.h>
+#include <Query/Executor/WorkerStatusManager.h>
 
 namespace DB
 {
@@ -101,11 +100,11 @@ void executePlanSegmentInternal(
     /// Because of CurrentThread::attachQueryForLog(query_) in ProcessList::insert() method, asynchronous execution is not supported
     if (async)
     {
-        ThreadFromGlobalPool async_thread([executor = std::move(executor), inform_success_status = inform_success_status]() mutable {
-            auto result = executor->execute();
-            executor.reset(); /// release executor
+        ThreadFromGlobalPool async_thread([executor_ = std::move(executor), inform_success_status_ = inform_success_status]() mutable {
+            auto result = executor_->execute();
+            executor_.reset(); /// release executor
             if (result)
-                reportExecutionResult(*result, inform_success_status);
+                reportExecutionResult(*result, inform_success_status_);
         });
         async_thread.detach();
         return;
@@ -123,12 +122,20 @@ static void OnSendPlanSegmentCallback(
     RPlanSegmentResponse * response,
     brpc::Controller * cntl,
     std::shared_ptr<RpcClient> rpc_channel,
+    WorkerStatusManagerPtr worker_status_manager,
     AsyncContextPtr async_context,
     WorkerID worker_id)
 {
     std::unique_ptr<brpc::Controller> cntl_guard(cntl);
     std::unique_ptr<RPlanSegmentResponse> response_guard(response);
 
+    if (worker_status_manager)
+    {
+        if (cntl->Failed())
+            worker_status_manager->setWorkerNodeDead(worker_id, cntl->ErrorCode());
+        else if (response->has_worker_resource_data())
+            worker_status_manager->updateWorkerNode(response->worker_resource_data(), WorkerStatusManager::UpdateSource::ComeFromWorker);
+    }
     rpc_channel->checkAliveWithController(*cntl);
     AsyncContext::AsyncResult result;
     if (cntl->Failed())
@@ -201,6 +208,7 @@ void executePlanSegmentRemotelyWithPreparedBuf(
     request.set_parallel_id(execution_info.parallel_id);
     request.set_plan_segment_id(segment_id);
     request.set_attempt_id(execution_info.attempt_id);
+    HostWithPorts::fillHostWithPorts(context.getOptimizerContext()->getHostWithPorts(), *request.mutable_coordinator_host_ports());
     if (execution_info.source_task_filter.isValid())
         *request.mutable_source_task_filter() = execution_info.source_task_filter.toProto();
 
@@ -237,7 +245,7 @@ void executePlanSegmentRemotelyWithPreparedBuf(
     cntl->request_attachment().append(attachment.movable());
     cntl->set_timeout_ms(opt_settings.send_plan_segment_timeout_ms.totalMilliseconds());
     google::protobuf::Closure * done = brpc::NewCallback(
-        &OnSendPlanSegmentCallback, response, cntl, std::move(rpc_channel), async_context, worker_id);
+        &OnSendPlanSegmentCallback, response, cntl, std::move(rpc_channel), opt_context->getWorkerStatusManager(), async_context, worker_id);
     async_context->addCallId(call_id);
     manager_stub.executePlanSegment(cntl, &request, response, done);
 }
@@ -264,6 +272,7 @@ void executePlanSegmentsRemotely(
 
     butil::IOBuf attachment;
     request.set_query_common_buf_size(query_common_buf.size());
+    HostWithPorts::fillHostWithPorts(context.getOptimizerContext()->getHostWithPorts(), *request.mutable_coordinator_host_ports());
     attachment.append(query_common_buf);
     request.set_query_settings_buf_size(query_settings_buf.size());
     if (!query_settings_buf.empty())
@@ -284,7 +293,7 @@ void executePlanSegmentsRemotely(
     auto call_id = cntl->call_id();
     cntl->request_attachment().append(attachment.movable());
     google::protobuf::Closure * done = brpc::NewCallback(
-        &OnSendPlanSegmentCallback, response, cntl, std::move(rpc_channel), async_context, worker_id);
+        &OnSendPlanSegmentCallback, response, cntl, std::move(rpc_channel), opt_context->getWorkerStatusManager(), async_context, worker_id);
     async_context->addCallId(call_id);
     manager_stub.executePlanSegments(cntl, &request, response, done);
 }

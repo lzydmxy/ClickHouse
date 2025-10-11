@@ -108,6 +108,7 @@
 #include <filesystem>
 #include <unordered_set>
 #include <Query/Executor/BrpcServerHolder.h>
+#include <Query/Executor/WorkerStatusManager.h>
 #include <Query/Exchange/bRPC/BrpcApplication.h>
 #include <Query/Statistics/StatisticsKeeperStore.h>
 
@@ -2156,6 +2157,11 @@ try
 
             if (has_zookeeper)
                 global_context->getOptimizerContext()->setStatisticsKeeperStore(std::make_shared<QueryStatistics::StatisticsKeeperStore>(global_context), global_context);
+
+            global_context->getOptimizerContext()->setWorkerStatusManager(std::make_shared<WorkerStatusManager>(global_context));
+            auto local_address = getLocalAddress(global_context);
+            HostWithPorts host_with_ports{local_address.getHostName(), local_address.getExchangePort(), global_context->getTCPPort(), static_cast<UInt16>(global_context->getConfigRef().getUInt("http_port", 0))};
+            global_context->getOptimizerContext()->setHostWithPorts(host_with_ports);
         }
 
         try

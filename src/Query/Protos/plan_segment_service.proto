@@ -78,6 +78,7 @@ message PlanSegmentRequest {
     SourceTaskFilter source_task_filter = 11;
     repeated PlanSegmentPartitionSource sources = 12;
     uint32 worker_epoch = 13;
+    HostWithPorts coordinator_host_ports = 14;
 }
 
 message PlanSegmentHeader {
@@ -94,13 +95,14 @@ message PlanSegmentsRequest {
     uint32 query_common_buf_size = 3;
     uint32 query_settings_buf_size = 4;
     repeated PlanSegmentHeader headers = 5;
+    HostWithPorts coordinator_host_ports = 6;
 }
 
 message PlanSegmentResponse {
     int32 status_code = 1;
     string message = 2;
-    string address = 3;
-    HostWithPorts host_ports = 4;
+    optional WorkerNodeResourceData worker_resource_data = 3;
+    string address = 4;
     string exception = 5;
 }
 

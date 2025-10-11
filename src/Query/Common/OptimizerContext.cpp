@@ -216,11 +216,14 @@ StatisticsKeeperStorePtr OptimizerContext::getStatisticsKeeperStore()
     return shared->statistics_keeper_store ? shared->statistics_keeper_store : nullptr;
 }
 
-HostWithPorts OptimizerContext::getHostWithPorts() const
+void OptimizerContext::setHostWithPorts(HostWithPorts host_with_ports)
 {
-    //todo: zhangdongdong92, other feat: need impl, now just a fake impl
-    HostWithPorts host;
-    return host;
+    shared->host_with_ports = host_with_ports;
+}
+
+const HostWithPorts & OptimizerContext::getHostWithPorts() const
+{
+    return shared->host_with_ports;
 }
 
 void OptimizerContext::setTransactionID(UInt64 txt_id_)
@@ -261,6 +264,18 @@ StatisticsMemoryStorePtr OptimizerContext::getStatisticsMemoryStore()
         this->stats_memory_store = std::make_shared<QueryStatistics::StatisticsMemoryStore>();
     }
     return stats_memory_store;
+}
+
+WorkerStatusManagerPtr OptimizerContext::getWorkerStatusManager() const
+{
+    std::lock_guard lock(mutex);
+    return shared->worker_status_manager;
+}
+
+void OptimizerContext::setWorkerStatusManager(WorkerStatusManagerPtr worker_status_manager)
+{
+    std::lock_guard lock(mutex);
+    shared->worker_status_manager = std::move(worker_status_manager);
 }
 
 void OptimizerContext::setComplexQueryActive(bool complex_query_active_)

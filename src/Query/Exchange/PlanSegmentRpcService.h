@@ -8,6 +8,7 @@
 #include <Interpreters/ProcessorsProfileLog.h>
 #include <Query/ProtosHelper/QueryProto.h>
 #include <Query/Common/ResourceMonitor.h>
+#include <Query/Common/WorkerNodeResourceData.h>
 #include <Query/Executor/QueryMPPCoordinator.h>
 #include <Query/Executor/QueryMPPManager.h>
 #include <Query/Executor/PlanSegmentProcessList.h>
@@ -50,12 +51,12 @@ public:
     }
     virtual ~ResourceMonitorTimer() override {}
     virtual void run() override;
-    //WorkerNodeResourceData getResourceData() const;
+    WorkerNodeResourceData getResourceData() const;
     void updateResourceData();
 
 private:
     ResourceMonitor resource_monitor;
-    //WorkerNodeResourceData cached_resource_data;
+    WorkerNodeResourceData cached_resource_data;
     mutable std::mutex resource_data_mutex;
     LoggerPtr log;
 };

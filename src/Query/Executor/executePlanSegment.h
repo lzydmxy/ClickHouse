@@ -2,6 +2,7 @@
 #include <brpc/controller.h>
 #include <Interpreters/Context_fwd.h>
 #include <QueryPipeline/BlockIO.h>
+#include <Query/Common/WorkerID.h>
 #include <Query/ProtosHelper/AddressInfo.h>
 #include <Query/ProtosHelper/QueryProto.h>
 #include <Query/ProtosHelper/RPCHelpers.h>

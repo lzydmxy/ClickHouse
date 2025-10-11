@@ -6,27 +6,30 @@ namespace DB
 
 struct WorkerID
 {
-    String cluster;
-    String id;
-    const String toString() const
+    WorkerID(std::string host_, UInt16 rpc_port_) : host(host_), rpc_port(rpc_port_) { }
+    WorkerID() = default;
+
+    std::string host;
+    UInt16 rpc_port{0};
+
+    String toString() const
     {
-        return cluster + "." + id;
+        return host + ":" + std::to_string(rpc_port);
     }
 
     inline bool operator==(WorkerID const & rhs) const
     {
-        return (cluster == rhs.cluster && id == rhs.id);
+        return host == rhs.host && rpc_port == rhs.rpc_port;
     }
 };
 
 struct WorkerIDHash
 {
-    std::size_t operator()(const WorkerID & workderID) const
+    std::size_t operator()(const WorkerID & worker_id) const
     {
-        return std::hash<String>()(workderID.toString());
+        return std::hash<String>()(worker_id.toString());
     }
 };
 
-using HostIDSet = std::unordered_set<WorkerID, WorkerIDHash>;
-
+using WorkerNodeSet = std::unordered_set<WorkerID, WorkerIDHash>;
 }

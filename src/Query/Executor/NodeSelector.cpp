@@ -13,6 +13,8 @@
 #include <Query/ProtosHelper/QueryProto.h>
 #include <Query/ProtosHelper/ExchangeMode.h>
 
+#include "WorkerStatusManager.h"
+
 namespace DB
 {
 namespace ErrorCodes
@@ -51,8 +53,12 @@ ClusterNodes::ClusterNodes(String cluster_name_, ContextPtr & query_context) : c
         return;
     }
 
-    const auto shards_addresses = cluster->getShardsAddresses();
-    const auto shards = cluster->getShardsInfo();
+    auto shards_addresses = cluster->getShardsAddresses();
+    if (auto worker_status_manager = query_context->getOptimizerContext()->getWorkerStatusManager())
+    {
+        shards_addresses = worker_status_manager->selectHealthNode(shards_addresses);
+    }
+
     for (const auto index : rank_worker_ids)
     {
         const Cluster::Address * selected_address = NULL;
