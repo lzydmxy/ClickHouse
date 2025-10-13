@@ -111,7 +111,7 @@ void WorkerStatusManager::updateWorkerNode(const Protos::WorkerNodeResourceData 
                 val.circuit_break.breaker_status = WorkerCircuitBreakerStatus::HalfOpen;
                 val.circuit_break.fail_count = 0;
             }
-            if (val.circuit_break.breaker_status == WorkerCircuitBreakerStatus::HalfOpen && source == UpdateSource::ComeFromWorker)
+            if (val.circuit_break.breaker_status == WorkerCircuitBreakerStatus::HalfOpen)
             {
                 LOG_DEBUG(log, "worker: {} is back, close circuit breaker.", id.toString());
                 val.circuit_break.breaker_status = WorkerCircuitBreakerStatus::Close;
