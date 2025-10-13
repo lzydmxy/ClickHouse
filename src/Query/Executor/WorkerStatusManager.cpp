@@ -42,7 +42,7 @@ std::vector<std::vector<Cluster::Address>> WorkerStatusManager::selectHealthNode
             bool health = false;
             // auto now = std::chrono::system_clock::now();
 
-            worker_status_map.update(worker_id, [&](WorkerStatus & val) {
+            worker_status_map.updateEmplaceIfNotExist(worker_id, [&](WorkerStatus & val) {
                 exist = true;
                 if (likely(val.circuit_break.breaker_status == WorkerCircuitBreakerStatus::Close))
                 {
@@ -97,6 +97,8 @@ void WorkerStatusManager::updateWorkerNode(const Protos::WorkerNodeResourceData 
 {
     auto id = getWorkerID(resource_info);
     auto now = std::chrono::system_clock::now();
+    LOG_TRACE(log, "update worker id {} : {}", id.toString(), resource_info.ShortDebugString());
+
     if (source == UpdateSource::ComeFromCoordinator)
     {
         worker_status_map.update(id, [&](WorkerStatus & val) {
@@ -124,7 +126,6 @@ void WorkerStatusManager::updateWorkerNode(const Protos::WorkerNodeResourceData 
     ResourceStatus resource_status(
         resource_info, recommended_concurrent_query_limit.load(std::memory_order_relaxed), health_worker_cpu_usage_threshold.load(std::memory_order_relaxed));
 
-    LOG_TRACE(log, "update worker id {} : {}", id.toString(), resource_info.ShortDebugString());
     worker_status_map.updateEmplaceIfNotExist(
         id,
         [id, this, &now, &resource_status, source](WorkerStatus & val) {
@@ -170,7 +171,7 @@ void WorkerStatusManager::setWorkerNodeDead(const WorkerID & key, int error_code
     worker_status_map.update(key, [&key, this, error_code, &now](WorkerStatus & val) {
         if (val.circuit_break.breaker_status == WorkerCircuitBreakerStatus::Open)
         {
-            LOG_TRACE(log, "worker: {}'s circuit break is open, wait RM to restart this worker.", key.toString());
+            LOG_TRACE(log, "worker: {}'s circuit break is open, wait to restart this worker", key.toString());
             return;
         }
         size_t error_weight = 1;
@@ -187,15 +188,15 @@ void WorkerStatusManager::setWorkerNodeDead(const WorkerID & key, int error_code
                 break;
         }
         val.circuit_break.fail_count += error_weight;
+        LOG_TRACE(log, "worker: {}'s circuit break fail_count {}", key.toString(), val.circuit_break.fail_count);
         if (val.circuit_break.fail_count > circuit_breaker_open_error_threshold.load(std::memory_order_relaxed)
             || val.circuit_break.breaker_status == WorkerCircuitBreakerStatus::HalfOpen)
         {
-            LOG_TRACE(log, "worker: {}'s fail_count {} open circuit break.", key.toString(), val.circuit_break.fail_count);
+            LOG_WARNING(log, "worker: {}'s fail_count {} open circuit break.", key.toString(), val.circuit_break.fail_count);
             val.circuit_break.breaker_status = WorkerCircuitBreakerStatus::Open;
             val.circuit_break.fail_count = 0;
             val.circuit_break.is_checking = false;
             val.circuit_break.open_time = now;
-            LOG_TRACE(log, "add unhealth worker {}", key.toString());
         }
     });
 }

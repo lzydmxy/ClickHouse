@@ -167,7 +167,7 @@ public:
 
     static WorkerID getWorkerID(const Protos::WorkerNodeResourceData & resource_info)
     {
-        return WorkerID{resource_info.host_ports().hostname(), static_cast<uint16_t>(resource_info.host_ports().rpc_port())};
+        return WorkerID{resource_info.host_ports().host(), static_cast<uint16_t>(resource_info.host_ports().rpc_port())};
     }
 
 private:
