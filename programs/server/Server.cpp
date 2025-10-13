@@ -2131,6 +2131,64 @@ try
         ProfileEvents::increment(ProfileEvents::ServerStartupMilliseconds, startup_watch.elapsedMilliseconds());
 
         std::vector<std::unique_ptr<BrpcServerHolder>> rpc_server_holders;
+        // Validate unique rpc_port per host within remote_servers clusters before starting RPC server
+        if (config().has("remote_servers"))
+        {
+            int default_rpc_port_for_replica = config().getInt("optimizer.rpc_port", 9090);
+            Poco::Util::AbstractConfiguration::Keys clusters;
+            config().keys("remote_servers", clusters);
+
+            for (const auto & cluster_name : clusters)
+            {
+                // host -> set of rpc ports
+                std::vector<std::pair<std::string, std::unordered_set<int>>> host_to_rpc_ports;
+
+                // enumerate shards
+                for (size_t shard_idx = 0;; ++shard_idx)
+                {
+                    std::string shard_path = fmt::format("remote_servers.{}.shard[{}]", cluster_name, shard_idx);
+                    if (!config().has(shard_path))
+                        break;
+
+                    // enumerate replicas
+                    for (size_t replica_idx = 0;; ++replica_idx)
+                    {
+                        std::string replica_path = fmt::format("{}.replica[{}]", shard_path, replica_idx);
+                        if (!config().has(replica_path))
+                            break;
+
+                        std::string host = config().getString(replica_path + ".host", "");
+                        if (host.empty())
+                            continue;
+
+                        int rpc_port_value = default_rpc_port_for_replica;
+                        std::string replica_rpc_port_key = replica_path + ".rpc_port";
+                        if (config().has(replica_rpc_port_key))
+                            rpc_port_value = config().getInt(replica_rpc_port_key);
+                        // LOG_DEBUG(log, "replica path {}: {}:{}", replica_path, host, rpc_port_value);
+                        // find or create host entry
+                        auto it = std::find_if(host_to_rpc_ports.begin(), host_to_rpc_ports.end(),
+                                               [&host](const auto & kv){ return kv.first == host; });
+                        if (it == host_to_rpc_ports.end())
+                        {
+                            host_to_rpc_ports.emplace_back(host, std::unordered_set<int>{});
+                            it = host_to_rpc_ports.end();
+                            --it;
+                        }
+
+                        // check duplicate rpc_port on the same host within the same cluster
+                        if (!it->second.insert(rpc_port_value).second)
+                        {
+                            throw Exception(
+                                ErrorCodes::INVALID_CONFIG_PARAMETER,
+                                "RPC port conflict detected: cluster='{}', host='{}', rpc_port='{}'. "
+                                "Please configure different <rpc_port> under each <replica>.",
+                                cluster_name, host, rpc_port_value);
+                        }
+                    }
+                }
+            }
+        }
         // optimizer rpc port and statistics store
         {
             const char * rpc_port_name = "optimizer.rpc_port";
