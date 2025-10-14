@@ -34,6 +34,7 @@ std::vector<std::vector<Cluster::Address>> WorkerStatusManager::selectHealthNode
     size_t shard_index = 0;
     for (const auto & shard : shards_addresses)
     {
+        shard_index++;
         health_nodes.emplace_back(std::vector<Cluster::Address>());
         for (const auto & address : shard)
         {
@@ -111,7 +112,7 @@ void WorkerStatusManager::updateWorkerNode(const Protos::WorkerNodeResourceData 
                 val.circuit_break.breaker_status = WorkerCircuitBreakerStatus::HalfOpen;
                 val.circuit_break.fail_count = 0;
             }
-            if (val.circuit_break.breaker_status == WorkerCircuitBreakerStatus::HalfOpen)
+            else if (val.circuit_break.breaker_status == WorkerCircuitBreakerStatus::HalfOpen)
             {
                 LOG_DEBUG(log, "worker: {} is back, close circuit breaker.", id.toString());
                 val.circuit_break.breaker_status = WorkerCircuitBreakerStatus::Close;
@@ -152,7 +153,7 @@ void WorkerStatusManager::updateWorkerNode(const Protos::WorkerNodeResourceData 
                 val.circuit_break.breaker_status = WorkerCircuitBreakerStatus::HalfOpen;
                 val.circuit_break.fail_count = 0;
             }
-            if (val.circuit_break.breaker_status == WorkerCircuitBreakerStatus::HalfOpen && source == UpdateSource::ComeFromWorker)
+            else if (val.circuit_break.breaker_status == WorkerCircuitBreakerStatus::HalfOpen && source == UpdateSource::ComeFromWorker)
             {
                 LOG_DEBUG(log, "worker: {} is back, close circuit breaker.", id.toString());
                 val.circuit_break.breaker_status = WorkerCircuitBreakerStatus::Close;
