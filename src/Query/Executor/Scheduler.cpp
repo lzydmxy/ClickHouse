@@ -29,8 +29,8 @@ void Scheduler::dispatchOrCollectTask(PlanSegment * plan_segment_ptr, const Segm
     if (worker_node.type != NodeType::Local)
     {
         address = worker_node.address;
-        worker_id.cluster = cluster_nodes.cluster_name;
-        worker_id.id = worker_node.id;
+        worker_id.host = worker_node.address.getHostName();
+        worker_id.rpc_port = worker_node.address.getExchangePort();
     }
 
     if (batch_schedule)

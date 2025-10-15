@@ -1,26 +1,28 @@
 #include "PlanSegmentRpcService.h"
-#include <brpc/controller.h>
-#include <butil/iobuf.h>
-#include <base/types.h>
-#include <Common/Exception.h>
-#include <IO/Progress.h>
-#include <Interpreters/Context_fwd.h>
-#include <Interpreters/ProcessorsProfileLog.h>
+
 #include <Access/AccessControl.h>
 #include <Access/User.h>
-#include <Query/Common/QueryCommon.h>
+#include <IO/Progress.h>
+#include <Interpreters/Context_fwd.h>
+#include <Interpreters/InternalTextLogsQueue.h>
+#include <Interpreters/ProcessorsProfileLog.h>
 #include <Query/Common/OptimizerContext.h>
 #include <Query/Common/OptimizerSettings.h>
-#include <Query/ProtosHelper/AddressInfo.h>
-#include <Query/ProtosHelper/ProgressHelper.h>
-#include <Query/Executor/ProfileLogHub.h>
-#include <Query/Executor/SegmentScheduler.h>
+#include <Query/Common/QueryCommon.h>
+#include <Query/Exchange/bRPC/ReadBufferFromBrpc.h>
 #include <Query/Executor/PlanSegmentInstance.h>
 #include <Query/Executor/PlanSegmentReport.h>
+#include <Query/Executor/ProfileLogHub.h>
+#include <Query/Executor/SegmentScheduler.h>
 #include <Query/Executor/executePlanSegment.h>
-#include <Query/Exchange/bRPC/ReadBufferFromBrpc.h>
-#include <Interpreters/InternalTextLogsQueue.h>
+#include <Query/ProtosHelper/AddressInfo.h>
+#include <Query/ProtosHelper/ProgressHelper.h>
 #include <Query/ProtosHelper/ProtosSerDerHelper.h>
+#include <base/types.h>
+#include <brpc/controller.h>
+#include <butil/iobuf.h>
+#include <Common/Exception.h>
+#include "Query/Executor/WorkerStatusManager.h"
 
 namespace DB
 {
@@ -40,7 +42,16 @@ RepeatedTimerTask::RepeatedTimerTask(BackgroundSchedulePool &pool_, UInt64 inter
     task = pool_.createTask(name_, [this]{ run(); });
 }
 
-void ResourceMonitorTimer::updateResourceData() {
+WorkerNodeResourceData ResourceMonitorTimer::getResourceData() const {
+    std::lock_guard lock(resource_data_mutex);
+    return cached_resource_data;
+}
+
+void ResourceMonitorTimer::updateResourceData()
+{
+    auto data = resource_monitor.createResourceData();
+    std::lock_guard lock(resource_data_mutex);
+    cached_resource_data = data;
 }
 
 void ResourceMonitorTimer::run() {
@@ -421,8 +432,16 @@ void PlanSegmentRpcService::executePlanSegment(
             request->plan_segment_id(),
             execution_info,
             std::make_shared<butil::IOBuf>(plan_segment_buf.movable()));
-        //report_metrics_timer->getResourceData().fillProto(*response->mutable_worker_resource_data());
-        //LOG_TRACE(log, "adaptive scheduler worker status: {}", response->worker_resource_data().ShortDebugString());
+
+        if (auto worker_status_manager = optimizer_context->getWorkerStatusManager())
+        {
+            Protos::WorkerNodeResourceData resource_info;
+            HostWithPorts::fillHostWithPorts(HostWithPorts::createHostWithPorts(request->coordinator_host_ports()), *resource_info.mutable_host_ports());
+            worker_status_manager->updateWorkerNode(resource_info, WorkerStatusManager::UpdateSource::ComeFromCoordinator);
+        }
+
+        report_metrics_timer->getResourceData().fillProto(*response->mutable_worker_resource_data());
+        LOG_TRACE(log, "adaptive scheduler worker status: {}", response->worker_resource_data().ShortDebugString());
     }
     catch (...)
     {
@@ -466,7 +485,6 @@ void PlanSegmentRpcService::executePlanSegments(
         auto execution_address = std::make_shared<AddressInfo>(request->execution_address());
         auto first_query_context
             = createQueryContext(context, query_common, cntl->remote_side().port, *first_instance_id);
-        auto optimizer_context = first_query_context->getOptimizerContext();
         auto process_plan_segment_entries = optimizer_context->getPlanSegmentProcessList()->insertGroup(first_query_context, segment_ids);
 
         for (int i = 0; i < headers.size(); i++)
@@ -496,8 +514,15 @@ void PlanSegmentRpcService::executePlanSegments(
                 (i == 0) ? first_query_context : nullptr);
         }
 
-        // report_metrics_timer->getResourceData().fillProto(*response->mutable_worker_resource_data());
-        // LOG_TRACE(log, "adaptive scheduler worker status: {}", response->worker_resource_data().ShortDebugString());
+        if (auto worker_status_manager = optimizer_context->getWorkerStatusManager())
+        {
+            Protos::WorkerNodeResourceData resource_info;
+            HostWithPorts::fillHostWithPorts(HostWithPorts::createHostWithPorts(request->coordinator_host_ports()), *resource_info.mutable_host_ports());
+            worker_status_manager->updateWorkerNode(resource_info, WorkerStatusManager::UpdateSource::ComeFromCoordinator);
+        }
+
+        report_metrics_timer->getResourceData().fillProto(*response->mutable_worker_resource_data());
+        LOG_TRACE(log, "adaptive scheduler worker status: {}", response->worker_resource_data().ShortDebugString());
     }
     catch (...)
     {

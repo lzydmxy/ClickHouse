@@ -31,6 +31,9 @@ class HostWithPorts;
 class SegmentScheduler;
 using SegmentSchedulerPtr = std::shared_ptr<SegmentScheduler>;
 
+class WorkerStatusManager;
+using WorkerStatusManagerPtr = std::shared_ptr<WorkerStatusManager>;
+
 class AddressInfo;
 using AddressInfoPtr = std::shared_ptr<AddressInfo>;
 
@@ -83,6 +86,8 @@ struct OptimizerContextSharedData
     PlanCacheManagerPtr plan_cache_manager;
     StatisticsKeeperStorePtr statistics_keeper_store;
     LoadTaskPtr ddl_worker_startup_task;
+    WorkerStatusManagerPtr worker_status_manager;
+    HostWithPorts host_with_ports;
 };
 
 class OptimizerContextData
@@ -175,10 +180,15 @@ public:
     void setPlanSegmentInstanceID(const PlanSegmentInstanceID & instance_id);
     PlanSegmentInstanceID getPlanSegmentInstanceID();
 
+    WorkerStatusManagerPtr getWorkerStatusManager() const;
+    void setWorkerStatusManager(WorkerStatusManagerPtr statistics_keeper_store_ptr);
+
     void setSendTCPProgress(std::function<void()> callback);
     std::function<void()> getSendTCPProgress() const;
 
-    HostWithPorts getHostWithPorts() const;
+    void setHostWithPorts(HostWithPorts host_with_ports);
+    const HostWithPorts & getHostWithPorts() const;
+
     SegmentSchedulerPtr getSegmentScheduler() const;
     ServiceType getServiceType() const;
 

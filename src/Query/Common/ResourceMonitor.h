@@ -10,11 +10,7 @@ namespace DB
 {
 
 class Context;
-namespace ResourceManagement
-{
-    struct WorkerNodeResourceData;
-}
-using WorkerNodeResourceData = ResourceManagement::WorkerNodeResourceData;
+struct WorkerNodeResourceData;
 
 class CPUMonitor
 {
@@ -97,7 +93,7 @@ public:
         start_time = time(nullptr);
     }
 
-    //WorkerNodeResourceData createResourceData(bool init = false);
+    WorkerNodeResourceData createResourceData(bool init = false);
 
     inline UInt32 getStartTime() const
     {
@@ -110,8 +106,6 @@ private:
 
     UInt64 getDiskSpace();
     UInt64 getQueryCount();
-    //UInt64 getManipulationTaskCount();
-    UInt64 getConsumerCount();
 
     MemoryMonitor mem_monitor;
     CPUMonitor cpu_monitor;

@@ -153,3 +153,29 @@ message HostWithPorts {
     uint32 tcp_port = 4;
     uint32 http_port = 5;
 }
+
+message WorkerNodeResourceData {
+    HostWithPorts host_ports = 1;
+
+    // number of queries in process list.
+    uint32 query_num = 2;
+
+    double cpu_usage = 3;
+    double memory_usage = 4;
+    uint64 memory_available = 5;
+    uint64 disk_space = 6;
+
+    optional uint64 cpu_limit = 7;
+    optional uint64 memory_limit = 8;
+
+    optional uint32 last_update_time = 9;
+
+    optional uint64 reserved_memory_bytes = 10;
+    optional uint32 reserved_cpu_cores = 11;
+    optional uint32 register_time = 12;
+    optional double cpu_usage_1min = 13;
+    optional double memory_usage_1min = 14;
+
+    optional uint64 last_status_create_time = 15;
+    optional double cpu_usage_10sec = 26;
+}

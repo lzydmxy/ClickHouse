@@ -38,11 +38,11 @@ public:
         }
     }
     const HostErrorCodeMap & getFailedRpcInfo() { return failed_rpc_info; }
-    const HostIDSet & getWorkers() { return hosts; }
+    const WorkerNodeSet & getWorkers() { return hosts; }
 
 private:
     HostErrorCodeMap failed_rpc_info;
-    HostIDSet hosts;
+    WorkerNodeSet hosts;
     bool record_all_workers{false};
 };
 

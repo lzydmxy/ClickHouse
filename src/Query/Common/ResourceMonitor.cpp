@@ -10,10 +10,11 @@
 #include <Common/getNumberOfPhysicalCPUCores.h>
 #include <IO/ReadBufferFromMemory.h>
 #include <IO/ReadHelpers.h>
-#include <Query/Common/ReadHelpers.h>
 #include <Interpreters/Context.h>
 #include <Interpreters/ProcessList.h>
-#include <Parsers/ParserSelectWithUnionQuery.h>
+#include <Query/Common/ReadHelpers.h>
+#include <Query/Common/WorkerNodeResourceData.h>
+#include <Query/Common/OptimizerContext.h>
 
 namespace 
 {
@@ -372,45 +373,34 @@ UInt64 ResourceMonitor::getQueryCount()
     return getContext()->getProcessList().size(); /// TODO: remove system_query.
 }
 
-// UInt64 ResourceMonitor::getManipulationTaskCount()
-// {
-//     return getContext()->getManipulationList().size();
-// }
-
-UInt64 ResourceMonitor::getConsumerCount()
+WorkerNodeResourceData ResourceMonitor::createResourceData(bool init)
 {
-    return CurrentMetrics::values[CurrentMetrics::Consumer];
+    WorkerNodeResourceData data;
+
+    data.host_ports = getContext()->getOptimizerContext()->getHostWithPorts();
+
+    auto cpu_data = cpu_monitor.get();
+    auto mem_data = mem_monitor.get();
+
+    data.cpu_usage = cpu_data.cpu_usage;
+    data.cpu_usage_1min = cpu_data.cpu_usage_avg_1min;
+    data.cpu_usage_10sec = cpu_data.cpu_usage_avg_10sec;
+    data.memory_usage = mem_data.memory_usage;
+    data.memory_usage_1min = mem_data.memory_usage_avg_1min;
+    data.memory_available = mem_data.memory_available;
+    data.disk_space = getDiskSpace();
+    data.query_num = getQueryCount();
+    data.last_status_create_time = time(nullptr);
+
+    data.register_time = start_time;
+
+    if (init)
+    {
+        data.cpu_limit = getCPULimit();
+        data.memory_limit = getMemoryLimit();
+    }
+
+    return data;
 }
-
-// WorkerNodeResourceData ResourceMonitor::createResourceData(bool init)
-// {
-//     WorkerNodeResourceData data;
-
-//     data.host_ports = getContext()->getOptimizerContext()->getHostWithPorts();
-
-//     auto cpu_data = cpu_monitor.get();
-//     auto mem_data = mem_monitor.get();
-
-//     data.cpu_usage = cpu_data.cpu_usage;
-//     data.cpu_usage_1min = cpu_data.cpu_usage_avg_1min;
-//     data.cpu_usage_10sec = cpu_data.cpu_usage_avg_10sec;
-//     data.memory_usage = mem_data.memory_usage;
-//     data.memory_usage_1min = mem_data.memory_usage_avg_1min;
-//     data.memory_available = mem_data.memory_available;
-//     data.disk_space = getDiskSpace();
-//     data.query_num = getQueryCount();
-//     data.last_status_create_time = time(nullptr);
-//     //data.manipulation_num = getManipulationTaskCount();
-//     data.consumer_num = getConsumerCount();
-//     data.register_time = start_time;
-
-//     if (init)
-//     {
-//         data.cpu_limit = getCPULimit();
-//         data.memory_limit = getMemoryLimit();
-//     }
-
-//     return data;
-// }
 
 }

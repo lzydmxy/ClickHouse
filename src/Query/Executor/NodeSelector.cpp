@@ -13,6 +13,8 @@
 #include <Query/ProtosHelper/QueryProto.h>
 #include <Query/ProtosHelper/ExchangeMode.h>
 
+#include "WorkerStatusManager.h"
+
 namespace DB
 {
 namespace ErrorCodes
@@ -51,8 +53,15 @@ ClusterNodes::ClusterNodes(String cluster_name_, ContextPtr & query_context) : c
         return;
     }
 
-    const auto shards_addresses = cluster->getShardsAddresses();
-    const auto shards = cluster->getShardsInfo();
+    auto shards_addresses = cluster->getShardsAddresses();
+    if (auto worker_status_manager = query_context->getOptimizerContext()->getWorkerStatusManager())
+    {
+        // TODO: Currently, we only select healthy nodes.
+        // In the future, we need to implement more SchedulerModes based on the attributes in WorkerNodeResourceData,
+        // such as cpu_rank and others.
+        shards_addresses = worker_status_manager->selectHealthNode(shards_addresses);
+    }
+
     for (const auto index : rank_worker_ids)
     {
         const Cluster::Address * selected_address = NULL;
@@ -68,7 +77,7 @@ ClusterNodes::ClusterNodes(String cluster_name_, ContextPtr & query_context) : c
         if (selected_address == NULL)
         {
             size_t replica_index;
-            //  TODO wujianchao implement other schedule mode
+
             switch(query_context->getOptimizerContext()->getSettingsRef().scheduler_mode)
             {
                 case SchedulerMode::RANDOM:
