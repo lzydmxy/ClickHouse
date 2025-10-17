@@ -2,7 +2,6 @@
 
 #include <Query/Optimizer/ExpressionDeterminism.h>
 #include <Query/Processors/QueryPlan/PlanVisitor.h>
-#include <Query/Processors/QueryPlan/QueryPlanExt.h>
 
 namespace DB
 {
@@ -98,7 +97,7 @@ protected:
 
     void visitSortingStepExtNode(SortingStepExtNode & node, ContextPtr & context) override
     {
-        if (dynamic_cast<const SortingStepExt *>(node.getStep().get())->getLimitValue() != 0)
+        if (dynamic_cast<const SortingStepExt *>(node.getStep().get())->getLimit() != 0)
             throw Exception(
                 ErrorCodes::QUERY_IS_NOT_SUPPORTED_IN_MATERIALIZED_VIEW,
                 "materialized view query don't support limit");

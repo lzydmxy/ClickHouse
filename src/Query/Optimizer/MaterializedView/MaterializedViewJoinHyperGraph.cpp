@@ -1,4 +1,3 @@
-
 #include <Query/Optimizer/MaterializedView/MaterializedViewJoinHyperGraph.h>
 
 #include <Query/Optimizer/PredicateUtils.h>

@@ -24,8 +24,9 @@ Void RelatedMaterializedViewsExtractor::visitTableScanStepExtNode(TableScanStepE
 {
     auto table_scan = node.getStep();
 
-    auto dependencies = DatabaseCatalog::instance().getLoadingDependencies(table_scan->getStorageID());
-    for (const auto & item : dependencies)
+    auto views = DatabaseCatalog::instance().getDependentViews(table_scan->getStorageID());
+    // auto dependencies = DatabaseCatalog::instance().getLoadingDependencies(table_scan->getStorageID());
+    for (const auto & item : views)
         if (visited_materialized_views.emplace(item).second)
             result.materialized_views.emplace_back(item);
     return Void{};

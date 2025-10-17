@@ -76,7 +76,6 @@ namespace MaterializedView
         AggregateDefaultValueProvider & default_value_provider);
 
 
-    AggregateDefaultValueProvider
-    getAggregateDefaultValueProvider(const std::shared_ptr<const AggregatingStepExt> & query_step, ContextMutablePtr context);
+    AggregateDefaultValueProvider getAggregateDefaultValueProvider(const std::shared_ptr<const AggregatingStepExt> & query_step, ContextMutablePtr context);
 }
 }

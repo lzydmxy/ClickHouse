@@ -177,9 +177,9 @@ MaterializedViewStructurePtr MaterializedViewStructure::buildFrom(
         output_columns_to_table_columns_map.emplace(query_column_name, table_column.name);
     }
 
-    std::shared_ptr<const AggregatingStep> aggregating_step = top_aggregate_node
-        ? dynamic_pointer_cast<const AggregatingStep>(top_aggregate_node->getStep())
-        : std::shared_ptr<const AggregatingStep>{};
+    std::shared_ptr<const AggregatingStepExt> aggregating_step = top_aggregate_node
+        ? dynamic_pointer_cast<const AggregatingStepExt>(top_aggregate_node->getStep())
+        : std::shared_ptr<const AggregatingStepExt>{};
 
     return std::make_shared<MaterializedViewStructure>(
         view_storage_id,

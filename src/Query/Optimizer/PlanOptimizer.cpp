@@ -11,7 +11,7 @@
 #include <Query/Optimizer/Rewriter/ColumnPruning.h>
 #include <Query/Optimizer/Rewriter/EliminateJoinByForeignKey.h>
 #include <Query/Optimizer/Rewriter/GroupByKeysPruning.h>
-// #include <Query/Optimizer/Rewriter/MaterializedViewRewriter.h>
+#include <Query/Optimizer/Rewriter/MaterializedViewRewriter.h>
 #include <Query/Optimizer/Rewriter/OptimizeTrivialCount.h>
 #include <Query/Optimizer/Rewriter/PredicatePushdown.h>
 #include <Query/Optimizer/Rewriter/RemoveApply.h>
@@ -96,7 +96,7 @@ const Rewriters & PlanOptimizer::getSimpleRewriters()
 
         // std::make_shared<ImplementJoinOrderHints>(), /// no hint now
 
-        // std::make_shared<MaterializedViewRewriter>(), /// no MaterializedViewRewriter now
+        std::make_shared<MaterializedViewRewriter>(),
         // std::make_shared<ImplementJoinOperationHints>(), /// no hint now
 
         /// topn filtering optimization
@@ -261,8 +261,7 @@ const Rewriters & PlanOptimizer::getLegacyFullRewriters()
         //add reorder adjacent windows
         std::make_shared<IterativeRewriter>(Rules::swapAdjacentRules(), "SwapAdjacent"),
 
-        //
-        // std::make_shared<MaterializedViewRewriter>(), /// no MaterializedViewRewriter now
+        std::make_shared<MaterializedViewRewriter>(),
         // std::make_shared<ImplementJoinOperationHints>(), /// no hint now
 
         /// topn filtering optimization
@@ -405,7 +404,7 @@ const Rewriters & PlanOptimizer::getFullRewriters()
         std::make_shared<IterativeRewriter>(Rules::markTopNDistinct(), "MarkTopNDistinct"),
 
         // add materialized view rewriter before distinct-aggregte rewrite
-        // std::make_shared<MaterializedViewRewriter>(), /// no MaterializedViewRewriter now
+        std::make_shared<MaterializedViewRewriter>(),
         // push down limit & aggregate
         std::make_shared<RemoveRedundantDistinct>(),
         std::make_shared<IterativeRewriter>(Rules::pushDownLimitRules(), "PushDownLimit"),

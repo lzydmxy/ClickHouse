@@ -48,7 +48,7 @@ struct MaterializedViewStructure
     const PlanNodes inner_sources;
     const PlanNodes outer_sources;
 
-    const std::shared_ptr<const AggregatingStep> top_aggregating_step;
+    const std::shared_ptr<const AggregatingStepExt> top_aggregating_step;
     const bool having_predicates;
 
     const SymbolTransformMap symbol_map;
@@ -67,7 +67,7 @@ struct MaterializedViewStructure
         JoinHyperGraph join_hyper_graph_,
         PlanNodes inner_sources_,
         PlanNodes outer_sources_,
-        std::shared_ptr<const AggregatingStep> top_aggregating_step_,
+        std::shared_ptr<const AggregatingStepExt> top_aggregating_step_,
         bool having_predicates_,
         SymbolTransformMap symbol_map_,
         std::unordered_set<String> output_columns_,

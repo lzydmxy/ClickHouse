@@ -192,8 +192,7 @@ namespace MaterializedView
         return {}; // rewrite fail, bail out
     }
 
-    AggregateDefaultValueProvider
-    getAggregateDefaultValueProvider(const std::shared_ptr<const AggregatingStep> & query_step, ContextMutablePtr context)
+    AggregateDefaultValueProvider getAggregateDefaultValueProvider(const std::shared_ptr<const AggregatingStepExt> & query_step, ContextMutablePtr context)
     {
         return [&, context](const ASTFunction & aggregate_ast_function) -> std::optional<Field> {
             if (!query_step)

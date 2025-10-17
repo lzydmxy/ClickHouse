@@ -63,8 +63,8 @@ std::optional<MaterializedViewStructurePtr>
 MaterializedViewMemoryCache::getMaterializedViewStructure(
     const StorageID & database_and_table_name,
     ContextMutablePtr context,
-    bool /*local_materialized_view*/,
-    const std::map<String, StorageID> & /*local_table_to_distributed_table*/)
+    bool local_materialized_view,
+    const std::map<String, StorageID> & local_table_to_distributed_table)
 {
     auto dependent_table = DatabaseCatalog::instance().tryGetTable(database_and_table_name, context);
     if (!dependent_table)
@@ -74,37 +74,35 @@ MaterializedViewMemoryCache::getMaterializedViewStructure(
     if (!materialized_view)
         return {};
 
-    // todo: hongzhigao1, need storage
-    // if (materialized_view->sync() && !context->getOptimizerContext()->getSettingsRef().enable_sync_materialized_view_rewrite)
-    //     return {};
+    if (/*materialized_view->sync() &&*/ !context->getOptimizerContext()->getSettingsRef().enable_sync_materialized_view_rewrite)
+        return {};
 
-    // ASTPtr query = materialized_view->getInnerQuery();
-    // StorageID materialized_view_id = materialized_view->getStorageID();
-    // std::optional<StorageID> target_table_id = findTargetTable(
-    //     local_materialized_view, *materialized_view, materialized_view_id, context);
-    // if (!target_table_id) {
-    //     return {};
-    // }
+    ASTPtr query = materialized_view->getInMemoryMetadataPtr()->getSelectQuery().inner_query->clone();
+    StorageID materialized_view_id = materialized_view->getStorageID();
+    std::optional<StorageID> target_table_id = findTargetTable(
+        local_materialized_view, *materialized_view, materialized_view_id, context);
+    if (!target_table_id) {
+        return {};
+    }
 
-    // if (local_materialized_view) {
-    //     LocalTableRewriter::Data data{local_table_to_distributed_table};
-    //     LocalTableRewriter::Visitor(data).visit(query);
-    // }
+    if (local_materialized_view) {
+        LocalTableRewriter::Data data{local_table_to_distributed_table};
+        LocalTableRewriter::Visitor(data).visit(query);
+    }
 
-    // try
-    // {
-    //     return MaterializedViewStructure::buildFrom(materialized_view_id, target_table_id.value(), query, materialized_view->async(), context);
-    // }
-    // catch (Exception & exception)
-    // {
-    //     static auto log = getLogger("MaterializedViewRewriter");
-    //     if (exception.code() == ErrorCodes::QUERY_IS_NOT_SUPPORTED_IN_MATERIALIZED_VIEW)
-    //         LOG_DEBUG(log, "skip {}, reason: {}", materialized_view_id.getFullTableName(), exception.message());
-    //     else
-    //         LOG_ERROR(log, "skip {}, reason: {}", materialized_view_id.getFullTableName(), exception.message());
-    //     return {};
-    // }
-    return {};
+    try
+    {
+        return MaterializedViewStructure::buildFrom(materialized_view_id, target_table_id.value(), query, false /*materialized_view->async()*/, context);
+    }
+    catch (Exception & exception)
+    {
+        static auto log = getLogger("MaterializedViewRewriter");
+        if (exception.code() == ErrorCodes::QUERY_IS_NOT_SUPPORTED_IN_MATERIALIZED_VIEW)
+            LOG_DEBUG(log, "skip {}, reason: {}", materialized_view_id.getFullTableName(), exception.message());
+        else
+            LOG_ERROR(log, "skip {}, reason: {}", materialized_view_id.getFullTableName(), exception.message());
+        return {};
+    }
 }
 
 std::optional<StorageID> MaterializedViewMemoryCache::findTargetTable(
